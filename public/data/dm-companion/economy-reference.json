@@ -1,0 +1,6980 @@
+[
+  {
+    "id": "eco-food-ale",
+    "category": "Еда и выпивка",
+    "name": "Кружка эля",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "notes": "Стандартный напиток в любой таверне Грейхольма."
+  },
+  {
+    "id": "eco-food-wine-glass",
+    "category": "Еда и выпивка",
+    "name": "Бокал вина",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-food-wine-bottle-good",
+    "category": "Еда и выпивка",
+    "name": "Бутылка хорошего вина",
+    "price": "10",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма",
+    "notes": "Привозное вино — есть не в каждой таверне."
+  },
+  {
+    "id": "eco-food-stew",
+    "category": "Еда и выпивка",
+    "name": "Похлёбка / каша",
+    "price": "3",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-food-bread",
+    "category": "Еда и выпивка",
+    "name": "Хлеб (буханка)",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-food-hearty-meal",
+    "category": "Еда и выпивка",
+    "name": "Сытный обед (мясо, хлеб, эль)",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-food-rations",
+    "category": "Еда и выпивка",
+    "name": "Дорожный паёк (на день)",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-food-cheese",
+    "category": "Еда и выпивка",
+    "name": "Сыр (головка)",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-food-game-roast",
+    "category": "Еда и выпивка",
+    "name": "Жаркое из дичи",
+    "price": "8",
+    "currency": "sp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-food-exotic-drink",
+    "category": "Еда и выпивка",
+    "name": "Экзотический напиток (эльфийское вино)",
+    "price": "25",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "мастерское",
+    "source": "Экономика Грейхольма",
+    "notes": "Заказывается через торговцев с дальних караванов."
+  },
+  {
+    "id": "eco-lodging-common-bunk",
+    "category": "Ночлег",
+    "name": "Койка в общем зале",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "плохое",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-lodging-normal-room",
+    "category": "Ночлег",
+    "name": "Обычная комната",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-lodging-good-room",
+    "category": "Ночлег",
+    "name": "Хорошая комната",
+    "price": "2",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма",
+    "notes": "Обычно есть только в приличных тавернах вроде «Золотого Колокола»."
+  },
+  {
+    "id": "eco-lodging-luxury-suite",
+    "category": "Ночлег",
+    "name": "Роскошные апартаменты",
+    "price": "8",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "мастерское",
+    "source": "Экономика Грейхольма",
+    "notes": "Только в «Золотом Колоколе», часто заняты приезжими купцами."
+  },
+  {
+    "id": "eco-lodging-stable",
+    "category": "Ночлег",
+    "name": "Место в конюшне (для лошади)",
+    "price": "3",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-lodging-bath",
+    "category": "Ночлег",
+    "name": "Горячая ванна",
+    "price": "5",
+    "currency": "sp",
+    "availability": "есть не всегда",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-lodging-laundry",
+    "category": "Ночлег",
+    "name": "Стирка одежды",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-lodging-storage",
+    "category": "Ночлег",
+    "name": "Хранение багажа (за ночь)",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-tavern-broken-mug",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Разбитая кружка / тарелка",
+    "price": "1",
+    "currency": "sp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Компенсация хозяину за каждый предмет."
+  },
+  {
+    "id": "eco-tavern-broken-window",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Разбитое окно",
+    "price": "5",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Компенсация за стекло и раму."
+  },
+  {
+    "id": "eco-tavern-broken-furniture",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Сломанный стул / стол",
+    "price": "2",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-tavern-brawl",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Драка в зале — компенсация ущерба",
+    "price": "5–20",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Точная сумма на усмотрение ДМ, зависит от масштаба разгрома."
+  },
+  {
+    "id": "eco-tavern-noise-fine",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Шумная ночь (жалобы соседей)",
+    "price": "1",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Портит отношения с хозяином при повторе."
+  },
+  {
+    "id": "eco-tavern-fire",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Поджог (даже случайный)",
+    "price": "100+",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Серьёзный конфликт, почти всегда вызывает стражу."
+  },
+  {
+    "id": "eco-tavern-unpaid-bill",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Неоплаченный счёт",
+    "price": "долг + 50%",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Штраф добавляется к сумме долга при поимке."
+  },
+  {
+    "id": "eco-weapon-dagger",
+    "category": "Оружие",
+    "name": "Кинжал",
+    "price": "2",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "простое",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-weapon-club",
+    "category": "Оружие",
+    "name": "Дубинка",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "простое",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-weapon-spear",
+    "category": "Оружие",
+    "name": "Копьё",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "простое",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-weapon-shortbow",
+    "category": "Оружие",
+    "name": "Короткий лук",
+    "price": "25",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "простое",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-weapon-quarterstaff",
+    "category": "Оружие",
+    "name": "Боевой посох",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "простое",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-weapon-longsword",
+    "category": "Оружие",
+    "name": "Длинный меч",
+    "price": "15",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "воинское",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-weapon-battleaxe",
+    "category": "Оружие",
+    "name": "Боевой топор",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "воинское",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-weapon-rapier",
+    "category": "Оружие",
+    "name": "Рапира",
+    "price": "25",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "воинское",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-weapon-longbow",
+    "category": "Оружие",
+    "name": "Длинный лук",
+    "price": "50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "воинское",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-weapon-heavy-crossbow",
+    "category": "Оружие",
+    "name": "Тяжёлый арбалет",
+    "price": "50",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "воинское",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-weapon-halberd",
+    "category": "Оружие",
+    "name": "Алебарда",
+    "price": "20",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "воинское",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-weapon-hand-crossbow",
+    "category": "Оружие",
+    "name": "Ручной арбалет",
+    "price": "75",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "quality": "мастерское",
+    "source": "Экономика Грейхольма",
+    "notes": "В Грейхольме на руках — буквально единичные экземпляры."
+  },
+  {
+    "id": "eco-weapon-ammo-arrows",
+    "category": "Оружие",
+    "name": "Стрелы (колчан, 20 шт.)",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-weapon-ammo-bolts",
+    "category": "Оружие",
+    "name": "Болты для арбалета (20 шт.)",
+    "price": "1",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-armor-padded",
+    "category": "Броня",
+    "name": "Стёганый доспех",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "лёгкая броня",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-armor-leather",
+    "category": "Броня",
+    "name": "Кожаный доспех",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "лёгкая броня",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-armor-studded-leather",
+    "category": "Броня",
+    "name": "Проклёпанная кожа",
+    "price": "45",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "лёгкая броня",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-armor-chain-shirt",
+    "category": "Броня",
+    "name": "Кольчужная рубаха",
+    "price": "50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "средняя броня",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-armor-scale-mail",
+    "category": "Броня",
+    "name": "Чешуйчатый доспех",
+    "price": "50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "средняя броня",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-armor-breastplate",
+    "category": "Броня",
+    "name": "Нагрудник",
+    "price": "400",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "средняя броня",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-armor-half-plate",
+    "category": "Броня",
+    "name": "Полулаты",
+    "price": "750",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "средняя броня",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-armor-chain-mail",
+    "category": "Броня",
+    "name": "Кольчуга",
+    "price": "75",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "тяжёлая броня",
+    "source": "Экономика Грейхольма",
+    "notes": "Бром делает по индивидуальному заказу — срок ожидания."
+  },
+  {
+    "id": "eco-armor-plate",
+    "category": "Броня",
+    "name": "Латы",
+    "price": "1500",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "quality": "тяжёлая броня",
+    "source": "Экономика Грейхольма",
+    "notes": "В городе нет в наличии — только герцогская гвардия и Гильдия."
+  },
+  {
+    "id": "eco-armor-shield",
+    "category": "Броня",
+    "name": "Щит",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-armor-repair",
+    "category": "Броня",
+    "name": "Ремонт доспеха или оружия",
+    "price": "1–10",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена зависит от типа снаряжения и масштаба повреждений.",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-gear-backpack",
+    "category": "Походное снаряжение",
+    "name": "Рюкзак",
+    "price": "2",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-gear-rope",
+    "category": "Походное снаряжение",
+    "name": "Верёвка пеньковая (15 м)",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-gear-torch",
+    "category": "Походное снаряжение",
+    "name": "Факел",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-gear-lantern",
+    "category": "Походное снаряжение",
+    "name": "Фонарь",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-gear-oil",
+    "category": "Походное снаряжение",
+    "name": "Масло (флакон)",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-gear-bedroll",
+    "category": "Походное снаряжение",
+    "name": "Спальный мешок",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-gear-tent",
+    "category": "Походное снаряжение",
+    "name": "Палатка (на двоих)",
+    "price": "2",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-gear-waterskin",
+    "category": "Походное снаряжение",
+    "name": "Фляга (бурдюк)",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-gear-pot",
+    "category": "Походное снаряжение",
+    "name": "Дорожный котелок",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-gear-tinderbox",
+    "category": "Походное снаряжение",
+    "name": "Огниво",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-tools-thieves",
+    "category": "Инструменты и наборы",
+    "name": "Воровские инструменты",
+    "price": "25",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "notes": "Открыто не продаются — только через знакомых или чёрный рынок."
+  },
+  {
+    "id": "eco-tools-healer",
+    "category": "Инструменты и наборы",
+    "name": "Набор целителя",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-lina-waters"
+    ]
+  },
+  {
+    "id": "eco-tools-explorer",
+    "category": "Инструменты и наборы",
+    "name": "Набор путешественника",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-tools-scribe",
+    "category": "Инструменты и наборы",
+    "name": "Письменные принадлежности",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-tools-smith",
+    "category": "Инструменты и наборы",
+    "name": "Инструменты кузнеца",
+    "price": "20",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-tools-alchemist",
+    "category": "Инструменты и наборы",
+    "name": "Набор алхимика",
+    "price": "50",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-lina-waters"
+    ]
+  },
+  {
+    "id": "eco-tools-lockpicks",
+    "category": "Инструменты и наборы",
+    "name": "Набор отмычек",
+    "price": "25",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-tools-musician",
+    "category": "Инструменты и наборы",
+    "name": "Музыкальный инструмент",
+    "price": "5–30",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "разное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-alchemy-healing-potion",
+    "category": "Алхимия и редкие товары",
+    "name": "Зелье лечения (обычное)",
+    "price": "50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-lina-waters"
+    ]
+  },
+  {
+    "id": "eco-alchemy-antidote",
+    "category": "Алхимия и редкие товары",
+    "name": "Противоядие",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-lina-waters"
+    ]
+  },
+  {
+    "id": "eco-alchemy-herbs",
+    "category": "Алхимия и редкие товары",
+    "name": "Лечебные травы (пучок)",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-lina-waters"
+    ]
+  },
+  {
+    "id": "eco-alchemy-acid",
+    "category": "Алхимия и редкие товары",
+    "name": "Кислота (флакон)",
+    "price": "25",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-alchemy-holy-water",
+    "category": "Алхимия и редкие товары",
+    "name": "Святая вода (флакон)",
+    "price": "25",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "quality": "освящённое",
+    "source": "Экономика Грейхольма",
+    "notes": "Освящается в храмовом квартале по запросу."
+  },
+  {
+    "id": "eco-alchemy-fire",
+    "category": "Алхимия и редкие товары",
+    "name": "Алхимический огонь (флакон)",
+    "price": "50",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-alchemy-invisibility-potion",
+    "category": "Алхимия и редкие товары",
+    "name": "Зелье невидимости",
+    "price": "300",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "quality": "редкое",
+    "source": "Экономика Грейхольма",
+    "notes": "Если вообще найдётся — только у заезжего торговца редкостями."
+  },
+  {
+    "id": "eco-alchemy-reagents",
+    "category": "Алхимия и редкие товары",
+    "name": "Реагенты для ритуалов",
+    "price": "10–50",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "разное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-alchemy-poison",
+    "category": "Алхимия и редкие товары",
+    "name": "Яд (доза)",
+    "price": "100",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "notes": "Продажа официально запрещена — только чёрный рынок."
+  },
+  {
+    "id": "eco-alchemy-incense",
+    "category": "Алхимия и редкие товары",
+    "name": "Благовония для ритуалов",
+    "price": "5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-magic-identify",
+    "category": "Магические услуги",
+    "name": "Опознание предмета",
+    "price": "20",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Гильдия авантюристов или Башня магов."
+  },
+  {
+    "id": "eco-magic-remove-curse",
+    "category": "Магические услуги",
+    "name": "Снятие проклятия",
+    "price": "200",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-magic-enchant-weapon",
+    "category": "Магические услуги",
+    "name": "Зачарование оружия (+1)",
+    "price": "500+",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма",
+    "notes": "Долгий заказ через Башню магов, не гарантирован."
+  },
+  {
+    "id": "eco-magic-cure-wounds",
+    "category": "Магические услуги",
+    "name": "Лечение тяжёлых ран (заклинание)",
+    "price": "50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "Услуга храма в Храмовом квартале."
+  },
+  {
+    "id": "eco-magic-raise-dead",
+    "category": "Магические услуги",
+    "name": "Воскрешение",
+    "price": "1000+",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма",
+    "notes": "Требует редких компонентов и согласия верховного жреца."
+  },
+  {
+    "id": "eco-magic-teleport-circle",
+    "category": "Магические услуги",
+    "name": "Телепортационный круг (разовая услуга)",
+    "price": "100",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-magic-divination",
+    "category": "Магические услуги",
+    "name": "Гадание / предсказание",
+    "price": "10",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-magic-scroll-copy",
+    "category": "Магические услуги",
+    "name": "Копирование свитка заклинания",
+    "price": "50–200",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-worker-porter",
+    "category": "Наёмники и работники",
+    "name": "Носильщик (день)",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-worker-guide",
+    "category": "Наёмники и работники",
+    "name": "Проводник (день)",
+    "price": "2",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-worker-soldier",
+    "category": "Наёмники и работники",
+    "name": "Наёмник-солдат (день)",
+    "price": "2",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-worker-veteran",
+    "category": "Наёмники и работники",
+    "name": "Опытный наёмник / ветеран (день)",
+    "price": "5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-worker-mage",
+    "category": "Наёмники и работники",
+    "name": "Маг на найм (день)",
+    "price": "10–20",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма",
+    "notes": "Через Башню магов или Гильдию."
+  },
+  {
+    "id": "eco-worker-healer",
+    "category": "Наёмники и работники",
+    "name": "Целитель (день)",
+    "price": "5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-worker-scribe",
+    "category": "Наёмники и работники",
+    "name": "Писарь / переводчик (день)",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-worker-caravan-guard",
+    "category": "Наёмники и работники",
+    "name": "Охрана каравана (за рейс, на человека)",
+    "price": "5–10",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-fee-gate-toll",
+    "category": "Штрафы и бытовые расходы",
+    "name": "Пошлина у городских ворот (с человека)",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-fee-cargo-toll",
+    "category": "Штрафы и бытовые расходы",
+    "name": "Пошлина за повозку / товар",
+    "price": "1–5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-fee-curfew",
+    "category": "Штрафы и бытовые расходы",
+    "name": "Штраф за нарушение комендантского часа",
+    "price": "1",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-fee-public-brawl",
+    "category": "Штрафы и бытовые расходы",
+    "name": "Штраф за драку в общественном месте",
+    "price": "5",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-fee-barber",
+    "category": "Штрафы и бытовые расходы",
+    "name": "Услуги цирюльника",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-fee-bathhouse",
+    "category": "Штрафы и бытовые расходы",
+    "name": "Общественная баня",
+    "price": "3",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-fee-bribe-guard",
+    "category": "Штрафы и бытовые расходы",
+    "name": "Подкуп стражника (мелкий)",
+    "price": "5–10",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Рискованно — может сработать или обернуться проблемой."
+  },
+  {
+    "id": "eco-fee-bribe-official",
+    "category": "Штрафы и бытовые расходы",
+    "name": "Подкуп чиновника (крупный)",
+    "price": "50–200",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-reward-minor-task",
+    "category": "Награды за квесты",
+    "name": "Мелкое задание",
+    "price": "5–15",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Поручения вроде доставки письма или поиска пропажи."
+  },
+  {
+    "id": "eco-reward-small-contract",
+    "category": "Награды за квесты",
+    "name": "Малый контракт",
+    "price": "25–75",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-reward-dangerous-contract-1",
+    "category": "Награды за квесты",
+    "name": "Опасный контракт (1 уровень)",
+    "price": "50–150",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-reward-major-contract",
+    "category": "Награды за квесты",
+    "name": "Крупный контракт",
+    "price": "200–500",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-reward-bonus",
+    "category": "Награды за квесты",
+    "name": "Бонус за быстрое / чистое выполнение",
+    "price": "+10–20%",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-reward-non-monetary",
+    "category": "Награды за квесты",
+    "name": "Неденежная награда (репутация, услуга, предмет)",
+    "price": "по ситуации",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Скидки в лавках, рекомендательные письма, доступ к закрытым местам."
+  },
+  {
+    "id": "eco-loot-beasts",
+    "category": "Добыча с врагов",
+    "name": "Дикие звери",
+    "price": "0",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Монет нет — только шкуры, клыки и трофеи (1–10 GP за штуку у скорняка)."
+  },
+  {
+    "id": "eco-loot-goblins",
+    "category": "Добыча с врагов",
+    "name": "Гоблины",
+    "price": "1d6",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Мелкие монеты + простое оружие на продажу."
+  },
+  {
+    "id": "eco-loot-bandits",
+    "category": "Добыча с врагов",
+    "name": "Бандиты",
+    "price": "2d10",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Монеты + снаряжение, которое можно продать торговцам."
+  },
+  {
+    "id": "eco-loot-cultists",
+    "category": "Добыча с врагов",
+    "name": "Культисты",
+    "price": "1d10",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Монеты + ритуальные предметы (могут заинтересовать храм или Гильдию)."
+  },
+  {
+    "id": "eco-loot-undead",
+    "category": "Добыча с врагов",
+    "name": "Нежить",
+    "price": "—",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Старые монеты (антиквариат) и случайные реликвии вместо обычного золота."
+  },
+  {
+    "id": "eco-loot-mercenaries",
+    "category": "Добыча с врагов",
+    "name": "Наёмники / солдаты",
+    "price": "3d10",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Хорошее снаряжение (оружие, броня) + монеты."
+  },
+  {
+    "id": "eco-loot-officers",
+    "category": "Добыча с врагов",
+    "name": "Офицеры / элитные бойцы",
+    "price": "5d10",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Качественное снаряжение, личные ценности, иногда документы."
+  },
+  {
+    "id": "eco-hoard-small",
+    "category": "Тайники и сокровища",
+    "name": "Малый тайник",
+    "price": "50–100",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Монеты + один мелкий ценный предмет (украшение, безделушка)."
+  },
+  {
+    "id": "eco-hoard-normal",
+    "category": "Тайники и сокровища",
+    "name": "Обычный тайник",
+    "price": "200–500",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Монеты + один-два предмета на продажу."
+  },
+  {
+    "id": "eco-hoard-large",
+    "category": "Тайники и сокровища",
+    "name": "Крупный тайник",
+    "price": "1000–3000",
+    "currency": "gp",
+    "availability": "—",
+    "source": "Экономика Грейхольма",
+    "notes": "Монеты, драгоценности и обычно один магический предмет."
+  },
+  {
+    "id": "eco-hoard-guild",
+    "category": "Тайники и сокровища",
+    "name": "Тайник гильдии или культа",
+    "price": "по ситуации",
+    "currency": "gp",
+    "availability": "—",
+    "source": "DM custom",
+    "notes": "Особый: помимо ценностей содержит документы, печати или улики, важные для сюжета."
+  },
+  {
+    "id": "eco-shop-lina-waters",
+    "category": "Магазины Грейхольма",
+    "name": "Травяная лавка Лины Уотерс",
+    "price": "—",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Алхимия, зелья, лечебные травы и наборы. Рыночная площадь.",
+    "soldAt": [
+      "shop-lina-waters"
+    ]
+  },
+  {
+    "id": "eco-shop-brom",
+    "category": "Магазины Грейхольма",
+    "name": "Кузница «Железная подкова» Брома",
+    "price": "—",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Простое и воинское оружие, лёгкая/средняя броня, ремонт. Караванные дворы.",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-shop-mirra",
+    "category": "Магазины Грейхольма",
+    "name": "Лавка дорожных товаров Мирры Олден",
+    "price": "—",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Походное снаряжение: верёвки, фляги, спальники, факелы, наборы. Рыночная площадь.",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-продажа-добычи-1",
+    "category": "Продажа добычи",
+    "name": "Правило: обычный предмет в хорошем состоянии",
+    "price": "50% цены",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Стандартная цена выкупа добычи в хорошем состоянии."
+  },
+  {
+    "id": "eco-продажа-добычи-2",
+    "category": "Продажа добычи",
+    "name": "Правило: повреждённый предмет",
+    "price": "10–30% цены",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-продажа-добычи-3",
+    "category": "Продажа добычи",
+    "name": "Правило: плохое оружие",
+    "price": "5–20% цены",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-продажа-добычи-4",
+    "category": "Продажа добычи",
+    "name": "Правило: броня с трупа",
+    "price": "10–30% цены",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-продажа-добычи-5",
+    "category": "Продажа добычи",
+    "name": "Правило: краденый предмет",
+    "price": "20–50% цены",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Продажа краденого несёт риск."
+  },
+  {
+    "id": "eco-продажа-добычи-6",
+    "category": "Продажа добычи",
+    "name": "Правило: редкий товар",
+    "price": "50–80% цены",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-продажа-добычи-7",
+    "category": "Продажа добычи",
+    "name": "Правило: драгоценности",
+    "price": "80–100% цены",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-продажа-добычи-8",
+    "category": "Продажа добычи",
+    "name": "Правило: торговый груз",
+    "price": "50–100% цены",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-продажа-добычи-9",
+    "category": "Продажа добычи",
+    "name": "Правило: сюжетный предмет",
+    "price": "не продавать",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Сюжетные предметы лучше не продавать."
+  },
+  {
+    "id": "eco-продажа-добычи-10",
+    "category": "Продажа добычи",
+    "name": "Пример: плохой кинжал гоблина → продажа",
+    "price": "1–5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Покупка обычного кинжала — 2 GP. Плохое качество гоблинского кинжала продаётся за гроши."
+  },
+  {
+    "id": "eco-продажа-добычи-11",
+    "category": "Продажа добычи",
+    "name": "Пример: обычный кинжал → продажа",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Покупка нового — 2 GP, продажа примерно 50% — 1 GP."
+  },
+  {
+    "id": "eco-продажа-добычи-12",
+    "category": "Продажа добычи",
+    "name": "Пример: хороший кинжал → продажа",
+    "price": "2–3",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Покупка хорошего кинжала — 5 GP."
+  },
+  {
+    "id": "eco-продажа-добычи-13",
+    "category": "Продажа добычи",
+    "name": "Пример: кожаная броня бандита → продажа",
+    "price": "2–8",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Покупка простой кожаной брони — 15 GP, в зависимости от состояния."
+  },
+  {
+    "id": "eco-продажа-добычи-14",
+    "category": "Продажа добычи",
+    "name": "Пример: повреждённый щит → продажа",
+    "price": "1–5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Покупка простого щита — 10 GP."
+  },
+  {
+    "id": "eco-продажа-добычи-15",
+    "category": "Продажа добычи",
+    "name": "Пример: хороший меч → продажа",
+    "price": "8–15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Покупка длинного меча — 18 GP."
+  },
+  {
+    "id": "eco-продажа-добычи-16",
+    "category": "Продажа добычи",
+    "name": "Пример: ручной арбалет в нормальном состоянии → продажа",
+    "price": "35–40",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Покупка ручного арбалета — 75 GP, продажа около 50%."
+  },
+  {
+    "id": "eco-продажа-добычи-17",
+    "category": "Продажа добычи",
+    "name": "Пример: ручной арбалет повреждённый → продажа",
+    "price": "10–25",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Покупка нового — 75 GP, повреждённый продаётся за 10-30%."
+  },
+  {
+    "id": "eco-продажа-добычи-18",
+    "category": "Продажа добычи",
+    "name": "Пример: кольцо жертвы → продажа",
+    "price": "5–50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена сильно зависит от качества украшения."
+  },
+  {
+    "id": "eco-продажа-добычи-19",
+    "category": "Продажа добычи",
+    "name": "Пример: украденный груз",
+    "price": "лучше вернуть заказчику",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Часто выгоднее и безопаснее, чем продавать."
+  },
+  {
+    "id": "eco-продажа-добычи-20",
+    "category": "Продажа добычи",
+    "name": "Пример: военное снаряжение",
+    "price": "продажа опасна",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Может привлечь внимание стражи или гарнизона."
+  },
+  {
+    "id": "eco-продажа-добычи-21",
+    "category": "Продажа добычи",
+    "name": "Пример: предмет с гербом",
+    "price": "вызывает вопросы",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Продажа предмета с чужим гербом привлекает ненужное внимание."
+  },
+  {
+    "id": "eco-еда-и-выпивка-1",
+    "category": "Еда и выпивка",
+    "name": "Кусок хлеба",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-2",
+    "category": "Еда и выпивка",
+    "name": "Кусок сыра",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-3",
+    "category": "Еда и выпивка",
+    "name": "Каша, хлеб и вода",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "плохое",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-4",
+    "category": "Еда и выпивка",
+    "name": "Нормальный обед",
+    "price": "3",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-5",
+    "category": "Еда и выпивка",
+    "name": "Хороший обед",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-6",
+    "category": "Еда и выпивка",
+    "name": "Ужин с мясом",
+    "price": "8",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-7",
+    "category": "Еда и выпивка",
+    "name": "Хороший ужин с мясом и элем",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-8",
+    "category": "Еда и выпивка",
+    "name": "Еда на день в городе",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-9",
+    "category": "Еда и выпивка",
+    "name": "Дешёвый дорожный рацион",
+    "price": "8",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-10",
+    "category": "Еда и выпивка",
+    "name": "Нормальный дорожный рацион",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-еда-и-выпивка-11",
+    "category": "Еда и выпивка",
+    "name": "Хороший дорожный рацион",
+    "price": "2",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-еда-и-выпивка-12",
+    "category": "Еда и выпивка",
+    "name": "Гарнизонный сухпаёк",
+    "price": "2",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Армейское снаряжение, не продаётся свободно."
+  },
+  {
+    "id": "eco-еда-и-выпивка-13",
+    "category": "Еда и выпивка",
+    "name": "Горячая еда в дороге",
+    "price": "1–3",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-14",
+    "category": "Еда и выпивка",
+    "name": "Праздничный ужин",
+    "price": "3–5",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-15",
+    "category": "Еда и выпивка",
+    "name": "Банкет для компании",
+    "price": "20–100",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена зависит от числа гостей и блюд."
+  },
+  {
+    "id": "eco-еда-и-выпивка-16",
+    "category": "Еда и выпивка",
+    "name": "Банкет для знати",
+    "price": "200",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма",
+    "notes": "От 200 GP и выше, с музыкой и редкими блюдами."
+  },
+  {
+    "id": "eco-еда-и-выпивка-17",
+    "category": "Еда и выпивка",
+    "name": "Кружка дешёвого эля",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "плохое",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-18",
+    "category": "Еда и выпивка",
+    "name": "Кружка крепкого эля",
+    "price": "3",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-19",
+    "category": "Еда и выпивка",
+    "name": "Кувшин эля на стол",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-20",
+    "category": "Еда и выпивка",
+    "name": "Дешёвое вино",
+    "price": "3",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-21",
+    "category": "Еда и выпивка",
+    "name": "Местное вино",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-22",
+    "category": "Еда и выпивка",
+    "name": "Хорошее местное вино",
+    "price": "3",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-23",
+    "category": "Еда и выпивка",
+    "name": "Импортное вино",
+    "price": "8",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-24",
+    "category": "Еда и выпивка",
+    "name": "Дорогое дворянское вино",
+    "price": "20",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-25",
+    "category": "Еда и выпивка",
+    "name": "Крепкая настойка",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-26",
+    "category": "Еда и выпивка",
+    "name": "Хорошая настойка",
+    "price": "2",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-27",
+    "category": "Еда и выпивка",
+    "name": "Редкая настойка",
+    "price": "5–15",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-28",
+    "category": "Еда и выпивка",
+    "name": "Контрабандный алкоголь",
+    "price": "20–50",
+    "currency": "gp",
+    "availability": "серый рынок",
+    "source": "Экономика Грейхольма",
+    "notes": "Можно встретить в «Синей Форели».",
+    "soldAt": [
+      "tavern-sinyaya-forel"
+    ]
+  },
+  {
+    "id": "eco-еда-и-выпивка-29",
+    "category": "Еда и выпивка",
+    "name": "Бутылка для подарка чиновнику",
+    "price": "25–100",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-30",
+    "category": "Еда и выпивка",
+    "name": "Бочонок эля",
+    "price": "10–30",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-еда-и-выпивка-31",
+    "category": "Еда и выпивка",
+    "name": "Бочонок хорошего вина",
+    "price": "100",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма",
+    "notes": "От 100 GP и выше."
+  },
+  {
+    "id": "eco-ночлег-32",
+    "category": "Ночлег",
+    "name": "Спать в конюшне",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ночлег-33",
+    "category": "Ночлег",
+    "name": "Очень бедная койка",
+    "price": "3",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ночлег-34",
+    "category": "Ночлег",
+    "name": "Дешёвая общая комната",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ночлег-35",
+    "category": "Ночлег",
+    "name": "Бедная комната",
+    "price": "8",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ночлег-36",
+    "category": "Ночлег",
+    "name": "Обычная комната с завтраком",
+    "price": "2",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ночлег-37",
+    "category": "Ночлег",
+    "name": "Комната получше",
+    "price": "6",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ночлег-38",
+    "category": "Ночлег",
+    "name": "Комната с замком и приватностью",
+    "price": "10",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ночлег-39",
+    "category": "Ночлег",
+    "name": "Комната с охраной",
+    "price": "20",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ночлег-40",
+    "category": "Ночлег",
+    "name": "Богатые покои",
+    "price": "30",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ночлег-41",
+    "category": "Ночлег",
+    "name": "Номер для дворянина",
+    "price": "50–100",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ночлег-42",
+    "category": "Ночлег",
+    "name": "Аренда отдельного дома на неделю",
+    "price": "100–300",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ночлег-43",
+    "category": "Ночлег",
+    "name": "Аренда склада на неделю",
+    "price": "50–200",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ночлег-44",
+    "category": "Ночлег",
+    "name": "Аренда комнаты на месяц",
+    "price": "30–100",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ночлег-45",
+    "category": "Ночлег",
+    "name": "Аренда приличного дома на месяц",
+    "price": "300–1000",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-таверны-штрафы-и-рас-46",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Чаевые официантке",
+    "price": "1–2",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-таверны-штрафы-и-рас-47",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Чаевые музыканту",
+    "price": "2–5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-таверны-штрафы-и-рас-48",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Помывка и стирка одежды",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-таверны-штрафы-и-рас-49",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Баня с отдельной комнатой",
+    "price": "3",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-таверны-штрафы-и-рас-50",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Сломанная дверь",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-таверны-штрафы-и-рас-51",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Порча комнаты",
+    "price": "10–50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-таверны-штрафы-и-рас-52",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Пьяная драка без тяжёлого ущерба",
+    "price": "5–15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-таверны-штрафы-и-рас-53",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Пьяная драка с ранеными",
+    "price": "20–75",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-таверны-штрафы-и-рас-54",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Драка со стражей",
+    "price": "50–200",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Помимо денег — проблемы с законом."
+  },
+  {
+    "id": "eco-таверны-штрафы-и-рас-55",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Подкуп вышибалы",
+    "price": "5–20",
+    "currency": "gp",
+    "availability": "серый рынок",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-таверны-штрафы-и-рас-56",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Подкуп трактирщика за молчание",
+    "price": "25–100",
+    "currency": "gp",
+    "availability": "серый рынок",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-таверны-штрафы-и-рас-57",
+    "category": "Таверны: штрафы и расходы",
+    "name": "Компенсация за сорванный вечер",
+    "price": "20–100",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-58",
+    "category": "Одежда и внешний вид",
+    "name": "Рваная одежда",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "quality": "плохое",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-59",
+    "category": "Одежда и внешний вид",
+    "name": "Простая одежда",
+    "price": "3",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-60",
+    "category": "Одежда и внешний вид",
+    "name": "Рабочая одежда",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-61",
+    "category": "Одежда и внешний вид",
+    "name": "Дорожная одежда",
+    "price": "8",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "обычное",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-62",
+    "category": "Одежда и внешний вид",
+    "name": "Тёплый плащ",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-63",
+    "category": "Одежда и внешний вид",
+    "name": "Хороший дорожный плащ",
+    "price": "25",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-64",
+    "category": "Одежда и внешний вид",
+    "name": "Городская приличная одежда",
+    "price": "30",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-65",
+    "category": "Одежда и внешний вид",
+    "name": "Красивая одежда",
+    "price": "75",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-66",
+    "category": "Одежда и внешний вид",
+    "name": "Одежда богатого купца",
+    "price": "150",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-67",
+    "category": "Одежда и внешний вид",
+    "name": "Одежда дворянского уровня",
+    "price": "300–800",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-68",
+    "category": "Одежда и внешний вид",
+    "name": "Парадная одежда",
+    "price": "500",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма",
+    "notes": "От 500 GP и выше."
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-69",
+    "category": "Одежда и внешний вид",
+    "name": "Маскарадный костюм",
+    "price": "100–500",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-70",
+    "category": "Одежда и внешний вид",
+    "name": "Скрытый карман в одежде",
+    "price": "+25",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма",
+    "notes": "Доплата к стоимости одежды у портного."
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-71",
+    "category": "Одежда и внешний вид",
+    "name": "Тайный пояс для монет",
+    "price": "30",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Продаётся на сером рынке."
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-72",
+    "category": "Одежда и внешний вид",
+    "name": "Водоотталкивающий плащ",
+    "price": "75",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-73",
+    "category": "Одежда и внешний вид",
+    "name": "Меховой плащ",
+    "price": "100–300",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-74",
+    "category": "Одежда и внешний вид",
+    "name": "Плащ с гербом",
+    "price": "150",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма",
+    "notes": "От 150 GP и выше, требует прав на герб."
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-75",
+    "category": "Одежда и внешний вид",
+    "name": "Униформа слуги",
+    "price": "20",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-76",
+    "category": "Одежда и внешний вид",
+    "name": "Фальшивая форма работника",
+    "price": "50–150",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Продаётся на сером рынке, рискованная покупка."
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-77",
+    "category": "Одежда и внешний вид",
+    "name": "Качественные сапоги",
+    "price": "25",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-78",
+    "category": "Одежда и внешний вид",
+    "name": "Сапоги для горных дорог",
+    "price": "50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-одежда-и-внешний-вид-79",
+    "category": "Одежда и внешний вид",
+    "name": "Сапоги дворянского качества",
+    "price": "100",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма",
+    "notes": "От 100 GP и выше."
+  },
+  {
+    "id": "eco-бытовые-товары-80",
+    "category": "Бытовые товары",
+    "name": "Свеча",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-81",
+    "category": "Бытовые товары",
+    "name": "Факел",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-82",
+    "category": "Бытовые товары",
+    "name": "Масло, фляга",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-83",
+    "category": "Бытовые товары",
+    "name": "Кремень и огниво",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-бытовые-товары-84",
+    "category": "Бытовые товары",
+    "name": "Мешок",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-85",
+    "category": "Бытовые товары",
+    "name": "Фляга",
+    "price": "3",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-86",
+    "category": "Бытовые товары",
+    "name": "Бурдюк",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-87",
+    "category": "Бытовые товары",
+    "name": "Ведро",
+    "price": "3",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-88",
+    "category": "Бытовые товары",
+    "name": "Корзина",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-89",
+    "category": "Бытовые товары",
+    "name": "Одеяло",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-90",
+    "category": "Бытовые товары",
+    "name": "Кошель",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-91",
+    "category": "Бытовые товары",
+    "name": "Лампа",
+    "price": "2",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-92",
+    "category": "Бытовые товары",
+    "name": "Хорошая лампа",
+    "price": "5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-93",
+    "category": "Бытовые товары",
+    "name": "Чернила",
+    "price": "20",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-yorik-maps"
+    ]
+  },
+  {
+    "id": "eco-бытовые-товары-94",
+    "category": "Бытовые товары",
+    "name": "Чернильное перо",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-yorik-maps"
+    ]
+  },
+  {
+    "id": "eco-бытовые-товары-95",
+    "category": "Бытовые товары",
+    "name": "Пергамент, лист",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-yorik-maps"
+    ]
+  },
+  {
+    "id": "eco-бытовые-товары-96",
+    "category": "Бытовые товары",
+    "name": "Бумага, лист",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-yorik-maps"
+    ]
+  },
+  {
+    "id": "eco-бытовые-товары-97",
+    "category": "Бытовые товары",
+    "name": "Печать восковая",
+    "price": "2",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-98",
+    "category": "Бытовые товары",
+    "name": "Воск для печати",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-99",
+    "category": "Бытовые товары",
+    "name": "Книга пустая",
+    "price": "25",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-yorik-maps"
+    ]
+  },
+  {
+    "id": "eco-бытовые-товары-100",
+    "category": "Бытовые товары",
+    "name": "Дневник",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-yorik-maps"
+    ]
+  },
+  {
+    "id": "eco-бытовые-товары-101",
+    "category": "Бытовые товары",
+    "name": "Хорошая книга",
+    "price": "50–200",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-102",
+    "category": "Бытовые товары",
+    "name": "Редкая книга",
+    "price": "300",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма",
+    "notes": "От 300 GP и выше, через коллекционеров."
+  },
+  {
+    "id": "eco-бытовые-товары-103",
+    "category": "Бытовые товары",
+    "name": "Сундук простой",
+    "price": "15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-104",
+    "category": "Бытовые товары",
+    "name": "Сундук крепкий",
+    "price": "50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-105",
+    "category": "Бытовые товары",
+    "name": "Сундук с хорошим замком",
+    "price": "150",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-106",
+    "category": "Бытовые товары",
+    "name": "Зеркало маленькое",
+    "price": "15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-107",
+    "category": "Бытовые товары",
+    "name": "Зеркало хорошее",
+    "price": "75",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-108",
+    "category": "Бытовые товары",
+    "name": "Лупа",
+    "price": "150",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-109",
+    "category": "Бытовые товары",
+    "name": "Подзорная труба",
+    "price": "1500",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-110",
+    "category": "Бытовые товары",
+    "name": "Простая посуда",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-111",
+    "category": "Бытовые товары",
+    "name": "Хорошая посуда",
+    "price": "5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-112",
+    "category": "Бытовые товары",
+    "name": "Кухонный набор",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-113",
+    "category": "Бытовые товары",
+    "name": "Бутылка стеклянная",
+    "price": "2",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-114",
+    "category": "Бытовые товары",
+    "name": "Флакон маленький",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-бытовые-товары-115",
+    "category": "Бытовые товары",
+    "name": "Шкатулка",
+    "price": "5–50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-116",
+    "category": "Походное снаряжение",
+    "name": "Верёвка хорошая",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-походное-снаряжение-117",
+    "category": "Походное снаряжение",
+    "name": "Верёвка шёлковая",
+    "price": "30",
+    "currency": "gp",
+    "availability": "редко",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-118",
+    "category": "Походное снаряжение",
+    "name": "Рюкзак хороший",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-походное-снаряжение-119",
+    "category": "Походное снаряжение",
+    "name": "Рюкзак усиленный",
+    "price": "25",
+    "currency": "gp",
+    "availability": "редко",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-120",
+    "category": "Походное снаряжение",
+    "name": "Палатка простая",
+    "price": "8",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-походное-снаряжение-121",
+    "category": "Походное снаряжение",
+    "name": "Палатка хорошая",
+    "price": "20",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-122",
+    "category": "Походное снаряжение",
+    "name": "Палатка зимняя",
+    "price": "60",
+    "currency": "gp",
+    "availability": "редко",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-123",
+    "category": "Походное снаряжение",
+    "name": "Крюк-кошка",
+    "price": "8",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-походное-снаряжение-124",
+    "category": "Походное снаряжение",
+    "name": "Железные крючья",
+    "price": "3",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-125",
+    "category": "Походное снаряжение",
+    "name": "Блок и лебёдка",
+    "price": "5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-126",
+    "category": "Походное снаряжение",
+    "name": "Ломик",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-походное-снаряжение-127",
+    "category": "Походное снаряжение",
+    "name": "Лопата",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-128",
+    "category": "Походное снаряжение",
+    "name": "Кирка",
+    "price": "8",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-129",
+    "category": "Походное снаряжение",
+    "name": "Топорик походный",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-130",
+    "category": "Походное снаряжение",
+    "name": "Железный котелок",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-131",
+    "category": "Походное снаряжение",
+    "name": "Набор посуды",
+    "price": "3",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-132",
+    "category": "Походное снаряжение",
+    "name": "Охотничий капкан",
+    "price": "15",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-133",
+    "category": "Походное снаряжение",
+    "name": "Кандалы простые",
+    "price": "5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-походное-снаряжение-134",
+    "category": "Походное снаряжение",
+    "name": "Кандалы хорошие",
+    "price": "20",
+    "currency": "gp",
+    "availability": "редко",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-135",
+    "category": "Походное снаряжение",
+    "name": "Цепь 10 футов",
+    "price": "10",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-походное-снаряжение-136",
+    "category": "Походное снаряжение",
+    "name": "Фонарь закрытый",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-137",
+    "category": "Походное снаряжение",
+    "name": "Фонарь направленный",
+    "price": "15",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-138",
+    "category": "Походное снаряжение",
+    "name": "Масляная лампа походная",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-139",
+    "category": "Походное снаряжение",
+    "name": "Дорожный плащ от дождя",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-140",
+    "category": "Походное снаряжение",
+    "name": "Тёплое одеяло",
+    "price": "3",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-141",
+    "category": "Походное снаряжение",
+    "name": "Набор костровой",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-142",
+    "category": "Походное снаряжение",
+    "name": "Полевой ремонтный набор",
+    "price": "15",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-143",
+    "category": "Походное снаряжение",
+    "name": "Маленькая пила",
+    "price": "8",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-144",
+    "category": "Походное снаряжение",
+    "name": "Ручная тележка",
+    "price": "30",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-145",
+    "category": "Походное снаряжение",
+    "name": "Сани",
+    "price": "50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "Доступны сезонно, зимой."
+  },
+  {
+    "id": "eco-походное-снаряжение-146",
+    "category": "Походное снаряжение",
+    "name": "Лёгкая складная лестница",
+    "price": "25",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-147",
+    "category": "Походное снаряжение",
+    "name": "Сетка охотничья",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-148",
+    "category": "Походное снаряжение",
+    "name": "Рыболовная снасть",
+    "price": "3",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-походное-снаряжение-149",
+    "category": "Походное снаряжение",
+    "name": "Маскировочная сеть",
+    "price": "30",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-150",
+    "category": "Карты, навигация и информация",
+    "name": "Простая карта города",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-yorik-maps"
+    ]
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-151",
+    "category": "Карты, навигация и информация",
+    "name": "Карта окрестностей",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-yorik-maps"
+    ]
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-152",
+    "category": "Карты, навигация и информация",
+    "name": "Карта торговых дорог",
+    "price": "25",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-yorik-maps"
+    ]
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-153",
+    "category": "Карты, навигация и информация",
+    "name": "Подробная карта трактов",
+    "price": "50",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-154",
+    "category": "Карты, навигация и информация",
+    "name": "Карта опасных мест",
+    "price": "75–150",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-155",
+    "category": "Карты, навигация и информация",
+    "name": "Карта старых руин",
+    "price": "100–300",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-156",
+    "category": "Карты, навигация и информация",
+    "name": "Военная карта",
+    "price": "300",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "От 300 GP, продажа незаконна."
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-157",
+    "category": "Карты, навигация и информация",
+    "name": "Карта подземных путей",
+    "price": "500",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма",
+    "notes": "От 500 GP и выше."
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-158",
+    "category": "Карты, навигация и информация",
+    "name": "Устный слух",
+    "price": "1–5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-159",
+    "category": "Карты, навигация и информация",
+    "name": "Полезный слух",
+    "price": "1–5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-160",
+    "category": "Карты, навигация и информация",
+    "name": "Проверенная информация",
+    "price": "10–50",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-161",
+    "category": "Карты, навигация и информация",
+    "name": "Имя нужного человека",
+    "price": "25–100",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-162",
+    "category": "Карты, навигация и информация",
+    "name": "Доступ к закрытой встрече",
+    "price": "50–250",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-163",
+    "category": "Карты, навигация и информация",
+    "name": "Услуга информатора",
+    "price": "10–100",
+    "currency": "gp",
+    "availability": "серый рынок",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-карты-навигация-и-ин-164",
+    "category": "Карты, навигация и информация",
+    "name": "Молчание информатора",
+    "price": "100",
+    "currency": "gp",
+    "availability": "серый рынок",
+    "source": "Экономика Грейхольма",
+    "notes": "Дороже самой услуги — от 100 GP."
+  },
+  {
+    "id": "eco-замки-ловушки-и-безо-165",
+    "category": "Замки, ловушки и безопасность",
+    "name": "Замок простой",
+    "price": "15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-замки-ловушки-и-безо-166",
+    "category": "Замки, ловушки и безопасность",
+    "name": "Замок хороший",
+    "price": "40",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-замки-ловушки-и-безо-167",
+    "category": "Замки, ловушки и безопасность",
+    "name": "Замок мастерской работы",
+    "price": "100–250",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-замки-ловушки-и-безо-168",
+    "category": "Замки, ловушки и безопасность",
+    "name": "Сундук с простым замком",
+    "price": "30",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-замки-ловушки-и-безо-169",
+    "category": "Замки, ловушки и безопасность",
+    "name": "Сундук с хорошим замком",
+    "price": "100",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-замки-ловушки-и-безо-170",
+    "category": "Замки, ловушки и безопасность",
+    "name": "Потайной ящик",
+    "price": "75–200",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-замки-ловушки-и-безо-171",
+    "category": "Замки, ловушки и безопасность",
+    "name": "Тайник в мебели",
+    "price": "100–300",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-замки-ловушки-и-безо-172",
+    "category": "Замки, ловушки и безопасность",
+    "name": "Установка простой ловушки",
+    "price": "25–75",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Услуга серого рынка."
+  },
+  {
+    "id": "eco-замки-ловушки-и-безо-173",
+    "category": "Замки, ловушки и безопасность",
+    "name": "Установка сложной ловушки",
+    "price": "150–500",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-замки-ловушки-и-безо-174",
+    "category": "Замки, ловушки и безопасность",
+    "name": "Сигнальный колокольчик",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-замки-ловушки-и-безо-175",
+    "category": "Замки, ловушки и безопасность",
+    "name": "Дверной засов хороший",
+    "price": "20",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-замки-ловушки-и-безо-176",
+    "category": "Замки, ловушки и безопасность",
+    "name": "Усиление двери",
+    "price": "50–150",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма",
+    "notes": "Работа мастера."
+  },
+  {
+    "id": "eco-замки-ловушки-и-безо-177",
+    "category": "Замки, ловушки и безопасность",
+    "name": "Ночная охрана комнаты",
+    "price": "10–25",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-замки-ловушки-и-безо-178",
+    "category": "Замки, ловушки и безопасность",
+    "name": "Охрана склада за ночь",
+    "price": "25–100",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-инструменты-и-наборы-179",
+    "category": "Инструменты и наборы",
+    "name": "Набор путешественника",
+    "price": "15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-инструменты-и-наборы-180",
+    "category": "Инструменты и наборы",
+    "name": "Набор исследователя подземелий",
+    "price": "20",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-mirra-olden"
+    ]
+  },
+  {
+    "id": "eco-инструменты-и-наборы-181",
+    "category": "Инструменты и наборы",
+    "name": "Набор альпиниста",
+    "price": "35",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-инструменты-и-наборы-182",
+    "category": "Инструменты и наборы",
+    "name": "Набор взломщика простой",
+    "price": "30",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Серый рынок."
+  },
+  {
+    "id": "eco-инструменты-и-наборы-183",
+    "category": "Инструменты и наборы",
+    "name": "Инструменты вора хорошие",
+    "price": "100",
+    "currency": "gp",
+    "availability": "редко",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-инструменты-и-наборы-184",
+    "category": "Инструменты и наборы",
+    "name": "Инструменты вора мастерские",
+    "price": "250",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма",
+    "notes": "Чёрный рынок."
+  },
+  {
+    "id": "eco-инструменты-и-наборы-185",
+    "category": "Инструменты и наборы",
+    "name": "Набор травника",
+    "price": "15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-lina-waters"
+    ]
+  },
+  {
+    "id": "eco-инструменты-и-наборы-186",
+    "category": "Инструменты и наборы",
+    "name": "Набор каллиграфа",
+    "price": "20",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-yorik-maps"
+    ]
+  },
+  {
+    "id": "eco-инструменты-и-наборы-187",
+    "category": "Инструменты и наборы",
+    "name": "Набор плотника",
+    "price": "25",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-инструменты-и-наборы-188",
+    "category": "Инструменты и наборы",
+    "name": "Набор каменщика",
+    "price": "25",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-инструменты-и-наборы-189",
+    "category": "Инструменты и наборы",
+    "name": "Набор кузнеца",
+    "price": "50",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-инструменты-и-наборы-190",
+    "category": "Инструменты и наборы",
+    "name": "Набор кожевника",
+    "price": "30",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-инструменты-и-наборы-191",
+    "category": "Инструменты и наборы",
+    "name": "Набор сапожника",
+    "price": "25",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-инструменты-и-наборы-192",
+    "category": "Инструменты и наборы",
+    "name": "Набор повара",
+    "price": "15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-инструменты-и-наборы-193",
+    "category": "Инструменты и наборы",
+    "name": "Набор пивовара",
+    "price": "30",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-инструменты-и-наборы-194",
+    "category": "Инструменты и наборы",
+    "name": "Набор художника",
+    "price": "25",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-инструменты-и-наборы-195",
+    "category": "Инструменты и наборы",
+    "name": "Набор ювелира",
+    "price": "75",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-инструменты-и-наборы-196",
+    "category": "Инструменты и наборы",
+    "name": "Набор алхимика хороший",
+    "price": "100",
+    "currency": "gp",
+    "availability": "редко",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-lina-waters"
+    ]
+  },
+  {
+    "id": "eco-инструменты-и-наборы-197",
+    "category": "Инструменты и наборы",
+    "name": "Набор отравителя",
+    "price": "150",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Запрещён к свободной продаже."
+  },
+  {
+    "id": "eco-инструменты-и-наборы-198",
+    "category": "Инструменты и наборы",
+    "name": "Инструменты навигатора",
+    "price": "50",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-yorik-maps"
+    ]
+  },
+  {
+    "id": "eco-инструменты-и-наборы-199",
+    "category": "Инструменты и наборы",
+    "name": "Инструменты картографа",
+    "price": "40",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-yorik-maps"
+    ]
+  },
+  {
+    "id": "eco-инструменты-и-наборы-200",
+    "category": "Инструменты и наборы",
+    "name": "Сумка компонентов",
+    "price": "30",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "У мага или храма."
+  },
+  {
+    "id": "eco-инструменты-и-наборы-201",
+    "category": "Инструменты и наборы",
+    "name": "Магический фокус простой",
+    "price": "20",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-temple-of-order"
+    ]
+  },
+  {
+    "id": "eco-инструменты-и-наборы-202",
+    "category": "Инструменты и наборы",
+    "name": "Магический фокус хороший",
+    "price": "50–100",
+    "currency": "gp",
+    "availability": "редко",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-инструменты-и-наборы-203",
+    "category": "Инструменты и наборы",
+    "name": "Священный символ простой",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-temple-of-order"
+    ]
+  },
+  {
+    "id": "eco-инструменты-и-наборы-204",
+    "category": "Инструменты и наборы",
+    "name": "Священный символ хороший",
+    "price": "50",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-temple-of-order"
+    ]
+  },
+  {
+    "id": "eco-инструменты-и-наборы-205",
+    "category": "Инструменты и наборы",
+    "name": "Священный символ серебряный",
+    "price": "100",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма",
+    "notes": "От 100 GP, изготавливается на заказ."
+  },
+  {
+    "id": "eco-оружие-206",
+    "category": "Оружие",
+    "name": "Большая дубина",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-207",
+    "category": "Оружие",
+    "name": "Боевой посох (запасной)",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-208",
+    "category": "Оружие",
+    "name": "Дротик",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-209",
+    "category": "Оружие",
+    "name": "Праща",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-210",
+    "category": "Оружие",
+    "name": "Метательное копьё",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-211",
+    "category": "Оружие",
+    "name": "Серп",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-212",
+    "category": "Оружие",
+    "name": "Кинжал хороший",
+    "price": "5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-оружие-213",
+    "category": "Оружие",
+    "name": "Кинжал скрытого ношения",
+    "price": "15–30",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Серый рынок."
+  },
+  {
+    "id": "eco-оружие-214",
+    "category": "Оружие",
+    "name": "Лёгкий молот",
+    "price": "2",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-215",
+    "category": "Оружие",
+    "name": "Ручной топор",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-216",
+    "category": "Оружие",
+    "name": "Булава",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-217",
+    "category": "Оружие",
+    "name": "Лёгкий арбалет",
+    "price": "25",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-оружие-218",
+    "category": "Оружие",
+    "name": "Охотничий короткий лук хороший",
+    "price": "40",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-219",
+    "category": "Оружие",
+    "name": "Праща охотничья хорошая",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-220",
+    "category": "Оружие",
+    "name": "Пика",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-221",
+    "category": "Оружие",
+    "name": "Трезубец",
+    "price": "8",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-222",
+    "category": "Оружие",
+    "name": "Боевой клевец",
+    "price": "8",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-223",
+    "category": "Оружие",
+    "name": "Цеп",
+    "price": "12",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-224",
+    "category": "Оружие",
+    "name": "Короткий меч",
+    "price": "12",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-оружие-225",
+    "category": "Оружие",
+    "name": "Моргенштерн",
+    "price": "18",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-226",
+    "category": "Оружие",
+    "name": "Боевой молот",
+    "price": "18",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-оружие-227",
+    "category": "Оружие",
+    "name": "Глефа",
+    "price": "25",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-228",
+    "category": "Оружие",
+    "name": "Скимитар",
+    "price": "35",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-229",
+    "category": "Оружие",
+    "name": "Секира",
+    "price": "40",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-оружие-230",
+    "category": "Оружие",
+    "name": "Двуручный меч",
+    "price": "60",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-оружие-231",
+    "category": "Оружие",
+    "name": "Длинный лук",
+    "price": "60",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-232",
+    "category": "Оружие",
+    "name": "Тяжёлый арбалет",
+    "price": "60",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма",
+    "notes": "Бывает под заказ.",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-оружие-233",
+    "category": "Оружие",
+    "name": "Ручной арбалет хороший",
+    "price": "110–125",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-234",
+    "category": "Оружие",
+    "name": "Ручной арбалет гарнизонного качества",
+    "price": "150",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "quality": "гарнизонное",
+    "source": "Экономика Грейхольма",
+    "notes": "Доступен через связи с гарнизоном."
+  },
+  {
+    "id": "eco-оружие-235",
+    "category": "Оружие",
+    "name": "Компактный ручной арбалет",
+    "price": "150–200",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-236",
+    "category": "Оружие",
+    "name": "Скрытый ручной арбалет",
+    "price": "250–350",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Чёрный рынок."
+  },
+  {
+    "id": "eco-оружие-237",
+    "category": "Оружие",
+    "name": "Запястный арбалет",
+    "price": "300–500",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Незаконное оружие."
+  },
+  {
+    "id": "eco-оружие-238",
+    "category": "Оружие",
+    "name": "Духовая трубка",
+    "price": "20",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-239",
+    "category": "Оружие",
+    "name": "Скрытая трость-клинок",
+    "price": "150–300",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Чёрный рынок."
+  },
+  {
+    "id": "eco-оружие-240",
+    "category": "Оружие",
+    "name": "Парные дуэльные кинжалы",
+    "price": "50–150",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-241",
+    "category": "Оружие",
+    "name": "Церемониальный меч",
+    "price": "100–500",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-242",
+    "category": "Оружие",
+    "name": "Офицерский меч",
+    "price": "150",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "От 150 GP, доступен через связи."
+  },
+  {
+    "id": "eco-оружие-243",
+    "category": "Оружие",
+    "name": "Гарнизонное копьё",
+    "price": "10",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "quality": "гарнизонное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-оружие-244",
+    "category": "Оружие",
+    "name": "Гарнизонный арбалет",
+    "price": "100",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "quality": "гарнизонное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-мини-арбалеты-245",
+    "category": "Мини-арбалеты",
+    "name": "Мини-арбалет обычный",
+    "price": "90–120",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма",
+    "notes": "Урон 1d6 колющий, дистанция 30/90 футов, свойства: Боеприпас, Перезарядка, Лёгкое, вес 2 фунта. Не замена ручному арбалету в открытом бою — ценен компактностью."
+  },
+  {
+    "id": "eco-мини-арбалеты-246",
+    "category": "Мини-арбалеты",
+    "name": "Складной мини-арбалет",
+    "price": "150",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма",
+    "notes": "Урон 1d6 колющий, дистанция 20/80 футов, свойства: Боеприпас, Перезарядка, Лёгкое. Складная конструкция — легче спрятать."
+  },
+  {
+    "id": "eco-мини-арбалеты-247",
+    "category": "Мини-арбалеты",
+    "name": "Запястный мини-арбалет",
+    "price": "300–500",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Урон 1d4 колющий, дистанция 20/60 футов, свойства: Боеприпас, Перезарядка, Скрытое — можно спрятать под одеждой. Инструмент убийцы, шпиона или контрабандиста, не охотника. Незаконно / чёрный рынок."
+  },
+  {
+    "id": "eco-боеприпасы-248",
+    "category": "Боеприпасы",
+    "name": "Стрелы, 20 шт.",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-боеприпасы-249",
+    "category": "Боеприпасы",
+    "name": "Хорошие стрелы, 20 шт.",
+    "price": "3",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-боеприпасы-250",
+    "category": "Боеприпасы",
+    "name": "Болты, 20 шт.",
+    "price": "1",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-боеприпасы-251",
+    "category": "Боеприпасы",
+    "name": "Хорошие болты, 20 шт.",
+    "price": "3",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-боеприпасы-252",
+    "category": "Боеприпасы",
+    "name": "Мини-болты, 20 шт.",
+    "price": "3–5",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-боеприпасы-253",
+    "category": "Боеприпасы",
+    "name": "Камни для пращи, 20 шт.",
+    "price": "1",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-боеприпасы-254",
+    "category": "Боеприпасы",
+    "name": "Иглы для духовой трубки, 20 шт.",
+    "price": "2",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-боеприпасы-255",
+    "category": "Боеприпасы",
+    "name": "Серебряные стрелы, 10 шт.",
+    "price": "25",
+    "currency": "gp",
+    "availability": "редко",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-боеприпасы-256",
+    "category": "Боеприпасы",
+    "name": "Серебряные болты, 10 шт.",
+    "price": "25",
+    "currency": "gp",
+    "availability": "редко",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-боеприпасы-257",
+    "category": "Боеприпасы",
+    "name": "Серебряные мини-болты, 10 шт.",
+    "price": "40",
+    "currency": "gp",
+    "availability": "редко",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-боеприпасы-258",
+    "category": "Боеприпасы",
+    "name": "Колчан простой",
+    "price": "2",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-боеприпасы-259",
+    "category": "Боеприпасы",
+    "name": "Колчан хороший",
+    "price": "5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-боеприпасы-260",
+    "category": "Боеприпасы",
+    "name": "Футляр для болтов",
+    "price": "2",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-боеприпасы-261",
+    "category": "Боеприпасы",
+    "name": "Скрытый футляр для болтов",
+    "price": "10",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Серый рынок."
+  },
+  {
+    "id": "eco-боеприпасы-262",
+    "category": "Боеприпасы",
+    "name": "Маскированный колчан",
+    "price": "25",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Серый рынок."
+  },
+  {
+    "id": "eco-боеприпасы-263",
+    "category": "Боеприпасы",
+    "name": "Ядовитые болты",
+    "price": "100",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Незаконны, продаются только на чёрном рынке."
+  },
+  {
+    "id": "eco-боеприпасы-264",
+    "category": "Боеприпасы",
+    "name": "Гарнизонные болты",
+    "price": "5",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "quality": "гарнизонное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-л-гкая-265",
+    "category": "Броня: лёгкая",
+    "name": "Стёганая броня",
+    "price": "8",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-броня-л-гкая-266",
+    "category": "Броня: лёгкая",
+    "name": "Кожаная броня простая",
+    "price": "15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-броня-л-гкая-267",
+    "category": "Броня: лёгкая",
+    "name": "Кожаная броня хорошая",
+    "price": "25",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-броня-л-гкая-268",
+    "category": "Броня: лёгкая",
+    "name": "Кожаная броня подогнанная",
+    "price": "40",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-л-гкая-269",
+    "category": "Броня: лёгкая",
+    "name": "Проклёпанная кожаная броня",
+    "price": "75",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "Цель для накопления на 1 уровне — серьёзная, но достижимая покупка."
+  },
+  {
+    "id": "eco-броня-л-гкая-270",
+    "category": "Броня: лёгкая",
+    "name": "Проклёпанная кожа хорошая",
+    "price": "110",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-л-гкая-271",
+    "category": "Броня: лёгкая",
+    "name": "Проклёпанная кожа скрытого ношения",
+    "price": "150–250",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма",
+    "notes": "Менее заметна под одеждой."
+  },
+  {
+    "id": "eco-броня-л-гкая-272",
+    "category": "Броня: лёгкая",
+    "name": "Дорожная броня охотника",
+    "price": "60–120",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-л-гкая-273",
+    "category": "Броня: лёгкая",
+    "name": "Лёгкая броня с гербом",
+    "price": "150",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма",
+    "notes": "От 150 GP, требует прав на герб."
+  },
+  {
+    "id": "eco-броня-средняя-274",
+    "category": "Броня: средняя",
+    "name": "Шкурная броня",
+    "price": "15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-средняя-275",
+    "category": "Броня: средняя",
+    "name": "Шкурная броня хорошая",
+    "price": "30",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-средняя-276",
+    "category": "Броня: средняя",
+    "name": "Кольчужная рубаха",
+    "price": "75",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-броня-средняя-277",
+    "category": "Броня: средняя",
+    "name": "Кольчужная рубаха хорошая",
+    "price": "110",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-средняя-278",
+    "category": "Броня: средняя",
+    "name": "Чешуйчатый доспех",
+    "price": "75",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-броня-средняя-279",
+    "category": "Броня: средняя",
+    "name": "Чешуйчатый доспех хороший",
+    "price": "125",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-средняя-280",
+    "category": "Броня: средняя",
+    "name": "Кираса",
+    "price": "500",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-средняя-281",
+    "category": "Броня: средняя",
+    "name": "Кираса хорошая",
+    "price": "700",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-средняя-282",
+    "category": "Броня: средняя",
+    "name": "Кираса гарнизонного качества",
+    "price": "900",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "quality": "гарнизонное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-средняя-283",
+    "category": "Броня: средняя",
+    "name": "Полулаты",
+    "price": "1000",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-средняя-284",
+    "category": "Броня: средняя",
+    "name": "Полулаты хорошие",
+    "price": "1300",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-средняя-285",
+    "category": "Броня: средняя",
+    "name": "Полулаты гарнизонного качества",
+    "price": "1500",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "quality": "гарнизонное",
+    "source": "Экономика Грейхольма",
+    "notes": "От 1500 GP и выше."
+  },
+  {
+    "id": "eco-броня-тяж-лая-286",
+    "category": "Броня: тяжёлая",
+    "name": "Кольчатый доспех",
+    "price": "45",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-броня-тяж-лая-287",
+    "category": "Броня: тяжёлая",
+    "name": "Кольчатый доспех хороший",
+    "price": "70",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-тяж-лая-288",
+    "category": "Броня: тяжёлая",
+    "name": "Кольчуга",
+    "price": "100",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-броня-тяж-лая-289",
+    "category": "Броня: тяжёлая",
+    "name": "Кольчуга подогнанная",
+    "price": "150",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-тяж-лая-290",
+    "category": "Броня: тяжёлая",
+    "name": "Кольчуга хорошая",
+    "price": "200",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-тяж-лая-291",
+    "category": "Броня: тяжёлая",
+    "name": "Шинный доспех",
+    "price": "300",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-тяж-лая-292",
+    "category": "Броня: тяжёлая",
+    "name": "Шинный доспех хороший",
+    "price": "450",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-тяж-лая-293",
+    "category": "Броня: тяжёлая",
+    "name": "Шинный доспех гарнизонный",
+    "price": "600",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "quality": "гарнизонное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-тяж-лая-294",
+    "category": "Броня: тяжёлая",
+    "name": "Латы",
+    "price": "1800–2200",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-броня-тяж-лая-295",
+    "category": "Броня: тяжёлая",
+    "name": "Латы хорошего качества",
+    "price": "2500–3000",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма",
+    "notes": "Доступны дворянам / под заказ."
+  },
+  {
+    "id": "eco-броня-тяж-лая-296",
+    "category": "Броня: тяжёлая",
+    "name": "Латы мастерской работы",
+    "price": "3500–5000",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма",
+    "notes": "Доступны дворянам и гарнизону."
+  },
+  {
+    "id": "eco-броня-тяж-лая-297",
+    "category": "Броня: тяжёлая",
+    "name": "Парадные латы",
+    "price": "5000",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма",
+    "notes": "От 5000 GP, только у дворян."
+  },
+  {
+    "id": "eco-щиты-298",
+    "category": "Щиты",
+    "name": "Щит простой",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order",
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-щиты-299",
+    "category": "Щиты",
+    "name": "Щит хороший",
+    "price": "20",
+    "currency": "gp",
+    "availability": "свободно",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-щиты-300",
+    "category": "Щиты",
+    "name": "Щит укреплённый",
+    "price": "35",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-щиты-301",
+    "category": "Щиты",
+    "name": "Щит гарнизонного качества",
+    "price": "50",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "quality": "гарнизонное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-щиты-302",
+    "category": "Щиты",
+    "name": "Украшенный щит",
+    "price": "75–200",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-щиты-303",
+    "category": "Щиты",
+    "name": "Щит с гербом",
+    "price": "100–300",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-щиты-304",
+    "category": "Щиты",
+    "name": "Большой церемониальный щит",
+    "price": "300",
+    "currency": "gp",
+    "availability": "под заказ",
+    "quality": "мастерская работа",
+    "source": "Экономика Грейхольма",
+    "notes": "От 300 GP и выше."
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-305",
+    "category": "Ремонт оружия и брони",
+    "name": "Починить лёгкую броню",
+    "price": "5–15",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova",
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-306",
+    "category": "Ремонт оружия и брони",
+    "name": "Подогнать лёгкую броню",
+    "price": "10–25",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-307",
+    "category": "Ремонт оружия и брони",
+    "name": "Починить среднюю броню",
+    "price": "25–75",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-308",
+    "category": "Ремонт оружия и брони",
+    "name": "Подогнать среднюю броню",
+    "price": "50–150",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-309",
+    "category": "Ремонт оружия и брони",
+    "name": "Починить тяжёлую броню",
+    "price": "75–250",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-310",
+    "category": "Ремонт оружия и брони",
+    "name": "Подогнать тяжёлую броню",
+    "price": "150–500",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-311",
+    "category": "Ремонт оружия и брони",
+    "name": "Снять гербы / знаки",
+    "price": "10–100",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма",
+    "notes": "Может вызвать вопросы у мастера."
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-312",
+    "category": "Ремонт оружия и брони",
+    "name": "Перекрасить броню",
+    "price": "20–100",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-313",
+    "category": "Ремонт оружия и брони",
+    "name": "Сделать броню приличной для города",
+    "price": "25–150",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-314",
+    "category": "Ремонт оружия и брони",
+    "name": "Скрыть происхождение брони",
+    "price": "100",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "От 100 GP и риск — серый рынок."
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-315",
+    "category": "Ремонт оружия и брони",
+    "name": "Починить простое оружие",
+    "price": "1–5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-316",
+    "category": "Ремонт оружия и брони",
+    "name": "Починить воинское оружие",
+    "price": "5–20",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova",
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-317",
+    "category": "Ремонт оружия и брони",
+    "name": "Переточить меч",
+    "price": "2",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-318",
+    "category": "Ремонт оружия и брони",
+    "name": "Заменить рукоять",
+    "price": "5–20",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-brom-zheleznaya-podkova"
+    ]
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-319",
+    "category": "Ремонт оружия и брони",
+    "name": "Починить лук",
+    "price": "5–25",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-320",
+    "category": "Ремонт оружия и брони",
+    "name": "Починить арбалет",
+    "price": "10–40",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-321",
+    "category": "Ремонт оружия и брони",
+    "name": "Настроить арбалет",
+    "price": "5–15",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-gretta-garrison-order"
+    ]
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-322",
+    "category": "Ремонт оружия и брони",
+    "name": "Убрать чужие знаки",
+    "price": "5–50",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-323",
+    "category": "Ремонт оружия и брони",
+    "name": "Сделать оружие презентабельным",
+    "price": "10–100",
+    "currency": "gp",
+    "availability": "под заказ",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-ремонт-оружия-и-брон-324",
+    "category": "Ремонт оружия и брони",
+    "name": "Срочный ремонт",
+    "price": "x2 от обычной цены",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "Срочный заказ стоит вдвое дороже обычного ремонта."
+  },
+  {
+    "id": "eco-алхимия-и-редкие-тов-325",
+    "category": "Алхимия и редкие товары",
+    "name": "Зелье лечения у перекупщика",
+    "price": "75–100",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-алхимия-и-редкие-тов-326",
+    "category": "Алхимия и редкие товары",
+    "name": "Зелье лечения со скидкой от храма",
+    "price": "40–50",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "По репутации в Храме Порядка.",
+    "soldAt": [
+      "shop-temple-of-order"
+    ]
+  },
+  {
+    "id": "eco-алхимия-и-редкие-тов-327",
+    "category": "Алхимия и редкие товары",
+    "name": "Базовый яд",
+    "price": "150",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Запрещён к свободной продаже."
+  },
+  {
+    "id": "eco-алхимия-и-редкие-тов-328",
+    "category": "Алхимия и редкие товары",
+    "name": "Сонный порошок",
+    "price": "100–250",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Чёрный рынок."
+  },
+  {
+    "id": "eco-алхимия-и-редкие-тов-329",
+    "category": "Алхимия и редкие товары",
+    "name": "Дымовая смесь",
+    "price": "50–150",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Серый рынок."
+  },
+  {
+    "id": "eco-алхимия-и-редкие-тов-330",
+    "category": "Алхимия и редкие товары",
+    "name": "Вонючая бомба",
+    "price": "25",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Серый рынок."
+  },
+  {
+    "id": "eco-алхимия-и-редкие-тов-331",
+    "category": "Алхимия и редкие товары",
+    "name": "Слепящий порошок",
+    "price": "75–200",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Серый рынок."
+  },
+  {
+    "id": "eco-алхимия-и-редкие-тов-332",
+    "category": "Алхимия и редкие товары",
+    "name": "Быстрогорящая смесь",
+    "price": "100",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-алхимия-и-редкие-тов-333",
+    "category": "Алхимия и редкие товары",
+    "name": "Реагент для ритуала простой",
+    "price": "10–50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-lina-waters"
+    ]
+  },
+  {
+    "id": "eco-алхимия-и-редкие-тов-334",
+    "category": "Алхимия и редкие товары",
+    "name": "Редкий реагент",
+    "price": "100–500",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-алхимия-и-редкие-тов-335",
+    "category": "Алхимия и редкие товары",
+    "name": "Монстрячий яд",
+    "price": "100–500",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Чёрный рынок."
+  },
+  {
+    "id": "eco-алхимия-и-редкие-тов-336",
+    "category": "Алхимия и редкие товары",
+    "name": "Серебряная пыль",
+    "price": "25–100",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-temple-of-order"
+    ]
+  },
+  {
+    "id": "eco-алхимия-и-редкие-тов-337",
+    "category": "Алхимия и редкие товары",
+    "name": "Освящённая соль",
+    "price": "10–50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-temple-of-order"
+    ]
+  },
+  {
+    "id": "eco-магические-услуги-338",
+    "category": "Магические услуги",
+    "name": "Заговор",
+    "price": "30",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-temple-of-order"
+    ]
+  },
+  {
+    "id": "eco-магические-услуги-339",
+    "category": "Магические услуги",
+    "name": "Заклинание 1 круга",
+    "price": "50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-temple-of-order"
+    ]
+  },
+  {
+    "id": "eco-магические-услуги-340",
+    "category": "Магические услуги",
+    "name": "Заклинание 2 круга",
+    "price": "200",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-магические-услуги-341",
+    "category": "Магические услуги",
+    "name": "Заклинание 3 круга",
+    "price": "300",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Только через специалиста."
+  },
+  {
+    "id": "eco-магические-услуги-342",
+    "category": "Магические услуги",
+    "name": "Заклинание 4–5 круга",
+    "price": "2000",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-магические-услуги-343",
+    "category": "Магические услуги",
+    "name": "Диагностика магии",
+    "price": "25–75",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-магические-услуги-344",
+    "category": "Магические услуги",
+    "name": "Снятие простого проклятия",
+    "price": "200–500",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-магические-услуги-345",
+    "category": "Магические услуги",
+    "name": "Срочная магическая помощь ночью",
+    "price": "x2 от обычной цены",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена услуги удваивается."
+  },
+  {
+    "id": "eco-магические-услуги-346",
+    "category": "Магические услуги",
+    "name": "Лицензированная магическая экспертиза",
+    "price": "100–300",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Бюрократическая процедура."
+  },
+  {
+    "id": "eco-магические-услуги-347",
+    "category": "Магические услуги",
+    "name": "Магическая печать документа",
+    "price": "50–150",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-магические-услуги-348",
+    "category": "Магические услуги",
+    "name": "Очистка помещения от мелкой порчи",
+    "price": "100–300",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-temple-of-order"
+    ]
+  },
+  {
+    "id": "eco-магические-услуги-349",
+    "category": "Магические услуги",
+    "name": "Благословение перед дорогой",
+    "price": "10–50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-temple-of-order"
+    ]
+  },
+  {
+    "id": "eco-магические-услуги-350",
+    "category": "Магические услуги",
+    "name": "Погребальный обряд",
+    "price": "5–100",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-temple-of-order"
+    ]
+  },
+  {
+    "id": "eco-магические-предметы-351",
+    "category": "Магические предметы",
+    "name": "Шкала редкости: Common",
+    "price": "100",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма",
+    "notes": "Базовая ориентировочная цена для предметов уровня Common."
+  },
+  {
+    "id": "eco-магические-предметы-352",
+    "category": "Магические предметы",
+    "name": "Шкала редкости: Uncommon",
+    "price": "400",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма",
+    "notes": "Базовая ориентировочная цена для предметов уровня Uncommon."
+  },
+  {
+    "id": "eco-магические-предметы-353",
+    "category": "Магические предметы",
+    "name": "Шкала редкости: Rare",
+    "price": "4000",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма",
+    "notes": "Базовая ориентировочная цена для предметов уровня Rare."
+  },
+  {
+    "id": "eco-магические-предметы-354",
+    "category": "Магические предметы",
+    "name": "Шкала редкости: Very Rare",
+    "price": "40000",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма",
+    "notes": "Базовая ориентировочная цена для предметов уровня Very Rare."
+  },
+  {
+    "id": "eco-магические-предметы-355",
+    "category": "Магические предметы",
+    "name": "Шкала редкости: Legendary",
+    "price": "200000",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма",
+    "notes": "Базовая ориентировочная цена для предметов уровня Legendary."
+  },
+  {
+    "id": "eco-магические-предметы-356",
+    "category": "Магические предметы",
+    "name": "Самонагревающаяся кружка",
+    "price": "100",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма",
+    "notes": "Бытовая магия без боевого преимущества."
+  },
+  {
+    "id": "eco-магические-предметы-357",
+    "category": "Магические предметы",
+    "name": "Амулет от дурных снов",
+    "price": "100–200",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-магические-предметы-358",
+    "category": "Магические предметы",
+    "name": "Негаснущая свеча",
+    "price": "100",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-магические-предметы-359",
+    "category": "Магические предметы",
+    "name": "Камень слабого света",
+    "price": "100–150",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-магические-предметы-360",
+    "category": "Магические предметы",
+    "name": "Одноразовый оберег от страха",
+    "price": "150–300",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-temple-of-order"
+    ]
+  },
+  {
+    "id": "eco-магические-предметы-361",
+    "category": "Магические предметы",
+    "name": "Амулет удачи без механики",
+    "price": "50–200",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "shop-temple-of-order"
+    ]
+  },
+  {
+    "id": "eco-магические-предметы-362",
+    "category": "Магические предметы",
+    "name": "Магическая печать подлинности",
+    "price": "100",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "От 100 GP, выдаётся официально."
+  },
+  {
+    "id": "eco-транспорт-и-животные-363",
+    "category": "Транспорт и животные",
+    "name": "Мул",
+    "price": "30",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-364",
+    "category": "Транспорт и животные",
+    "name": "Осёл",
+    "price": "20",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-365",
+    "category": "Транспорт и животные",
+    "name": "Пони",
+    "price": "50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-366",
+    "category": "Транспорт и животные",
+    "name": "Лошадь рабочая",
+    "price": "75",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-367",
+    "category": "Транспорт и животные",
+    "name": "Лошадь верховая",
+    "price": "100",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-368",
+    "category": "Транспорт и животные",
+    "name": "Лошадь хорошая",
+    "price": "200",
+    "currency": "gp",
+    "availability": "редко",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-369",
+    "category": "Транспорт и животные",
+    "name": "Боевой конь",
+    "price": "400",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма",
+    "notes": "От 400 GP, чаще доступен военным."
+  },
+  {
+    "id": "eco-транспорт-и-животные-370",
+    "category": "Транспорт и животные",
+    "name": "Повозка простая",
+    "price": "50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-371",
+    "category": "Транспорт и животные",
+    "name": "Повозка крепкая",
+    "price": "100",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-372",
+    "category": "Транспорт и животные",
+    "name": "Карета простая",
+    "price": "250",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-373",
+    "category": "Транспорт и животные",
+    "name": "Карета богатая",
+    "price": "1000",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма",
+    "notes": "От 1000 GP, доступна дворянам."
+  },
+  {
+    "id": "eco-транспорт-и-животные-374",
+    "category": "Транспорт и животные",
+    "name": "Седло простое",
+    "price": "20",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-375",
+    "category": "Транспорт и животные",
+    "name": "Седло хорошее",
+    "price": "50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-376",
+    "category": "Транспорт и животные",
+    "name": "Седло военное",
+    "price": "100",
+    "currency": "gp",
+    "availability": "редко",
+    "quality": "гарнизонное",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-377",
+    "category": "Транспорт и животные",
+    "name": "Упряжь",
+    "price": "10",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-378",
+    "category": "Транспорт и животные",
+    "name": "Корм на день",
+    "price": "5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-379",
+    "category": "Транспорт и животные",
+    "name": "Стойло на ночь",
+    "price": "5–10",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "soldAt": [
+      "tavern-severny-ochag"
+    ]
+  },
+  {
+    "id": "eco-транспорт-и-животные-380",
+    "category": "Транспорт и животные",
+    "name": "Уход за лошадью",
+    "price": "1–5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-381",
+    "category": "Транспорт и животные",
+    "name": "Лечение животного",
+    "price": "5–50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-382",
+    "category": "Транспорт и животные",
+    "name": "Аренда лошади на день",
+    "price": "5–15",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-383",
+    "category": "Транспорт и животные",
+    "name": "Аренда повозки на день",
+    "price": "10–25",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-транспорт-и-животные-384",
+    "category": "Транспорт и животные",
+    "name": "Наём возницы на день",
+    "price": "2–10",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-услуги-обычных-работ-385",
+    "category": "Услуги обычных работников",
+    "name": "Чернорабочий на день",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-услуги-обычных-работ-386",
+    "category": "Услуги обычных работников",
+    "name": "Носильщик на день",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-услуги-обычных-работ-387",
+    "category": "Услуги обычных работников",
+    "name": "Конюх на день",
+    "price": "2",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-услуги-обычных-работ-388",
+    "category": "Услуги обычных работников",
+    "name": "Посыльный по городу",
+    "price": "1–5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-услуги-обычных-работ-389",
+    "category": "Услуги обычных работников",
+    "name": "Посыльный между поселениями",
+    "price": "1–5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-услуги-обычных-работ-390",
+    "category": "Услуги обычных работников",
+    "name": "Писец на день",
+    "price": "2",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-услуги-обычных-работ-391",
+    "category": "Услуги обычных работников",
+    "name": "Ремесленник на день",
+    "price": "2",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-услуги-обычных-работ-392",
+    "category": "Услуги обычных работников",
+    "name": "Хороший ремесленник на день",
+    "price": "5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "quality": "хорошее",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-услуги-обычных-работ-393",
+    "category": "Услуги обычных работников",
+    "name": "Охранник на день",
+    "price": "2",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-услуги-обычных-работ-394",
+    "category": "Услуги обычных работников",
+    "name": "Опытный охранник на день",
+    "price": "5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-услуги-обычных-работ-395",
+    "category": "Услуги обычных работников",
+    "name": "Проводник по окрестностям",
+    "price": "5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена за день."
+  },
+  {
+    "id": "eco-услуги-обычных-работ-396",
+    "category": "Услуги обычных работников",
+    "name": "Следопыт по опасной местности",
+    "price": "10–25",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена за день."
+  },
+  {
+    "id": "eco-услуги-обычных-работ-397",
+    "category": "Услуги обычных работников",
+    "name": "Носильщики для груза",
+    "price": "1–5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена за день."
+  },
+  {
+    "id": "eco-услуги-обычных-работ-398",
+    "category": "Услуги обычных работников",
+    "name": "Грузчики для каравана",
+    "price": "5–20",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена за день."
+  },
+  {
+    "id": "eco-услуги-обычных-работ-399",
+    "category": "Услуги обычных работников",
+    "name": "Переводчик",
+    "price": "5–25",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена за день."
+  },
+  {
+    "id": "eco-услуги-обычных-работ-400",
+    "category": "Услуги обычных работников",
+    "name": "Писарь для документов",
+    "price": "5–20",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-услуги-обычных-работ-401",
+    "category": "Услуги обычных работников",
+    "name": "Глашатай",
+    "price": "5–25",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-услуги-обычных-работ-402",
+    "category": "Услуги обычных работников",
+    "name": "Частный повар",
+    "price": "5–20",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена за день."
+  },
+  {
+    "id": "eco-на-мники-и-охрана-403",
+    "category": "Наёмники и охрана",
+    "name": "Ночной сторож",
+    "price": "2–5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-на-мники-и-охрана-404",
+    "category": "Наёмники и охрана",
+    "name": "Обычный охранник на день",
+    "price": "5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-на-мники-и-охрана-405",
+    "category": "Наёмники и охрана",
+    "name": "Опытный охранник",
+    "price": "10",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена за день."
+  },
+  {
+    "id": "eco-на-мники-и-охрана-406",
+    "category": "Наёмники и охрана",
+    "name": "Ветеран-наёмник",
+    "price": "20–50",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена за день."
+  },
+  {
+    "id": "eco-на-мники-и-охрана-407",
+    "category": "Наёмники и охрана",
+    "name": "Малый отряд охраны",
+    "price": "100–300",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена за день."
+  },
+  {
+    "id": "eco-на-мники-и-охрана-408",
+    "category": "Наёмники и охрана",
+    "name": "Караванная охрана",
+    "price": "50–200",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена за участок пути."
+  },
+  {
+    "id": "eco-на-мники-и-охрана-409",
+    "category": "Наёмники и охрана",
+    "name": "Телохранитель",
+    "price": "25–100",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена за день."
+  },
+  {
+    "id": "eco-на-мники-и-охрана-410",
+    "category": "Наёмники и охрана",
+    "name": "Телохранитель высокого уровня",
+    "price": "150",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "От 150 GP за день."
+  },
+  {
+    "id": "eco-на-мники-и-охрана-411",
+    "category": "Наёмники и охрана",
+    "name": "Сопровождение важного лица",
+    "price": "100–500",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-на-мники-и-охрана-412",
+    "category": "Наёмники и охрана",
+    "name": "Охрана тайной встречи",
+    "price": "50–300",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-на-мники-и-охрана-413",
+    "category": "Наёмники и охрана",
+    "name": "Охрана склада на ночь",
+    "price": "25–100",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--414",
+    "category": "Социальные услуги и взятки",
+    "name": "Мелкое ускорение очереди",
+    "price": "1–5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--415",
+    "category": "Социальные услуги и взятки",
+    "name": "Подкуп мелкого служащего",
+    "price": "10–50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--416",
+    "category": "Социальные услуги и взятки",
+    "name": "Подкуп стражника",
+    "price": "25–100",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--417",
+    "category": "Социальные услуги и взятки",
+    "name": "Подкуп сержанта",
+    "price": "100–300",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--418",
+    "category": "Социальные услуги и взятки",
+    "name": "Подкуп офицера",
+    "price": "300",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "От 300 GP и серьёзный риск."
+  },
+  {
+    "id": "eco-социальные-услуги-и--419",
+    "category": "Социальные услуги и взятки",
+    "name": "Молчание свидетеля",
+    "price": "10–100",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--420",
+    "category": "Социальные услуги и взятки",
+    "name": "Молчание опасного свидетеля",
+    "price": "100–500",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--421",
+    "category": "Социальные услуги и взятки",
+    "name": "Доступ в закрытый архив",
+    "price": "50–300",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--422",
+    "category": "Социальные услуги и взятки",
+    "name": "Ложная справка",
+    "price": "100–500",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--423",
+    "category": "Социальные услуги и взятки",
+    "name": "Поддельная печать",
+    "price": "300",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "От 300 GP, чёрный рынок."
+  },
+  {
+    "id": "eco-социальные-услуги-и--424",
+    "category": "Социальные услуги и взятки",
+    "name": "Временное разрешение на оружие",
+    "price": "25–100",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--425",
+    "category": "Социальные услуги и взятки",
+    "name": "Официальная лицензия",
+    "price": "100–500",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--426",
+    "category": "Социальные услуги и взятки",
+    "name": "Встреча с чиновником",
+    "price": "25–200",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--427",
+    "category": "Социальные услуги и взятки",
+    "name": "Встреча с важным чиновником",
+    "price": "200",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма",
+    "notes": "От 200 GP и выше."
+  },
+  {
+    "id": "eco-социальные-услуги-и--428",
+    "category": "Социальные услуги и взятки",
+    "name": "Юридическая помощь",
+    "price": "50–500",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--429",
+    "category": "Социальные услуги и взятки",
+    "name": "Штраф за мелкое нарушение",
+    "price": "5–50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--430",
+    "category": "Социальные услуги и взятки",
+    "name": "Штраф за оружие без разрешения",
+    "price": "50–300",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--431",
+    "category": "Социальные услуги и взятки",
+    "name": "Штраф за драку",
+    "price": "20–200",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-социальные-услуги-и--432",
+    "category": "Социальные услуги и взятки",
+    "name": "Выкуп из заключения",
+    "price": "100",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма",
+    "notes": "От 100 GP, если вообще разрешён."
+  },
+  {
+    "id": "eco-ч-рный-рынок-433",
+    "category": "Чёрный рынок",
+    "name": "Скрытый кинжал",
+    "price": "15–30",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Риск: низкий."
+  },
+  {
+    "id": "eco-ч-рный-рынок-434",
+    "category": "Чёрный рынок",
+    "name": "Отмычки без вопросов",
+    "price": "50–100",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Риск: средний."
+  },
+  {
+    "id": "eco-ч-рный-рынок-435",
+    "category": "Чёрный рынок",
+    "name": "Поддельный пропуск",
+    "price": "100–300",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Риск: высокий."
+  },
+  {
+    "id": "eco-ч-рный-рынок-436",
+    "category": "Чёрный рынок",
+    "name": "Поддельная печать",
+    "price": "300–1000",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Риск: высокий."
+  },
+  {
+    "id": "eco-ч-рный-рынок-437",
+    "category": "Чёрный рынок",
+    "name": "Яд слабый",
+    "price": "150",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Риск: высокий."
+  },
+  {
+    "id": "eco-ч-рный-рынок-438",
+    "category": "Чёрный рынок",
+    "name": "Яд сильный",
+    "price": "300–1000",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Риск: высокий."
+  },
+  {
+    "id": "eco-ч-рный-рынок-439",
+    "category": "Чёрный рынок",
+    "name": "Сонный порошок (чёрный рынок)",
+    "price": "100–250",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Риск: средний."
+  },
+  {
+    "id": "eco-ч-рный-рынок-440",
+    "category": "Чёрный рынок",
+    "name": "Запястный арбалет (чёрный рынок)",
+    "price": "300–500",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Риск: высокий."
+  },
+  {
+    "id": "eco-ч-рный-рынок-441",
+    "category": "Чёрный рынок",
+    "name": "Скрытый ручной арбалет (чёрный рынок)",
+    "price": "250–350",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Риск: высокий."
+  },
+  {
+    "id": "eco-ч-рный-рынок-442",
+    "category": "Чёрный рынок",
+    "name": "Краденое оружие",
+    "price": "50–80% цены",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Риск: высокий. Цена считается от обычной цены аналогичного оружия."
+  },
+  {
+    "id": "eco-ч-рный-рынок-443",
+    "category": "Чёрный рынок",
+    "name": "Краденая броня",
+    "price": "30–70% цены",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Риск: высокий. Цена считается от обычной цены аналогичной брони."
+  },
+  {
+    "id": "eco-ч-рный-рынок-444",
+    "category": "Чёрный рынок",
+    "name": "Информация о патрулях",
+    "price": "50–300",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Риск: высокий."
+  },
+  {
+    "id": "eco-ч-рный-рынок-445",
+    "category": "Чёрный рынок",
+    "name": "Услуга контрабандиста",
+    "price": "100–500",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Риск: высокий."
+  },
+  {
+    "id": "eco-ч-рный-рынок-446",
+    "category": "Чёрный рынок",
+    "name": "Вывоз человека из города",
+    "price": "300",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма",
+    "notes": "От 300 GP. Риск: очень высокий."
+  },
+  {
+    "id": "eco-ч-рный-рынок-447",
+    "category": "Чёрный рынок",
+    "name": "Заказ на запугивание",
+    "price": "100",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "От 100 GP. Риск: высокий."
+  },
+  {
+    "id": "eco-ч-рный-рынок-448",
+    "category": "Чёрный рынок",
+    "name": "Заказ на убийство",
+    "price": "сюжетно",
+    "currency": "gp",
+    "availability": "почти недоступно",
+    "source": "Экономика Грейхольма",
+    "notes": "Цена и доступность определяются сюжетно — крайне высокий риск, обычно не для PC."
+  },
+  {
+    "id": "eco-награды-за-квесты-449",
+    "category": "Награды за квесты",
+    "name": "Очень мелкое поручение (за группу)",
+    "price": "10–20",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Например: отнести письмо, найти пропавшую собаку, помочь лавочнику."
+  },
+  {
+    "id": "eco-награды-за-квесты-450",
+    "category": "Награды за квесты",
+    "name": "Простое поручение (за группу)",
+    "price": "20–50",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Разнять драку, поймать мелкого вора, донести посылку."
+  },
+  {
+    "id": "eco-награды-за-квесты-451",
+    "category": "Награды за квесты",
+    "name": "Неприятное поручение (за группу)",
+    "price": "1–3",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Присмотреть за телегой, помочь трактирщику, найти потерянный товар."
+  },
+  {
+    "id": "eco-награды-за-квесты-452",
+    "category": "Награды за квесты",
+    "name": "Мелкая работа с риском (за группу)",
+    "price": "3–8",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-453",
+    "category": "Награды за квесты",
+    "name": "Работа для начинающих авантюристов (за группу)",
+    "price": "5–15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Такие задания нужны не ради богатства, а ради знакомства с городом."
+  },
+  {
+    "id": "eco-награды-за-квесты-454",
+    "category": "Награды за квесты",
+    "name": "Малый контракт: простая работа без боя (за группу)",
+    "price": "15–25",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Например: проверить дорогу, доставить груз в соседнюю деревню."
+  },
+  {
+    "id": "eco-награды-за-квесты-455",
+    "category": "Награды за квесты",
+    "name": "Малый контракт: работа с возможной опасностью (за группу)",
+    "price": "25–40",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Найти пропавшего посыльного, проверить заброшенный дом."
+  },
+  {
+    "id": "eco-награды-за-квесты-456",
+    "category": "Награды за квесты",
+    "name": "Малый контракт: с одним лёгким боем (за группу)",
+    "price": "40–60",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Прогнать волков, разобраться с кражей."
+  },
+  {
+    "id": "eco-награды-за-квесты-457",
+    "category": "Награды за квесты",
+    "name": "Малый контракт: работа за городом (за группу)",
+    "price": "50–75",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Сопроводить телегу до фермы, проверить старый склад."
+  },
+  {
+    "id": "eco-награды-за-квесты-458",
+    "category": "Награды за квесты",
+    "name": "Малый контракт: с риском для репутации (за группу)",
+    "price": "50–100",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Найти источник странного шума, изгнать кобольдов с моста."
+  },
+  {
+    "id": "eco-награды-за-квесты-459",
+    "category": "Награды за квесты",
+    "name": "Опасный контракт: лёгкий бой (за группу)",
+    "price": "50",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Например: гоблины у дороги, волки у фермы."
+  },
+  {
+    "id": "eco-награды-за-квесты-460",
+    "category": "Награды за квесты",
+    "name": "Опасный контракт: один серьёзный бой (за группу)",
+    "price": "60–80",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Бандиты на тракте, нежить на старом кладбище."
+  },
+  {
+    "id": "eco-награды-за-квесты-461",
+    "category": "Награды за квесты",
+    "name": "Опасный контракт: несколько мелких боёв (за группу)",
+    "price": "80–100",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Логово крыс в подвале, нападения на дровосеков."
+  },
+  {
+    "id": "eco-награды-за-квесты-462",
+    "category": "Награды за квесты",
+    "name": "Опасный контракт: место с ловушками (за группу)",
+    "price": "100–125",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Вернуть украденный ящик, найти пропавшего разведчика."
+  },
+  {
+    "id": "eco-награды-за-квесты-463",
+    "category": "Награды за квесты",
+    "name": "Опасный контракт: есть риск смерти (за группу)",
+    "price": "125–150",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Пропавший караван и подобные опасные дела."
+  },
+  {
+    "id": "eco-награды-за-квесты-464",
+    "category": "Награды за квесты",
+    "name": "Крупный контракт: простой (за группу)",
+    "price": "100",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Зачистить маленькое логово, вернуть украденный груз."
+  },
+  {
+    "id": "eco-награды-за-квесты-465",
+    "category": "Награды за квесты",
+    "name": "Крупный контракт: сложный (за группу)",
+    "price": "125–150",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Спасти пленника, поймать главаря банды."
+  },
+  {
+    "id": "eco-награды-за-квесты-466",
+    "category": "Награды за квесты",
+    "name": "Крупный контракт: от власти или богатого торговца (за группу)",
+    "price": "150–200",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Раскрыть маленькую ячейку культа, вернуть печать чиновника."
+  },
+  {
+    "id": "eco-награды-за-квесты-467",
+    "category": "Награды за квесты",
+    "name": "Крупный контракт: очень щедрый для 1 уровня (за группу)",
+    "price": "200–250",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма",
+    "notes": "Больше 250 GP за контракт на 1 уровне лучше не давать, если это не сюжетный момент."
+  },
+  {
+    "id": "eco-награды-за-квесты-468",
+    "category": "Награды за квесты",
+    "name": "Бонус: принесли доказательство выполнения",
+    "price": "+10",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-469",
+    "category": "Награды за квесты",
+    "name": "Бонус: вернули украденный товар целым",
+    "price": "+20–50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-470",
+    "category": "Награды за квесты",
+    "name": "Бонус: спасли пленника",
+    "price": "+20–50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-471",
+    "category": "Награды за квесты",
+    "name": "Бонус: никто из мирных не погиб",
+    "price": "+20–40",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-472",
+    "category": "Награды за квесты",
+    "name": "Бонус: поймали врага живым",
+    "price": "+20–50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-473",
+    "category": "Награды за квесты",
+    "name": "Бонус: узнали важную информацию",
+    "price": "+10–30",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-474",
+    "category": "Награды за квесты",
+    "name": "Бонус: выполнили быстро",
+    "price": "+10–25",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-475",
+    "category": "Награды за квесты",
+    "name": "Бонус: выполнили без шума",
+    "price": "+25–50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-476",
+    "category": "Награды за квесты",
+    "name": "Бонус: сохранили репутацию заказчика",
+    "price": "+25–75",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-477",
+    "category": "Награды за квесты",
+    "name": "Бонус: вернули документы или печати",
+    "price": "+25–100",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-478",
+    "category": "Награды за квесты",
+    "name": "Бонус: договорились без бойни",
+    "price": "+10–50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-479",
+    "category": "Награды за квесты",
+    "name": "Бонус: не разрушили имущество",
+    "price": "+10–30",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-480",
+    "category": "Награды за квесты",
+    "name": "Бонус: привели свидетеля",
+    "price": "+25–75",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-481",
+    "category": "Награды за квесты",
+    "name": "Неденежная награда: бесплатный ночлег",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Хорошая альтернатива золоту, чтобы не разгонять экономику."
+  },
+  {
+    "id": "eco-награды-за-квесты-482",
+    "category": "Награды за квесты",
+    "name": "Неденежная награда: еда на дорогу",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-483",
+    "category": "Награды за квесты",
+    "name": "Неденежная награда: скидка у кузнеца / в лавке",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-484",
+    "category": "Награды за квесты",
+    "name": "Неденежная награда: бесплатный ремонт оружия / подгонка брони",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-485",
+    "category": "Награды за квесты",
+    "name": "Неденежная награда: 1 зелье лечения на группу",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-486",
+    "category": "Награды за квесты",
+    "name": "Неденежная награда: карта, информация или слух",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-487",
+    "category": "Награды за квесты",
+    "name": "Неденежная награда: рекомендация гильдии / доступ к закрытому контракту",
+    "price": "0",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-488",
+    "category": "Награды за квесты",
+    "name": "Неденежная награда: уважение стражи / личная благодарность NPC",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-489",
+    "category": "Награды за квесты",
+    "name": "Неденежная награда: право купить редкий товар или заказать вещь у мастера",
+    "price": "0",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-490",
+    "category": "Награды за квесты",
+    "name": "Неденежная награда: знакомство с чиновником / письмо-поручительство",
+    "price": "0",
+    "currency": "gp",
+    "availability": "через гильдию",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-491",
+    "category": "Награды за квесты",
+    "name": "Неденежная награда: бесплатная юридическая помощь / безопасный проход / скидка в храме",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-награды-за-квесты-492",
+    "category": "Награды за квесты",
+    "name": "Стартовый запас на группу: бедный темп",
+    "price": "80–120",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Суммарно на группу за первые 2-3 задания."
+  },
+  {
+    "id": "eco-награды-за-квесты-493",
+    "category": "Награды за квесты",
+    "name": "Стартовый запас на группу: нормальный темп",
+    "price": "150–250",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Рекомендуемый темп для Грейхольма. На группу из 4 — около 50 GP на персонажа: хватает на оружие, щит, часть снаряжения, набор лекаря, начало накоплений на броню или ручной арбалет (75 GP), но не на всё сразу."
+  },
+  {
+    "id": "eco-награды-за-квесты-494",
+    "category": "Награды за квесты",
+    "name": "Стартовый запас на группу: щедрый темп",
+    "price": "250–350",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-495",
+    "category": "Добыча с врагов",
+    "name": "Обычный зверь / монстр без разума (деньги)",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Волк, гигантская крыса, медведь, паук — деньги отсутствуют."
+  },
+  {
+    "id": "eco-добыча-с-врагов-496",
+    "category": "Добыча с врагов",
+    "name": "Шкура волка",
+    "price": "2–5",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "Можно продать скорняку или в лавку дорожных товаров."
+  },
+  {
+    "id": "eco-добыча-с-врагов-497",
+    "category": "Добыча с врагов",
+    "name": "Хорошая шкура",
+    "price": "5–15",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-498",
+    "category": "Добыча с врагов",
+    "name": "Клыки / когти",
+    "price": "1–5",
+    "currency": "sp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-499",
+    "category": "Добыча с врагов",
+    "name": "Ядовитая железа",
+    "price": "10–50",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма",
+    "notes": "Интересна алхимикам."
+  },
+  {
+    "id": "eco-добыча-с-врагов-500",
+    "category": "Добыча с врагов",
+    "name": "Редкий орган монстра",
+    "price": "25–100",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-501",
+    "category": "Добыча с врагов",
+    "name": "Целая туша зверя",
+    "price": "5–50",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "Если есть кому продать (мясник, таверна)."
+  },
+  {
+    "id": "eco-добыча-с-врагов-502",
+    "category": "Добыча с врагов",
+    "name": "Бедный гоблин (деньги при себе)",
+    "price": "1–5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-503",
+    "category": "Добыча с врагов",
+    "name": "Обычный гоблин (деньги при себе)",
+    "price": "5–10",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-504",
+    "category": "Добыча с врагов",
+    "name": "Гоблин-разведчик (деньги при себе)",
+    "price": "1–2",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-505",
+    "category": "Добыча с врагов",
+    "name": "Гоблин-грабитель (деньги при себе)",
+    "price": "2–5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-506",
+    "category": "Добыча с врагов",
+    "name": "Гоблин-командир (деньги при себе)",
+    "price": "10–25",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-507",
+    "category": "Добыча с врагов",
+    "name": "Гоблин-главарь мелкой шайки (деньги при себе)",
+    "price": "25–50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-508",
+    "category": "Добыча с врагов",
+    "name": "Доп. добыча гоблинов",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Плохой кинжал, короткий лук, плохой щит, украденная еда, мешок мелких монет, дешёвые украшения, амулет племени, часть груза, карта тропы, странный символ, ключ от тайника."
+  },
+  {
+    "id": "eco-добыча-с-врагов-509",
+    "category": "Добыча с врагов",
+    "name": "Бедный бандит (деньги при себе)",
+    "price": "5–10",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-510",
+    "category": "Добыча с врагов",
+    "name": "Обычный бандит (деньги при себе)",
+    "price": "1–5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-511",
+    "category": "Добыча с врагов",
+    "name": "Бандит после удачного грабежа (деньги при себе)",
+    "price": "5–15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-512",
+    "category": "Добыча с врагов",
+    "name": "Бандит-ветеран (деньги при себе)",
+    "price": "15–30",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-513",
+    "category": "Добыча с врагов",
+    "name": "Сержант банды (деньги при себе)",
+    "price": "30–60",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-514",
+    "category": "Добыча с врагов",
+    "name": "Главарь мелкой банды (деньги при себе)",
+    "price": "75–150",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-515",
+    "category": "Добыча с врагов",
+    "name": "Доп. добыча бандитов",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Кинжал, короткий меч, арбалет, кожаная броня, краденый кошель, кольцо жертвы, карта засады, письмо от заказчика, часть украденного груза, список жертв, фальшивый пропуск, ключ от склада."
+  },
+  {
+    "id": "eco-добыча-с-врагов-516",
+    "category": "Добыча с врагов",
+    "name": "Бедный культист (деньги при себе)",
+    "price": "1–5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-517",
+    "category": "Добыча с врагов",
+    "name": "Обычный культист (деньги при себе)",
+    "price": "5 sp – 2 gp",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-518",
+    "category": "Добыча с врагов",
+    "name": "Культист-посвящённый (деньги при себе)",
+    "price": "5–15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-519",
+    "category": "Добыча с врагов",
+    "name": "Жрец культа (деньги при себе)",
+    "price": "25–75",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-520",
+    "category": "Добыча с врагов",
+    "name": "Лидер ячейки культа (деньги при себе)",
+    "price": "100–250",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-521",
+    "category": "Добыча с врагов",
+    "name": "Доп. добыча культистов",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Символ культа, ритуальный нож, записка с именем, странный порошок, свечи, книга ритуалов, ключ, карта тайного места, редкий реагент, амулет, кровь в флаконе, кусок старой ткани с символом."
+  },
+  {
+    "id": "eco-добыча-с-врагов-522",
+    "category": "Добыча с врагов",
+    "name": "Скелет / зомби (деньги)",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-523",
+    "category": "Добыча с врагов",
+    "name": "Труп старого солдата (деньги)",
+    "price": "0–5",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-524",
+    "category": "Добыча с врагов",
+    "name": "Нежить в гробнице (ценности)",
+    "price": "5–30",
+    "currency": "gp",
+    "availability": "есть не всегда",
+    "source": "Экономика Грейхольма",
+    "notes": "В старых вещах рядом с останками."
+  },
+  {
+    "id": "eco-добыча-с-врагов-525",
+    "category": "Добыча с врагов",
+    "name": "Нежить бывшего дворянина (украшения)",
+    "price": "50–200",
+    "currency": "gp",
+    "availability": "редко",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-526",
+    "category": "Добыча с врагов",
+    "name": "Доп. добыча нежити",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Старые монеты, кольцо, медальон, ржавая брошь, фамильный знак, оружие, ключ, погребальные украшения, старый приказ, карта, семейная печать."
+  },
+  {
+    "id": "eco-добыча-с-врагов-527",
+    "category": "Добыча с врагов",
+    "name": "Рядовой наёмник (деньги при себе)",
+    "price": "5–15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-528",
+    "category": "Добыча с врагов",
+    "name": "Опытный наёмник (деньги при себе)",
+    "price": "15–40",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-529",
+    "category": "Добыча с врагов",
+    "name": "Сержант наёмников (деньги при себе)",
+    "price": "40–100",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-530",
+    "category": "Добыча с врагов",
+    "name": "Командир отряда наёмников (деньги при себе)",
+    "price": "100–250",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-531",
+    "category": "Добыча с врагов",
+    "name": "Элитный наёмник (деньги при себе)",
+    "price": "150–400",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-532",
+    "category": "Добыча с врагов",
+    "name": "Доп. добыча наёмников",
+    "price": "0",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Качественное оружие, броня, контракт, жетон отряда, карта маршрута, приказ, аванс, трофеи, письмо от нанимателя, печать компании, список выплат."
+  },
+  {
+    "id": "eco-добыча-с-врагов-533",
+    "category": "Добыча с врагов",
+    "name": "Рекрут (деньги при себе)",
+    "price": "1–5",
+    "currency": "sp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-534",
+    "category": "Добыча с врагов",
+    "name": "Обычный солдат (деньги при себе)",
+    "price": "5 sp – 2 gp",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-535",
+    "category": "Добыча с врагов",
+    "name": "Ветеран-солдат (деньги при себе)",
+    "price": "5–15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-536",
+    "category": "Добыча с врагов",
+    "name": "Сержант (деньги при себе)",
+    "price": "20–50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-537",
+    "category": "Добыча с врагов",
+    "name": "Офицер (деньги при себе)",
+    "price": "75–200",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-добыча-с-врагов-538",
+    "category": "Добыча с врагов",
+    "name": "Доп. добыча солдат",
+    "price": "0",
+    "currency": "gp",
+    "availability": "ограничено законом",
+    "source": "Экономика Грейхольма",
+    "notes": "Армейский жетон, приказ, печать, ключ, сухой паёк, оружие, часть жалования, личное письмо, карта маршрута, список патрулей. Важно: убийство и обыск солдат может иметь юридические последствия."
+  },
+  {
+    "id": "eco-тайники-и-сокровища-539",
+    "category": "Тайники и сокровища",
+    "name": "Маленький тайник: монеты",
+    "price": "10–30",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Для гоблинов, мелких воров, бедных бандитов."
+  },
+  {
+    "id": "eco-тайники-и-сокровища-540",
+    "category": "Тайники и сокровища",
+    "name": "Маленький тайник: мелкие товары",
+    "price": "10–25",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-тайники-и-сокровища-541",
+    "category": "Тайники и сокровища",
+    "name": "Маленький тайник: украшения",
+    "price": "10–50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-тайники-и-сокровища-542",
+    "category": "Тайники и сокровища",
+    "name": "Маленький тайник: еда и припасы",
+    "price": "5–15",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-тайники-и-сокровища-543",
+    "category": "Тайники и сокровища",
+    "name": "Маленький тайник: плохое оружие",
+    "price": "5–20",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-тайники-и-сокровища-544",
+    "category": "Тайники и сокровища",
+    "name": "Маленький тайник: ключ или карта",
+    "price": "сюжетная ценность",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Украденную вещь лучше вернуть владельцу."
+  },
+  {
+    "id": "eco-тайники-и-сокровища-545",
+    "category": "Тайники и сокровища",
+    "name": "Обычный тайник банды: монеты",
+    "price": "50–150",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-тайники-и-сокровища-546",
+    "category": "Тайники и сокровища",
+    "name": "Обычный тайник банды: украденные товары",
+    "price": "50–200",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-тайники-и-сокровища-547",
+    "category": "Тайники и сокровища",
+    "name": "Обычный тайник банды: простое оружие",
+    "price": "20–75",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-тайники-и-сокровища-548",
+    "category": "Тайники и сокровища",
+    "name": "Обычный тайник банды: украшения",
+    "price": "25–100",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-тайники-и-сокровища-549",
+    "category": "Тайники и сокровища",
+    "name": "Обычный тайник банды: один редкий предмет",
+    "price": "50–150",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-тайники-и-сокровища-550",
+    "category": "Тайники и сокровища",
+    "name": "Обычный тайник банды: зелье лечения",
+    "price": "50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-тайники-и-сокровища-551",
+    "category": "Тайники и сокровища",
+    "name": "Обычный тайник банды: документы / часть груза",
+    "price": "сюжетная ценность",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Часть груза лучше вернуть или продать законно."
+  },
+  {
+    "id": "eco-тайники-и-сокровища-552",
+    "category": "Тайники и сокровища",
+    "name": "Крупный тайник: монеты",
+    "price": "150–300",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Для 1 уровня использовать осторожно."
+  },
+  {
+    "id": "eco-тайники-и-сокровища-553",
+    "category": "Тайники и сокровища",
+    "name": "Крупный тайник: товары",
+    "price": "200–500",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-тайники-и-сокровища-554",
+    "category": "Тайники и сокровища",
+    "name": "Крупный тайник: хорошее оружие",
+    "price": "75–200",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-тайники-и-сокровища-555",
+    "category": "Тайники и сокровища",
+    "name": "Крупный тайник: зелье лечения",
+    "price": "50",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-тайники-и-сокровища-556",
+    "category": "Тайники и сокровища",
+    "name": "Крупный тайник: редкий инструмент",
+    "price": "50–150",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма"
+  },
+  {
+    "id": "eco-тайники-и-сокровища-557",
+    "category": "Тайники и сокровища",
+    "name": "Крупный тайник: залоговый предмет",
+    "price": "100–500",
+    "currency": "gp",
+    "availability": "свободно",
+    "source": "Экономика Грейхольма",
+    "notes": "Важный документ и список заказчиков — сюжетная ценность. Украденные печати опасно хранить. Часть добычи может быть чужой собственностью."
+  }
+]

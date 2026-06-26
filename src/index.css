@@ -1,0 +1,3111 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color-scheme: dark light;
+  --font-heading: 'Cinzel', 'Marcellus', Georgia, serif;
+  --bg: #0e0d0b;
+  --bg-deep: #090807;
+  --bg-card: #16140f;
+  --bg-card-raised: #1c1914;
+  --fg: #e9e2d1;
+  --fg-dim: #a89c84;
+  --fg-faint: #756b58;
+  --gold: #d4af37;
+  --gold-soft: #e5c873;
+  --gold-dim: #8a6f2f;
+  --border: #3a3224;
+  --border-soft: #2a251a;
+  --accent: #d4af37;
+  --danger: #b3413a;
+  --green: #4f9d5b;
+  --amber: #c08a2e;
+  --purple: #8b5fbf;
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  /* Aliases kept in sync with the palette above — referenced in a few older
+   * rules (battle-map thumbnails, drawer subtext) under these names. Defining
+   * them here removes the previously-undefined --bg-dark/--text-muted custom
+   * properties (Etap I visual-foundation cleanup). */
+  --bg-dark: #1a1410;
+  --bg-elevated: #1c1914;
+  --text-muted: var(--fg-dim);
+
+  /* ---------- Visual Plan Stage 1: design tokens ----------
+   * Additive only — every name below either aliases an existing color
+   * above (so nothing already painted on screen changes) or introduces a
+   * spacing/radius/shadow/z-index/motion scale that previously existed
+   * only as scattered inline literals throughout index.css. No selector
+   * below this block was removed; this just gives future rules (and
+   * future visual stages) a shared vocabulary to draw from. */
+
+  /* Semantic color roles — same dark-fantasy palette, named by what they
+   * mean rather than what hex they are, so call sites read as intent. */
+  --color-bg-app: var(--bg);
+  --color-bg-panel: var(--bg-card);
+  --color-bg-panel-elevated: var(--bg-card-raised);
+  --color-bg-map-surface: var(--bg-deep);
+  --color-border-subtle: var(--border-soft);
+  --color-border-strong: var(--border);
+  --color-text-primary: var(--fg);
+  --color-text-secondary: var(--fg-dim);
+  --color-text-muted: var(--fg-faint);
+  --color-accent-primary: var(--gold);
+  --color-accent-secondary: var(--gold-soft);
+  --color-danger: var(--danger);
+  --color-warning: var(--amber);
+  --color-success: var(--green);
+  --color-info: var(--purple);
+  --color-dm-only: var(--gold-dim);
+  --color-player-visible: var(--green);
+  --color-route-normal: var(--accent);
+  --color-route-active: var(--green);
+  --color-route-selected: var(--gold-soft);
+  --color-route-invalid: var(--fg-faint);
+  --color-party-token: var(--gold-soft);
+  --color-selected-outline: var(--gold-soft);
+
+  /* Spacing scale. */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1.25rem;
+  --space-xl: 2rem;
+  --space-panel-padding: 1rem 1.25rem;
+  --space-control-gap: 0.5rem;
+
+  /* Radius scale. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+
+  /* Shadow scale — --shadow above stays the canonical panel shadow; these
+   * are the other recurring glow/shadow shapes already used ad hoc. */
+  --shadow-panel: var(--shadow);
+  --shadow-marker: 0 0 8px rgba(139, 95, 191, 0.7), 0 0 4px rgba(0, 0, 0, 0.6);
+  --shadow-selected-glow: 0 0 0 4px rgba(212, 175, 55, 0.55), 0 0 10px rgba(212, 175, 55, 0.9);
+  --shadow-route-active-glow: 0 0 6px rgba(110, 200, 140, 0.85);
+
+  /* Z-index scale — documents the layering that the SVG/marker code in
+   * MapWorkspacePage.tsx already relies on (see the .party-map-marker and
+   * faction-zone comments below); existing numeric z-index rules are left
+   * as-is to avoid an unrelated mass find/replace, but new rules should
+   * reference this scale. */
+  --z-map-base: 1;
+  --z-zones: 5;
+  --z-routes: 7;
+  --z-markers: 20;
+  --z-party-token: 30;
+  --z-tooltip: 40;
+  --z-panels: 50;
+  --z-modal: 100;
+
+  /* Motion scale. */
+  --motion-fast: 0.1s;
+  --motion-normal: 0.15s;
+  --motion-slow: 0.2s;
+  --motion-tooltip-fade: 0.2s;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse at top, rgba(212, 175, 55, 0.06), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0px, rgba(255, 255, 255, 0.012) 1px, transparent 1px, transparent 3px);
+  color: var(--fg);
+}
+
+h1, h2, h3,
+.brand,
+.side-panel-title,
+.location-name {
+  font-family: var(--font-heading);
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  color: var(--gold-soft);
+}
+
+a {
+  color: var(--gold-soft);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- app shell (left rail + main column) ---------- */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-shell-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- left vertical nav rail ---------- */
+.nav-rail {
+  width: 80px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, var(--bg-card-raised), var(--bg-deep));
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0.6rem 0.4rem;
+  gap: 0.2rem;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 25;
+}
+
+.nav-rail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--fg-dim);
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 0.5rem 0.2rem;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.nav-rail-item:hover:not(:disabled) {
+  background: var(--bg-card);
+  color: var(--gold-soft);
+  border-color: var(--border-soft);
+  text-decoration: none;
+}
+
+.nav-rail-item.active {
+  background: rgba(212, 175, 55, 0.12);
+  border-color: var(--gold-dim);
+  color: var(--gold-soft);
+}
+
+.nav-rail-item-disabled,
+.nav-rail-item-disabled:hover {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: transparent;
+  color: var(--fg-faint);
+  border-color: transparent;
+}
+
+.nav-rail-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.nav-rail-label {
+  line-height: 1.15;
+}
+
+/* ---------- top nav ---------- */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 1.25rem;
+  background: linear-gradient(180deg, var(--bg-card-raised), var(--bg-card));
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  position: relative;
+  z-index: 20;
+}
+
+.navbar-left,
+.navbar-center,
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.navbar-left a:not(.brand) {
+  color: var(--fg-dim);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.3rem 0.2rem;
+  border-bottom: 2px solid transparent;
+}
+.navbar-left a:not(.brand):hover {
+  color: var(--gold-soft);
+  text-decoration: none;
+  border-bottom-color: var(--gold-dim);
+}
+
+.brand {
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.brand-mark {
+  color: var(--gold);
+  margin-right: 0.2rem;
+}
+
+.navbar-menu {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.navbar-text-link {
+  color: var(--fg-dim);
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.navbar-text-link:hover {
+  color: var(--gold-soft);
+}
+
+.navbar-text-link-hint {
+  cursor: help;
+  border-bottom: 1px dashed var(--border);
+}
+
+.navbar-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--gold-soft), var(--gold-dim));
+  color: #1a1306;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+  flex-shrink: 0;
+}
+.navbar-avatar:hover {
+  filter: brightness(1.08);
+  color: #1a1306;
+}
+
+/* segmented control (mode / arc switchers) */
+.segmented {
+  display: inline-flex;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem;
+  gap: 0.15rem;
+}
+
+.segmented-option {
+  background: transparent;
+  border: none;
+  color: var(--fg-dim);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.segmented-option:hover:not(:disabled) {
+  color: var(--fg);
+}
+
+.segmented-option.active {
+  background: linear-gradient(180deg, var(--gold-soft), var(--gold-dim));
+  color: #1a1306;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.segmented-option:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ---------- generic page shell (timeline/quests/admin pages) ---------- */
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.dm-only {
+  border-color: var(--gold-dim);
+  border-style: solid;
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.08), var(--shadow);
+}
+
+.status-badge {
+  display: inline-block;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  font-size: 0.78rem;
+  color: var(--fg-dim);
+}
+
+/* Semantic badge modifiers (Visual Plan Stage 1) — layer onto the base
+ * .status-badge above; existing plain .status-badge usages are untouched
+ * (no behavior change), these are opt-in for call sites that want a
+ * specific semantic color instead of the neutral default. Text content
+ * still carries the meaning — these only add a color cue, never replace
+ * the label, so they stay legible without relying on color alone. */
+.status-badge--dm-only {
+  border-color: var(--color-dm-only);
+  color: var(--gold-soft);
+}
+
+.status-badge--player-visible {
+  border-color: var(--color-player-visible);
+  color: var(--color-player-visible);
+}
+
+.status-badge--hidden {
+  border-color: var(--fg-faint);
+  color: var(--fg-faint);
+  opacity: 0.75;
+}
+
+/* Stage 6C.5 Phase 2 — visibility badge in the compact object overview. */
+.status-badge--visible {
+  border-color: var(--color-player-visible);
+  color: var(--color-player-visible);
+}
+
+.status-badge--active {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.status-badge--danger {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.status-badge--saved {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.status-badge--error {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  background: rgba(179, 65, 58, 0.12);
+}
+
+.status-badge--draft {
+  border-color: var(--fg-dim);
+  color: var(--fg-dim);
+  border-style: dashed;
+}
+
+.status-badge--invalid {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  border-style: dashed;
+}
+
+.status-badge--time-gated {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+.status-badge--observer-safe {
+  border-color: var(--color-player-visible);
+  color: var(--color-player-visible);
+}
+
+/* Button hierarchy (Visual Plan Stage 1) — opt-in modifiers on top of the
+ * existing bare `button` rule above, so every unclassified button keeps
+ * rendering exactly as before. Apply at call sites that have a clear
+ * semantic role (Save = primary, Cancel = secondary/ghost, Delete/
+ * Archive = danger) rather than mass-converting every button blindly. */
+.btn-primary {
+  background: linear-gradient(180deg, var(--gold-soft), var(--gold-dim));
+  color: #1a1306;
+  border-color: var(--gold-dim);
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  color: #1a1306;
+  filter: brightness(1.08);
+}
+
+.btn-secondary {
+  background: var(--bg-card-raised);
+  color: var(--fg-dim);
+  border-color: var(--border);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--fg-dim);
+  border-color: transparent;
+}
+
+.btn-ghost:hover {
+  background: var(--bg-card-raised);
+  color: var(--gold-soft);
+}
+
+.btn-danger {
+  background: var(--bg-card-raised);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: rgba(179, 65, 58, 0.18);
+  color: #f3b6b0;
+  border-color: var(--danger);
+}
+
+.btn-compact {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.82rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.btn-link {
+  background: linear-gradient(180deg, var(--gold-soft), var(--gold-dim));
+  color: #1a1306;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.btn-link.disabled {
+  background: var(--border);
+  color: #777;
+  pointer-events: none;
+}
+
+.quick-links {
+  list-style: none;
+  padding: 0;
+}
+.quick-links li {
+  margin-bottom: 0.4rem;
+}
+
+/* ---------- workspace layout ---------- */
+.workspace {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 56px);
+  background: var(--bg);
+}
+
+.workspace-topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.55rem 1rem;
+  background: linear-gradient(180deg, var(--bg-card-raised), var(--bg-card));
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  flex-wrap: wrap;
+}
+
+.workspace-search {
+  flex: 1;
+  min-width: 180px;
+  max-width: 360px;
+}
+
+.workspace-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.workspace-map-area {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem;
+  gap: 0.75rem;
+  overflow-y: auto;
+}
+
+.workspace-side-panel {
+  width: 400px;
+  max-width: 42vw;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border-soft);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem 1.1rem;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+}
+
+/* Stage 6C.4: every direct child must be allowed to shrink/wrap inside the
+   400px/42vw panel — without min-width:0 a flex/grid child's intrinsic
+   content width (long titles, button rows, image captions) pushes the
+   panel itself into horizontal overflow instead of wrapping. */
+.workspace-side-panel * {
+  min-width: 0;
+}
+
+.workspace-side-panel img {
+  max-width: 100%;
+  height: auto;
+}
+
+.workspace-side-panel h1,
+.workspace-side-panel h2,
+.workspace-side-panel h3,
+.workspace-side-panel p,
+.workspace-side-panel span,
+.workspace-side-panel strong {
+  overflow-wrap: anywhere;
+}
+
+.side-panel-empty {
+  color: var(--fg-faint);
+  font-size: 0.9rem;
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.side-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.side-panel-breadcrumb {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--fg-faint);
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 0.5rem;
+}
+
+.breadcrumb-link {
+  background: none;
+  border: none;
+  color: var(--fg-dim);
+  font-size: 0.78rem;
+  padding: 0;
+  cursor: pointer;
+}
+.breadcrumb-link:hover {
+  color: var(--gold-soft);
+  text-decoration: underline;
+}
+
+.side-panel-close {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  color: var(--fg-dim);
+  border-radius: 999px;
+  width: 26px;
+  height: 26px;
+  line-height: 1;
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.side-panel-close:hover {
+  color: var(--gold-soft);
+  border-color: var(--gold-dim);
+}
+
+.side-panel-title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.side-panel-subheading {
+  font-size: 0.78rem;
+  color: var(--fg-faint);
+  margin: 0.4rem 0 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- entity cards ---------- */
+.entity-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+}
+
+.entity-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  background: var(--bg-card-raised);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  color: var(--fg);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s, background 0.15s;
+}
+
+.entity-card:hover {
+  border-color: var(--gold-dim);
+  background: #221d14;
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.15), 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.entity-card-title {
+  font-weight: 600;
+}
+
+.entity-card-sub {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--fg-dim);
+}
+
+.entity-card-stats {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--fg-dim);
+}
+
+.entity-card-wrap {
+  position: relative;
+}
+
+.entity-card-wrap .entity-card {
+  width: 100%;
+  height: 100%;
+}
+
+.entity-card-place {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  font-size: 0.7rem;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(10, 9, 7, 0.85);
+  border: 1px solid var(--border);
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.entity-card-place:hover {
+  border-color: var(--gold-soft);
+  color: var(--gold-soft);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .entity-card:hover {
+    transform: translateY(-2px);
+  }
+  .entity-card:active {
+    transform: translateY(0);
+  }
+}
+
+.side-panel-content {
+  animation: side-panel-fade 0.18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side-panel-content {
+    animation: none;
+  }
+}
+
+@keyframes side-panel-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- map canvas ---------- */
+.map-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.map-zoom-controls {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.map-canvas {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 420px;
+  background: #0a0907;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.6), var(--shadow);
+}
+
+.map-canvas-zoomable {
+  cursor: grab;
+}
+
+.map-canvas-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* width/height are set inline to the map image's natural pixel size
+     (1280x853); the transform (translate + fit-scale * zoom) positions and
+     scales this element within the overflow:hidden viewport. */
+}
+
+.map-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-faint);
+  font-size: 0.9rem;
+  font-family: var(--font-heading);
+}
+
+.hotspot {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  border: 2px solid var(--gold-soft);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15), 0 0 8px rgba(0, 0, 0, 0.6);
+}
+
+.hotspot-selected {
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.45), 0 0 14px rgba(212, 175, 55, 0.85);
+  border-color: var(--gold-soft);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hotspot-selected {
+    animation: hotspot-select-pulse 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes hotspot-select-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.45), 0 0 10px rgba(212, 175, 55, 0.7); }
+  50% { box-shadow: 0 0 0 6px rgba(212, 175, 55, 0.3), 0 0 18px rgba(212, 175, 55, 1); }
+}
+
+.map-legend {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  background: rgba(10, 9, 7, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.72rem;
+  color: var(--fg-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  z-index: 6;
+}
+
+.map-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.map-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.hotspot-label {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  white-space: nowrap;
+  background: rgba(10, 9, 7, 0.85);
+  border: 1px solid var(--border-soft);
+  color: var(--fg-dim);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.quest-list {
+  list-style: none;
+  padding: 0;
+}
+
+.quest-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border-soft);
+  gap: 0.5rem;
+}
+
+.breadcrumb {
+  margin-bottom: 0.5rem;
+}
+
+.reveal-toggle {
+  font-size: 0.78rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--fg-dim);
+}
+
+textarea {
+  width: 100%;
+  background: var(--bg-deep);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-family: inherit;
+}
+
+select,
+button {
+  background: var(--bg-card-raised);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold-soft);
+}
+
+button:active:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  button,
+  select,
+  .nav-rail-item,
+  .segmented-option,
+  .entity-card {
+    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s, filter 0.1s;
+  }
+}
+
+.edit-mode-banner {
+  background: linear-gradient(180deg, #7a2420, #5c1714);
+  color: #fbe7c6;
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.4rem 0;
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--gold-dim);
+}
+
+.party-marker {
+  font-size: 0.82rem;
+  color: var(--fg-dim);
+}
+
+.calendar-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--fg-dim);
+  background: var(--bg-elevated, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--gold-dim);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  white-space: nowrap;
+}
+
+.calendar-chip button {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.45rem;
+}
+
+.calendar-chip button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.calendar-chip-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.2rem;
+}
+
+.calendar-chip-custom input[type='number'] {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.3rem;
+}
+
+/* Pending-trigger badge on the Calendar chip — subtle, not alarmist: same
+   gold/amber family as other DM-facing warning text, not red/error red. */
+.calendar-trigger-badge {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--gold-dim);
+  background: rgba(212, 175, 55, 0.18);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.calendar-trigger-badge:hover {
+  background: rgba(212, 175, 55, 0.3);
+}
+
+.layer-preset-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--fg-dim);
+}
+
+.layer-preset-select select {
+  font-size: 0.78rem;
+}
+
+.trigger-warning-badge {
+  background: rgba(212, 175, 55, 0.22);
+}
+
+.pending-triggers-panel .trigger-warning {
+  color: var(--gold);
+}
+
+p.trigger-warning {
+  color: var(--gold, #d4af37);
+  font-size: 0.85rem;
+}
+
+.mode-select {
+  font-weight: 600;
+}
+
+.placeholder-badge {
+  display: inline-block;
+  background: #7a2420;
+  color: #fbe7c6;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+
+.review-badge {
+  display: inline-block;
+  background: var(--amber);
+  color: #1a1306;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  margin-left: 0.3rem;
+  vertical-align: middle;
+}
+
+/* ---------- confidence badges: small pill + colored dot ---------- */
+.confidence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.55rem 0.15rem 0.4rem;
+  border-radius: 999px;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.confidence-badge::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.confidence-exact {
+  color: var(--green);
+  border-color: rgba(79, 157, 91, 0.4);
+}
+.confidence-exact::before {
+  background: var(--green);
+  box-shadow: 0 0 4px rgba(79, 157, 91, 0.8);
+}
+
+.confidence-likely {
+  color: var(--amber);
+  border-color: rgba(192, 138, 46, 0.4);
+}
+.confidence-likely::before {
+  background: var(--amber);
+  box-shadow: 0 0 4px rgba(192, 138, 46, 0.8);
+}
+
+.confidence-manual {
+  color: var(--purple);
+  border-color: rgba(139, 95, 191, 0.4);
+}
+.confidence-manual::before {
+  background: var(--purple);
+  box-shadow: 0 0 4px rgba(139, 95, 191, 0.8);
+}
+
+.map-level-tabs {
+  display: flex;
+  gap: 0.3rem;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem;
+}
+
+.map-level-tabs button {
+  border: none;
+  background: transparent;
+  font-size: 0.78rem;
+  border-radius: 999px;
+  color: var(--fg-dim);
+}
+
+.map-level-tabs button.active {
+  background: linear-gradient(180deg, var(--gold-soft), var(--gold-dim));
+  color: #1a1306;
+  font-weight: 700;
+}
+
+.map-no-art {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--fg-faint);
+  background: repeating-linear-gradient(45deg, #14110c, #14110c 12px, #0e0c08 12px, #0e0c08 24px);
+  font-family: var(--font-heading);
+}
+
+.hotspot.draft {
+  border-style: dashed;
+}
+
+/*
+ * Distinct from .hotspot (location), .waypoint-dot (route point), and
+ * .placement-marker (NPC/quest/enemy/etc): a flag icon + visible "Партия"
+ * label, well above every other map layer (z-index 30 vs waypoint's 7).
+ * Deliberately NOT animated with a left/top transition — a CSS transition
+ * between two (left%, top%) values always interpolates a straight line on
+ * screen, which previously made the party appear to cut diagonally across
+ * the map on every move regardless of any route. The marker now snaps
+ * instantly to its new position (still computed from the route's matching
+ * endpoint when one is active — see partyMarkerPoint in MapWorkspacePage).
+ */
+.party-map-marker {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  z-index: 30;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+/*
+ * Only applied while partyTravelAnim is stepping through route.points (see
+ * MapWorkspacePage). Each step is a short, separate transition between two
+ * ADJACENT polyline points — never one long transition across the whole
+ * route — so the visible motion always traces the actual path, never a
+ * shortcut diagonal between the start and end locations.
+ */
+.party-map-marker-walking {
+  transition: left 0.4s linear, top 0.4s linear;
+}
+
+.party-map-marker-icon {
+  font-size: 22px;
+  line-height: 1;
+  color: #3b82f6;
+  text-shadow: 0 0 6px rgba(59, 130, 246, 0.9), 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.party-map-marker-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #eaf3ff;
+  background: rgba(10, 9, 7, 0.75);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid #3b82f6;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .party-map-marker-icon {
+    animation: party-pulse 2.4s ease-in-out infinite;
+  }
+}
+
+.side-panel-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.side-panel-tabs button {
+  flex: 0 0 auto;
+}
+
+.side-panel-tabs button.active {
+  border-color: var(--gold-soft);
+  color: var(--gold-soft);
+}
+
+.side-panel-header-image-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 0.6rem;
+  cursor: pointer;
+  background: none;
+}
+
+.side-panel-header-image {
+  display: block;
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+}
+
+.route-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.route-list-panel .route-list li {
+  background: var(--bg-card-raised);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+}
+
+.route-list-row-selected {
+  border-color: var(--gold-soft) !important;
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.3);
+}
+
+.journey-panel {
+  border-color: var(--gold-dim);
+}
+
+.route-selected {
+  filter: drop-shadow(0 0 4px rgba(229, 200, 115, 0.8));
+}
+
+/* Route validity states (Etap I/E) — applied alongside the existing per-type
+ * stroke colors so a route missing endpoints or a path is visually distinct
+ * from one that's fully usable for party movement. */
+.route-invalid {
+  stroke-dasharray: 4 4;
+  opacity: 0.55;
+}
+
+.route-hidden-dm-only {
+  stroke-dasharray: 2 6;
+  opacity: 0.4;
+}
+
+.route-point-handle {
+  fill: var(--gold-soft);
+  stroke: var(--bg-deep);
+  stroke-width: 1;
+  cursor: grab;
+}
+
+.route-point-handle:active {
+  cursor: grabbing;
+}
+
+/* Faction Zones (Stage 4A) — low-opacity filled polygons rendered BELOW
+ * markers/routes/party token (see the SVG layer ordering in
+ * MapWorkspacePage.tsx: zones are painted first inside .route-layer).
+ * Lightweight, reuses existing palette tokens — no new colors invented. */
+.faction-zone {
+  stroke-width: 2;
+  transition: opacity 0.15s ease;
+}
+
+.faction-zone--stable {
+  fill: var(--green, #4f9d5b);
+  stroke: var(--green, #4f9d5b);
+}
+
+.faction-zone--contested {
+  fill: var(--amber, #c08a2e);
+  stroke: var(--amber, #c08a2e);
+}
+
+.faction-zone--expanding {
+  fill: var(--accent, #5b9ad4);
+  stroke: var(--accent, #5b9ad4);
+}
+
+.faction-zone--collapsing {
+  fill: var(--danger, #b3413a);
+  stroke: var(--danger, #b3413a);
+}
+
+.faction-zone--hidden {
+  fill: var(--fg-dim, #888);
+  stroke: var(--fg-dim, #888);
+  stroke-dasharray: 4 4;
+}
+
+.faction-zone--selected {
+  stroke-width: 3;
+  filter: drop-shadow(0 0 5px rgba(229, 200, 115, 0.8));
+}
+
+.faction-zone-vertex {
+  fill: var(--gold-soft);
+  stroke: var(--bg-deep);
+  stroke-width: 1;
+  cursor: grab;
+}
+
+.faction-zone-vertex--selected {
+  fill: var(--danger, #b3413a);
+}
+
+/* Dynamic Map Overlays (Stage 4B) — full-canvas translucent tint layers,
+ * rendered BELOW the Faction Zones SVG (and everything painted inside it:
+ * routes/hotspots/placements/party token). Purely cosmetic; pointer-events
+ * stay off so nothing under the tint becomes unclickable. Reuses existing
+ * palette tokens from :root — no new colors invented. */
+.map-dynamic-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 0.2s ease;
+}
+
+.map-dynamic-overlay--fog {
+  background: var(--fg, #e9e2d1);
+}
+
+.map-dynamic-overlay--night {
+  background: var(--bg-deep, #090807);
+}
+
+.map-dynamic-overlay--fire {
+  background: var(--danger, #b3413a);
+}
+
+.map-dynamic-overlay--destruction {
+  background: var(--fg-faint, #756b58);
+}
+
+.map-dynamic-overlay--magical {
+  background: var(--purple, #8b5fbf);
+}
+
+.map-dynamic-overlay--faction_occupation {
+  background: var(--amber, #c08a2e);
+}
+
+.map-dynamic-overlay--custom {
+  background: var(--gold, #d4af37);
+}
+
+/* Movable Entity markers (Stage 4C) — compact letter-badge tokens, visually
+ * distinct from .hotspot (round dot, location), .placement-marker (rounded
+ * square, green border), .party-map-marker (flag + label, z-index 30) and
+ * .faction-zone-vertex (small filled circle on a polygon). Sits ABOVE
+ * placements/events (z-index 7) but BELOW the party token (z-index 30) so the
+ * party marker always reads as "the" focal marker on the map. */
+.movable-entity-marker {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card-raised);
+  border: 2px solid var(--accent, #5b9ad4);
+  box-shadow: 0 0 6px rgba(91, 154, 212, 0.6), 0 0 8px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  z-index: 20;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--fg);
+}
+
+.movable-entity-marker--npc {
+  border-color: var(--accent, #5b9ad4);
+}
+
+.movable-entity-marker--enemy-group {
+  border-color: var(--danger, #b3413a);
+}
+
+.movable-entity-marker--caravan {
+  border-color: var(--amber, #c08a2e);
+}
+
+.movable-entity-marker--army {
+  border-color: var(--purple, #8b5fbf);
+}
+
+/* Stage 6C.4E — Quest/Enemy/Image standalone markers, distinct colors from
+ * NPC/enemy-group/caravan/army above. */
+.movable-entity-marker--quest {
+  border-color: var(--gold-soft, #d4af37);
+}
+
+.movable-entity-marker--enemy {
+  border-color: var(--danger, #b3413a);
+  border-style: dotted;
+}
+
+.movable-entity-marker--image {
+  border-color: var(--fg-muted, #8a8a8a);
+}
+
+/* Stage 6C.4F — drag-and-drop ghost marker + warning banner. Ghost is
+ * pointer-events:none so it never intercepts the dragover/drop it's meant to
+ * visualize. */
+.drag-ghost-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 50;
+  border: 2px dashed;
+}
+
+.drag-ghost-marker--valid {
+  border-color: var(--gold-soft, #d4af37);
+  background: rgba(212, 175, 55, 0.25);
+  color: var(--fg);
+}
+
+.drag-ghost-marker--invalid {
+  border-color: var(--danger, #b3413a);
+  background: rgba(179, 65, 58, 0.25);
+  color: var(--fg);
+}
+
+.drag-drop-warning-banner {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  background: var(--danger, #b3413a);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  max-width: 90%;
+  text-align: center;
+}
+
+.library-card-row--dragging {
+  opacity: 0.5;
+}
+
+.movable-entity-marker--travelling {
+  box-shadow: 0 0 0 3px rgba(91, 154, 212, 0.3), 0 0 10px rgba(91, 154, 212, 0.85);
+}
+
+.movable-entity-marker--hidden {
+  opacity: 0.45;
+  border-style: dashed;
+}
+
+.movable-entity-marker--selected {
+  border-color: var(--gold-soft);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.4), 0 0 12px rgba(212, 175, 55, 0.9);
+}
+
+/* Battle Entry markers (Stage 5A) — visually distinct from location hotspots
+ * (round dots), placements (square icons), event markers (pulsing rings) and
+ * movable entities (rounded-square badges): a diamond shape with a crossed-
+ * swords glyph, so a DM scanning a busy map can immediately tell "prepared
+ * encounter" apart from every other marker family. Sits at the same z-index
+ * tier as movable-entity-marker (above placements/events, below the party
+ * token). */
+.battle-entry-marker {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card-raised);
+  border: 2px solid var(--danger, #b3413a);
+  box-shadow: 0 0 6px rgba(179, 65, 58, 0.55), 0 0 8px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  z-index: 20;
+  font-size: 0.7rem;
+}
+
+.battle-entry-marker {
+  color: var(--fg);
+}
+
+/* Counter-rotate the glyph text node so it reads upright inside the rotated
+ * diamond shell above. */
+.battle-entry-marker > * {
+  transform: rotate(-45deg);
+}
+
+.battle-entry-marker--prepared {
+  border-color: var(--amber, #c08a2e);
+  opacity: 0.85;
+}
+
+.battle-entry-marker--available {
+  border-color: var(--danger, #b3413a);
+}
+
+.battle-entry-marker--active {
+  border-color: var(--danger, #b3413a);
+  box-shadow: 0 0 0 3px rgba(179, 65, 58, 0.35), 0 0 12px rgba(179, 65, 58, 0.95);
+}
+
+.battle-entry-marker--completed {
+  border-color: var(--muted, #7a7a7a);
+  opacity: 0.55;
+}
+
+.battle-entry-marker--disabled {
+  border-color: var(--muted, #7a7a7a);
+  opacity: 0.35;
+  border-style: dashed;
+}
+
+.battle-entry-marker--hidden {
+  opacity: 0.4;
+  border-style: dashed;
+}
+
+.battle-entry-marker--selected {
+  border-color: var(--gold-soft);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.4), 0 0 12px rgba(212, 175, 55, 0.9);
+}
+
+/* Small "this is active" chip, reused for overlay/zone/entity summary rows in
+ * the Current Session panel and the Dynamic Overlay panel — same visual
+ * weight as .calendar-chip, but inline/compact instead of a toolbar block. */
+.overlay-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card-raised);
+  color: var(--fg-dim);
+  font-size: 0.72rem;
+}
+
+/* Area Edit Mode indicator chip shown in the toolbar while a zone draft is in
+ * progress or an existing zone's polygon is being edited. */
+.area-edit-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--gold-dim);
+  background: rgba(212, 175, 55, 0.12);
+  color: var(--gold-soft);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+/* Route status classes (Step 4 stabilization pass) — applied on the rendered
+ * <g>/<polyline> alongside the existing per-type stroke color/route-selected/
+ * route-invalid/route-hidden-dm-only rules above. Kept additive/lightweight:
+ * no new geometry, just stroke/opacity/glow tweaks layered on what's there. */
+.route--active {
+  filter: drop-shadow(0 0 6px rgba(110, 200, 140, 0.85));
+}
+
+.route--active polyline {
+  stroke-width: 4;
+}
+
+.route--dangerous polyline {
+  stroke: var(--danger, #c44);
+}
+
+.route--blocked polyline {
+  stroke-dasharray: 3 7;
+  opacity: 0.5;
+}
+
+/* Start/end waypoint markers already get distinct colors via .waypoint-dot-
+ * start/.waypoint-dot-end; .route-point--selected highlights whichever point
+ * is currently selected for editing (e.g. about to be dragged/deleted). */
+.route-point--selected {
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.55), 0 0 10px rgba(212, 175, 55, 0.9) !important;
+  border-color: var(--gold-soft) !important;
+}
+
+/* Observer MVP (Etap C) — full-bleed, no app-shell chrome. Designed for a
+ * second screen/TV, so contrast and marker size lean larger than the DM's
+ * own map canvas. */
+.observer-shell {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-deep);
+  color: var(--fg);
+  overflow: hidden;
+}
+
+.observer-loading,
+.observer-no-map {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 1.2rem;
+  color: var(--fg-dim);
+}
+
+.observer-map-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.observer-map-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.observer-map-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  color: var(--fg-dim);
+}
+
+.observer-route-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.observer-route-line {
+  stroke: var(--gold-soft);
+  stroke-width: 0.004;
+  opacity: 0.75;
+}
+
+.observer-hotspot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 6px rgba(212, 175, 55, 0.7);
+}
+
+.observer-hotspot-label {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.9rem;
+  color: var(--fg);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.observer-placement {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--purple);
+  opacity: 0.85;
+}
+
+.observer-party-marker {
+  position: absolute;
+  font-size: 1.6rem;
+  transform: translate(-50%, -100%);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+}
+
+.shop-block {
+  margin-bottom: 0.75rem;
+}
+
+.shop-block:last-child {
+  margin-bottom: 0;
+}
+
+.shop-item-card {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  cursor: default;
+}
+
+.battle-map-thumb {
+  width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-soft);
+}
+
+.battle-map-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.battle-map-thumb-fallback {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  font-size: 1.4rem;
+  color: var(--fg-faint);
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.battle-map-thumb-fallback span {
+  font-size: 0.65rem;
+  font-weight: 400;
+}
+
+.battle-map-thumb-small {
+  height: 64px;
+  margin-bottom: 0.25rem;
+}
+
+.battle-map-thumb-large {
+  height: 220px;
+  margin-bottom: 0.75rem;
+}
+
+.laws-accordion summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--gold-soft);
+}
+
+/* Stage 5C — Battle Entry pre-launch hardening. Reuses existing palette
+ * tokens from :root — no new colors invented. */
+.battle-map-preview {
+  width: 100%;
+  max-height: 220px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-soft);
+  margin: 0.5rem 0;
+}
+
+.battle-map-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.battle-variant-chip,
+.encounter-preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  margin: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.battle-variant-chip--selected,
+.encounter-preset-chip.battle-variant-chip--selected {
+  border-color: var(--gold-soft);
+  color: var(--gold-soft);
+}
+
+.battle-variant-chip--suggested {
+  border-color: var(--accent);
+}
+
+.battle-launch-summary {
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: var(--bg-card-raised);
+}
+
+.battle-launch-warning {
+  color: var(--amber);
+  font-size: 0.85rem;
+  margin: 0.25rem 0;
+}
+
+/* Stage 5D — return-flow status indicators, reusing existing tokens only. */
+.battle-return-ready {
+  color: var(--green);
+}
+
+.battle-return-warning {
+  color: var(--amber);
+}
+
+.battle-return-detected {
+  border-color: var(--gold-soft);
+  color: var(--gold-soft);
+}
+
+.battle-smoke-action {
+  border-style: dashed;
+  color: var(--fg-dim);
+}
+
+.battle-launch-url-preview {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.linked-entity-chip {
+  display: inline-block;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  margin: 0.1rem;
+  font-size: 0.75rem;
+  color: var(--fg-dim);
+}
+
+.linked-entity-chip--missing {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+@keyframes party-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(59, 130, 246, 0.6); }
+  50% { box-shadow: 0 0 18px rgba(59, 130, 246, 1); }
+}
+
+.checkbox-list {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem;
+  background: var(--bg-deep);
+}
+
+.checkbox-list label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0;
+  font-size: 0.85rem;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.form-row label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--fg-faint);
+  margin-bottom: 0.2rem;
+}
+
+input[type='text'],
+input[type='search'] {
+  background: var(--bg-deep);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  width: 100%;
+  font-family: inherit;
+}
+
+input[type='text']:focus,
+input[type='search']:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.15);
+}
+
+.section-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hint-banner {
+  background: #15202b;
+  border: 1px dashed var(--gold-dim);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+  color: var(--fg-dim);
+}
+
+/* ---------- search overlay ---------- */
+.search-overlay {
+  position: absolute;
+  top: 52px;
+  left: 1rem;
+  right: 1rem;
+  max-width: 420px;
+  z-index: 30;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.session-toggle.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.session-panel {
+  position: absolute;
+  top: 52px;
+  right: 1rem;
+  width: 360px;
+  max-width: calc(100% - 2rem);
+  max-height: 70vh;
+  overflow-y: auto;
+  z-index: 30;
+  padding: 1rem;
+}
+
+.session-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+.session-panel-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.session-panel-row {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+}
+
+.session-panel-section {
+  margin-top: 0.75rem;
+}
+
+.muted {
+  color: var(--fg-dim);
+  font-size: 0.8rem;
+}
+
+.link-like {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+}
+
+.search-result-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-soft);
+  padding: 0.45rem 0.5rem;
+  font-size: 0.85rem;
+  color: var(--fg);
+  border-radius: 6px;
+}
+.search-result-row:last-child {
+  border-bottom: none;
+}
+.search-result-row:hover {
+  background: var(--bg-card-raised);
+  color: var(--gold-soft);
+  border-color: transparent;
+}
+
+/* ---------- hotspot editor (DM Edit) ---------- */
+.hotspot-editor h2,
+.hotspot-editor h3 {
+  margin-top: 0;
+}
+
+.hotspot-edit-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.hotspot-edit-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.hotspot-secondary-list {
+  font-size: 0.85rem;
+}
+
+.hotspot-secondary-list summary {
+  cursor: pointer;
+  color: var(--fg-dim);
+}
+
+.map-zoom-controls button.active {
+  background: var(--gold-soft);
+  color: #1a1408;
+  border-color: var(--gold-soft);
+}
+
+.placement-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--gold-soft);
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid var(--gold-dim);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+}
+
+.waypoint-dot {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--purple);
+  border: 3px solid #e9e2d1;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 8px rgba(139, 95, 191, 0.7), 0 0 4px rgba(0, 0, 0, 0.6);
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.waypoint-dot:hover {
+  border-color: var(--gold-soft);
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.35), 0 0 10px rgba(212, 175, 55, 0.8);
+}
+
+.waypoint-dot-start {
+  background: var(--green);
+}
+
+.waypoint-dot-end {
+  background: var(--danger);
+}
+
+.waypoint-dot-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: #fff;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.waypoint-remove {
+  position: absolute;
+  top: -20px;
+  left: 24px;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  font-size: 0.75rem;
+  border-radius: 50%;
+  background: var(--bg-deep);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  padding: 0;
+  cursor: pointer;
+}
+
+.route-edit-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  background: rgba(139, 95, 191, 0.1);
+  border: 1px solid var(--purple);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  flex-wrap: wrap;
+}
+
+.route-edit-toolbar-title {
+  color: var(--fg);
+}
+
+.route-edit-mode-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(212, 175, 55, 0.12);
+  border: 2px solid var(--gold-soft);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.25);
+}
+
+.route-edit-mode-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--gold-soft);
+}
+
+.route-edit-mode-header strong {
+  font-family: var(--font-heading);
+}
+
+.route-editor-error {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+.save-status {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.save-status-saved {
+  color: var(--gold-soft);
+  background: rgba(180, 150, 80, 0.12);
+}
+
+.save-status-error {
+  color: var(--danger);
+  background: rgba(200, 60, 60, 0.12);
+}
+
+.fill-location-button {
+  display: block;
+  width: 100%;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+}
+
+.entity-cards-panel .side-panel-tabs {
+  margin: 0.5rem 0;
+}
+
+.edit-mode-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.75rem;
+  margin: 0.4rem 0;
+  background: var(--bg-card-raised);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+}
+
+.edit-mode-toolbar-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.edit-mode-toolbar button.active {
+  background: var(--gold-soft);
+  color: var(--bg-dark, #1a1410);
+  font-weight: 600;
+}
+
+.edit-mode-toolbar-active-hint {
+  margin-left: auto;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.battle-map-vtt-link-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.6rem 0;
+}
+
+.battle-map-vtt-link-field label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.battle-map-vtt-link-field input {
+  font-size: 0.85rem;
+}
+
+.object-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal, 200);
+}
+
+.object-picker-modal {
+  background: var(--bg-card-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 10px);
+  width: min(900px, 92vw);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  gap: 0.75rem;
+  box-shadow: var(--shadow-panel, 0 8px 30px rgba(0, 0, 0, 0.4));
+}
+
+.link-target-menu {
+  background: var(--bg-card-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 10px);
+  width: min(420px, 92vw);
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  gap: 0.6rem;
+  box-shadow: var(--shadow-panel, 0 8px 30px rgba(0, 0, 0, 0.4));
+}
+
+.link-target-menu h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.link-target-menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* Stage 6C.5 Phase 2B — Library is now a centered workspace modal
+   (previously a left-side drawer in Phase 1/2A). It DOES use a
+   full-screen backdrop now, which means drag-and-drop onto the map is
+   not usable while it's open — this trade-off is intentional and
+   documented; arm-then-click remains the fully-supported workflow, and
+   every placement/select action closes this modal automatically so the
+   next map click lands correctly. */
+.library-drawer-panel {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 2rem;
+}
+
+.library-drawer-panel-inner {
+  background: var(--bg-card-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 10px);
+  width: min(1100px, 94vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-panel, 0 8px 30px rgba(0, 0, 0, 0.4));
+  overflow: hidden;
+}
+
+.library-drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.library-drawer-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.library-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 1.25rem 1.25rem;
+}
+
+/* Stage 6C.5 Phase 2B — hierarchy/structural locations reveal block. */
+.library-hierarchy-locations {
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.library-hierarchy-note {
+  font-size: 0.8rem;
+}
+
+/* Stage 6C.5 Phase 2E-Reset — Library category tabs. Replaces the single
+   long mixed vertical list (Локации/NPC/Таверны/.../Изображения stacked
+   top to bottom) with one-category-at-a-time browsing, sticky at the top
+   of the modal so the active tab/counts stay visible while the list
+   below scrolls. */
+.library-category-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--panel-bg, #1a1410);
+  border-bottom: 1px solid var(--border);
+}
+
+.library-category-tab {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted, #c9bfae);
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.library-category-tab.active {
+  background: var(--gold, #d4af37);
+  border-color: var(--gold, #d4af37);
+  color: #1a1410;
+  font-weight: 600;
+}
+
+/* Stage 6C.5 Phase 2D — DM Companion rich source card, rendered inside the
+   object window's "Обзор" section. Visual style intentionally echoes
+   DM Companion's own dark/gold reading style using this app's existing
+   --gold/--gold-soft tokens rather than introducing a new palette. */
+.companion-source-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 10px);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: var(--bg-card-raised);
+}
+
+.companion-source-header {
+  margin-bottom: 0.5rem;
+}
+
+.companion-source-header h3 {
+  margin: 0;
+  color: var(--gold);
+}
+
+.companion-source-card h4 {
+  color: var(--gold-soft);
+  margin: 0.75rem 0 0.25rem;
+  font-size: 0.95rem;
+}
+
+.companion-source-card p,
+.companion-source-card ul {
+  margin: 0.25rem 0;
+}
+
+/* Stage 6C.5 Phase 2F — Tavern/Shop companion card additions: hero image,
+   readable menu/room/goods rows (no buy/cart UI, out of scope), gallery. */
+.companion-source-hero {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--radius-md, 6px);
+  margin-bottom: 0.5rem;
+}
+
+.companion-item-list {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+
+.companion-item-list li {
+  margin-bottom: 0.2rem;
+}
+
+.companion-goods-category {
+  margin-bottom: 0.5rem;
+}
+
+.companion-image-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.companion-image-gallery img {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--border);
+}
+
+/* Stage 6C.5 Phase 2 — compact selected-object overview in the right
+   panel. Replaces the old long row of tabs: header + up to 4 primary
+   buttons + short summary + linked-content counts + collapsed "Ещё"
+   (map quick actions, general tools, danger zone). Deep editing/links/
+   map/danger management now lives in .object-window-* instead. */
+.side-panel-library-button {
+  align-self: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.object-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.5rem;
+}
+
+.object-overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.object-overview-header h3 {
+  margin: 0;
+}
+
+.object-overview-primary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.object-overview-summary {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--fg-muted, var(--fg-faint));
+}
+
+.object-overview-linked-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.link-count-chip {
+  background: var(--bg-chip, transparent);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.object-overview-more {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.object-overview-map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.object-overview-tools-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.object-overview-tools-toggle--standalone {
+  margin-top: 0.5rem;
+}
+
+.object-overview-danger {
+  margin-top: 0.3rem;
+}
+
+.object-overview-danger summary {
+  cursor: pointer;
+  color: var(--color-danger, #c0392b);
+  font-size: 0.85rem;
+}
+
+.object-overview-danger .btn-danger {
+  margin: 0.4rem 0.4rem 0 0;
+}
+
+/* Stage 6C.5 Phase 2 — large object management window. Opened from the
+   compact overview's "Открыть карточку"/"Редактировать" buttons; hosts
+   the same pre-existing card/edit/links/map components as sections
+   instead of cramped inline aside tabs. */
+.object-window-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: 2rem;
+}
+
+/* Stage 6C.5 Phase 2G — the embedded companion window, the new entry
+   point for opening a card without first selecting/placing a map
+   hotspot. Sits above `.object-window-overlay` (60) since it can be
+   opened from a linked row INSIDE that window, but below the image
+   lightbox (`.drawer-overlay`, 80) so a linked image still opens on top
+   of it, matching the existing object-window/lightbox stacking. */
+.companion-window-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 70;
+  padding: 2rem;
+}
+
+.companion-window-panel {
+  background: var(--bg-card-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 10px);
+  width: min(900px, 94vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-panel, 0 8px 30px rgba(0, 0, 0, 0.4));
+  overflow: hidden;
+}
+
+.companion-window-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 0.75rem;
+}
+
+.companion-window-header h2 {
+  margin: 0.25rem 0 0;
+  color: var(--gold);
+}
+
+.companion-window-body {
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.companion-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.companion-link-chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--gold-soft);
+  padding: 0.2rem 0.65rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.companion-link-chip:hover {
+  background: var(--bg-card-raised);
+  border-color: var(--gold);
+}
+
+.companion-enemy-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.5rem 0;
+}
+
+.companion-enemy-stat {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-card-raised);
+  padding: 0.4rem 0.75rem;
+  min-width: 4.5rem;
+  text-align: center;
+}
+
+.companion-enemy-stat strong {
+  display: block;
+  color: var(--gold-soft);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.companion-readonly-note {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  font-style: italic;
+}
+
+.object-window-panel {
+  background: var(--bg-card-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 10px);
+  width: min(960px, 94vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-panel, 0 8px 30px rgba(0, 0, 0, 0.4));
+  overflow: hidden;
+}
+
+.object-window-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.object-window-header h2 {
+  margin: 0;
+}
+
+.object-window-section-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.object-window-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1.25rem;
+}
+
+.object-window-danger-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: flex-start;
+}
+
+.object-window-danger-explain {
+  margin: 0 0 0.6rem 0;
+  font-size: 0.85rem;
+  color: var(--fg-muted, var(--fg-faint));
+}
+
+.object-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.object-picker-header h2 {
+  margin: 0 0 0.2rem 0;
+}
+
+.object-picker-search {
+  width: 100%;
+}
+
+.object-picker-tabs {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.object-picker-tabs button {
+  flex-shrink: 0;
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.object-picker-tabs button.active {
+  background: var(--gold-dim);
+  color: var(--fg);
+  border-color: var(--gold);
+}
+
+.object-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.6rem;
+  overflow-y: auto;
+  padding: 0.2rem;
+}
+
+.object-picker-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md, 6px);
+  padding: 0.6rem;
+}
+
+/* Stage 6C.4C: the picker is a wide card grid (unlike the Library panel's
+   narrow list rows), so its media area should be a full-width banner, not
+   the 48px row-thumb. Overrides .library-thumb's fixed 48px box ONLY inside
+   .object-picker-card — the Library panel's compact list rows are
+   untouched. */
+.object-picker-card > .library-thumb {
+  width: 100%;
+  height: 110px;
+  max-width: 100%;
+  border-radius: var(--radius-sm, 4px);
+  object-fit: cover;
+}
+
+.object-picker-card > .library-thumb-fallback {
+  font-size: 2.4rem;
+  background: var(--bg-deep);
+}
+
+.object-picker-card p {
+  font-size: 0.8rem;
+  color: var(--fg-dim);
+  margin: 0;
+  flex: 1;
+}
+
+.object-picker-footer {
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 0.6rem;
+}
+
+/* ---------- Stage 6C.3A: Library/picker card thumbnails ---------- */
+.library-card-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.library-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.library-thumb {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  max-width: 48px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-soft);
+}
+
+.library-thumb-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  color: var(--fg-faint);
+}
+
+.route-draft-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--bg-card-raised);
+  border: 1px solid var(--gold-dim);
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+}
+
+.route-draft-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--fg-dim);
+}
+
+.route-draft-form input,
+.route-draft-form select {
+  background: var(--bg-deep);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  color: var(--fg);
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.placement-marker {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card-raised);
+  border: 2px solid var(--green);
+  box-shadow: 0 0 6px rgba(79, 157, 91, 0.6), 0 0 8px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  z-index: 6;
+  font-size: 0.85rem;
+}
+
+.placement-marker-hidden {
+  opacity: 0.45;
+  border-style: dashed;
+  border-color: var(--fg-faint);
+  box-shadow: none;
+}
+
+.placement-marker-selected {
+  border-color: var(--gold-soft);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.4), 0 0 12px rgba(212, 175, 55, 0.9);
+}
+
+.placement-marker-icon {
+  line-height: 1;
+}
+
+.placement-marker-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+/* Player-visible CampaignEvent markers (Stage 3 closing pass) — rendered on
+   MapWorkspacePage's map canvas and ObserverViewPage, always sourced via
+   getPlayerSafeEvents(). Kept simple and consistent with the existing
+   marker language (.placement-marker / .observer-hotspot) — a small
+   rounded dot, no deep redesign. */
+.map-event-marker {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-block;
+  z-index: 7;
+}
+
+.map-event-marker--visible {
+  background: var(--amber);
+  border: 2px solid var(--gold-soft);
+  box-shadow: 0 0 6px rgba(192, 138, 46, 0.8), 0 0 8px rgba(0, 0, 0, 0.6);
+}
+
+.map-event-marker--active {
+  background: var(--green);
+  border-color: rgba(79, 157, 91, 0.9);
+  box-shadow: 0 0 6px rgba(79, 157, 91, 0.8), 0 0 8px rgba(0, 0, 0, 0.6);
+}
+
+.map-event-marker--planned {
+  opacity: 0.7;
+  border-style: dashed;
+}
+
+.map-event-list-fallback {
+  margin-top: 0.5rem;
+}
+
+.observer-event-list-fallback {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  right: 0.75rem;
+  background: rgba(10, 9, 7, 0.75);
+  border: 1px solid var(--gold-dim);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--fg);
+}
+
+.observer-event-list-heading {
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
+  color: var(--gold);
+}
+
+.observer-event-list-fallback ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.observer-event-list-fallback li .map-event-marker {
+  position: static;
+  display: inline-block;
+  transform: none;
+  vertical-align: middle;
+  margin-right: 0.35rem;
+}
+
+.trigger-month-order-note {
+  font-size: 0.78rem;
+  color: var(--amber);
+}
+
+.placement-action {
+  margin-top: 0.75rem;
+}
+
+.hotspot-inspector-empty {
+  align-items: center;
+  text-align: center;
+}
+
+/* ---------- drawers / modals ---------- */
+/* Stage 6C.5 Phase 2D-Fix — `.drawer-overlay` (EntityDrawer, including the
+   image lightbox) is opened FROM other overlays (the object window at
+   z-index 60, the Library workspace at z-index 50) and must always render
+   on top of them, never behind. Bumped from 50 to 80 — still below
+   `.object-picker-overlay` (var(--z-modal, 200)), which is fine since that
+   picker and this drawer are not expected to be open at the same time. */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 4, 3, 0.65);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+  padding: 1.5rem;
+}
+
+.drawer-panel {
+  background: linear-gradient(180deg, var(--bg-card-raised), var(--bg-card));
+  border: 1px solid var(--gold-dim);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  max-width: 560px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(212, 175, 55, 0.08);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .drawer-overlay {
+    animation: drawer-overlay-fade 0.15s ease-out;
+  }
+  .drawer-panel {
+    animation: drawer-panel-in 0.18s ease-out;
+  }
+}
+
+@keyframes drawer-overlay-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes drawer-panel-in {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.lightbox-image-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.lightbox-image {
+  max-width: 100%;
+  max-height: 60vh;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}

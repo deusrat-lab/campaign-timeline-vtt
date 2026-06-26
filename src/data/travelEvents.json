@@ -1,0 +1,16 @@
+[
+  {
+    "id": "travel-event-docks-rats",
+    "arcId": "arc-1",
+    "routeId": "route-docks-market",
+    "locationStateId": "loc-greyholm-river-docks__arc-1-peace",
+    "title": "Возможная встреча: Гигантская крыса, Альфа-крыса",
+    "type": "encounter",
+    "dangerLevel": "watchful",
+    "description": "Технический слот, собранный из уже существующих связей: эти враги привязаны к Речным докам в quest-mini-rats-warehouse.",
+    "linkedEnemyIds": ["enemy-giant-rat", "enemy-alpha-rat"],
+    "linkedQuestIds": ["quest-mini-rats-warehouse"],
+    "visibleInPlayerView": false,
+    "status": "available"
+  }
+]
