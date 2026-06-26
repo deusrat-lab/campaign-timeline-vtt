@@ -1,0 +1,149 @@
+/* Ported from dm-companion/src/components/ImageLightbox.css. Variable names
+ * adapted to campaign-timeline-vtt's actual design tokens, same mapping as
+ * PurchaseCart.css. z-index raised to sit above .companion-window-overlay. */
+.image-lightbox .btn {
+  border: 1px solid var(--border);
+  background: var(--bg-card-raised);
+  color: var(--fg);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font: inherit;
+  padding: var(--space-xs) var(--space-sm);
+}
+
+.image-lightbox .btn--small {
+  font-size: 0.85rem;
+}
+
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: var(--space-lg);
+}
+
+.image-lightbox__content {
+  position: relative;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  max-width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: visible;
+}
+
+.image-lightbox__viewport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: calc(90vh - var(--space-lg) * 2 - 2rem);
+  overflow: auto;
+  touch-action: pan-y;
+}
+
+.image-lightbox__viewport img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(90vh - var(--space-lg) * 2 - 2rem);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  transition: transform 0.15s ease;
+}
+
+.image-lightbox__viewport--zoomed {
+  max-height: 90vh;
+  cursor: zoom-out;
+}
+
+.image-lightbox__viewport--zoomed img {
+  max-width: none;
+  max-height: none;
+  transform: scale(2);
+  cursor: zoom-out;
+}
+
+.image-lightbox__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  cursor: pointer;
+}
+
+.image-lightbox__nav--prev {
+  left: var(--space-sm);
+}
+
+.image-lightbox__nav--next {
+  right: var(--space-sm);
+}
+
+.image-lightbox__counter {
+  margin: var(--space-xs) 0 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.image-lightbox__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  justify-content: center;
+  margin-top: var(--space-md);
+}
+
+.image-lightbox__hint {
+  margin: var(--space-sm) 0 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.image-lightbox__hint--muted {
+  opacity: 0.7;
+}
+
+.image-lightbox__title {
+  margin-top: var(--space-md);
+  text-align: center;
+  color: var(--fg);
+}
+
+.image-lightbox__close {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  cursor: pointer;
+}

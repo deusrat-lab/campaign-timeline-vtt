@@ -1,0 +1,123 @@
+/* Ported from dm-companion/src/components/PurchaseCart.css. Variable names
+ * adapted to campaign-timeline-vtt's actual design tokens (src/index.css):
+ * --color-surface -> --bg-card, --color-border -> --border,
+ * --space-3 -> --space-md, --color-accent -> --gold,
+ * --color-text-muted -> --color-text-muted, --radius-md -> --radius-md
+ * (already matches), --color-accent-strong -> --gold-soft,
+ * --color-success -> --color-success (already matches). */
+/* campaign-timeline-vtt has no .btn/.btn--small/.btn-row classes (it uses
+ * .btn-ghost/.btn-primary/.btn-danger/.btn-compact instead) — defined here,
+ * scoped to this feature's components, rather than adding generic .btn
+ * classes to the shared src/index.css for two small ported components. */
+.purchase-cart .btn,
+.image-lightbox .btn {
+  border: 1px solid var(--border);
+  background: var(--bg-card-raised);
+  color: var(--fg);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font: inherit;
+}
+
+.purchase-cart .btn:hover,
+.image-lightbox .btn:hover {
+  border-color: var(--gold-dim);
+}
+
+.purchase-cart .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.purchase-cart .btn--small {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.85rem;
+}
+
+.purchase-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.purchase-item__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.purchase-item__name {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.purchase-item__meta {
+  font-size: 0.8rem;
+  color: var(--gold);
+  margin-bottom: 2px;
+}
+
+.purchase-item__line-total {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.purchase-item__qty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.purchase-item__qty .btn {
+  margin-bottom: 0;
+  min-height: 40px;
+  padding: var(--space-sm);
+  width: 40px;
+}
+
+.purchase-item__qty input {
+  width: 48px;
+  text-align: center;
+  padding: var(--space-sm) var(--space-xs);
+  background: var(--bg-card-raised);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.purchase-cart__total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  font-size: 1.1rem;
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border);
+}
+
+.purchase-cart__total strong {
+  color: var(--gold-soft);
+}
+
+.purchase-cart__total .btn-row {
+  margin-bottom: 0;
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.purchase-cart__total .btn {
+  margin-bottom: 0;
+}
+
+.purchase-cart__copied {
+  font-size: 0.8rem;
+  color: var(--color-success);
+}
