@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import type { DmQuest, DmImageItem } from '../../types/dmCompanion';
 import type { QuestStatus } from '../../types';
 import { resolveEntityPreviewImage } from '../../pages/map-workspace/libraryCards';
 import { CompanionLinkRow } from './CompanionLinkRow';
+import { ImageLightbox } from './ImageLightbox';
 
 const QUEST_STATUS_LABELS: Record<QuestStatus, string> = {
   active: 'Активен',
@@ -42,6 +44,7 @@ export function CompanionQuestCard({
   const hero = resolveEntityPreviewImage('quest', quest, images);
   const giver = quest.giver ? npcs.find((n) => n.id === quest.giver) : undefined;
   const enemyItems = (quest.enemies ?? []).map((id) => ({ id, label: enemies.find((e) => e.id === id)?.name ?? id }));
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   return (
     <div className="companion-source-card">
@@ -52,7 +55,14 @@ export function CompanionQuestCard({
           {quest.tags?.length ? ` · ${quest.tags.join(', ')}` : ''}
         </span>
       </div>
-      {hero && <img className="companion-source-hero" src={hero.src} alt={quest.title} />}
+      {hero && (
+        <button type="button" className="companion-source-hero-wrap" onClick={() => setLightboxOpen(true)}>
+          <img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={quest.title} />
+        </button>
+      )}
+      {hero && lightboxOpen && (
+        <ImageLightbox image={{ ...hero, title: hero.title ?? quest.title }} onClose={() => setLightboxOpen(false)} />
+      )}
       {locationName && (
         <>
           <h4>Локация</h4>

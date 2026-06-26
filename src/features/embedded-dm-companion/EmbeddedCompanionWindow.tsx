@@ -44,6 +44,11 @@ export function EmbeddedCompanionWindow({
   data,
   npcs,
   quests,
+  onEditNpc,
+  onEditTavern,
+  onEditShop,
+  onEditImage,
+  onEditBattleEntry,
 }: {
   entity: EmbeddedCompanionEntity;
   hasBack: boolean;
@@ -53,6 +58,21 @@ export function EmbeddedCompanionWindow({
   data: CampaignData;
   npcs: { id: string; name: string }[];
   quests: { id: string; title: string }[];
+  /** Bug-fix pass — "Редактировать" bottom action bar (see dm-companion's
+   * real ShopDetailPage.tsx/NpcDetailPage.tsx btn-row: Редактировать /
+   * Перенести в архив / Удалить). Only npc/tavern/shop/image/battleEntry
+   * have a real override-patch edit mechanism in this app today
+   * (MapWorkspacePage's `open*Editor` functions) — location/quest/enemy
+   * genuinely have none yet (same pre-existing limitation already
+   * documented in CompanionQuestCard's/CompanionEnemyCard's own
+   * "Редактирование ... будет добавлено отдельным этапом" notes), so those
+   * three omit this prop and the bar shows that same disabled message
+   * instead of a non-functional button. */
+  onEditNpc?: (npcId: string) => void;
+  onEditTavern?: (tavernId: string) => void;
+  onEditShop?: (shopId: string) => void;
+  onEditImage?: (imageId: string) => void;
+  onEditBattleEntry?: (battleEntryId: string) => void;
 }) {
   const store = useCampaignStore();
   const openNpc = (id: string) => onOpen({ type: 'npc', id });
@@ -67,24 +87,60 @@ export function EmbeddedCompanionWindow({
   if (entity.type === 'location') {
     const loc = data.locations.find((l) => l.id === entity.id);
     title = loc?.name ?? 'Локация';
+    // Bug-fix pass (audit: "Рыночная площадь") — dm-companion's real
+    // LocationDetailPage also shows "Магазины здесь" (shops with
+    // `shop.location === loc.id`) and "Связанные враги"
+    // (`enemy.locationIds.includes(loc.id)`); both are reverse lookups,
+    // same as it does, not stored directly on DmLocation.
+    const shopsHere = loc ? data.shops.filter((s) => s.location === loc.id) : [];
+    const enemiesHere = loc ? data.enemies.filter((e) => e.locationIds?.includes(loc.id)) : [];
     body = loc ? (
-      <CompanionLocationCard loc={loc} npcs={npcs} quests={quests} onOpenNpc={openNpc} onOpenQuest={openQuest} />
+      <CompanionLocationCard
+        loc={loc}
+        npcs={npcs}
+        quests={quests}
+        shops={shopsHere}
+        enemies={enemiesHere}
+        images={data.images}
+        onOpenNpc={openNpc}
+        onOpenQuest={openQuest}
+        onOpenShop={openShop}
+        onOpenEnemy={openEnemy}
+      />
     ) : (
       <p className="muted">Локация не найдена.</p>
     );
   } else if (entity.type === 'tavern') {
     const tavern = data.taverns.find((t) => t.id === entity.id);
     title = tavern?.name ?? 'Таверна';
+    const tavernLoc = tavern ? data.locations.find((l) => l.id === tavern.location) : undefined;
     body = tavern ? (
-      <CompanionTavernCard tavern={tavern} npcs={npcs} quests={quests} images={data.images} onOpenNpc={openNpc} onOpenQuest={openQuest} />
+      <CompanionTavernCard
+        tavern={tavern}
+        npcs={npcs}
+        quests={quests}
+        images={data.images}
+        locationName={tavernLoc?.name}
+        onOpenNpc={openNpc}
+        onOpenQuest={openQuest}
+        onOpenLocation={tavernLoc ? () => openLocation(tavernLoc.id) : undefined}
+      />
     ) : (
       <p className="muted">Таверна не найдена.</p>
     );
   } else if (entity.type === 'shop') {
     const shop = data.shops.find((s) => s.id === entity.id);
     title = shop?.name ?? 'Лавка';
+    const shopLoc = shop ? data.locations.find((l) => l.id === shop.location) : undefined;
     body = shop ? (
-      <CompanionShopCard shop={shop} npcs={npcs} images={data.images} onOpenNpc={openNpc} />
+      <CompanionShopCard
+        shop={shop}
+        npcs={npcs}
+        images={data.images}
+        locationName={shopLoc?.name}
+        onOpenNpc={openNpc}
+        onOpenLocation={shopLoc ? () => openLocation(shopLoc.id) : undefined}
+      />
     ) : (
       <p className="muted">Лавка не найдена.</p>
     );
@@ -167,6 +223,41 @@ export function EmbeddedCompanionWindow({
     );
   }
 
+  // Bug-fix pass — "Действия на карте": map-only placement/visibility
+  // controls, collapsed by default, rendered below the Companion*Card
+  // content rather than mixed into it. Real placement data (not a
+  // duplicate/fake panel) — looked up from `data.placements` by entity
+  // type+id, same linkage MapWorkspacePage itself uses to match a marker
+  // to its entity. `battleEntry` has no MapObjectPlacement record (it is
+  // positioned directly via `BattleEntry.position`/`sourceLocationStateId`,
+  // see CompanionBattleEntryCard's module doc), so this section is omitted
+  // for that type rather than showing an always-empty list.
+  const placement =
+    entity.type === 'battleEntry'
+      ? undefined
+      : data.placements.find((p) => p.entityKind === entity.type && p.entityId === entity.id && p.status !== 'archived');
+
+  // Bug-fix pass — bottom "Редактировать" action bar, matching dm-companion's
+  // real detail-page btn-row. Editing toggles the existing inline-edit
+  // overlay for the types that have one; the others show the same
+  // already-established disabled/read-only note instead of faking a save.
+  const editAction: (() => void) | undefined =
+    entity.type === 'npc' && onEditNpc
+      ? () => onEditNpc(entity.id)
+      : entity.type === 'tavern' && onEditTavern
+        ? () => onEditTavern(entity.id)
+        : entity.type === 'shop' && onEditShop
+          ? () => onEditShop(entity.id)
+          : entity.type === 'image' && onEditImage
+            ? () => onEditImage(entity.id)
+            : entity.type === 'battleEntry' && onEditBattleEntry
+              ? () => onEditBattleEntry(entity.id)
+              : undefined;
+  const editUnsupportedNote =
+    entity.type === 'location' || entity.type === 'quest' || entity.type === 'enemy'
+      ? 'Редактирование исходной карточки будет добавлено отдельным этапом.'
+      : undefined;
+
   return (
     <div className="companion-window-overlay" onClick={onClose}>
       <div className="companion-window-panel" onClick={(e) => e.stopPropagation()}>
@@ -183,7 +274,60 @@ export function EmbeddedCompanionWindow({
             Закрыть ✕
           </button>
         </div>
-        <div className="companion-window-body">{body}</div>
+        <div className="companion-window-body">
+          {body}
+          {entity.type !== 'battleEntry' && (
+            <details className="companion-map-actions">
+              <summary>Действия на карте</summary>
+              {placement ? (
+                <div className="companion-map-actions-body">
+                  <p className="muted">
+                    Размещено на карте · {placement.status === 'hidden' ? 'скрыто (ДМ)' : 'активно'} ·{' '}
+                    {placement.visibleInPlayerView ? 'видно игрокам' : 'скрыто от игроков'}
+                  </p>
+                  <div className="actions">
+                    {placement.status !== 'hidden' ? (
+                      <button onClick={() => store.patchPlacement(placement.id, { status: 'hidden' })}>
+                        Скрыть маркер (ДМ)
+                      </button>
+                    ) : (
+                      <button onClick={() => store.patchPlacement(placement.id, { status: 'active' })}>
+                        Показать маркер (ДМ)
+                      </button>
+                    )}
+                    {placement.visibleInPlayerView ? (
+                      <button onClick={() => store.patchPlacement(placement.id, { visibleInPlayerView: false })}>
+                        Скрыть от игроков
+                      </button>
+                    ) : (
+                      <button onClick={() => store.patchPlacement(placement.id, { visibleInPlayerView: true })}>
+                        Показать игрокам
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="muted">Эта карточка пока не размещена маркером на текущей карте.</p>
+              )}
+            </details>
+          )}
+          {/* Bug-fix pass — bottom action bar, matching dm-companion's real
+              detail-page btn-row (Редактировать / Перенести в архив /
+              Удалить). "Перенести в архив"/"Удалить" are not added here:
+              this app has no archive/delete flow for library source
+              records (only for placed map markers, already covered by
+              "Действия на карте" above) — adding fake destructive buttons
+              would be worse than omitting them. */}
+          <div className="companion-edit-bar">
+            {editAction ? (
+              <button className="btn-secondary btn-compact" onClick={editAction}>
+                Редактировать
+              </button>
+            ) : (
+              <p className="muted companion-readonly-note">{editUnsupportedNote}</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import type { DmShop, DmImageItem } from '../../types/dmCompanion';
 import { resolveEntityPreviewImage } from '../../pages/map-workspace/libraryCards';
 import { CompanionLinkRow } from './CompanionLinkRow';
 import { PurchaseCart, type BuyableItem } from './PurchaseCart';
 import { parseAnyPrice } from './currency';
+import { ImageLightbox } from './ImageLightbox';
 
 /**
  * Ported field order/content from dm-companion's real
@@ -23,12 +25,18 @@ export function CompanionShopCard({
   shop,
   npcs,
   images,
+  locationName,
   onOpenNpc,
+  onOpenLocation,
 }: {
   shop: DmShop;
   npcs: { id: string; name: string }[];
   images: DmImageItem[];
+  /** Bug-fix pass: dm-companion's real ShopDetailPage shows "Локация"
+   * (`shop.location`) right after Слухи — this card was missing it. */
+  locationName?: string;
   onOpenNpc?: (id: string) => void;
+  onOpenLocation?: () => void;
 }) {
   const owner = shop.ownerNpcId ? npcs.find((n) => n.id === shop.ownerNpcId) : undefined;
   const hero = resolveEntityPreviewImage('shop', shop, images);
@@ -39,6 +47,7 @@ export function CompanionShopCard({
     list.push(item);
     itemsByCategory.set(cat, list);
   }
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   return (
     <div className="companion-source-card">
@@ -49,7 +58,14 @@ export function CompanionShopCard({
           {shop.tags?.length ? ` · ${shop.tags.join(', ')}` : ''}
         </span>
       </div>
-      {hero && <img className="companion-source-hero" src={hero.src} alt={shop.name} />}
+      {hero && (
+        <button type="button" className="companion-source-hero-wrap" onClick={() => setLightboxOpen(true)}>
+          <img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={shop.name} />
+        </button>
+      )}
+      {hero && lightboxOpen && (
+        <ImageLightbox image={{ ...hero, title: hero.title ?? shop.name }} onClose={() => setLightboxOpen(false)} />
+      )}
       <p>{shop.description}</p>
       {shop.relationToPlayers && (
         <>
@@ -71,6 +87,18 @@ export function CompanionShopCard({
               <li key={i}>{r}</li>
             ))}
           </ul>
+        </>
+      )}
+      {locationName && (
+        <>
+          <h4>Локация</h4>
+          {onOpenLocation ? (
+            <button type="button" className="companion-link-chip" onClick={onOpenLocation}>
+              {locationName}
+            </button>
+          ) : (
+            <p>{locationName}</p>
+          )}
         </>
       )}
       {owner && (

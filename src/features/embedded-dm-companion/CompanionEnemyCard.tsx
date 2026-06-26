@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import type { DmCustomEnemy, DmImageItem } from '../../types/dmCompanion';
 import { resolveEntityPreviewImage } from '../../pages/map-workspace/libraryCards';
 import { CompanionLinkRow } from './CompanionLinkRow';
+import { ImageLightbox } from './ImageLightbox';
 
 /**
  * Ported field order from dm-companion's real `pages/enemies/EnemyDetailPage.tsx`:
@@ -37,6 +39,7 @@ export function CompanionEnemyCard({
   const locationItems = (enemy.locationIds ?? []).map((id) => ({ id, label: locations.find((l) => l.id === id)?.name ?? id }));
   const questItems = (enemy.questIds ?? []).map((id) => ({ id, label: quests.find((q) => q.id === id)?.title ?? id }));
   const abilityLabels: Record<string, string> = { str: 'СИЛ', dex: 'ЛОВ', con: 'ТЕЛ', int: 'ИНТ', wis: 'МДР', cha: 'ХАР' };
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   return (
     <div className="companion-source-card">
@@ -49,7 +52,14 @@ export function CompanionEnemyCard({
           {enemy.tags?.length ? ` · ${enemy.tags.join(', ')}` : ''}
         </span>
       </div>
-      {hero && <img className="companion-source-hero" src={hero.src} alt={enemy.name} />}
+      {hero && (
+        <button type="button" className="companion-source-hero-wrap" onClick={() => setLightboxOpen(true)}>
+          <img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={enemy.name} />
+        </button>
+      )}
+      {hero && lightboxOpen && (
+        <ImageLightbox image={{ ...hero, title: hero.title ?? enemy.name }} onClose={() => setLightboxOpen(false)} />
+      )}
       <div className="companion-enemy-stats">
         {enemy.ac !== undefined && (
           <div className="companion-enemy-stat">

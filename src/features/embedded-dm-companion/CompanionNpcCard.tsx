@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import type { DmNpc, DmImageItem } from '../../types/dmCompanion';
 import { resolveEntityPreviewImage } from '../../pages/map-workspace/libraryCards';
 import { CompanionLinkRow } from './CompanionLinkRow';
+import { ImageLightbox } from './ImageLightbox';
 
 /**
  * Ported field order from dm-companion's real `pages/npcs/NpcDetailPage.tsx`:
@@ -32,6 +34,7 @@ export function CompanionNpcCard({
   const hero = heroImg ?? resolveEntityPreviewImage('npc', npc, images);
   const galleryImages = images.filter((i) => i.relatedEntity === npc.id && i.id !== heroImg?.id);
   const questItems = (npc.relatedQuests ?? []).map((id) => ({ id, label: quests.find((q) => q.id === id)?.title ?? id }));
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   return (
     <div className="companion-source-card">
@@ -42,7 +45,14 @@ export function CompanionNpcCard({
           {npc.tags?.length ? `${shop ? ' · ' : ''}${npc.tags.join(', ')}` : ''}
         </span>
       </div>
-      {hero && <img className="companion-source-hero" src={hero.src} alt={npc.name} />}
+      {hero && (
+        <button type="button" className="companion-source-hero-wrap" onClick={() => setLightboxOpen(true)}>
+          <img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={npc.name} />
+        </button>
+      )}
+      {hero && lightboxOpen && (
+        <ImageLightbox image={{ ...hero, title: hero.title ?? npc.name }} onClose={() => setLightboxOpen(false)} />
+      )}
       {npc.race && (
         <>
           <h4>Раса</h4>

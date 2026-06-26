@@ -3384,3 +3384,156 @@ code path that reaches these components while `isDmMode` is false.
 warnings — identical count to the pre-change baseline at checkpoint
 `5a5b5fa` (verified via `git worktree add /tmp/dmcomp-baseline 5a5b5fa` +
 `npm run lint`), i.e. zero new lint issues introduced by this port.
+
+## 36. Bug-fix pass — duplicated content, Travel block, old NPC popup, image crop, tab dominance, route panel, edit UX
+
+A live manual browser review of the §35 port found concrete bugs that
+`tsc`/`eslint` cannot catch (content duplication, wrong UI hierarchy,
+leftover popup component, image-fit CSS). See
+`CAMPAIGN_MAP_WORKSPACE_USABILITY_BASELINE_ACCEPTANCE.md`'s "Bug-fix pass"
+section for the full list and audit findings; this section records the
+implementation specifics.
+
+### 36.1 Content-duplication root cause
+
+Two independent rendering paths existed for "open a location": the new
+`companionStack`/`openCompanion`/`EmbeddedCompanionWindow` system from §35,
+and the pre-existing `objectWindowOpen`/`objectWindowSection` large object
+window (Stage 6C.5 Phase 2, §26) whose "Обзор" section rendered a
+`Companion*Card` (added in Phases 2D/2F) immediately followed by
+`<LocationSidePanel>` (the original, much older technical panel, with the
+Travel block inside it) — i.e. the same content twice, by construction,
+every time. `MapWorkspacePage.tsx`'s `selectLocation`/marker-click/Library
+flows mostly fed `objectWindowOpen`, not `openCompanion`, so this was the
+*actual* primary path most users hit, not a rare edge case.
+
+Fix: `LocationSidePanel` is no longer rendered inside `objectWindowOpen`'s
+body at all. The object window's "Обзор" tab button was removed entirely —
+the `Companion*Card` renders unconditionally as the window's only content,
+with the 4 remaining sections (Редактирование/Связи/Карта/Опасная зона)
+moved into a collapsed `<details className="object-window-map-actions">`
+titled "Действия на карте" below it (`effectiveObjectWindowSection` still
+drives which of the 4 is shown, defaulting to none/all-collapsed in DM
+View since they're DM-Edit-only anyway).
+
+The non-edit-mode standalone aside (`!isEditMode && selectedLs &&
+selectedVisible`) used to render `<LocationSidePanel>` directly for BOTH DM
+View and Player View. Split: DM View now renders a single "Открыть
+карточку" button (same `setObjectWindowOpen(true)` as DM Edit);
+`<LocationSidePanel>` is now reachable only when `isPlayerView` is true.
+
+### 36.2 Travel block removal
+
+Removed `MapWorkspacePage.tsx`'s `LocationSidePanel`'s `isJourneyTarget`/
+`journeyQuest`/`journeyRoute`/`journeyDangerEnemies`/`travelEvents`
+computed state and the `{isJourneyTarget && (<section
+className="card journey-panel">...)}` JSX block it fed (formerly
+immediately after the location header, ~175 lines: Откуда/Куда/Зачем, path
+description, "Найти путь"/"Переместить партию по маршруту" buttons,
+"Возможные опасности по пути", "Что может случиться по пути"). The route
+feature itself was preserved: `onFindAndCommitPath`/`pathfindingResult`/
+`commitMultiSegmentJourney` still exist; the multi-hop pathfinding-result
+display moved to the "Маршруты" tool tab as a collapsed `<details
+className="route-pathfinding-result">`. `partyHotspotForJourney` (used by
+the separate, still-present generic "Переместить партию сюда" button) was
+kept. The orphaned `openRouteBuilderBetween` helper (only ever called from
+the removed panel's "Создать маршрут между этими точками" button) was
+removed as dead code — route creation between hotspots remains fully
+functional via `handleHotspotDoubleClick` and the manual "Создать
+маршрут" form, both unaffected.
+
+### 36.3 Image fit fix
+
+`.companion-source-hero` (`index.css`) changed from `object-fit: cover` +
+`max-height: 220px` to `object-fit: contain` + `max-height: 60vh`,
+centered in a new `.companion-source-hero-wrap` button (so the hero is
+also click-to-lightbox). `.side-panel-header-image` got the same
+`cover`→`contain` fix. Matches dm-companion's real
+`EntityHeroImage.tsx`/`RelatedImages.css` (`object-fit: contain`,
+`max-height: 60vh` on the hero variant). Wired `ImageLightbox` into
+`CompanionLocationCard`/`CompanionTavernCard`/`CompanionShopCard`/
+`CompanionNpcCard`/`CompanionEnemyCard`/`CompanionQuestCard`'s hero images
+(previously only `CompanionImageCard` had this).
+
+### 36.4 Old NPC popup (`EntityDrawer`) — call sites fixed
+
+`EntityDrawer`'s `npc`/`quest`/`enemy`/`image` branches were reachable from
+far more places than just NPCs: `openLinkedEntity` (every map marker click
+on an NPC/quest/enemy/image placement), the global search results list,
+the session panel's active-quest rows, and `UnplacedContentPanel`'s
+NPC/quest "Открыть" buttons. All re-pointed at `openCompanion()`.
+`UnplacedContentPanel` had its `onOpenDrawer: (d: DrawerState) => void`
+prop replaced with `onOpenCompanion: (entity: EmbeddedCompanionEntity) =>
+void`. `EntityDrawer` itself is NOT deleted — its npc/quest/enemy/image
+branches are still the live, correct destination for
+`LocationSidePanel`'s own entity-card-grid buttons, now that
+`LocationSidePanel` is Player-View-only (see 36.1); `placement`/
+`battleMap`/`economy`/`law` (no `Companion*Card` exists for these) keep
+using it unconditionally.
+
+### 36.5 "Действия на карте" sections
+
+Added to both window types:
+- `objectWindowOpen`'s `<details className="object-window-map-actions">`
+  (36.1) — the 4 existing Редактирование/Связи/Карта/Опасная зона sections,
+  just relocated and collapsed, no new functionality.
+- `EmbeddedCompanionWindow.tsx`'s `<details className="companion-map-actions">`
+  — genuinely new: looks up the entity's `MapObjectPlacement` from
+  `data.placements` by `(entityKind, entityId)`, shows placement/visibility
+  status, and two toggle buttons (`store.patchPlacement`) for "скрыть/
+  показать маркер (ДМ)" and "скрыть/показать игрокам". Omitted for
+  `battleEntry` (no `MapObjectPlacement` record exists for those — they're
+  positioned via `BattleEntry.position`/`sourceLocationStateId` directly).
+  Shows "Эта карточка пока не размещена маркером на текущей карте." when no
+  placement is found, rather than nothing.
+
+### 36.6 Bottom edit action bar
+
+`EmbeddedCompanionWindow` gained `onEditNpc`/`onEditTavern`/`onEditShop`/
+`onEditImage`/`onEditBattleEntry` optional props, wired from
+`MapWorkspacePage.tsx` to the pre-existing `open*Editor` functions (looked
+up by id from `data`/`store.battleEntriesById`, only when `isEditMode`).
+Renders a `.companion-edit-bar` with a single "Редактировать" button when
+an edit handler exists for the current entity type, or the disabled note
+"Редактирование исходной карточки будет добавлено отдельным этапом" for
+location/quest/enemy (no override-patch mechanism exists for those — same
+pre-existing limitation already documented inside
+`CompanionQuestCard.tsx`/`CompanionEnemyCard.tsx`). No "Перенести в
+архив"/"Удалить" buttons were added: this app has no archive/delete flow
+for library source records (only for placed map markers, already covered
+by 36.5).
+
+### 36.7 Audit-driven content fixes (data-level cross-check)
+
+- `CompanionLocationCard.tsx` gained a hero/gallery image (`loc.images`
+  resolved against the `images` prop — previously rendered no image at
+  all, unlike every other card and unlike dm-companion's real
+  `LocationDetailPage.tsx`), a "Магазины здесь" section (`shop.location
+  === loc.id` reverse lookup, computed at both `EmbeddedCompanionWindow.tsx`
+  and `MapWorkspacePage.tsx` call sites since `DmLocation` has no `shops`
+  id array of its own — only the `loc.shops` field exists but isn't a
+  reliable cross-reference; using the `shop.location` reverse lookup
+  matches dm-companion's own `shopsAtLocation`), and a "Связанные враги"
+  section (`enemy.locationIds.includes(loc.id)`, matching
+  `customEnemiesAtLocation`).
+- `CompanionTavernCard.tsx`/`CompanionShopCard.tsx` gained a "Локация"
+  section (`tavern.location`/`shop.location`, resolved to a location name
+  + optional `onOpenLocation` callback at both call sites) — both cards'
+  own module-doc comments already claimed this field was ported, but it
+  was never actually rendered; this was a real gap, not a deliberate
+  omission.
+- `CompanionNpcCard.tsx`/`CompanionQuestCard.tsx`/`CompanionEnemyCard.tsx`
+  were checked field-by-field against `NpcDetailPage.tsx`/
+  `QuestDetailPage.tsx`/`EnemyDetailPage.tsx` and already matched (faction
+  badges intentionally skipped, as already documented in each file).
+  `QuestDetailPage.tsx`'s confirmed/possible `BattleMapsSection` (the same
+  battle-map confidence-linking machinery as Location's "Боевые карты")
+  has no `CompanionQuestCard` equivalent — flagged as a known, documented
+  limitation (a real follow-up feature, not a silent skip), not fixed in
+  this pass.
+
+### 36.8 Gates after this pass
+
+`lint:hooks` PASS, `typecheck` PASS, `build` PASS. Full `lint`: 7 errors / 3
+warnings — same count as the pre-change baseline (checkpoint `72379ca`),
+i.e. zero new lint issues introduced.

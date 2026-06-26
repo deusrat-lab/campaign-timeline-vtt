@@ -234,3 +234,118 @@ the list above, not the whole baseline. Remaining gaps (Player View safe
 marker projection, mode-guard hardening pass, local image upload/custom
 object creation, cross-map transfer, viewport stability) are unchanged by
 this work.
+
+## Bug-fix pass (post-2I, manual browser review)
+
+A live manual review in the browser found concrete regressions/bugs that
+the prior passes' own gates didn't catch (none of them are TS/lint errors —
+they're UX/content-duplication bugs). This pass fixed all of them:
+
+1. **Old duplicated content alongside the new embedded card** — opening a
+   Location/Tavern/Shop via `objectWindowOpen` (the large object window with
+   the Обзор/Редактирование/Связи/Карта/Опасная зона tab strip) used to
+   render the real `Companion*Card` AND then immediately render
+   `<LocationSidePanel>` again right below it in the same "Обзор" section —
+   the exact same NPC/quest/enemy/image/route/shop content twice in one
+   scroll. Fixed: `LocationSidePanel` is no longer rendered inside the
+   object window at all; the `Companion*Card` is the sole content. The
+   standalone (non-edit-mode) aside also used to render
+   `<LocationSidePanel>` directly for DM View, not just Player View — DM
+   View now shows an "Открыть карточку" button into the same embedded card
+   instead; only Player View (the one path that's genuinely
+   player-safe-gated) still uses `LocationSidePanel`.
+2. **"Путешествие" (Travel) block removed from entity cards** — `Откуда`/
+   `Куда`/`Зачем`, "прямого маршрута нет — нажмите «Найти путь»", and the
+   full route-network pathfinding-options UI used to render unconditionally
+   inside `LocationSidePanel` whenever a non-party location was selected
+   (`isJourneyTarget`), i.e. mixed into the same scroll as the entity
+   content. The whole block (`MapWorkspacePage.tsx`, the section right
+   after the location header, formerly ~175 lines) is now deleted from
+   every card. The underlying feature is NOT deleted: multi-hop
+   route-network pathfinding (`onFindAndCommitPath`/`pathfindingResult`/
+   `commitMultiSegmentJourney`) now surfaces in the dedicated "Маршруты"
+   tool tab as a collapsed-by-default `<details>` ("Результат поиска
+   пути"), and the generic "Переместить партию сюда"/"Поставить партию
+   здесь" button in `LocationSidePanel` (Player View) still avoids
+   teleporting through closed routes.
+3. **Image cropping fixed** — `.companion-source-hero` and
+   `.side-panel-header-image` used `object-fit: cover` with an aggressive
+   `max-height` (160–220px), cropping a narrow strip out of tall source
+   images. Now `object-fit: contain`, centered, `max-height: 60vh`,
+   matching dm-companion's real `EntityHeroImage`/`RelatedImages.css`
+   sizing approach. Every `Companion*Card`'s hero image is now also
+   click-to-lightbox (`ImageLightbox`) — previously only `CompanionImageCard`
+   had this wired; Location/Tavern/Shop/NPC/Enemy/Quest hero images were
+   plain unclickable `<img>` tags.
+4. **Technical tabs no longer the primary UI** — the object window's
+   "Обзор" tab (competing on equal footing with Редактирование/Связи/Карта/
+   Опасная зона) is gone; the `Companion*Card` content now always renders
+   first, unconditionally, with no tab gating. The 4 remaining map/edit-only
+   sections are inside a collapsed-by-default `<details>` titled "Действия
+   на карте" below the card. `EmbeddedCompanionWindow.tsx` (the
+   `openCompanion()` path) gained its own matching "Действия на карте"
+   section — real placement/visibility data looked up from
+   `data.placements`, not a fake/empty panel.
+5. **Old NPC popup eliminated from every DM-facing path** — `EntityDrawer`
+   (an old, much smaller component rendering NPC `race`/`role`/`goals` as
+   plain inline JSX, no portrait, no link-row navigation, no edit) used to
+   be the actual destination for: map marker clicks on NPC/quest/enemy/image
+   placements (`openLinkedEntity`), global search results for NPC/quest/
+   enemy, the session panel's active-quest list, and "Unplaced content"'s
+   NPC/quest "Открыть" buttons. All of these now call `openCompanion()`
+   instead. `EntityDrawer`'s npc/quest/enemy/image branches are kept
+   (not deleted) only because `LocationSidePanel` — now rendered exclusively
+   in Player View — still needs a working, player-safe popup; `placement`/
+   `battleMap`/`economy`/`law` (no `Companion*Card` equivalent) keep using
+   it in every mode. See the code-change report for the exact NPC
+   previously affected by this bug (every NPC reachable via a map marker,
+   search, or the session panel — not one specific NPC).
+6. **Route/travel panel de-intensified** — there was no separate
+   purple-styled "RoutePanel" component; the closest match was the
+   "Путешествие" journey panel itself (already gold-themed, not purple),
+   removed per item 2 above. The multi-hop pathfinding-result UI that used
+   to live inside it now renders compact and collapsed (`<details>`) in the
+   "Маршруты" tool tab, themed with the existing dark/gold palette
+   (`.route-pathfinding-result`), not full-width/always-expanded.
+7. **Bottom "Редактировать" action bar** added to `EmbeddedCompanionWindow`,
+   matching dm-companion's real `ShopDetailPage.tsx`/`NpcDetailPage.tsx`
+   btn-row. Wired to the existing `open*Editor` overlays for npc/tavern/
+   shop/image/battleEntry (the types with a real override-patch mechanism);
+   location/quest/enemy show "Редактирование исходной карточки будет
+   добавлено отдельным этапом" instead of a non-functional button — no
+   archive/delete buttons were added (no archive/delete flow exists for
+   library source records, only for placed map markers, already covered by
+   "Действия на карте").
+8. **Player/Observer safety re-confirmed, no gaps found.** `isDmMode =
+   !isPlayerView` already gates `EmbeddedCompanionWindow`, the Library
+   drawer, the object-overview "Открыть карточку"/"Редактировать" buttons,
+   and the object window — verified by grep, not just assumption. No new
+   gap was introduced or found in this pass.
+
+### Audit against real dm-companion source (data-level cross-check)
+
+Comparing each `Companion*Card` against the actual dm-companion
+`*DetailPage.tsx` field order found two real content gaps (not just the
+bugs above), fixed in this pass:
+
+- `CompanionLocationCard` never rendered a hero/gallery image at all (real
+  `LocationDetailPage.tsx` always shows one via `imagesForEntity`), and
+  never rendered "Магазины здесь" (shops at this location) or "Связанные
+  враги" (enemies linked to this location) — both real sections in
+  `LocationDetailPage.tsx`, both reverse lookups (`shop.location ===
+  loc.id`, `enemy.locationIds.includes(loc.id)`), not stored on
+  `DmLocation` directly. All three added.
+- `CompanionTavernCard`/`CompanionShopCard` had a doc comment claiming a
+  "Локация" section but never actually rendered `tavern.location`/
+  `shop.location` — added, with click-through navigation when an
+  `onOpenLocation` callback is supplied.
+
+`CompanionNpcCard`, `CompanionQuestCard`, `CompanionEnemyCard` were checked
+field-by-field against `NpcDetailPage.tsx`/`QuestDetailPage.tsx`/
+`EnemyDetailPage.tsx` and already matched (faction badges intentionally
+skipped, as already documented). One remaining gap found and NOT fixed in
+this pass: `QuestDetailPage.tsx`'s confirmed/possible `BattleMapsSection`
+(battle-map confidence linking for a quest) has no equivalent in
+`CompanionQuestCard` — this is a deeper feature (the same confidence-link
+machinery already used for Location's "Боевые карты" section) and is
+flagged as a documented limitation, not silently skipped.

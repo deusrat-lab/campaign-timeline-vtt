@@ -1258,8 +1258,8 @@ p.trigger-warning {
 .side-panel-header-image {
   display: block;
   width: 100%;
-  max-height: 160px;
-  object-fit: cover;
+  max-height: 60vh;
+  object-fit: contain;
 }
 
 .route-list {
@@ -1286,6 +1286,25 @@ p.trigger-warning {
 
 .journey-panel {
   border-color: var(--gold-dim);
+}
+
+/* Bug-fix pass — route/pathfinding result, relocated out of the entity
+   card into the dedicated "Маршруты" tool tab, collapsed by default
+   (compact summary chip, expandable). Themed with the app's existing
+   dark/gold palette, never purple — see "Route panel cleanup" in the
+   usability-baseline acceptance doc. */
+.route-pathfinding-result {
+  margin-top: 0.6rem;
+  border: 1px solid var(--gold-dim, var(--border));
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+  background: var(--bg-card-raised);
+}
+
+.route-pathfinding-result summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--gold-soft, var(--gold));
 }
 
 .route-selected {
@@ -2475,14 +2494,33 @@ textarea:focus {
 }
 
 /* Stage 6C.5 Phase 2F — Tavern/Shop companion card additions: hero image,
-   readable menu/room/goods rows (no buy/cart UI, out of scope), gallery. */
+   readable menu/room/goods rows (no buy/cart UI, out of scope), gallery.
+   Bug-fix pass (see CAMPAIGN_MAP_WORKSPACE_USABILITY_BASELINE_ACCEPTANCE.md,
+   "Image fit fix"): matches dm-companion's EntityHeroImage/RelatedImages.css
+   sizing — object-fit: contain (never crop), centered, generous max-height
+   instead of `cover` cropping a narrow strip out of tall/portrait source
+   images. */
+.companion-source-hero-wrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  overflow: hidden;
+  background: var(--bg-card-raised, var(--bg-card));
+  padding: 0;
+  cursor: pointer;
+}
+
 .companion-source-hero {
   display: block;
   width: 100%;
-  max-height: 220px;
-  object-fit: cover;
-  border-radius: var(--radius-md, 6px);
-  margin-bottom: 0.5rem;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: 0;
+  margin-bottom: 0;
 }
 
 .companion-item-list {
@@ -2606,6 +2644,14 @@ textarea:focus {
   margin: 0.4rem 0.4rem 0 0;
 }
 
+/* Bug-fix pass — DM View's compact aside now just offers "Открыть
+   карточку" straight into the embedded Companion card, instead of falling
+   back to the old technical LocationSidePanel (which is what previously
+   showed Travel-block/old-content duplication in DM View). */
+.object-overview-open-card {
+  margin-top: 0.4rem;
+}
+
 /* Stage 6C.5 Phase 2 — large object management window. Opened from the
    compact overview's "Открыть карточку"/"Редактировать" buttons; hosts
    the same pre-existing card/edit/links/map components as sections
@@ -2668,6 +2714,33 @@ textarea:focus {
 .companion-window-body {
   overflow-y: auto;
   padding: 1.25rem;
+}
+
+/* Bug-fix pass — "Действия на карте" inside EmbeddedCompanionWindow:
+   collapsed-by-default map/placement controls, kept visually separate
+   from (below) the Companion*Card content. */
+.companion-map-actions {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.companion-map-actions summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--gold-soft, var(--gold));
+}
+
+.companion-map-actions-body {
+  margin-top: 0.5rem;
+}
+
+/* Bug-fix pass — bottom "Редактировать" action bar, matching dm-companion's
+   real detail-page btn-row. */
+.companion-edit-bar {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
 }
 
 .companion-link-row {
@@ -2751,9 +2824,24 @@ textarea:focus {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+  padding: 0.75rem 0 0;
+}
+
+/* Bug-fix pass — "Действия на карте": map/edit-only tools, collapsed by
+   default, rendered below the always-visible Companion*Card content
+   instead of competing with it as top-level tabs (see
+   CAMPAIGN_MAP_WORKSPACE_USABILITY_BASELINE_ACCEPTANCE.md, "Tab
+   separation"). */
+.object-window-map-actions {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.object-window-map-actions summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--gold-soft, var(--gold));
 }
 
 .object-window-body {

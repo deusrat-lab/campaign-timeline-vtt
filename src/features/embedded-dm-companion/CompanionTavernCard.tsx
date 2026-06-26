@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import type { DmTavern, DmImageItem } from '../../types/dmCompanion';
 import { resolveEntityPreviewImage } from '../../pages/map-workspace/libraryCards';
 import { CompanionLinkRow } from './CompanionLinkRow';
 import { PurchaseCart, type BuyableItem } from './PurchaseCart';
 import { parseAnyPrice } from './currency';
+import { ImageLightbox } from './ImageLightbox';
 
 /**
  * Ported field order/content from dm-companion's real
@@ -24,15 +26,22 @@ export function CompanionTavernCard({
   npcs,
   quests,
   images,
+  locationName,
   onOpenNpc,
   onOpenQuest,
+  onOpenLocation,
 }: {
   tavern: DmTavern;
   npcs: { id: string; name: string }[];
   quests: { id: string; title: string }[];
   images: DmImageItem[];
+  /** Bug-fix pass: dm-companion's real TavernDetailPage shows "Локация"
+   * (`tavern.location`) right after Атмосфера — this card had the doc
+   * comment claiming it but never actually rendered it. */
+  locationName?: string;
   onOpenNpc?: (id: string) => void;
   onOpenQuest?: (id: string) => void;
+  onOpenLocation?: () => void;
 }) {
   const owner = tavern.ownerNpcId ? npcs.find((n) => n.id === tavern.ownerNpcId) : undefined;
   const staffItems = (tavern.staff ?? []).map((id) => ({ id, label: npcs.find((n) => n.id === id)?.name ?? id }));
@@ -62,6 +71,7 @@ export function CompanionTavernCard({
     })
     .filter((x): x is BuyableItem => !!x);
   const roomPlainItems = (tavern.rooms ?? []).filter((room) => !parseAnyPrice(room.price));
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   return (
     <div className="companion-source-card">
@@ -69,12 +79,31 @@ export function CompanionTavernCard({
         <h3>{tavern.name}</h3>
         <span className="muted">Таверна{tavern.tags?.length ? ` · ${tavern.tags.join(', ')}` : ''}</span>
       </div>
-      {hero && <img className="companion-source-hero" src={hero.src} alt={tavern.name} />}
+      {hero && (
+        <button type="button" className="companion-source-hero-wrap" onClick={() => setLightboxOpen(true)}>
+          <img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={tavern.name} />
+        </button>
+      )}
+      {hero && lightboxOpen && (
+        <ImageLightbox image={{ ...hero, title: hero.title ?? tavern.name }} onClose={() => setLightboxOpen(false)} />
+      )}
       <p>{tavern.description}</p>
       {tavern.atmosphere && (
         <>
           <h4>Атмосфера</h4>
           <p>{tavern.atmosphere}</p>
+        </>
+      )}
+      {locationName && (
+        <>
+          <h4>Локация</h4>
+          {onOpenLocation ? (
+            <button type="button" className="companion-link-chip" onClick={onOpenLocation}>
+              {locationName}
+            </button>
+          ) : (
+            <p>{locationName}</p>
+          )}
         </>
       )}
       {(owner || tavern.ownerName) && (

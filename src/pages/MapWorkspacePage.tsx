@@ -1628,6 +1628,18 @@ export function MapWorkspacePage() {
       return;
     }
     if (p.entityKind === 'note' || p.entityKind === 'custom') return;
+    // Bug-fix pass — NPC/quest/enemy/image markers used to open through the
+    // old small EntityDrawer popup (race/role/goals inline JSX), not the
+    // embedded Companion card. This was the actual "some NPCs still open
+    // through an old small homemade popup" regression: every map marker for
+    // an NPC opened this way. battleMap has no Companion*Card equivalent
+    // (no DM Companion "battle map detail" page exists to port), so it
+    // keeps using EntityDrawer.
+    if (p.entityKind === 'npc' || p.entityKind === 'quest' || p.entityKind === 'enemy' || p.entityKind === 'image') {
+      setDrawer(null);
+      openCompanion({ type: p.entityKind, id: p.entityId });
+      return;
+    }
     setDrawer({ kind: p.entityKind, id: p.entityId } as DrawerState);
   }
 
@@ -2816,16 +2828,14 @@ export function MapWorkspacePage() {
     setEditingRouteId(newRoute.id);
   }
 
-  function openRouteBuilderBetween(fromHotspotId: string, toHotspotId: string) {
-    const from = hotspots.find((h) => h.id === fromHotspotId);
-    const to = hotspots.find((h) => h.id === toHotspotId);
-    cancelAllEditTools();
-    setRouteDraft({
-      title: from && to ? `${from.label} → ${to.label}` : '',
-      fromHotspotId,
-      toHotspotId,
-    });
-  }
+  // Bug-fix pass — `openRouteBuilderBetween` (double-click-two-hotspots
+  // route creation shortcut) was only ever invoked from the removed
+  // "Путешествие" panel's "Создать маршрут между этими точками" button
+  // (see Travel-block removal in the usability-baseline doc). Route
+  // creation itself is NOT removed — it remains fully functional via
+  // `handleHotspotDoubleClick` (double-clicking two hotspots on the map)
+  // and the manual "Создать маршрут" form in the Маршруты tool tab, both
+  // of which call `setRouteDraft` directly.
 
   function finishRouteEditing() {
     if (!editingRouteId) return;
@@ -3340,7 +3350,7 @@ export function MapWorkspacePage() {
                   className="search-result-row"
                   onClick={() => {
                     jumpToLocationOfEntity(n.location);
-                    setDrawer({ kind: 'npc', id: n.id });
+                    openCompanion({ type: 'npc', id: n.id });
                     setGlobalSearch('');
                   }}
                 >
@@ -3353,7 +3363,7 @@ export function MapWorkspacePage() {
                   className="search-result-row"
                   onClick={() => {
                     jumpToLocationOfEntity(q.location);
-                    setDrawer({ kind: 'quest', id: q.id });
+                    openCompanion({ type: 'quest', id: q.id });
                     setGlobalSearch('');
                   }}
                 >
@@ -3366,7 +3376,7 @@ export function MapWorkspacePage() {
                   className="search-result-row"
                   onClick={() => {
                     jumpToLocationOfEntity(en.locationIds?.[0]);
-                    setDrawer({ kind: 'enemy', id: en.id });
+                    openCompanion({ type: 'enemy', id: en.id });
                     setGlobalSearch('');
                   }}
                 >
@@ -3454,7 +3464,7 @@ export function MapWorkspacePage() {
                       className="link-like"
                       onClick={() => {
                         jumpToLocationOfEntity(q.location);
-                        setDrawer({ kind: 'quest', id: q.id });
+                        openCompanion({ type: 'quest', id: q.id });
                         setShowSessionPanel(false);
                       }}
                     >
@@ -7435,6 +7445,62 @@ export function MapWorkspacePage() {
                   })}
                 </ul>
               )}
+              {/* Bug-fix pass — multi-hop route-network pathfinding results
+                  used to render as a full-width "Путешествие" block inside
+                  the location card (always expanded, theme-inconsistent).
+                  Moved here into the dedicated route tool tab, collapsed by
+                  default behind a compact summary chip, themed with this
+                  app's existing dark/gold variables (no purple). Same
+                  underlying `onFindAndCommitPath`/`pathfindingResult`/
+                  `onCommitPathOption` functionality — just relocated and
+                  de-intensified, not removed. */}
+              {pathfindingResult && (
+                <details className="route-pathfinding-result" open>
+                  <summary>
+                    Результат поиска пути ({pathfindingResult.options.length}{' '}
+                    {pathfindingResult.options.length === 1 ? 'вариант' : 'варианта'})
+                  </summary>
+                  {pathfindingResult.options.length === 0 ? (
+                    <p className="route-editor-error">
+                      Нет доступного маршрута по дорожной сети между этими точками.
+                    </p>
+                  ) : (
+                    pathfindingResult.options.map((path, optionIdx) => (
+                      <div key={optionIdx} className="route-list-option">
+                        {pathfindingResult.options.length > 1 && (
+                          <p><strong>Вариант {optionIdx === 0 ? 'A' : 'B'}</strong></p>
+                        )}
+                        <ol className="route-list">
+                          {path.segments.map((seg, segIdx) => {
+                            const segRoute = routes.find((r) => r.id === seg.routeId);
+                            const segLabel = segRoute?.label ?? `маршрут ${segIdx + 1}`;
+                            const dangerNote =
+                              seg.dangerLevel === 'dangerous' || seg.dangerLevel === 'deadly' || seg.status === 'dangerous'
+                                ? ' (опасный участок)'
+                                : '';
+                            return <li key={seg.routeId + segIdx}>{segLabel}{dangerNote}</li>;
+                          })}
+                        </ol>
+                        {path.warnings.length > 0 && (
+                          <ul className="route-list">
+                            {path.warnings.map((w) => (
+                              <li key={w} className="route-editor-error">{w}</li>
+                            ))}
+                          </ul>
+                        )}
+                        <button
+                          onClick={() => commitMultiSegmentJourney(path, pathfindingResult.targetLocationStateId)}
+                        >
+                          Построить путь партии{pathfindingResult.options.length > 1 ? ` (Вариант ${optionIdx === 0 ? 'A' : 'B'})` : ''}
+                        </button>
+                      </div>
+                    ))
+                  )}
+                  <button className="btn-ghost btn-compact" onClick={() => setPathfindingResult(null)}>
+                    Скрыть результат
+                  </button>
+                </details>
+              )}
             </div>
           )}
 
@@ -7483,22 +7549,22 @@ export function MapWorkspacePage() {
                 if (selectedLs.questIds.includes(questId)) return;
                 store.patchLocationState(selectedLs.id, { questIds: [...selectedLs.questIds, questId] });
               }}
-              onOpenDrawer={setDrawer}
+              onOpenCompanion={openCompanion}
               onPlaceOnMap={(locationId) => setPlacingExistingLocationId(locationId)}
               placingExistingLocationId={placingExistingLocationId}
             />
           )}
 
-          {/* Stage 6C.5 Phase 2 — point/data/links/overview are now sections
-              inside the large object window instead of top-level aside tabs.
-              Gating switched from `sidePanelTab` to `objectWindowOpen &&
-              objectWindowSection` so they only render inside that window. */}
-          {/* Stage 6C.5 Phase 2D-Fix — opening the card (read/navigation) now
-              works in any DM mode, not just DM Edit. The 4 write-capable
-              sections (Редактирование/Связи/Карта/Опасная зона) are
-              disabled in DM View instead of removed, so the tab layout
-              stays stable; "Обзор" (the actual readable DM Companion
-              content) is always available. */}
+          {/* Bug-fix pass — this window's tab strip used to include an
+              "Обзор" tab competing on equal footing with
+              Редактирование/Связи/Карта/Опасная зона, and the technical
+              tabs were the primary, always-visible UI (bug: "Technical
+              tabs dominate as primary UI"). The Companion*Card content is
+              now ALWAYS rendered first/unconditionally (no tab gating, no
+              "Обзор" button) and the 4 map/edit-only sections are moved
+              into a collapsed-by-default <details> titled "Действия на
+              карте" below it, matching EmbeddedCompanionWindow's own
+              "Действия на карте" section for the openCompanion() path. */}
           {isDmMode && objectWindowOpen && selectedLs && (
             <div className="object-window-overlay" onClick={() => setObjectWindowOpen(false)}>
               <div className="object-window-panel" onClick={(e) => e.stopPropagation()}>
@@ -7514,47 +7580,107 @@ export function MapWorkspacePage() {
                     Закрыть ✕
                   </button>
                 </div>
-                <div className="object-window-section-nav">
-                  <button
-                    className={effectiveObjectWindowSection === 'overview' ? 'active' : ''}
-                    onClick={() => setObjectWindowSection('overview')}
-                  >
-                    Обзор
-                  </button>
-                  <button
-                    className={effectiveObjectWindowSection === 'edit' ? 'active' : ''}
-                    disabled={!isEditMode}
-                    title={isEditMode ? undefined : 'Доступно только в режиме DM Edit'}
-                    onClick={() => setObjectWindowSection('edit')}
-                  >
-                    Редактирование
-                  </button>
-                  <button
-                    className={effectiveObjectWindowSection === 'links' ? 'active' : ''}
-                    disabled={!isEditMode}
-                    title={isEditMode ? undefined : 'Доступно только в режиме DM Edit'}
-                    onClick={() => setObjectWindowSection('links')}
-                  >
-                    Связи
-                  </button>
-                  <button
-                    className={effectiveObjectWindowSection === 'map' ? 'active' : ''}
-                    disabled={!isEditMode}
-                    title={isEditMode ? undefined : 'Доступно только в режиме DM Edit'}
-                    onClick={() => setObjectWindowSection('map')}
-                  >
-                    Карта
-                  </button>
-                  <button
-                    className={effectiveObjectWindowSection === 'danger' ? 'active' : ''}
-                    disabled={!isEditMode}
-                    title={isEditMode ? undefined : 'Доступно только в режиме DM Edit'}
-                    onClick={() => setObjectWindowSection('danger')}
-                  >
-                    Опасная зона
-                  </button>
-                </div>
                 <div className="object-window-body">
+          {selectedLs && !selectedVisible && (
+            <p className="side-panel-empty">Эта локация скрыта от игроков.</p>
+          )}
+
+          {selectedLs && selectedVisible && (() => {
+            // Stage 6C.5 Phase 2F — a placed Tavern/Shop materializes as a
+            // LocationState too (tagged `sourceLibraryType`/`sourceLibraryId`
+            // at placement time, see handleMapClick), not a DmLocation, so
+            // the DmLocation lookup below always misses for them. Branch on
+            // the source type first so taverns/shops get their own real
+            // DM-Companion-style card instead of silently rendering nothing
+            // and falling through to the generic technical panel.
+            if (selectedLs.sourceLibraryType === 'tavern') {
+              const sourceTavern = data?.taverns.find((t) => t.id === selectedLs.sourceLibraryId);
+              const sourceTavernLoc = sourceTavern ? data?.locations.find((l) => l.id === sourceTavern.location) : undefined;
+              return sourceTavern ? (
+                <CompanionTavernCard
+                  tavern={sourceTavern}
+                  npcs={npcsForArc}
+                  quests={questsForArc}
+                  images={data?.images ?? []}
+                  locationName={sourceTavernLoc?.name}
+                  onOpenNpc={(id) => openCompanion({ type: 'npc', id })}
+                  onOpenQuest={(id) => openCompanion({ type: 'quest', id })}
+                  onOpenLocation={sourceTavernLoc ? () => openCompanion({ type: 'location', id: sourceTavernLoc.id }) : undefined}
+                />
+              ) : null;
+            }
+            if (selectedLs.sourceLibraryType === 'shop') {
+              const sourceShop = data?.shops.find((s) => s.id === selectedLs.sourceLibraryId);
+              const sourceShopLoc = sourceShop ? data?.locations.find((l) => l.id === sourceShop.location) : undefined;
+              return sourceShop ? (
+                <CompanionShopCard
+                  shop={sourceShop}
+                  npcs={npcsForArc}
+                  images={data?.images ?? []}
+                  locationName={sourceShopLoc?.name}
+                  onOpenNpc={(id) => openCompanion({ type: 'npc', id })}
+                  onOpenLocation={sourceShopLoc ? () => openCompanion({ type: 'location', id: sourceShopLoc.id }) : undefined}
+                />
+              ) : null;
+            }
+            const sourceLoc = data?.locations.find((l) => l.id === selectedLs.locationId);
+            return sourceLoc ? (
+              <CompanionLocationCard
+                loc={sourceLoc}
+                npcs={npcsForArc}
+                quests={questsForArc}
+                shops={(data?.shops ?? []).filter((s) => s.location === sourceLoc.id)}
+                enemies={(data?.enemies ?? []).filter((e) => e.locationIds?.includes(sourceLoc.id))}
+                images={data?.images ?? []}
+                onOpenNpc={(id) => openCompanion({ type: 'npc', id })}
+                onOpenQuest={(id) => openCompanion({ type: 'quest', id })}
+                onOpenShop={(id) => openCompanion({ type: 'shop', id })}
+                onOpenEnemy={(id) => openCompanion({ type: 'enemy', id })}
+              />
+            ) : null;
+          })()}
+
+          {/* Bug-fix pass — "Технические вкладки доминируют как первичный
+              UI" (bug 4): Редактирование/Связи/Карта/Опасная зона are now
+              collapsed by default under this <details>, rendered BELOW the
+              Companion*Card content above, not as competing top-level tabs.
+              Write-capable sections stay DM-Edit-only via `disabled`. */}
+          <details className="object-window-map-actions">
+            <summary>Действия на карте</summary>
+            <div className="object-window-section-nav">
+              <button
+                className={effectiveObjectWindowSection === 'edit' ? 'active' : ''}
+                disabled={!isEditMode}
+                title={isEditMode ? undefined : 'Доступно только в режиме DM Edit'}
+                onClick={() => setObjectWindowSection('edit')}
+              >
+                Редактирование
+              </button>
+              <button
+                className={effectiveObjectWindowSection === 'links' ? 'active' : ''}
+                disabled={!isEditMode}
+                title={isEditMode ? undefined : 'Доступно только в режиме DM Edit'}
+                onClick={() => setObjectWindowSection('links')}
+              >
+                Связи
+              </button>
+              <button
+                className={effectiveObjectWindowSection === 'map' ? 'active' : ''}
+                disabled={!isEditMode}
+                title={isEditMode ? undefined : 'Доступно только в режиме DM Edit'}
+                onClick={() => setObjectWindowSection('map')}
+              >
+                Карта
+              </button>
+              <button
+                className={effectiveObjectWindowSection === 'danger' ? 'active' : ''}
+                disabled={!isEditMode}
+                title={isEditMode ? undefined : 'Доступно только в режиме DM Edit'}
+                onClick={() => setObjectWindowSection('danger')}
+              >
+                Опасная зона
+              </button>
+            </div>
           {effectiveObjectWindowSection === 'map' && (
             <HotspotInspector
               hotspot={selectedHotspot}
@@ -7737,87 +7863,6 @@ export function MapWorkspacePage() {
             />
           )}
 
-          {effectiveObjectWindowSection === 'overview' && selectedLs && !selectedVisible && (
-            <p className="side-panel-empty">Эта локация скрыта от игроков.</p>
-          )}
-
-          {effectiveObjectWindowSection === 'overview' && selectedLs && selectedVisible && (() => {
-            // Stage 6C.5 Phase 2F — a placed Tavern/Shop materializes as a
-            // LocationState too (tagged `sourceLibraryType`/`sourceLibraryId`
-            // at placement time, see handleMapClick), not a DmLocation, so
-            // the DmLocation lookup below always misses for them. Branch on
-            // the source type first so taverns/shops get their own real
-            // DM-Companion-style card instead of silently rendering nothing
-            // and falling through to the generic technical panel.
-            if (selectedLs.sourceLibraryType === 'tavern') {
-              const sourceTavern = data?.taverns.find((t) => t.id === selectedLs.sourceLibraryId);
-              return sourceTavern ? (
-                <CompanionTavernCard
-                  tavern={sourceTavern}
-                  npcs={npcsForArc}
-                  quests={questsForArc}
-                  images={data?.images ?? []}
-                  onOpenNpc={(id) => openCompanion({ type: 'npc', id })}
-                  onOpenQuest={(id) => openCompanion({ type: 'quest', id })}
-                />
-              ) : null;
-            }
-            if (selectedLs.sourceLibraryType === 'shop') {
-              const sourceShop = data?.shops.find((s) => s.id === selectedLs.sourceLibraryId);
-              return sourceShop ? (
-                <CompanionShopCard
-                  shop={sourceShop}
-                  npcs={npcsForArc}
-                  images={data?.images ?? []}
-                  onOpenNpc={(id) => openCompanion({ type: 'npc', id })}
-                />
-              ) : null;
-            }
-            const sourceLoc = data?.locations.find((l) => l.id === selectedLs.locationId);
-            return sourceLoc ? (
-              <CompanionLocationCard
-                loc={sourceLoc}
-                npcs={npcsForArc}
-                quests={questsForArc}
-                onOpenNpc={(id) => openCompanion({ type: 'npc', id })}
-                onOpenQuest={(id) => openCompanion({ type: 'quest', id })}
-              />
-            ) : null;
-          })()}
-
-          {effectiveObjectWindowSection === 'overview' && selectedLs && selectedVisible && (
-            <LocationSidePanel
-              ls={selectedLs}
-              routes={routes}
-              hotspots={hotspots}
-              partyLocationState={partyLocationState}
-              selectedRouteId={selectedRouteId}
-              onSelectRoute={setSelectedRouteId}
-              onSelectLocation={selectLocation}
-              onOpenDrawer={setDrawer}
-              onOpenPlacement={openPlacementDrawer}
-              onStartPlacement={startPlacement}
-              onMarkRoutePath={markRoutePath}
-              onCreateRouteBetween={openRouteBuilderBetween}
-              onStartMoveHotspot={(hotspotId) => setMovingHotspotId(hotspotId)}
-              movingHotspotId={movingHotspotId}
-              onStartPartyAnimation={(points) => setPartyTravelAnim({ points, index: 0 })}
-              onFindAndCommitPath={(fromHotspotId, toHotspotId, destinationLocationStateId) => {
-                const paths = findJourneyPaths(fromHotspotId, toHotspotId);
-                if (paths.length === 1) {
-                  commitMultiSegmentJourney(paths[0], destinationLocationStateId);
-                } else {
-                  setPathfindingResult({ targetLocationStateId: destinationLocationStateId, options: paths });
-                }
-              }}
-              pathfindingResult={pathfindingResult}
-              onCommitPathOption={(path, destinationLocationStateId) => commitMultiSegmentJourney(path, destinationLocationStateId)}
-              onClose={() => {
-                setSelectedLocationStateId(null);
-                setPathfindingResult(null);
-              }}
-            />
-          )}
                   {effectiveObjectWindowSection === 'danger' && (
                     <div className="object-window-danger-zone">
                       <p className="muted">
@@ -7854,6 +7899,7 @@ export function MapWorkspacePage() {
                       </p>
                     </div>
                   )}
+          </details>
                 </div>
               </div>
             </div>
@@ -7867,20 +7913,39 @@ export function MapWorkspacePage() {
             <p className="side-panel-empty">Эта локация скрыта от игроков.</p>
           )}
 
-          {!isEditMode && selectedLs && selectedVisible && (
+          {/* Bug-fix pass — DM View (isDmMode && !isEditMode) now opens the
+              same embedded Companion card as DM Edit instead of falling
+              back to the old technical LocationSidePanel (which is what
+              previously let DM View show duplicated/Travel-block content).
+              Player View keeps LocationSidePanel: it is the one path that is
+              actually player-safe-gated end to end, and the Companion*Card
+              components are DM-only by design (see their module docs) — see
+              "Player/Observer safety" in the usability-baseline doc. */}
+          {isDmMode && !isEditMode && selectedLs && selectedVisible && (
+            <div className="object-overview-open-card">
+              <button
+                className="btn-primary btn-compact"
+                onClick={() => {
+                  setObjectWindowSection('overview');
+                  setObjectWindowOpen(true);
+                }}
+              >
+                Открыть карточку
+              </button>
+            </div>
+          )}
+
+          {isPlayerView && selectedLs && selectedVisible && (
             <LocationSidePanel
               ls={selectedLs}
               routes={routes}
               hotspots={hotspots}
               partyLocationState={partyLocationState}
-              selectedRouteId={selectedRouteId}
               onSelectRoute={setSelectedRouteId}
               onSelectLocation={selectLocation}
               onOpenDrawer={setDrawer}
               onOpenPlacement={openPlacementDrawer}
               onStartPlacement={startPlacement}
-              onMarkRoutePath={markRoutePath}
-              onCreateRouteBetween={openRouteBuilderBetween}
               onStartMoveHotspot={(hotspotId) => setMovingHotspotId(hotspotId)}
               movingHotspotId={movingHotspotId}
               onStartPartyAnimation={(points) => setPartyTravelAnim({ points, index: 0 })}
@@ -7892,8 +7957,6 @@ export function MapWorkspacePage() {
                   setPathfindingResult({ targetLocationStateId: destinationLocationStateId, options: paths });
                 }
               }}
-              pathfindingResult={pathfindingResult}
-              onCommitPathOption={(path, destinationLocationStateId) => commitMultiSegmentJourney(path, destinationLocationStateId)}
               onClose={() => {
                 setSelectedLocationStateId(null);
                 setPathfindingResult(null);
@@ -7911,6 +7974,46 @@ export function MapWorkspacePage() {
             data={data}
             npcs={npcsForArc}
             quests={questsForArc}
+            onEditNpc={
+              isEditMode
+                ? (id) => {
+                    const npc = data.npcs.find((n) => n.id === id);
+                    if (npc) openNpcEditor(npc);
+                  }
+                : undefined
+            }
+            onEditTavern={
+              isEditMode
+                ? (id) => {
+                    const tavern = data.taverns.find((t) => t.id === id);
+                    if (tavern) openTavernEditor(tavern);
+                  }
+                : undefined
+            }
+            onEditShop={
+              isEditMode
+                ? (id) => {
+                    const shop = data.shops.find((s) => s.id === id);
+                    if (shop) openShopEditor(shop);
+                  }
+                : undefined
+            }
+            onEditImage={
+              isEditMode
+                ? (id) => {
+                    const img = data.images.find((i) => i.id === id);
+                    if (img) openImageEditor(img);
+                  }
+                : undefined
+            }
+            onEditBattleEntry={
+              isEditMode
+                ? (id) => {
+                    const entry = store.battleEntriesById[id];
+                    if (entry) openBattleEntryEditor(entry);
+                  }
+                : undefined
+            }
           />
         )}
       </div>
@@ -8537,7 +8640,7 @@ function UnplacedContentPanel({
   onSelectLocation,
   onLinkNpcToSelected,
   onLinkQuestToSelected,
-  onOpenDrawer,
+  onOpenCompanion,
   onPlaceOnMap,
   placingExistingLocationId,
 }: {
@@ -8549,7 +8652,10 @@ function UnplacedContentPanel({
   onSelectLocation: (id: string) => void;
   onLinkNpcToSelected: (npcId: string) => void;
   onLinkQuestToSelected: (questId: string) => void;
-  onOpenDrawer: (d: DrawerState) => void;
+  /** Bug-fix pass — was `onOpenDrawer` (the old small EntityDrawer popup);
+   * "Открыть" for NPC/quest here now opens the embedded Companion card,
+   * same as every other entry point. */
+  onOpenCompanion: (entity: EmbeddedCompanionEntity) => void;
   onPlaceOnMap: (locationId: string) => void;
   placingExistingLocationId: string | null;
 }) {
@@ -8611,7 +8717,7 @@ function UnplacedContentPanel({
                 <li key={n.id}>
                   <strong>{n.name}</strong>
                   <div className="actions">
-                    <button onClick={() => onOpenDrawer({ kind: 'npc', id: n.id })}>Открыть</button>
+                    <button onClick={() => onOpenCompanion({ type: 'npc', id: n.id })}>Открыть</button>
                     {selectedLs && (
                       <button onClick={() => onLinkNpcToSelected(n.id)}>
                         Привязать к «{selectedLs.title}»
@@ -8641,7 +8747,7 @@ function UnplacedContentPanel({
                 <li key={q.id}>
                   <strong>{q.title}</strong>
                   <div className="actions">
-                    <button onClick={() => onOpenDrawer({ kind: 'quest', id: q.id })}>Открыть</button>
+                    <button onClick={() => onOpenCompanion({ type: 'quest', id: q.id })}>Открыть</button>
                     {selectedLs && (
                       <button onClick={() => onLinkQuestToSelected(q.id)}>
                         Привязать к «{selectedLs.title}»
@@ -9785,18 +9891,13 @@ function LocationSidePanel({
   routes,
   hotspots,
   partyLocationState,
-  selectedRouteId,
   onSelectRoute,
   onSelectLocation,
   onOpenDrawer,
   onOpenPlacement,
   onStartPlacement,
-  onMarkRoutePath,
-  onCreateRouteBetween,
   onStartPartyAnimation,
   onFindAndCommitPath,
-  pathfindingResult,
-  onCommitPathOption,
   onClose,
   onStartMoveHotspot,
   movingHotspotId,
@@ -9805,23 +9906,21 @@ function LocationSidePanel({
   routes: MapRoute[];
   hotspots: MapHotspot[];
   partyLocationState: LocationState | undefined;
-  selectedRouteId: string | null;
   onSelectRoute: (id: string | null) => void;
   onSelectLocation: (id: string) => void;
   onOpenDrawer: (d: DrawerState) => void;
   onOpenPlacement: (p: MapObjectPlacement) => void;
   onStartPlacement: (entityKind: MapObjectPlacement['entityKind'], entityId: string | undefined, title: string) => void;
-  onMarkRoutePath: (routeId: string) => void;
-  onCreateRouteBetween: (fromHotspotId: string, toHotspotId: string) => void;
   onStartMoveHotspot: (hotspotId: string) => void;
   movingHotspotId: string | null;
   onStartPartyAnimation: (points: { x: number; y: number }[]) => void;
   /** Route-network pathfinding (Etap H): called when no single direct route
    * connects the party to ls — looks up multi-hop options and either commits
-   * the only one found or hands them to pathfindingResult for the DM to pick. */
+   * the only one found, or (for the DM-View/multi-option case) hands off to
+   * the page-level pathfindingResult state for the dedicated route UI to
+   * show the options — this player-safe panel never renders that picker
+   * itself (no Travel/Journey block here any more). */
   onFindAndCommitPath: (fromHotspotId: string, toHotspotId: string, destinationLocationStateId: string) => void;
-  pathfindingResult: { targetLocationStateId: string; options: RoutePathResult[] } | null;
-  onCommitPathOption: (path: RoutePathResult, destinationLocationStateId: string) => void;
   onClose: () => void;
 }) {
   const { data } = useCampaignData();
@@ -9888,43 +9987,16 @@ function LocationSidePanel({
     return !!p.entityId && linkedEntityIdsForPlacements.has(p.entityId);
   });
 
-  // ---------- Journey panel ("Путешествие") ----------
-  // Shown only when a location other than the party's current one is
-  // selected — purely informational/suggestion UI, never auto-triggered.
-  const isJourneyTarget = !!partyLocationState && partyLocationState.id !== ls.id;
-  const journeyQuest = isJourneyTarget
-    ? quests.find((q) => {
-        const qStatus = effectiveQuestStatus(q.id, q.status, store.progress);
-        return qStatus === 'active';
-      }) ??
-      data.quests.find((q) => {
-        if (q.location !== ls.locationId && q.location !== ls.id) return false;
-        const qStatus = effectiveQuestStatus(q.id, q.status, store.progress);
-        return qStatus === 'active';
-      })
-    : undefined;
+  // Bug-fix pass: the old "Journey panel" / "Travel events" computed state
+  // (isJourneyTarget/journeyQuest/journeyRoute/journeyDangerEnemies/
+  // travelEvents) that used to live here was removed along with the
+  // "Путешествие" JSX block below — see the comment at the old block's
+  // former location. `partyHotspotForJourney` is kept: the generic
+  // "Переместить партию сюда" action further down in this component still
+  // needs it to avoid teleporting the party through a closed area.
   const partyHotspotForJourney = partyLocationState
     ? hotspots.find((h) => h.locationStateId === partyLocationState.id)
     : undefined;
-  const journeyRoute =
-    isJourneyTarget && partyHotspotForJourney && ownHotspot
-      ? routes.find(
-          (r) =>
-            (r.fromHotspotId === partyHotspotForJourney.id && r.toHotspotId === ownHotspot.id) ||
-            (r.toHotspotId === partyHotspotForJourney.id && r.fromHotspotId === ownHotspot.id),
-        )
-      : undefined;
-  const journeyDangerEnemies = enemies; // same enemy-fetching logic already used for the card's "Враги" section.
-
-  // ---------- Travel events ("Что может случиться по пути") ----------
-  // DM-only, never auto-triggered — purely prepared options the DM can open.
-  // Only seeded as a mechanical inference from existing enemy/battle-map
-  // links (see src/data/travelEvents.json); never invented narrative.
-  const travelEvents = data.travelEvents.filter(
-    (ev) =>
-      ev.status !== 'hidden' &&
-      ((journeyRoute && ev.routeId === journeyRoute.id) || ev.locationStateId === ls.id),
-  );
 
   // ---------- Shops / economy ("Товары и услуги") ----------
   const linkedShops = data.shops.filter((s) => s.location === ls.locationId || s.location === ls.id);
@@ -9997,181 +10069,17 @@ function LocationSidePanel({
         </>
       )}
 
-      {isJourneyTarget && (
-        <section className="card journey-panel">
-          <h3>Путешествие</h3>
-          <p><strong>Откуда:</strong> {partyLocationState?.title ?? 'не задано'}</p>
-          <p><strong>Куда:</strong> {ls.title}</p>
-          <p>
-            <strong>Зачем:</strong>{' '}
-            {journeyQuest ? journeyQuest.title : 'Свободное путешествие / исследование'}
-          </p>
-          {(() => {
-            const journeyHasRealPath = (journeyRoute?.points?.length ?? 0) >= 2;
-            if (journeyHasRealPath && journeyRoute) {
-              return (
-                <p>
-                  <strong>Путь:</strong> партия идёт по маршруту «{journeyRoute.label ?? 'без названия'}»
-                  {' '}({journeyRoute.points!.length} точек по карте).
-                </p>
-              );
-            }
-            // No single direct route — describe what the route-network
-            // pathfinding (or its absence) found, never silently imply a
-            // direct/teleport move is the plan.
-            const activePathResult =
-              pathfindingResult?.targetLocationStateId === ls.id ? pathfindingResult : null;
-            if (!activePathResult) {
-              return (
-                <p>
-                  <strong>Путь:</strong> прямого маршрута нет — нажмите «Найти путь», чтобы поискать путь
-                  по дорожной сети.
-                </p>
-              );
-            }
-            if (activePathResult.options.length === 0) {
-              return (
-                <p className="route-editor-error">
-                  <strong>Путь:</strong> нет доступного маршрута по дорожной сети между этими точками.
-                  Нельзя строить прямой путь через закрытую область. Создайте маршрут/переход между этими
-                  районами — партия не будет перемещена.
-                </p>
-              );
-            }
-            return (
-              <div>
-                <p><strong>Путь найден по дорожной сети:</strong></p>
-                {activePathResult.options.map((path, optionIdx) => (
-                  <div key={optionIdx} className="route-list-option">
-                    {activePathResult.options.length > 1 && (
-                      <p><strong>Вариант {optionIdx === 0 ? 'A' : 'B'}</strong></p>
-                    )}
-                    <ol className="route-list">
-                      {path.segments.map((seg, segIdx) => {
-                        const segRoute = routes.find((r) => r.id === seg.routeId);
-                        const fromLabel =
-                          segIdx === 0
-                            ? hotspots.find((h) => h.id === partyHotspotForJourney?.id)?.label ?? 'Партия'
-                            : (segRoute?.label ?? 'маршрут');
-                        const toHotspotForSeg = hotspots.find(
-                          (h) => h.x === seg.points[seg.points.length - 1].x && h.y === seg.points[seg.points.length - 1].y,
-                        );
-                        const segLabel = segRoute?.label ?? `маршрут ${segIdx + 1}`;
-                        const dangerNote =
-                          seg.dangerLevel === 'dangerous' || seg.dangerLevel === 'deadly' || seg.status === 'dangerous'
-                            ? ' (опасный участок)'
-                            : '';
-                        return (
-                          <li key={seg.routeId + segIdx}>
-                            {segIdx === 0 ? fromLabel : segLabel} → {toHotspotForSeg?.label ?? segLabel}
-                            {dangerNote}
-                          </li>
-                        );
-                      })}
-                    </ol>
-                    {path.warnings.length > 0 && (
-                      <ul className="route-list">
-                        {path.warnings.map((w) => (
-                          <li key={w} className="route-editor-error">{w}</li>
-                        ))}
-                      </ul>
-                    )}
-                    {!isPlayerView && (
-                      <button onClick={() => onCommitPathOption(path, ls.id)}>
-                        Построить путь партии{activePathResult.options.length > 1 ? ` (Вариант ${optionIdx === 0 ? 'A' : 'B'})` : ''}
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-          {!isPlayerView && (
-            <div className="actions">
-              {(() => {
-                const journeyHasRealPath = (journeyRoute?.points?.length ?? 0) >= 2;
-                if (journeyHasRealPath && journeyRoute) {
-                  return (
-                    <button
-                      onClick={() => {
-                        // routeId is passed as pure metadata (which path the
-                        // party used) — it is never turned into rendered
-                        // geometry; the marker's actual screen position is
-                        // computed separately from route.points, and no
-                        // direct currentLocation→targetLocation line is ever
-                        // drawn.
-                        store.setCurrentLocation(ls.id, journeyRoute.id);
-                        onSelectRoute(journeyRoute.id);
-                        const path =
-                          partyHotspotForJourney && journeyRoute.fromHotspotId === partyHotspotForJourney.id
-                            ? journeyRoute.points!
-                            : [...journeyRoute.points!].reverse();
-                        onStartPartyAnimation(path);
-                      }}
-                    >
-                      Переместить партию по маршруту
-                    </button>
-                  );
-                }
-                return (
-                  <button
-                    disabled={!partyHotspotForJourney || !ownHotspot}
-                    onClick={() => {
-                      if (!partyHotspotForJourney || !ownHotspot) return;
-                      onFindAndCommitPath(partyHotspotForJourney.id, ownHotspot.id, ls.id);
-                    }}
-                  >
-                    Найти путь к локации
-                  </button>
-                );
-              })()}
-              {journeyRoute && (journeyRoute.points?.length ?? 0) >= 2 && (
-                <button onClick={() => onSelectRoute(selectedRouteId === journeyRoute.id ? null : journeyRoute.id)}>
-                  {selectedRouteId === journeyRoute.id ? 'Скрыть маршрут' : 'Показать маршрут'}
-                </button>
-              )}
-              {journeyRoute && isEditMode && (journeyRoute.points?.length ?? 0) < 2 && (
-                <button onClick={() => onMarkRoutePath(journeyRoute.id)}>Разметить путь</button>
-              )}
-              {!journeyRoute && isEditMode && partyHotspotForJourney && ownHotspot && (
-                <button onClick={() => onCreateRouteBetween(partyHotspotForJourney.id, ownHotspot.id)}>
-                  Создать маршрут между этими точками
-                </button>
-              )}
-            </div>
-          )}
-          {!isPlayerView && journeyDangerEnemies.length > 0 && (
-            <div className="dm-only">
-              <p className="side-panel-subheading">Возможные опасности по пути</p>
-              <ul className="route-list">
-                {journeyDangerEnemies.map((en) => (
-                  <li key={en.id}>{en.name}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {!isPlayerView && travelEvents.length > 0 && (
-            <div className="dm-only">
-              <p className="side-panel-subheading">Что может случиться по пути</p>
-              <ul className="route-list">
-                {travelEvents.map((ev) => (
-                  <li key={ev.id}>
-                    <strong>{ev.title}</strong>
-                    {ev.dangerLevel && <span className="status-badge"> {ev.dangerLevel}</span>}
-                    {ev.status === 'used' && <span className="status-badge"> использовано</span>}
-                    <div className="actions">
-                      <button onClick={() => store.patchTravelEvent(ev.id, { status: 'used' })}>
-                        Отметить использованным
-                      </button>
-                      <button onClick={() => store.patchTravelEvent(ev.id, { status: 'hidden' })}>Скрыть</button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
-      )}
+      {/* Bug-fix pass — the "Путешествие" (Travel) block that used to live
+          here (Откуда/Куда/Зачем, "прямого маршрута нет", "Найти путь") has
+          been removed from this card per the usability-baseline acceptance
+          doc: it must never render inside an object/entity content card.
+          The underlying route/pathfinding feature itself is NOT deleted —
+          `onFindAndCommitPath`/`pathfindingResult`/`onCommitPathOption`/
+          `onCreateRouteBetween`/`onMarkRoutePath` still exist and are wired
+          into the dedicated route/travel UI (the "Маршруты" tool tab and the
+          purple-turned-themed RoutePanel/journey toolbar elsewhere in this
+          page) — this card itself just stops re-rendering a second copy of
+          it next to the entity content. */}
 
       {!isPlayerView && (
         <div className="actions">
@@ -10684,6 +10592,22 @@ const PLACEMENT_KIND_LABELS: Record<MapObjectPlacement['entityKind'], string> = 
  * "Открыть Battle Map VTT" can only deep-link once the DM has pasted the
  * real battle-map-vtt URL here once. Without it, the button just opens the
  * app's base URL — never a fake/guessed deep link.
+ *
+ * Bug-fix pass — this was previously the OLD small homemade popup that some
+ * NPC/quest/enemy/image map markers, search results, and the session panel
+ * opened instead of the embedded Companion card (the "some NPCs still open
+ * through an old small homemade popup" regression). Every DM-facing path
+ * (marker click via `openLinkedEntity`, global search results, the session
+ * panel's quest list, Library/Unplaced-content "Открыть") has been
+ * re-pointed at `openCompanion()` instead — see the bug-fix comments at
+ * each of those call sites. The `npc`/`quest`/`enemy`/`image` branches
+ * below are kept only because `LocationSidePanel` (the player-safe-gated
+ * panel, now rendered ONLY in Player View — see its own call site comment)
+ * still uses them for its own read-only, player-safe detail popups; they
+ * are intentionally NOT deleted, since Player View still needs a working,
+ * player-safe entity popup and the Companion*Card components are DM-only by
+ * design. `placement`/`battleMap`/`economy`/`law` have no Companion*Card
+ * equivalent and keep using this drawer for every mode.
  */
 function EntityDrawer({
   drawer,
