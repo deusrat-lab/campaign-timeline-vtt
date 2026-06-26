@@ -3275,3 +3275,112 @@ to add `dev:host`).
   verification above used real, non-sandboxed Vite/Python processes
   inside this environment, which is the closest equivalent available
   here.
+
+## 35. DM Companion real-component port — `src/features/embedded-dm-companion/`
+
+Replaces the inline, simplified `Companion*Card` components that previously
+lived directly in `MapWorkspacePage.tsx` (Stage 6C.5 Phases 2D/2F/2G/2H) with
+real ported presentational components in a dedicated feature directory, plus
+two genuinely new pieces (Image detail view, BattleEntry passthrough wrapper)
+that the earlier stages had explicitly deferred.
+
+### 35.1 Final API names (decision, not an oversight)
+
+Kept `openCompanion`, `EmbeddedCompanionEntity`, `EmbeddedCompanionWindow` —
+did NOT rename to `openDmCompanionEntity`/`EmbeddedDmCompanionHost` even
+though the task allowed it. Reasoning: ~13 call sites across
+`MapWorkspacePage.tsx` already used these exact names; renaming would touch
+every one of them for purely cosmetic benefit, and the existing names already
+read clearly ("open the companion window for this entity"). The type now
+lives in `src/features/embedded-dm-companion/EmbeddedCompanionWindow.tsx`
+and is imported into `MapWorkspacePage.tsx`; the `companionStack`/
+`openCompanion`/`companionBack`/`closeCompanion` state and back-stack/
+Escape-to-close/DM-gating logic in `MapWorkspacePage.tsx` itself is
+unchanged.
+
+### 35.2 New feature directory contents
+
+`src/features/embedded-dm-companion/`:
+- `EmbeddedCompanionWindow.tsx` — the host; routes `{type, id}` to the right
+  ported card, resolves cross-entity data (location/npc/shop names for
+  link rows) from the already-loaded `CampaignData`.
+- `CompanionLinkRow.tsx` — shared clickable-chip row (moved unchanged from
+  `MapWorkspacePage.tsx`).
+- `CompanionLocationCard.tsx`, `CompanionTavernCard.tsx`,
+  `CompanionShopCard.tsx`, `CompanionNpcCard.tsx`, `CompanionQuestCard.tsx`,
+  `CompanionEnemyCard.tsx` — ported field order/content, confirmed against
+  dm-companion's real `pages/{locations,taverns,shops,npcs,quests,enemies}/
+  *DetailPage.tsx` (see each file's module doc for the exact field list).
+- `CompanionImageCard.tsx` — NEW, not ported (dm-companion has no Image
+  detail page, only the lightbox launched from galleries).
+- `CompanionBattleEntryCard.tsx` — NEW thin wrapper around the existing,
+  already-DM-gated `BattleEntryPanel` (map-native, not from dm-companion).
+- `PurchaseCart.tsx`, `PurchaseCart.css`, `currency.ts` — ported from
+  dm-companion's `components/PurchaseCart.tsx`/`.css` +
+  `utils/currency.ts`, with the local/non-persistent simplification (see
+  35.3) and `parseAnyPrice` added to bridge this app's looser
+  `string | number | undefined` price fields.
+- `ImageLightbox.tsx`, `ImageLightbox.css` — ported from dm-companion's
+  `components/ImageLightbox.tsx`/`.css`, with Capacitor-specific
+  Android-back-button and native-file-share code replaced by plain-web
+  equivalents (Escape key listener; Web Share API or download fallback).
+
+### 35.3 Cart simplification (documented, deliberate)
+
+`PurchaseCart` quantities are pure local `useState` inside the component —
+never written to the campaign store, overlay, or `localStorage`. Closing the
+embedded companion window unmounts the cart, so it silently resets. This
+matches the task's explicit instruction ("LOCAL non-persistent session
+state... no persistence layer") and reflects that shop/tavern purchases are
+a DM bookkeeping aid during a live session, not a tracked economy ledger —
+campaign-timeline-vtt has no economy/inventory data model to persist into
+even if this were wired up.
+
+Wired into both `CompanionTavernCard` (menu items + room bookings, two
+separate carts) and `CompanionShopCard` (one cart per goods category).
+Items whose price field isn't numerically parseable (`parseAnyPrice`
+returns `null` — e.g. descriptive prices like "по запросу") still render as
+plain text rows beneath the cart, matching dm-companion's own
+`parsePriceString` returning `null` for the same cases.
+
+### 35.4 Image — new, not ported
+
+dm-companion has no `ImageDetailPage.tsx`; images are only ever viewed via
+the `ImageLightbox` overlay launched from gallery grids on other entities'
+pages. `CompanionImageCard.tsx` is therefore a genuinely new component (the
+task spec anticipated this) — it shows the image's own metadata (title,
+type, DM-only/safeForPlayers flag, linked location/NPC/enemy/quests, all
+resolved via `data.images[].relatedEntity`/`linkedQuestIds`) plus a button
+that opens the full `ImageLightbox`.
+
+### 35.5 BattleEntry — map-native passthrough, not ported
+
+`BattleEntry` has no dm-companion equivalent at all (dm-companion has no
+concept of a battle map launch tied to a location). `{type:'battleEntry',
+id}` resolves the entry from `store.battleEntriesById` and renders the
+existing, already-DM-gated `src/pages/map-workspace/BattleEntryPanel.tsx`
+via a thin wrapper (`CompanionBattleEntryCard.tsx`). Documented limitation:
+the wrapper's `onEdit`/`onOpenConsequences`/`onCreateEvent` handlers show an
+explanatory `window.alert` instead of opening MapWorkspacePage's own
+drawers/state, since those require state that isn't threaded into the
+embedded host's calling convention. The DM should open battle entries from
+the main battle-entry marker layer on the map for those actions; opening
+via `openCompanion({type:'battleEntry', id})` (e.g. from a future Library
+entry) gives a read-only view of the entry's panel content.
+
+### 35.6 DM gating preserved
+
+`EmbeddedCompanionWindow` is only ever mounted when `isDmMode` is true
+(`{isDmMode && companionOpen && data && <EmbeddedCompanionWindow ... />}` in
+`MapWorkspacePage.tsx`, unchanged). Every ported card's DM-only block
+(location `dmSecrets`/`notes`, NPC `secrets`/`dmNotes`, enemy
+`tactics`/`dmNotes`, shop/tavern `notes`) renders unconditionally inside
+these cards — same convention as before the port — because there is no
+code path that reaches these components while `isDmMode` is false.
+
+### 35.7 Gates after this port
+
+`lint:hooks` PASS, `typecheck` PASS, `build` PASS. Full `lint`: 7 errors / 3
+warnings — identical count to the pre-change baseline at checkpoint
+`5a5b5fa` (verified via `git worktree add /tmp/dmcomp-baseline 5a5b5fa` +
+`npm run lint`), i.e. zero new lint issues introduced by this port.

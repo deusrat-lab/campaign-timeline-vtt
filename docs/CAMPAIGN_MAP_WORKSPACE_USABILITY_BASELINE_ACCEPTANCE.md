@@ -193,8 +193,9 @@ The following blockers from the manual UX review remain open:
 - Decide whether explicit cross-map transfer is actually needed, or
   whether "view only, no transfer" is the permanent intended behavior
   for hierarchy-level locations.
-- Build the large object window for the remaining object types
-  (Image, BattleEntry).
+- ~~Build the large object window for the remaining object types
+  (Image, BattleEntry).~~ DONE — see "DM Companion real-component
+  port" entry below.
 - Implement local image upload and custom object creation, or
   explicitly re-scope the baseline definition to exclude them.
 - Implement Player View safe marker projection.
@@ -212,3 +213,24 @@ BattleEntry card/open action, then deciding whether to unify
 `.object-window-overlay` and `.companion-window-overlay` into one
 system before moving on to Player View safe marker projection and the
 map viewport/zoom rework.
+
+## DM Companion real-component port (post Phase 2I)
+
+All seven embedded companion entity types (Location, Tavern, Shop, NPC,
+Quest, Enemy, Image) plus BattleEntry now open through
+`openCompanion`/`EmbeddedCompanionWindow`, backed by real ported
+presentational components in `src/features/embedded-dm-companion/` (full
+details: `CAMPAIGN_MAP_WORKSPACE_MANUAL_CONTENT_AUTHORING_SPEC.md` §35).
+Image and BattleEntry — the two placeholders this document previously
+listed as outstanding — are now real: Image via a new
+lightbox-based detail card (no dm-companion source page existed to port),
+BattleEntry via a thin wrapper around the existing native
+`BattleEntryPanel`. Shop/Tavern also gained a real, working
+add/remove/quantity purchase cart (local, non-persistent session state —
+resets when the embedded window closes).
+
+Still NOT ACCEPTED overall — this closes one specific outstanding item from
+the list above, not the whole baseline. Remaining gaps (Player View safe
+marker projection, mode-guard hardening pass, local image upload/custom
+object creation, cross-map transfer, viewport stability) are unchanged by
+this work.

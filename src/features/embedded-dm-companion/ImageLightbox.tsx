@@ -70,7 +70,6 @@ export function ImageLightbox({ image, onClose, images, onNavigate }: ImageLight
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when the image identity changes, matching source behavior
   }, [image, onClose]);
 
   useEffect(() => {
