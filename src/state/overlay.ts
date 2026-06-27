@@ -28,8 +28,9 @@ import type {
   MovableEntity,
   BattleEntry,
   Npc,
+  PartyRouteProgress,
 } from '../types';
-import type { DmTavern, DmShop, DmImageItem } from '../types/dmCompanion';
+import type { DmTavern, DmShop, DmImageItem, DmLocation } from '../types/dmCompanion';
 
 export const DELETED = '__deleted__' as const;
 
@@ -61,6 +62,11 @@ export interface CampaignOverlay {
   tavernPatches: Record<string, Patch<DmTavern>>;
   shopPatches: Record<string, Patch<DmShop>>;
   imagePatches: Record<string, Patch<DmImageItem>>;
+  /** Hotfix — DM edits to a dm-companion-seeded *source* Location (the
+   * embedded-companion content card, e.g. "Cardlarein Road"). Distinct from
+   * locationStatePatches, which patches the per-timeline map projection
+   * (LocationState), not the underlying DmLocation content. */
+  locationPatches: Record<string, Patch<DmLocation>>;
 
   /** Brand-new entities created in DM Edit Mode (not present in the seed). */
   newTimelines: Timeline[];
@@ -75,6 +81,10 @@ export interface CampaignOverlay {
   /** Stage 6B.1 — NPCs created via "Create NPC here", same "no seed data,
    * 100% DM-created" pattern as newPlacements. */
   newNpcs: Npc[];
+  /** Hotfix — images uploaded from the DM's computer via the image picker's
+   * "Загрузить изображение с компьютера" button. Same "no seed data, 100%
+   * DM-created" pattern as newNpcs; `src` is a data: URL. */
+  newImages: DmImageItem[];
 
   /** These have no separate "seed" — the overlay IS the full value. */
   party: PartyState;
@@ -127,6 +137,12 @@ export interface CampaignOverlay {
    * never hard-deleted. Always defaulted to {} for old overlay JSON. */
   battleEntriesById: Record<string, BattleEntry>;
 
+  /** Time + Travel Engine MVP — at most one in-progress staged route walk
+   * (the app has exactly one party). null when the party isn't mid-route
+   * (e.g. resting at a location, or finished a route via the existing
+   * instant-walk flow). Always defaulted to null for old overlay JSON. */
+  partyRouteProgress: PartyRouteProgress | null;
+
   currentTimelineId: string;
   mode: 'dm-view' | 'dm-edit' | 'player-view';
 
@@ -168,6 +184,7 @@ export const EMPTY_OVERLAY: CampaignOverlay = {
   tavernPatches: {},
   shopPatches: {},
   imagePatches: {},
+  locationPatches: {},
   newTimelines: [],
   newWorldMaps: [],
   newWorldMapStates: [],
@@ -177,6 +194,7 @@ export const EMPTY_OVERLAY: CampaignOverlay = {
   newTravelEvents: [],
   newPlacements: [],
   newNpcs: [],
+  newImages: [],
   party: { visitedLocationStateIds: [], knownLocationStateIds: [], revealedLocationStateIds: [] },
   progress: { questStatusOverrides: {}, locationStatusOverrides: {}, notesByLocationStateId: {} },
   battleMapLocationLinkOverrides: {},
@@ -189,6 +207,7 @@ export const EMPTY_OVERLAY: CampaignOverlay = {
   dynamicMapOverlaysById: {},
   movableEntitiesById: {},
   battleEntriesById: {},
+  partyRouteProgress: null,
   currentTimelineId: '',
   mode: 'dm-view',
   routeEditorVersion: 0,

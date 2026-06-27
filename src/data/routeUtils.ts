@@ -10,7 +10,7 @@
  * with empty-string endpoints can never be matched by the travel logic and
  * silently falls back to a direct teleport).
  */
-import type { MapRoute } from '../types';
+import type { MapRoute, MapScaleConfig } from '../types';
 
 export function getRoutePointCount(route: MapRoute | undefined | null): number {
   return route?.points?.length ?? 0;
@@ -95,4 +95,108 @@ export function estimateTravelDays(distanceKm: number | null, presetKey: TravelS
   if (distanceKm === null || distanceKm <= 0) return null;
   const preset = TRAVEL_SPEED_PRESETS[presetKey];
   return distanceKm / preset.kmPerDay;
+}
+
+// ---------- Time + Travel Engine MVP ----------
+
+/**
+ * Resolves a route's real-world distance using, in priority order: (1) an
+ * explicit `route.distanceKm` the DM typed in directly (always wins — it's
+ * an explicit override), (2) the map's `scale` config converting the route's
+ * normalized polyline length, (3) null ("масштаб карты не задан" — never a
+ * fabricated number). This is the single source of truth the Travel Panel,
+ * the route list, and the staged-travel advancement below all read from.
+ */
+export function getRouteDistanceKm(route: MapRoute | undefined | null, scale: MapScaleConfig | undefined): number | null {
+  if (!route) return null;
+  if (route.distanceKm !== undefined) return route.distanceKm;
+  if (!scale || scale.distancePerNormalizedUnit <= 0) return null;
+  const normalized = calculateRouteNormalizedDistance(route);
+  if (normalized <= 0) return null;
+  return normalized * scale.distancePerNormalizedUnit;
+}
+
+/** 1 day = 4 phases (morning/noon/evening/night) — see TimeOfDay in types.ts. */
+export const PHASES_PER_DAY = 4;
+
+export interface RouteTravelEstimate {
+  /** Real km, or null if no scale/override is configured ("scale missing"). */
+  distanceKm: number | null;
+  normalizedDistance: number;
+  /** True when distanceKm is null purely because no scale exists (as opposed
+   * to the route having no points at all) — drives the "масштаб карты не
+   * задан" warning specifically. */
+  scaleMissing: boolean;
+  estimatedDays: number | null;
+  estimatedPhases: number | null;
+}
+
+export function getRouteTravelEstimate(
+  route: MapRoute | undefined | null,
+  scale: MapScaleConfig | undefined,
+  kmPerDay: number,
+): RouteTravelEstimate {
+  const normalizedDistance = calculateRouteNormalizedDistance(route);
+  const distanceKm = getRouteDistanceKm(route, scale);
+  const scaleMissing = distanceKm === null && normalizedDistance > 0;
+  const estimatedDays = distanceKm !== null && distanceKm > 0 && kmPerDay > 0 ? distanceKm / kmPerDay : null;
+  const estimatedPhases = estimatedDays !== null ? estimatedDays * PHASES_PER_DAY : null;
+  return { distanceKm, normalizedDistance, scaleMissing, estimatedDays, estimatedPhases };
+}
+
+export interface RoutePosition {
+  segmentIndex: number;
+  segmentProgress: number;
+  position: { x: number; y: number };
+  completed: boolean;
+}
+
+/**
+ * Walks forward along a route's polyline by `normalizedDistanceDelta` (same
+ * unit as calculateRouteNormalizedDistance), starting from an existing
+ * (segmentIndex, segmentProgress) position. The result's `position` is
+ * always interpolated ON the polyline — there is no straight-line shortcut
+ * between the start and end points, exactly like the existing
+ * partyTravelAnim per-segment walk in MapWorkspacePage.tsx. Clamps at the
+ * final point and sets `completed: true` once the whole route is walked.
+ * A negative delta is rejected (returns the unchanged start position) —
+ * this MVP only walks forward; backtracking is "Stop here" + manually
+ * restarting, not a supported rewind.
+ */
+export function advanceAlongRoute(
+  points: Array<{ x: number; y: number }>,
+  fromSegmentIndex: number,
+  fromSegmentProgress: number,
+  normalizedDistanceDelta: number,
+): RoutePosition {
+  if (points.length < 2) {
+    return { segmentIndex: 0, segmentProgress: 0, position: points[0] ?? { x: 0, y: 0 }, completed: true };
+  }
+  let segIdx = Math.min(Math.max(fromSegmentIndex, 0), points.length - 2);
+  let segProgress = Math.min(Math.max(fromSegmentProgress, 0), 1);
+  let remaining = Math.max(normalizedDistanceDelta, 0);
+
+  while (remaining > 0) {
+    const a = points[segIdx];
+    const b = points[segIdx + 1];
+    const segLength = Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
+    const remainingInSegment = segLength * (1 - segProgress);
+    if (remaining < remainingInSegment || segLength === 0) {
+      segProgress += segLength > 0 ? remaining / segLength : 0;
+      remaining = 0;
+      break;
+    }
+    remaining -= remainingInSegment;
+    if (segIdx >= points.length - 2) {
+      // Reached the final point — clamp here, never overshoot past the route end.
+      return { segmentIndex: points.length - 2, segmentProgress: 1, position: points[points.length - 1], completed: true };
+    }
+    segIdx += 1;
+    segProgress = 0;
+  }
+
+  const a = points[segIdx];
+  const b = points[segIdx + 1];
+  const position = { x: a.x + (b.x - a.x) * segProgress, y: a.y + (b.y - a.y) * segProgress };
+  return { segmentIndex: segIdx, segmentProgress: segProgress, position, completed: false };
 }

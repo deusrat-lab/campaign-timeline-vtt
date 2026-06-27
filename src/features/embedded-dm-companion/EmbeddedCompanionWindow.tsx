@@ -1,5 +1,9 @@
 import type { CampaignData } from '../../data/loadCampaignData';
 import { useCampaignStore } from '../../state/campaignStore';
+import { effectiveQuestStatus } from '../../data/selectors';
+import { getPlacementVisibilityState, getVisibilityLabel } from '../../data/visibility';
+import type { DmQuest } from '../../types/dmCompanion';
+import type { QuestStatus, BattleEntry } from '../../types';
 import { CompanionLocationCard } from './CompanionLocationCard';
 import { CompanionTavernCard } from './CompanionTavernCard';
 import { CompanionShopCard } from './CompanionShopCard';
@@ -35,6 +39,23 @@ export type EmbeddedCompanionEntity =
   | { type: 'image'; id: string }
   | { type: 'battleEntry'; id: string };
 
+const QUEST_STATUS_ORDER: QuestStatus[] = ['active', 'completed', 'failed', 'hidden'];
+/** Noun-form display label ("Статус квеста: Активен"), matching
+ * MapWorkspacePage.tsx's own QUEST_STATUS_LABELS exactly. */
+const QUEST_STATUS_LABELS: Record<QuestStatus, string> = {
+  active: 'Активен',
+  completed: 'Завершён',
+  failed: 'Провален',
+  hidden: 'Скрыт',
+};
+/** Verb-form action-button label for "set status to X". */
+const QUEST_STATUS_ACTION_LABELS: Record<QuestStatus, string> = {
+  active: 'Активировать',
+  completed: 'Завершить',
+  failed: 'Провалить',
+  hidden: 'Скрыть',
+};
+
 export function EmbeddedCompanionWindow({
   entity,
   hasBack,
@@ -49,6 +70,7 @@ export function EmbeddedCompanionWindow({
   onEditShop,
   onEditImage,
   onEditBattleEntry,
+  onEditLocation,
 }: {
   entity: EmbeddedCompanionEntity;
   hasBack: boolean;
@@ -73,6 +95,10 @@ export function EmbeddedCompanionWindow({
   onEditShop?: (shopId: string) => void;
   onEditImage?: (imageId: string) => void;
   onEditBattleEntry?: (battleEntryId: string) => void;
+  /** Hotfix — Location now has a real overlay-patch editor too
+   * (locationPatches), same pattern as onEditTavern/onEditShop. Quest/Enemy
+   * still have none and keep showing editUnsupportedNote below. */
+  onEditLocation?: (locationId: string) => void;
 }) {
   const store = useCampaignStore();
   const openNpc = (id: string) => onOpen({ type: 'npc', id });
@@ -83,6 +109,20 @@ export function EmbeddedCompanionWindow({
 
   let title: string;
   let body: React.ReactNode;
+  /** Hotfix — restores the quest status lifecycle toggle (active/completed/
+   * failed/hidden). This used to live in the old EntityDrawer 'quest'
+   * popup; once marker clicks were redirected to openCompanion (see
+   * openLinkedEntity's "Bug-fix pass" comment in MapWorkspacePage.tsx),
+   * that drawer branch became unreachable dead code and store.setQuestStatus
+   * had no remaining call site at all — silently dropping the only way to
+   * change a quest's status. Set below only when entity.type === 'quest'. */
+  let questForStatus: DmQuest | undefined;
+  /** Visibility-pass continuation — BattleEntry has no MapObjectPlacement
+   * record (see the "Действия на карте" comment below), so its own
+   * status/visibleInPlayerView fields need a dedicated reveal/hide block
+   * instead of the generic placement lookup. Set below only when
+   * entity.type === 'battleEntry' and the entry resolves. */
+  let battleEntryForVisibility: BattleEntry | undefined;
 
   if (entity.type === 'location') {
     const loc = data.locations.find((l) => l.id === entity.id);
@@ -172,6 +212,7 @@ export function EmbeddedCompanionWindow({
     ) : (
       <p className="muted">Квест не найден.</p>
     );
+    questForStatus = quest;
   } else if (entity.type === 'enemy') {
     const enemy = data.enemies.find((e) => e.id === entity.id);
     title = enemy?.name ?? 'Враг';
@@ -207,6 +248,7 @@ export function EmbeddedCompanionWindow({
     // entity.type === 'battleEntry' — map-native passthrough, see
     // CompanionBattleEntryCard.tsx's module doc.
     const entry = store.battleEntriesById[entity.id];
+    battleEntryForVisibility = entry;
     title = entry?.name ?? 'Боевая запись';
     body = entry ? (
       <CompanionBattleEntryCard
@@ -252,9 +294,11 @@ export function EmbeddedCompanionWindow({
             ? () => onEditImage(entity.id)
             : entity.type === 'battleEntry' && onEditBattleEntry
               ? () => onEditBattleEntry(entity.id)
-              : undefined;
+              : entity.type === 'location' && onEditLocation
+                ? () => onEditLocation(entity.id)
+                : undefined;
   const editUnsupportedNote =
-    entity.type === 'location' || entity.type === 'quest' || entity.type === 'enemy'
+    entity.type === 'quest' || entity.type === 'enemy'
       ? 'Редактирование исходной карточки будет добавлено отдельным этапом.'
       : undefined;
 
@@ -270,12 +314,64 @@ export function EmbeddedCompanionWindow({
             )}
             <h2>{title}</h2>
           </div>
-          <button className="btn-ghost" onClick={onClose}>
-            Закрыть ✕
-          </button>
+          <div className="companion-window-header-actions">
+            {/* Header Edit button — moved up from the bottom action bar so
+                it's reachable in one click without scrolling past the
+                whole card body first, matching the same fix applied to the
+                map's object-window-panel header for the marker-click path. */}
+            {editAction && (
+              <button className="btn-primary btn-compact" onClick={editAction}>
+                Редактировать
+              </button>
+            )}
+            <button className="btn-ghost" onClick={onClose}>
+              Закрыть ✕
+            </button>
+          </div>
         </div>
         <div className="companion-window-body">
           {body}
+          {questForStatus && (
+            <div className="companion-map-actions-body">
+              <p className="muted">
+                Статус квеста: {QUEST_STATUS_LABELS[effectiveQuestStatus(questForStatus.id, questForStatus.status, store.progress)]}
+              </p>
+              <div className="actions">
+                {QUEST_STATUS_ORDER.filter(
+                  (s) => s !== effectiveQuestStatus(questForStatus!.id, questForStatus!.status, store.progress),
+                ).map((s) => (
+                  <button key={s} className="btn-secondary btn-compact" onClick={() => store.setQuestStatus(questForStatus!.id, s)}>
+                    {QUEST_STATUS_ACTION_LABELS[s]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {battleEntryForVisibility && (
+            <div className="companion-map-actions-body">
+              <p className="muted">
+                Боевая сцена на карте ·{' '}
+                {getVisibilityLabel(
+                  battleEntryForVisibility.status === 'hidden' || battleEntryForVisibility.status === 'disabled'
+                    ? 'hidden'
+                    : battleEntryForVisibility.visibleInPlayerView === true
+                      ? 'visible'
+                      : 'hidden',
+                )}
+              </p>
+              <div className="actions">
+                {battleEntryForVisibility.visibleInPlayerView === true ? (
+                  <button onClick={() => store.updateBattleEntry(battleEntryForVisibility!.id, { visibleInPlayerView: false })}>
+                    Скрыть от игроков
+                  </button>
+                ) : (
+                  <button onClick={() => store.updateBattleEntry(battleEntryForVisibility!.id, { visibleInPlayerView: true })}>
+                    Показать игрокам
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
           {entity.type !== 'battleEntry' && (
             <details className="companion-map-actions">
               <summary>Действия на карте</summary>
@@ -283,7 +379,7 @@ export function EmbeddedCompanionWindow({
                 <div className="companion-map-actions-body">
                   <p className="muted">
                     Размещено на карте · {placement.status === 'hidden' ? 'скрыто (ДМ)' : 'активно'} ·{' '}
-                    {placement.visibleInPlayerView ? 'видно игрокам' : 'скрыто от игроков'}
+                    {getVisibilityLabel(getPlacementVisibilityState(placement))}
                   </p>
                   <div className="actions">
                     {placement.status !== 'hidden' ? (
@@ -311,22 +407,14 @@ export function EmbeddedCompanionWindow({
               )}
             </details>
           )}
-          {/* Bug-fix pass — bottom action bar, matching dm-companion's real
-              detail-page btn-row (Редактировать / Перенести в архив /
-              Удалить). "Перенести в архив"/"Удалить" are not added here:
-              this app has no archive/delete flow for library source
-              records (only for placed map markers, already covered by
-              "Действия на карте" above) — adding fake destructive buttons
-              would be worse than omitting them. */}
-          <div className="companion-edit-bar">
-            {editAction ? (
-              <button className="btn-secondary btn-compact" onClick={editAction}>
-                Редактировать
-              </button>
-            ) : (
+          {/* Edit button itself now lives in the header (see above) for
+              one-click reachability. This bar is kept only for entity
+              types with no edit mechanism yet, to surface that note. */}
+          {!editAction && editUnsupportedNote && (
+            <div className="companion-edit-bar">
               <p className="muted companion-readonly-note">{editUnsupportedNote}</p>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

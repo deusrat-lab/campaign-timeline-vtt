@@ -3870,5 +3870,941 @@
       "generation-pending",
       "humanoid"
     ]
+  },
+  {
+    "id": "gh-region-npc-sargon-melt",
+    "title": "Саргон Мельт — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/sargon-melt.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-sargon-melt",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-helga-runn",
+    "title": "Хельга Рунн — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/helga-runn.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-helga-runn",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-vale-ard",
+    "title": "Рейнджер Вейл Ард — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/vale-ard.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-vale-ard",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-brenn-holz",
+    "title": "Староста Бренн Хольц — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/brenn-holz.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-brenn-holz",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-mara-till",
+    "title": "Мара Тилль — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/mara-till.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-mara-till",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-otets-elvin",
+    "title": "Отец Элвин — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/otets-elvin.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-otets-elvin",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-krell-sukhar",
+    "title": "Крелл «Сухарь» — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/krell-sukhar.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-krell-sukhar",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-sestra-nevra",
+    "title": "Сестра Невра — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/sestra-nevra.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-sestra-nevra",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-darion-feyl",
+    "title": "Дарион Фейл — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/darion-feyl.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-darion-feyl",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-rollan-greyv",
+    "title": "Мастер Роллан Грейв — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/rollan-greyv.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-rollan-greyv",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-ilza-kramm",
+    "title": "Ильза Крамм — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/ilza-kramm.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-ilza-kramm",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-pell-tarvin",
+    "title": "Пелл Тарвин — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/pell-tarvin.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-pell-tarvin",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-tomas-brid",
+    "title": "Томас Брид — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/tomas-brid.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-tomas-brid",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-lina-roud",
+    "title": "Лина Роуд — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/lina-roud.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-lina-roud",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-starik-ebb",
+    "title": "Старик Эбб — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/starik-ebb.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-starik-ebb",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-korvin-damm",
+    "title": "Мастер Корвин Дамм — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/korvin-damm.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-korvin-damm",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-enna-valts",
+    "title": "Энна Вальц — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/enna-valts.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-enna-valts",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-bratya-rudd",
+    "title": "Братья Рудд — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/bratya-rudd.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-bratya-rudd",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-holm-vest",
+    "title": "Рейнджер Хольм Вест — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/holm-vest.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-holm-vest",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-seira-list",
+    "title": "Друидка Сейра Лист — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/seira-list.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-seira-list",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-born-tir",
+    "title": "Охотник Борн Тир — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/born-tir.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-born-tir",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-elmar-kruk",
+    "title": "Элмар Крук — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/elmar-kruk.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-elmar-kruk",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-nissa-vest",
+    "title": "Нисса Вест — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/nissa-vest.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-nissa-vest",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-garret-plug",
+    "title": "Гаррет Плуг — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/garret-plug.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-garret-plug",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-ovik-rundelskiy",
+    "title": "Рундельский дед Овик — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/ovik-rundelskiy.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-ovik-rundelskiy",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-mila-kors",
+    "title": "Мила Корс — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/mila-kors.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-mila-kors",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-yann-tikhiy",
+    "title": "Янн Тихий — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/yann-tikhiy.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-yann-tikhiy",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-tern-ostrolist",
+    "title": "Терн Остролист — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/tern-ostrolist.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-tern-ostrolist",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-maelin-teni-vetvey",
+    "title": "Маэлин из Тени Ветвей — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/maelin-teni-vetvey.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-maelin-teni-vetvey",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-grogg-mshistyy",
+    "title": "Грогг Мшистый — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/grogg-mshistyy.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-grogg-mshistyy",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-den-roff",
+    "title": "Старый капрал Ден Рофф — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/den-roff.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-den-roff",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-pip",
+    "title": "Пип — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/pip.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-pip",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-broom-kamnetes",
+    "title": "Камнетёс Брум — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/broom-kamnetes.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-broom-kamnetes",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-edvar-reyn",
+    "title": "Лорд-комендант Эдвар Рейн — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/edvar-reyn.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-edvar-reyn",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-orvin-ley",
+    "title": "Писарь Орвин Лей — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/orvin-ley.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-orvin-ley",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-galen-brok",
+    "title": "Гален Брок — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/galen-brok.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-galen-brok",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-rada-flint",
+    "title": "Рада Флинт — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/rada-flint.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-rada-flint",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-erik-storn",
+    "title": "Эрик Сторн — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/erik-storn.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-erik-storn",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-ferra-nil",
+    "title": "Ферра Ниль — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/ferra-nil.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-ferra-nil",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-norren-klayn",
+    "title": "Норрен Клайн — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/norren-klayn.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-norren-klayn",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-sella-mur",
+    "title": "Селла Мур — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/sella-mur.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-sella-mur",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-fenn-pisar",
+    "title": "Писарь Фенн — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/fenn-pisar.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-fenn-pisar",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-barton-heys",
+    "title": "Инструктор Бартон Хейс — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/barton-heys.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-barton-heys",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-greta-neyl",
+    "title": "Мастер Грета Нейл — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/greta-neyl.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-greta-neyl",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-rell-kursant",
+    "title": "Курсант Релл — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/rell-kursant.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-rell-kursant",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-mat-seleniya",
+    "title": "Мать Селения — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/mat-seleniya.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-mat-seleniya",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-poslushnitsa-lira",
+    "title": "Послушница Лира — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/poslushnitsa-lira.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-poslushnitsa-lira",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-brat-orm",
+    "title": "Брат Орм — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/brat-orm.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-brat-orm",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-dorn-ugolshchik",
+    "title": "Дорн Угольщик — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/dorn-ugolshchik.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-dorn-ugolshchik",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-reyka-smouk",
+    "title": "Рейка Смоук — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/reyka-smouk.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-reyka-smouk",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-malt-ferren",
+    "title": "Мальт Феррен — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/malt-ferren.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-malt-ferren",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-varg-hemm",
+    "title": "Мастер Варг Хемм — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/varg-hemm.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-varg-hemm",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-sora-pepelnaya",
+    "title": "Сора Пепельная — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/sora-pepelnaya.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-sora-pepelnaya",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-brin-koll",
+    "title": "Брин Колл — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/brin-koll.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-brin-koll",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-bram-grunn",
+    "title": "Брам Грунн — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/bram-grunn.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-bram-grunn",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-elsa-din",
+    "title": "Элса Дин — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/elsa-din.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-elsa-din",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-kaff-ro",
+    "title": "Кафф Ро — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/kaff-ro.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-kaff-ro",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-avern-kold",
+    "title": "Аверн Колд — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/avern-kold.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-avern-kold",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-npc-horan",
+    "title": "Каменщик Хоран — портрет",
+    "src": "/images/uploads/greyholm-region-npcs/horan.png",
+    "type": "npc",
+    "safeForPlayers": false,
+    "relatedEntity": "npc-horan",
+    "tags": [
+      "greyholm-region",
+      "npc-portrait"
+    ]
+  },
+  {
+    "id": "gh-region-loc-cardlarein-road",
+    "title": "Кардларейнская дорога — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/cardlarein-road.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-cardlarein-road",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-lashdale",
+    "title": "Лэшдейл — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/lashdale.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-lashdale",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-ruins-of-lashdale",
+    "title": "Руины Лэшдейла — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/ruins-of-lashdale.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-ruins-of-lashdale",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-feybridge",
+    "title": "Фейбридж — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/feybridge.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-feybridge",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-quiet-ford",
+    "title": "Тихий Брод — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/quiet-ford.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-quiet-ford",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-black-wheel-mill",
+    "title": "Мельница Чёрного Колеса — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/black-wheel-mill.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-black-wheel-mill",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-dunwood",
+    "title": "Данвуд — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/dunwood.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-dunwood",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-lower-dunwood",
+    "title": "Нижний Данвуд — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/lower-dunwood.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-lower-dunwood",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-lake-rundel",
+    "title": "Озеро Рандел — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/lake-rundel.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-lake-rundel",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-dense-forest",
+    "title": "Густой лес — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/dense-forest.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-dense-forest",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-old-fort",
+    "title": "Старый Форт — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/old-fort.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-old-fort",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-fort-narrow-crown",
+    "title": "Форт Узкая Корона — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/fort-narrow-crown.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-fort-narrow-crown",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-black-water-bridge",
+    "title": "Мост Чёрной Воды — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/black-water-bridge.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-black-water-bridge",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-stone-limit-bridge",
+    "title": "Мост Каменного Предела — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/stone-limit-bridge.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-stone-limit-bridge",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-warehouse-7",
+    "title": "Склад №7 — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/warehouse-7.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-warehouse-7",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-nail-yard",
+    "title": "Гвоздиный Двор — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/nail-yard.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-nail-yard",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-ash-shelter",
+    "title": "Пепельный Приют — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/ash-shelter.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-ash-shelter",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-grey-kilns",
+    "title": "Серые Печи — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/grey-kilns.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-grey-kilns",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
+  },
+  {
+    "id": "gh-region-loc-grunshaa-caves",
+    "title": "Пещеры Грун’Шаа — арт локации",
+    "src": "/images/uploads/greyholm-region-locations/grunshaa-caves.png",
+    "type": "location",
+    "safeForPlayers": false,
+    "relatedEntity": "loc-grunshaa-caves",
+    "tags": [
+      "greyholm-region",
+      "location-art"
+    ]
   }
 ]

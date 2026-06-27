@@ -396,6 +396,13 @@ a:hover {
   opacity: 0.75;
 }
 
+/* Restricted/Impassable Zones MVP — route validation status chip (route
+ * panel). Reuses the same .status-badge shell as the other modifiers above. */
+.status-badge--danger {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
 /* Stage 6C.5 Phase 2 — visibility badge in the compact object overview. */
 .status-badge--visible {
   border-color: var(--color-player-visible);
@@ -883,11 +890,56 @@ a:hover {
   transform: translateX(-50%);
   font-size: 0.7rem;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
   background: rgba(10, 9, 7, 0.85);
   border: 1px solid var(--border-soft);
   color: var(--fg-dim);
   padding: 1px 6px;
   border-radius: 4px;
+}
+
+/* Compact DM-only visibility indicator for hotspots (Visual Plan Stage 1
+ * marker polish) — replaces the old always-on "👁 Открыто" text pill, which
+ * rendered as a large amber capsule on every non-default-visibility marker
+ * and covered the map underneath it. The full word now only shows on hover
+ * (native title tooltip, set inline) or once the marker is selected
+ * (.hotspot-label-status below); by default it's just an 8px corner dot so
+ * markers stay readable at a glance without burying the map in buttons. */
+.hotspot-visibility-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--bg-deep);
+  pointer-events: none;
+}
+
+.hotspot-visibility-dot--hidden {
+  background: var(--fg-faint);
+}
+
+.hotspot-visibility-dot--discovered {
+  background: var(--color-player-visible);
+}
+
+.hotspot-label-status {
+  margin-left: 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.hotspot-label-status--hidden {
+  color: var(--fg-faint);
+}
+
+.hotspot-label-status--discovered {
+  color: var(--color-player-visible);
 }
 
 .quest-list {
@@ -1307,6 +1359,16 @@ p.trigger-warning {
   color: var(--gold-soft, var(--gold));
 }
 
+/* Time + Travel Engine MVP — staged travel block inside the route panel.
+ * Reuses existing tokens/card shell, no new colors. */
+.travel-stage-panel {
+  margin: var(--space-sm) 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-card-raised);
+}
+
 .route-selected {
   filter: drop-shadow(0 0 4px rgba(229, 200, 115, 0.8));
 }
@@ -1319,9 +1381,13 @@ p.trigger-warning {
   opacity: 0.55;
 }
 
-.route-hidden-dm-only {
+/* DM-only hidden-from-players route. Class name matches the route--active/
+ * route--selected/route--dangerous/route--blocked family below (the JSX at
+ * MapWorkspacePage.tsx applies 'route--hidden' on the wrapping <g>, not the
+ * old .route-hidden-dm-only name this previously had — that name was never
+ * referenced from JSX and painted nothing). */
+.route--hidden polyline {
   stroke-dasharray: 2 6;
-  opacity: 0.4;
 }
 
 .route-point-handle {
@@ -1373,6 +1439,26 @@ p.trigger-warning {
 .faction-zone--selected {
   stroke-width: 3;
   filter: drop-shadow(0 0 5px rgba(229, 200, 115, 0.8));
+}
+
+/* Restricted/Impassable Zones MVP — boundary treatment by zone TYPE, additive
+ * on top of the status-driven fill/stroke color above (these only touch
+ * stroke-width/dasharray, never `fill`, so a custom DM-picked color or the
+ * status palette above is always respected). Per spec: impassable gets the
+ * strongest/solid boundary, restricted a dashed "warning" boundary, danger a
+ * thicker risk outline, faction control/magical/weather/battle_area stay
+ * subtle (no override needed beyond the base .faction-zone rule). */
+.faction-zone-type--impassable {
+  stroke-width: 3;
+  stroke-dasharray: none;
+}
+
+.faction-zone-type--restricted {
+  stroke-dasharray: 6 3;
+}
+
+.faction-zone-type--danger {
+  stroke-width: 2.5;
 }
 
 .faction-zone-vertex {
@@ -1548,6 +1634,26 @@ p.trigger-warning {
   box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.4), 0 0 12px rgba(212, 175, 55, 0.9);
 }
 
+/* Unified, subtle hover affordance across every clickable map marker family
+ * (Full Map Readability Pass) — a small brightness lift, no transform/scale
+ * (avoids fighting each marker's own translate(-50%, ...) centering and any
+ * --selected glow already applied) and no change to existing colors/sizes.
+ * Skipped on hidden/disabled markers so a faded marker doesn't look "more
+ * clickable" than it actually is in that state. */
+.hotspot:not(.hotspot-hidden):hover,
+.placement-marker:not(.placement-marker-hidden):hover,
+.movable-entity-marker:not(.movable-entity-marker--hidden):hover,
+.battle-entry-marker:not(.battle-entry-marker--disabled):not(.battle-entry-marker--hidden):hover {
+  filter: brightness(1.2);
+}
+
+.hotspot,
+.placement-marker,
+.movable-entity-marker,
+.battle-entry-marker {
+  transition: filter var(--motion-normal, 0.15s) ease, box-shadow var(--motion-normal, 0.15s) ease;
+}
+
 /* Battle Entry markers (Stage 5A) — visually distinct from location hotspots
  * (round dots), placements (square icons), event markers (pulsing rings) and
  * movable entities (rounded-square badges): a diamond shape with a crossed-
@@ -1667,6 +1773,20 @@ p.trigger-warning {
   opacity: 0.5;
 }
 
+/* Restricted/Impassable Zones MVP — route crosses a zone, purely visual
+ * (validateRouteAgainstZones is the source of truth; this never re-derives
+ * the result, just paints whatever class MapWorkspacePage.tsx already
+ * computed DM-side). Blocked takes priority visually over warning since a
+ * route can carry both classes if it crosses more than one zone type. */
+.route--zone-warning polyline {
+  stroke: var(--color-warning);
+}
+
+.route--zone-blocked polyline {
+  stroke: var(--color-danger);
+  stroke-dasharray: 5 4;
+}
+
 /* Start/end waypoint markers already get distinct colors via .waypoint-dot-
  * start/.waypoint-dot-end; .route-point--selected highlights whichever point
  * is currently selected for editing (e.g. about to be dragged/deleted). */
@@ -1750,9 +1870,15 @@ p.trigger-warning {
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
   font-size: 0.9rem;
   color: var(--fg);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  background: rgba(10, 9, 7, 0.6);
+  padding: 1px 8px;
+  border-radius: 4px;
 }
 
 .observer-placement {
@@ -1770,6 +1896,7 @@ p.trigger-warning {
   font-size: 1.6rem;
   transform: translate(-50%, -100%);
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+  z-index: var(--z-party-token);
 }
 
 .shop-block {
@@ -2550,6 +2677,82 @@ textarea:focus {
   border: 1px solid var(--border);
 }
 
+.companion-empty-state {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.companion-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+}
+
+.companion-tag-chip {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card-raised);
+  color: var(--text-secondary, inherit);
+}
+
+.companion-npc-row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.companion-npc-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  background: var(--bg-card-raised);
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+}
+
+.companion-npc-row:hover {
+  border-color: var(--gold-soft, var(--gold));
+}
+
+.companion-npc-row-static {
+  cursor: default;
+}
+
+.companion-npc-row-static:hover {
+  border-color: var(--border);
+}
+
+.companion-npc-row-portrait {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+.companion-npc-row-portrait-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  color: var(--text-secondary, inherit);
+  opacity: 0.6;
+}
+
+.companion-npc-row-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
 /* Stage 6C.5 Phase 2 — compact selected-object overview in the right
    panel. Replaces the old long row of tabs: header + up to 4 primary
    buttons + short summary + linked-content counts + collapsed "Ещё"
@@ -2711,6 +2914,13 @@ textarea:focus {
   color: var(--gold);
 }
 
+.companion-window-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .companion-window-body {
   overflow-y: auto;
   padding: 1.25rem;
@@ -2818,6 +3028,13 @@ textarea:focus {
 
 .object-window-header h2 {
   margin: 0;
+}
+
+.object-window-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .object-window-section-nav {
@@ -3084,6 +3301,43 @@ textarea:focus {
 
 .map-event-list-fallback {
   margin-top: 0.5rem;
+}
+
+/* Event System + Delayed Triggers MVP — DM-only event markers. Square shape
+ * (vs. the player-safe .map-event-marker dot above) so a DM scanning a busy
+ * map can tell "DM event marker, clickable for the Event Panel" apart from
+ * the player-facing dot at a glance. */
+.campaign-event-marker {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: var(--purple);
+  border: 2px solid var(--bg-deep);
+  box-shadow: 0 0 6px rgba(139, 95, 191, 0.7), 0 0 8px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  z-index: 21;
+}
+
+.campaign-event-marker--active {
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(79, 157, 91, 0.8), 0 0 8px rgba(0, 0, 0, 0.6);
+}
+
+.campaign-event-marker--resolved {
+  background: var(--fg-faint);
+  opacity: 0.55;
+}
+
+.campaign-event-marker--dm-only {
+  border-style: dashed;
+  opacity: 0.75;
+}
+
+.campaign-event-marker--selected {
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.4), 0 0 12px rgba(212, 175, 55, 0.9);
+  border-color: var(--gold-soft);
 }
 
 .observer-event-list-fallback {

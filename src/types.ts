@@ -58,6 +58,21 @@ export interface WorldMap {
   defaultCenter?: { x: number; y: number };
   /** Whether this map itself (as opposed to individual hotspots/routes on it) may ever be shown to players/Observer. Defaults to true when unset. */
   isPlayerVisible?: boolean;
+  /** Time + Travel Engine MVP — optional real-world scale for this map's
+   * normalized 0..1 coordinate space. Absent means "no scale configured":
+   * route distance falls back to a per-route `distanceKm` override if the DM
+   * set one, or to "условные единицы" (normalized units) with an explicit
+   * "масштаб карты не задан" warning — never a fabricated km figure. */
+  scale?: MapScaleConfig;
+}
+
+export interface MapScaleConfig {
+  unit: 'km' | 'miles' | 'meters' | 'custom';
+  /** Real-world distance one full unit of normalized route length (the same
+   * unit calculateRouteNormalizedDistance in routeUtils.ts already produces)
+   * represents on THIS map. */
+  distancePerNormalizedUnit: number;
+  label?: string;
 }
 
 /** Per-timeline state of a WorldMap (its hotspots may differ by timeline). */
@@ -112,6 +127,13 @@ export interface LocationState {
   enemyIds: string[];
   imageIds: string[];
   tags?: string[];
+  /**
+   * Raw dm-companion `DmLocation.region` label, carried through verbatim.
+   * Used only to tell the Greyholm city map's Library apart from the
+   * Greyholm region map's Library (see `belongsToGreyholmScope` in
+   * MapWorkspacePage.tsx) — not a first-class hierarchy field.
+   */
+  region?: string;
   /** Order among siblings under the same parent — used by the simple up/down reordering UI. */
   order?: number;
   /** Set manually once a real battle-map link is established. */
@@ -289,6 +311,42 @@ export interface PartyState {
   currentPartyRouteId?: string;
 }
 
+/**
+ * Time + Travel Engine MVP — a single in-progress "walk this route in
+ * stages" session, distinct from PartyState.currentPartyRouteId above (which
+ * only records the LAST route used for an instant move). At most one of
+ * these exists at a time (the app has exactly one party) — see
+ * `store.partyRouteProgress` in campaignStore.tsx. Persists across reload
+ * exactly like every other overlay field (same localStorage JSON blob).
+ * Cleared on `canonMapVersion` bump (see clearCanonMapOverlayState) since a
+ * route geometry from replaced map art is meaningless.
+ */
+export type PartyRouteProgressMode = 'at_start' | 'between_waypoints' | 'paused' | 'completed' | 'interrupted';
+
+export interface PartyRouteProgress {
+  timelineId: string;
+  mapId: string;
+  routeId: string;
+  progressMode: PartyRouteProgressMode;
+  /** Index of the route segment (route.points[segmentIndex] -> [segmentIndex+1])
+   * the party is currently on or about to start. */
+  segmentIndex: number;
+  /** 0..1 position within the current segment; 0 means "at the segment's
+   * start waypoint" (equivalent to the spec's 'at_waypoint'). */
+  segmentProgress: number;
+  /** Normalized 0..1 map coordinate, always ON the route polyline — never a
+   * straight-line shortcut between two points. */
+  currentPosition: { x: number; y: number };
+  currentSpeedPresetId: string;
+  startedAt?: { day: number; month: string; year: number };
+  startedTimeOfDay?: TimeOfDay;
+  /** Calendar time-of-day as of the last advance — purely informational
+   * (e.g. "Сейчас: вечер" in the travel panel), never read by anything that
+   * derives position/duration math. */
+  currentTimeOfDay?: TimeOfDay;
+  updatedAt: string;
+}
+
 /** DM-controlled progress tracking, persisted to localStorage. */
 export interface CampaignProgress {
   /** Quest status overrides keyed by quest id — defaults to the seed quest.status when absent. */
@@ -387,6 +445,15 @@ export interface CampaignEvent {
    * of which reliably identify "this event is ABOUT this specific battle
    * entry" when an entry has no location/quest/npc/enemy links at all). */
   linkedBattleEntryIds?: string[];
+  /** Event System + Delayed Triggers MVP — optional back-link to FactionZones
+   * this event concerns (e.g. a zone-entry trigger's auto-created event).
+   * Additive, same non-breaking pattern as linkedBattleEntryIds above. */
+  linkedZoneIds?: string[];
+  /** Optional player-facing rewrite of `description`, same publicDescription/
+   * dmNotes split already used on FactionZone/LocationState. When absent and
+   * the event is player-visible, the safe projection omits description
+   * entirely rather than ever leaking the DM-authored text. */
+  playerSafeDescription?: string;
   // TODO(stage-4c): a formal `linkedFactionZoneIds?: string[]` field could be
   // added here so faction_shift events reference their originating zone
   // directly instead of only reusing linkedLocationStateIds/linkedRouteIds —
@@ -412,7 +479,12 @@ export type TriggerType =
   | 'party_reaches_route_point'
   | 'party_completes_route'
   | 'quest_status'
-  | 'manual';
+  | 'manual'
+  // Event System + Delayed Triggers MVP additions — travel-interruption
+  // trigger types, evaluated during staged-travel advance (see
+  // evaluateTravelStepTriggers in triggerUtils.ts), not date/calendar-based.
+  | 'party_crosses_route_segment'
+  | 'party_enters_area';
 
 export type TriggerStatus = 'armed' | 'triggered' | 'resolved' | 'cancelled';
 
@@ -422,7 +494,11 @@ export type TriggerEffectType =
   | 'change_location_status'
   | 'reveal_marker'
   | 'activate_battle_entry'
-  | 'custom';
+  | 'custom'
+  /** Marks an EXISTING CampaignEvent (referenced by payload.eventId) active,
+   * instead of creating a new one — see applyActivateEventTrigger in
+   * MapWorkspacePage.tsx. */
+  | 'activate_event';
 
 export interface DelayedTrigger {
   id: string;
@@ -437,6 +513,16 @@ export interface DelayedTrigger {
   delayDays?: number;
   routeId?: string;
   routePointIndex?: number;
+  /** For triggerType==='party_crosses_route_segment' — fires once the staged
+   * travel advance crosses from segment (routeSegmentIndex) into the next. */
+  routeSegmentIndex?: number;
+  /** For triggerType==='party_enters_area' — the FactionZone (unified
+   * MapAreaZone, see U4) whose polygon the party must enter. Reuses
+   * isPointInPolygon from zoneValidation.ts rather than duplicating geometry. */
+  zoneId?: string;
+  /** Optional map point, purely informational/for "Focus" UI — never itself
+   * the trigger condition (routeId/zoneId/date above are). */
+  position?: { x: number; y: number };
   linkedLocationStateId?: string;
   linkedQuestId?: string;
   /** Free-form DM-reference text only — never parsed/evaluated by code. */
@@ -473,7 +559,15 @@ export type FactionZoneType =
   | 'warfront'
   | 'restricted'
   | 'magical'
-  | 'custom';
+  | 'custom'
+  // Restricted/Impassable Zones MVP additions — FactionZone IS the unified
+  // "MapAreaZone" the spec asks for; these are new TYPE values on the same
+  // model, not a parallel struct. 'control' above already covers the spec's
+  // "faction_control" concept for zones created before this stage — kept
+  // as-is rather than renamed, to avoid migrating every existing saved zone.
+  | 'impassable'
+  | 'weather'
+  | 'battle_area';
 
 export type FactionZoneStatus = 'stable' | 'contested' | 'expanding' | 'collapsing' | 'hidden';
 
@@ -508,6 +602,33 @@ export interface FactionZone {
   playerSafeDescription?: string;
   /** Never included in player-safe/Observer output under any circumstance. */
   dmNotes?: string;
+  // ---------- Restricted/Impassable Zones MVP (movement-blocking flags) ----------
+  /** When true, route validation (src/data/zoneValidation.ts) reports any route
+   * segment crossing this zone's polygon as blocking, and the party-movement
+   * guard requires DM confirmation/override before walking that route. */
+  blocksPartyMovement?: boolean;
+  /** Same as blocksPartyMovement, but for MovableEntity (NPC/caravan/army)
+   * movement. No automatic NPC movement engine exists yet (out of scope for
+   * this stage) — this flag is stored/validated now so a future movement
+   * engine has it ready, exactly like MapRoute's isNetworkRoute pattern. */
+  blocksNpcMovement?: boolean;
+  /** Route types this zone blocks regardless of blocksPartyMovement (e.g. a
+   * zone that only blocks 'road' traffic but allows 'trail'/'secret'). Empty/
+   * absent means "blocks every route type" when blocksPartyMovement is true. */
+  blocksRouteTypes?: MapRoute['routeType'][];
+  /** Crossing this zone is risky but never blocks movement by itself — surfaces
+   * as a 'warning' severity in RouteValidationResult, not 'error'. */
+  increasesTravelRisk?: boolean;
+  /** Multiplies travel time/cost for routes crossing this zone. Stored and
+   * surfaced in validation/UI now; no Travel Engine consumes it yet (out of
+   * scope for this stage — see report). */
+  travelCostMultiplier?: number;
+  /** Reserved for a future event-trigger engine (TravelEvent/CampaignEvent
+   * auto-fire on party entry) — stored now, never auto-fired by this stage. */
+  triggersOnEnter?: boolean;
+  /** Optional multi-faction reference, additive alongside the existing single
+   * `factionId` free-text field above (kept for backward compatibility). */
+  linkedFactionIds?: string[];
   linkedLocationStateIds?: string[];
   linkedRouteIds?: string[];
   linkedEventIds?: string[];

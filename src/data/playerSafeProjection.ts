@@ -115,8 +115,25 @@ export function getPlayerSafeImages(images: ImageItem[]): ImageItem[] {
  * explicitly flagged visibleInPlayerView===true are ever shown to a player
  * or to Observer. Mirrors the placement/route/hotspot visibility rule: an
  * absent flag means "not visible", never "visible by default". */
+/**
+ * Event System + Delayed Triggers MVP — previously this only filtered by
+ * visibility and returned the event as-is, which meant a DM-authored
+ * `description` (written before playerSafeDescription existed as a field)
+ * would leak verbatim to players for any event flagged visibleInPlayerView.
+ * Fixed to mirror the FactionZone description/playerSafeDescription split
+ * exactly: `description` is never included, `playerSafeDescription` is
+ * included only when the DM explicitly wrote one.
+ */
 export function getPlayerSafeEvents(events: CampaignEvent[]): CampaignEvent[] {
-  return events.filter((ev) => ev.visibleInPlayerView === true && ev.status !== 'cancelled' && ev.status !== 'hidden');
+  return events
+    .filter((ev) => ev.visibleInPlayerView === true && ev.status !== 'cancelled' && ev.status !== 'hidden')
+    .map((ev) => {
+      const { description: _description, ...rest } = ev;
+      return {
+        ...rest,
+        ...(ev.playerSafeDescription ? { playerSafeDescription: ev.playerSafeDescription } : {}),
+      } as CampaignEvent;
+    });
 }
 
 /**

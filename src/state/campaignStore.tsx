@@ -24,9 +24,10 @@ import type {
   MovableEntity,
   BattleEntry,
   Npc,
+  PartyRouteProgress,
 } from '../types';
 import { TIMELINES } from '../data/loadCampaignData';
-import type { DmTavern, DmShop, DmImageItem } from '../types/dmCompanion';
+import type { DmTavern, DmShop, DmImageItem, DmLocation } from '../types/dmCompanion';
 import { DELETED, EMPTY_OVERLAY, DEFAULT_CALENDAR } from './overlay';
 import type { CampaignOverlay, Patch } from './overlay';
 
@@ -106,6 +107,7 @@ function clearCanonMapOverlayState(overlay: CampaignOverlay): CampaignOverlay {
       currentLocationStateId: undefined,
       currentPartyRouteId: undefined,
     },
+    partyRouteProgress: null,
     canonMapVersion: CANON_MAP_VERSION,
   };
 }
@@ -180,13 +182,15 @@ type EntityKind =
   | 'npc'
   | 'tavern'
   | 'shop'
-  | 'image';
+  | 'image'
+  | 'location';
 
 type Action =
   | { type: 'SET_CURRENT_LOCATION'; locationStateId: string; routeId?: string }
   | { type: 'MARK_VISITED'; locationStateId: string }
   | { type: 'SET_KNOWN'; locationStateId: string }
   | { type: 'SET_REVEALED'; locationStateId: string }
+  | { type: 'UNSET_REVEALED'; locationStateId: string }
   | { type: 'SET_LOCATION_STATUS'; locationStateId: string; status: LocationStatus }
   | { type: 'SET_QUEST_STATUS'; questId: string; status: QuestStatus }
   | { type: 'SET_LOCATION_NOTE'; locationStateId: string; note: string }
@@ -204,6 +208,7 @@ type Action =
   | { type: 'ADD_TRAVEL_EVENT'; event: TravelEvent }
   | { type: 'ADD_PLACEMENT'; placement: MapObjectPlacement }
   | { type: 'ADD_NPC'; npc: Npc }
+  | { type: 'ADD_IMAGE'; image: DmImageItem }
   | { type: 'SET_BATTLE_MAP_LINK'; link: BattleMapLocationLink }
   | { type: 'SET_BATTLE_MAP_VTT_URL'; battleMapId: string; url: string }
   | { type: 'SET_PLACEMENT_LAYER_VISIBLE'; visible: boolean }
@@ -233,6 +238,7 @@ type Action =
   | { type: 'ARCHIVE_BATTLE_ENTRY'; entryId: string }
   | { type: 'MARK_BATTLE_ENTRY_ACTIVE'; entryId: string }
   | { type: 'MARK_BATTLE_ENTRY_COMPLETED'; entryId: string }
+  | { type: 'SET_PARTY_ROUTE_PROGRESS'; progress: PartyRouteProgress | null }
   | { type: 'IMPORT_OVERLAY'; overlay: CampaignOverlay }
   | { type: 'RESET' };
 
@@ -268,6 +274,8 @@ function patchesKey(kind: EntityKind): keyof CampaignOverlay {
       return 'shopPatches';
     case 'image':
       return 'imagePatches';
+    case 'location':
+      return 'locationPatches';
   }
 }
 
@@ -314,6 +322,17 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
           revealedLocationStateIds: already
             ? state.party.revealedLocationStateIds
             : [...state.party.revealedLocationStateIds, action.locationStateId],
+        },
+      };
+    }
+    case 'UNSET_REVEALED': {
+      return {
+        ...state,
+        party: {
+          ...state.party,
+          revealedLocationStateIds: state.party.revealedLocationStateIds.filter(
+            (id) => id !== action.locationStateId,
+          ),
         },
       };
     }
@@ -427,6 +446,8 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
       return { ...state, newPlacements: [...state.newPlacements, action.placement] };
     case 'ADD_NPC':
       return { ...state, newNpcs: [...state.newNpcs, action.npc] };
+    case 'ADD_IMAGE':
+      return { ...state, newImages: [...state.newImages, action.image] };
     case 'SET_PLACEMENT_LAYER_VISIBLE':
       return { ...state, placementLayerVisible: action.visible };
     case 'SET_CALENDAR':
@@ -687,6 +708,8 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
           [action.battleMapId]: action.url,
         },
       };
+    case 'SET_PARTY_ROUTE_PROGRESS':
+      return { ...state, partyRouteProgress: action.progress };
     case 'IMPORT_OVERLAY':
       // Defensive merge: an imported overlay JSON file may predate any field
       // added since it was exported (calendars, events, route hardening
@@ -704,6 +727,7 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
         dynamicMapOverlaysById: (action.overlay as Partial<CampaignOverlay>).dynamicMapOverlaysById ?? {},
         movableEntitiesById: (action.overlay as Partial<CampaignOverlay>).movableEntitiesById ?? {},
         battleEntriesById: (action.overlay as Partial<CampaignOverlay>).battleEntriesById ?? {},
+        partyRouteProgress: (action.overlay as Partial<CampaignOverlay>).partyRouteProgress ?? null,
         party: { ...defaultOverlay().party, ...action.overlay.party },
         progress: { ...defaultOverlay().progress, ...action.overlay.progress },
         battleMapLocationLinkOverrides: action.overlay.battleMapLocationLinkOverrides ?? {},
@@ -726,6 +750,7 @@ interface CampaignStoreValue extends CampaignOverlay {
   markVisited: (locationStateId: string) => void;
   setKnown: (locationStateId: string) => void;
   setRevealed: (locationStateId: string) => void;
+  unsetRevealed: (locationStateId: string) => void;
   setLocationStatus: (locationStateId: string, status: LocationStatus) => void;
   setQuestStatus: (questId: string, status: QuestStatus) => void;
   setLocationNote: (locationStateId: string, note: string) => void;
@@ -745,10 +770,17 @@ interface CampaignStoreValue extends CampaignOverlay {
   patchTavern: (id: string, patch: Patch<DmTavern>) => void;
   patchShop: (id: string, patch: Patch<DmShop>) => void;
   patchImage: (id: string, patch: Patch<DmImageItem>) => void;
+  /** Hotfix — edits a dm-companion-seeded source Location's own content
+   * fields (description/playerView/dmSecrets/notes/image), distinct from
+   * patchLocationState above. */
+  patchLocation: (id: string, patch: Patch<DmLocation>) => void;
+  /** Hotfix — adds a brand-new image uploaded from the DM's computer
+   * (data: URL `src`), same "no seed data" pattern as addNpc. */
+  addImage: (image: DmImageItem) => void;
   /** Stage 6C.4D — removes the local override for one entity, restoring seed
    * defaults. Never deletes the source entity, a placement marker, or a
    * relationship link. */
-  resetOverride: (kind: 'npc' | 'tavern' | 'shop' | 'image' | 'locationState', id: string) => void;
+  resetOverride: (kind: 'npc' | 'tavern' | 'shop' | 'image' | 'locationState' | 'location', id: string) => void;
   deleteLocationState: (id: string) => void;
   deleteHotspot: (id: string) => void;
   deleteRoute: (id: string) => void;
@@ -799,6 +831,7 @@ interface CampaignStoreValue extends CampaignOverlay {
   removeBattleMapLink: (locationStateId: string, battleMapId: string) => void;
   addManualBattleMapLink: (locationStateId: string, battleMapId: string, reason?: string) => void;
   setBattleMapVttUrl: (battleMapId: string, url: string) => void;
+  setPartyRouteProgress: (progress: PartyRouteProgress | null) => void;
   exportOverlay: () => CampaignOverlay;
   importOverlay: (overlay: CampaignOverlay) => void;
   resetOverlay: () => void;
@@ -854,6 +887,7 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       markVisited: (locationStateId) => dispatch({ type: 'MARK_VISITED', locationStateId }),
       setKnown: (locationStateId) => dispatch({ type: 'SET_KNOWN', locationStateId }),
       setRevealed: (locationStateId) => dispatch({ type: 'SET_REVEALED', locationStateId }),
+      unsetRevealed: (locationStateId) => dispatch({ type: 'UNSET_REVEALED', locationStateId }),
       setLocationStatus: (locationStateId, status) =>
         dispatch({ type: 'SET_LOCATION_STATUS', locationStateId, status }),
       setQuestStatus: (questId, status) => dispatch({ type: 'SET_QUEST_STATUS', questId, status }),
@@ -877,6 +911,8 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       patchTavern: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'tavern', id, patch: patch as Patch<unknown> }),
       patchShop: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'shop', id, patch: patch as Patch<unknown> }),
       patchImage: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'image', id, patch: patch as Patch<unknown> }),
+      patchLocation: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'location', id, patch: patch as Patch<unknown> }),
+      addImage: (image) => dispatch({ type: 'ADD_IMAGE', image }),
       resetOverride: (kind, id) => dispatch({ type: 'RESET_PATCH', kind, id }),
       deleteLocationState: (id) => dispatch({ type: 'PATCH_ENTITY', kind: 'locationState', id, patch: DELETED }),
       deleteHotspot: (id) => dispatch({ type: 'PATCH_ENTITY', kind: 'hotspot', id, patch: DELETED }),
@@ -921,6 +957,7 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       markBattleEntryCompleted: (entryId) => dispatch({ type: 'MARK_BATTLE_ENTRY_COMPLETED', entryId }),
       setBattleMapLink: (link) => dispatch({ type: 'SET_BATTLE_MAP_LINK', link }),
       setBattleMapVttUrl: (battleMapId, url) => dispatch({ type: 'SET_BATTLE_MAP_VTT_URL', battleMapId, url }),
+      setPartyRouteProgress: (progress) => dispatch({ type: 'SET_PARTY_ROUTE_PROGRESS', progress }),
       confirmBattleMapLink: (locationStateId, battleMapId) => {
         const key = `${locationStateId}__${battleMapId}`;
         const existing = state.battleMapLocationLinkOverrides[key];

@@ -5,8 +5,9 @@
  * "Resolve" / "Cancel" manually (see the Pending Triggers panel in
  * MapWorkspacePage.tsx). The free-text `condition` field is never parsed.
  */
-import type { CampaignCalendar, DelayedTrigger } from '../types';
+import type { CampaignCalendar, DelayedTrigger, FactionZone } from '../types';
 import { isCampaignDateReached } from './calendarUtils';
+import { isPointInPolygon } from './zoneValidation';
 
 export function getTriggersForTimeline(
   triggersById: Record<string, DelayedTrigger>,
@@ -76,6 +77,56 @@ export interface EvaluatePendingTriggersInput {
  * for this MVP and is left as a follow-up (see TODO in MapWorkspacePage.tsx
  * near the Pending Triggers panel).
  */
+/**
+ * `party_crosses_route_segment` triggers pending for a staged-travel advance
+ * that moved the party from `fromSegmentIndex` to `toSegmentIndex` (inclusive
+ * range) on `routeId`. Fires once per trigger per advance call — the caller
+ * (advanceStagedTravel in MapWorkspacePage.tsx) is responsible for not
+ * re-evaluating the same already-triggered/resolved trigger again, same as
+ * every other trigger type here (status !== 'armed' is filtered out).
+ */
+export function getPendingSegmentTriggers(
+  triggers: DelayedTrigger[],
+  routeId: string,
+  fromSegmentIndex: number,
+  toSegmentIndex: number,
+): DelayedTrigger[] {
+  const lo = Math.min(fromSegmentIndex, toSegmentIndex);
+  const hi = Math.max(fromSegmentIndex, toSegmentIndex);
+  return triggers.filter(
+    (t) =>
+      t.status === 'armed' &&
+      t.triggerType === 'party_crosses_route_segment' &&
+      t.routeId === routeId &&
+      t.routeSegmentIndex !== undefined &&
+      t.routeSegmentIndex >= lo &&
+      t.routeSegmentIndex <= hi,
+  );
+}
+
+/**
+ * `party_enters_area` triggers pending when the party's position transitions
+ * from OUTSIDE to INSIDE the trigger's linked zone polygon during a staged-
+ * travel advance — fires once on entry, not on every subsequent step spent
+ * inside the zone. Reuses isPointInPolygon from zoneValidation.ts (U4) rather
+ * than re-implementing point-in-polygon geometry.
+ */
+export function getPendingZoneEntryTriggers(
+  triggers: DelayedTrigger[],
+  zonesById: Record<string, FactionZone>,
+  fromPosition: { x: number; y: number },
+  toPosition: { x: number; y: number },
+): DelayedTrigger[] {
+  return triggers.filter((t) => {
+    if (t.status !== 'armed' || t.triggerType !== 'party_enters_area' || !t.zoneId) return false;
+    const zone = zonesById[t.zoneId];
+    if (!zone || zone.polygon.length < 3) return false;
+    const wasInside = isPointInPolygon(fromPosition, zone.polygon);
+    const nowInside = isPointInPolygon(toPosition, zone.polygon);
+    return nowInside && !wasInside;
+  });
+}
+
 export function evaluatePendingTriggers(input: EvaluatePendingTriggersInput): DelayedTrigger[] {
   const seen = new Set<string>();
   const result: DelayedTrigger[] = [];

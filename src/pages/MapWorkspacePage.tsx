@@ -11,6 +11,7 @@ import {
 } from '../data/selectors';
 import { BATTLE_MAP_VTT_BASE_URL } from '../config';
 import { getPlayerSafeHotspots, getPlayerSafeRoutes, getPlayerSafePlacements, getPlayerSafeImages } from '../data/playerSafeProjection';
+import { getLocationVisibilityState, getVisibilityLabel, isLinkedEntityPlacementVisible } from '../data/visibility';
 import { useMapWorkspaceMode } from './map-workspace/useMapWorkspaceMode';
 import { postObserverFocus } from './map-workspace/observerBroadcast';
 import { BattleMapThumbnail } from './map-workspace/BattleMapThumbnail';
@@ -24,10 +25,15 @@ import {
   estimateTravelDays,
   isRouteValid,
   TRAVEL_SPEED_PRESETS,
+  getRouteTravelEstimate,
+  advanceAlongRoute,
+  PHASES_PER_DAY,
 } from '../data/routeUtils';
 import type { TravelSpeedPresetKey } from '../data/routeUtils';
+import type { PartyRouteProgress } from '../types';
 import { buildRouteGraph, findPathBetweenLocations } from '../data/routeNetwork';
 import type { RoutePathResult } from '../data/routeNetwork';
+import { validateRouteAgainstZones, getBlockingZoneIds } from '../data/zoneValidation';
 import { CheckboxList } from '../components/CheckboxList';
 import type {
   LocationState,
@@ -48,6 +54,8 @@ import {
   getArmedTriggersForTimeline,
   getPendingDateTriggers,
   getPendingRouteTriggers,
+  getPendingSegmentTriggers,
+  getPendingZoneEntryTriggers,
 } from '../data/triggerUtils';
 import { isMonthOrderUnknownForDate } from '../data/calendarUtils';
 import {
@@ -72,7 +80,7 @@ import type {
   BattleSceneSize,
 } from '../types';
 import { BattleEntryMarkerLayer } from './map-workspace/BattleEntryMarkerLayer';
-import type { DmTavern, DmShop, DmQuest, DmCustomEnemy, DmImageItem } from '../types/dmCompanion';
+import type { DmTavern, DmShop, DmQuest, DmCustomEnemy, DmImageItem, DmLocation } from '../types/dmCompanion';
 /** The shared embedded-companion navigation entity + the host that renders
  * real ported dm-companion cards for each type now live in
  * src/features/embedded-dm-companion/ (see EmbeddedCompanionWindow.tsx's
@@ -115,18 +123,44 @@ const ZONE_TYPE_OPTIONS: FactionZoneType[] = [
   'patrol',
   'warfront',
   'restricted',
+  'impassable',
   'magical',
+  'weather',
+  'battle_area',
   'custom',
 ];
 const ZONE_TYPE_LABELS: Record<FactionZoneType, string> = {
-  control: 'Контроль',
+  control: 'Контроль фракции',
   contested: 'Спорная территория',
   danger: 'Опасная зона',
   patrol: 'Патрулируемая зона',
   warfront: 'Линия фронта',
   restricted: 'Запретная зона',
+  impassable: 'Непроходимая зона',
   magical: 'Магическая аномалия',
+  weather: 'Погодная зона',
+  battle_area: 'Зона боя',
   custom: 'Прочее',
+};
+
+/**
+ * Restricted/Impassable Zones MVP — blocking-flag defaults applied only when
+ * a NEW zone is created (saveZoneDraft below). Existing saved zones are never
+ * silently re-defaulted; the DM can always override via the checkboxes/inputs
+ * in the zone panel. Mirrors the spec's MVP defaults table exactly.
+ */
+const ZONE_TYPE_BLOCKING_DEFAULTS: Record<FactionZoneType, { blocksPartyMovement: boolean; blocksNpcMovement: boolean; increasesTravelRisk: boolean }> = {
+  control: { blocksPartyMovement: false, blocksNpcMovement: false, increasesTravelRisk: false },
+  contested: { blocksPartyMovement: false, blocksNpcMovement: false, increasesTravelRisk: false },
+  danger: { blocksPartyMovement: false, blocksNpcMovement: false, increasesTravelRisk: true },
+  patrol: { blocksPartyMovement: false, blocksNpcMovement: false, increasesTravelRisk: false },
+  warfront: { blocksPartyMovement: false, blocksNpcMovement: false, increasesTravelRisk: true },
+  restricted: { blocksPartyMovement: true, blocksNpcMovement: false, increasesTravelRisk: false },
+  impassable: { blocksPartyMovement: true, blocksNpcMovement: true, increasesTravelRisk: false },
+  magical: { blocksPartyMovement: false, blocksNpcMovement: false, increasesTravelRisk: false },
+  weather: { blocksPartyMovement: false, blocksNpcMovement: false, increasesTravelRisk: false },
+  battle_area: { blocksPartyMovement: false, blocksNpcMovement: false, increasesTravelRisk: false },
+  custom: { blocksPartyMovement: false, blocksNpcMovement: false, increasesTravelRisk: false },
 };
 const ZONE_STATUS_OPTIONS: FactionZoneStatus[] = ['stable', 'contested', 'expanding', 'collapsing', 'hidden'];
 const ZONE_STATUS_LABELS: Record<FactionZoneStatus, string> = {
@@ -254,6 +288,29 @@ const SCOPE_LABELS: Record<WorldMap['scope'], string> = {
 
 const SCOPE_ORDER: WorldMap['scope'][] = ['kingdom', 'region', 'city'];
 
+// The Greyholm city map (map-city-greyholm) and the Greyholm region map
+// (map-region) share the same Arc-1 timeline and would otherwise show an
+// identical Library (locationsForTimeline/npcsForArc are arc-wide, not
+// map-scoped). These two raw `DmLocation.region` labels are the only field
+// that already distinguishes "in the city" from "in the surrounding region"
+// in the seed data, so the Library uses them to split the two maps' card
+// lists. Only these two known map ids are affected — every other map keeps
+// showing its full unfiltered list, exactly as before.
+const GREYHOLM_CITY_REGION_LABEL = 'Грейхольм';
+const GREYHOLM_OUTSKIRTS_REGION_LABEL = 'Окрестности Грейхольма';
+const GREYHOLM_CITY_MAP_ID = 'map-city-greyholm';
+const GREYHOLM_REGION_MAP_ID = 'map-region';
+
+/** Library-only visibility split between the Greyholm city map and the
+ * Greyholm region map — does not affect placement, search elsewhere, or any
+ * other map. A location with no `region` set (most content) is unaffected
+ * and keeps showing on both, matching pre-existing behavior. */
+function locationLibraryVisibleForMap(region: string | undefined, mapId: string | undefined): boolean {
+  if (mapId === GREYHOLM_CITY_MAP_ID) return region !== GREYHOLM_OUTSKIRTS_REGION_LABEL;
+  if (mapId === GREYHOLM_REGION_MAP_ID) return region !== GREYHOLM_CITY_REGION_LABEL;
+  return true;
+}
+
 // Per-map camera (pan/zoom) persistence. Deliberately a *separate* localStorage
 // key from the DM-edit overlay: camera position is pure viewport state, not a
 // content edit, so it must never be touched by Export/Import/Reset Local Edits.
@@ -320,7 +377,6 @@ const LOCATION_TEMPLATE_OPTIONS: { value: LocationTemplateType; label: string }[
   { value: 'temple', label: 'Храм' },
   { value: 'custom', label: 'Другое' },
 ];
-const QUEST_STATUSES: QuestStatus[] = ['active', 'completed', 'failed', 'hidden'];
 const QUEST_STATUS_LABELS: Record<QuestStatus, string> = {
   active: 'Активен',
   completed: 'Завершён',
@@ -374,11 +430,18 @@ function useActiveMapImageSize(map: WorldMap | undefined): { width: number; heig
   return { width: FALLBACK_MAP_IMAGE_WIDTH, height: FALLBACK_MAP_IMAGE_HEIGHT };
 }
 
+/**
+ * Hotfix — npc/quest/enemy/image were removed from this union (and their
+ * EntityDrawer branches deleted) because they were unreachable dead code:
+ * openLinkedEntity already redirects every npc/quest/enemy/image marker
+ * click straight to openCompanion (see its own "Bug-fix pass" comment), so
+ * nothing in the app could ever construct `{ kind: 'npc' | 'quest' |
+ * 'enemy' | 'image' }` anymore. EntityDrawer is now exclusively for
+ * map-only objects with no DM Companion equivalent (battleMap) plus the
+ * two map-local reference panels (economy/law) and the placement
+ * marker-info drawer itself.
+ */
 type DrawerState =
-  | { kind: 'npc'; id: string }
-  | { kind: 'quest'; id: string }
-  | { kind: 'enemy'; id: string }
-  | { kind: 'image'; id: string }
   | { kind: 'battleMap'; id: string }
   | { kind: 'economy'; id: string }
   | { kind: 'law'; id: string }
@@ -443,6 +506,12 @@ export function MapWorkspacePage() {
     visibleInPlayerView: boolean;
   }
   const [quickPinDraft, setQuickPinDraft] = useState<QuickPinDraft | null>(null);
+  // Event System + Delayed Triggers MVP — "Создать событие здесь" arming,
+  // mirrors quickPinArming exactly (armed via a button, next map click
+  // creates the event at that point; nothing saved before the click).
+  const [eventCreateArming, setEventCreateArming] = useState(false);
+  // Event Panel selection — mirrors selectedZoneId/selectedMovableEntityId.
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   // Travel Panel foundation (Etap G) — purely a UI preset selection, never
   // persisted; distance/duration are estimated, never fabricated when the
   // map has no known scale (see routeUtils.ts's estimateRouteDistanceKm).
@@ -490,6 +559,11 @@ export function MapWorkspacePage() {
   const [objectWindowSection, setObjectWindowSection] = useState<'overview' | 'edit' | 'links' | 'map' | 'danger'>(
     'overview',
   );
+  /** Controls the "Действия на карте" <details> open/closed state directly
+   * (native <details> ignores re-renders of its children, so jumping
+   * objectWindowSection to 'edit' from the header Edit button would
+   * otherwise leave the section collapsed and invisible). */
+  const [objectWindowActionsOpen, setObjectWindowActionsOpen] = useState(false);
   // Stage 6C.5 Phase 2 — "Ещё" reveal toggle for secondary actions in the
   // compact location summary (route/event/visited quick actions + access
   // to the general Маршруты/Объекты/Не размещено tools).
@@ -752,6 +826,11 @@ export function MapWorkspacePage() {
     | { kind: 'tavern'; tavernId: string }
     | { kind: 'shop'; shopId: string }
     | { kind: 'battleEntry'; battleEntryId: string }
+    /** Hotfix — distinct from 'location' above: that kind targets a
+     * LocationState's header image (a placed/created map location); this
+     * one targets the raw dm-companion source Location card's own hero
+     * image via locationEditDraft/patchLocation. */
+    | { kind: 'locationSource'; locationId: string }
     | null
   >(null);
   // Stage 6C.4D: same non-destructive override pattern as npcEditDraft, for
@@ -772,6 +851,19 @@ export function MapWorkspacePage() {
     image: string;
   } | null>(null);
   const [imageEditDraft, setImageEditDraft] = useState<{ imageId: string; title: string } | null>(null);
+  // Hotfix — Location source-card editor draft (locationPatches overlay).
+  const [locationEditDraft, setLocationEditDraft] = useState<{
+    locationId: string;
+    name: string;
+    type: string;
+    description: string;
+    playerView: string;
+    notes: string;
+    image: string;
+    /** Gallery images beyond the hero (loc.images[1:]) — preserved as-is on
+     * save; this editor only exposes/changes the hero (images[0]). */
+    restImages: string[];
+  } | null>(null);
   const [battleEntryEditDraft, setBattleEntryEditDraft] = useState<{
     battleEntryId: string;
     name: string;
@@ -1340,9 +1432,34 @@ export function MapWorkspacePage() {
       ? eventsForCurrentMap.filter((ev) => !ev.position)
       : [];
 
+  // Event System + Delayed Triggers MVP — DM-mode event markers. The
+  // player-facing branch above (eventsForCurrentMap/visibleCampaignEvent-
+  // Markers) ALWAYS goes through getPlayerSafeEvents and is untouched; this
+  // is the previously-missing DM-only branch — before this, the DM had no
+  // way to see ANY event marker on the map canvas itself (only in the
+  // Session panel's text list), including hidden/DM-only ones. Never used
+  // for isPlayerView or usesPlayerSafeProjection presets.
+  const dmEventMarkersForMap = isPlayerView || activeLayerVisibility.usesPlayerSafeProjection || !activeLayerVisibility.events
+    ? []
+    : eventsForTimeline.filter(
+        (ev) => !!ev.position && (!ev.mapLevel || ev.mapLevel === scope) && (!ev.mapId || !map || ev.mapId === map.id),
+      );
+
   const locationsForTimeline = data.locationStates.filter((ls) => ls.timelineId === store.currentTimelineId);
   const filteredLocations = locationsForTimeline.filter((ls) =>
     ls.title.toLowerCase().includes(locationSearch.toLowerCase()),
+  );
+
+  // Library-only: split Greyholm city vs Greyholm region content (see
+  // locationLibraryVisibleForMap doc comment above). Every other consumer
+  // of locationsForTimeline/npcsForArc (markers, search, placement) is left
+  // untouched.
+  const locationsForLibraryScope = locationsForTimeline.filter((ls) =>
+    locationLibraryVisibleForMap(ls.region, map?.id),
+  );
+  const npcLocationRegionById = new Map(data.locations.map((l) => [l.id, l.region]));
+  const npcsForLibraryScope = npcsForArc.filter((n) =>
+    locationLibraryVisibleForMap(n.location ? npcLocationRegionById.get(n.location) : undefined, map?.id),
   );
 
   const partyLocationState = store.party.currentLocationStateId
@@ -1358,7 +1475,27 @@ export function MapWorkspacePage() {
   const activePartyRoute = store.party.currentPartyRouteId
     ? data.routes.find((r) => r.id === store.party.currentPartyRouteId)
     : undefined;
+  // Time + Travel Engine MVP — while a staged PartyRouteProgress exists for
+  // THIS map/timeline, its `currentPosition` (always interpolated ON the
+  // route polyline by advanceAlongRoute, never a straight-line shortcut)
+  // takes over the marker position entirely. This is intentionally checked
+  // before the hotspot-based fallback below, so a party paused mid-route
+  // shows mid-route, not snapped back to their last-visited location.
+  //
+  // DM-only: gated on `!isPlayerView` so Player View (and Observer, which
+  // reads store.party directly and never touches partyRouteProgress at all)
+  // never sees a live mid-route position — players only see the party move
+  // once travel completes and the canonical currentLocationStateId updates,
+  // exactly like the existing instant-travel flow already behaves for them.
+  const activePartyRouteProgress =
+    !isPlayerView &&
+    store.partyRouteProgress &&
+    store.partyRouteProgress.timelineId === store.currentTimelineId &&
+    store.partyRouteProgress.mapId === map?.id
+      ? store.partyRouteProgress
+      : null;
   const partyMarkerPoint = (() => {
+    if (activePartyRouteProgress) return activePartyRouteProgress.currentPosition;
     if (!partyHotspot) return undefined;
     const pts = activePartyRoute?.points;
     if (activePartyRoute && pts && pts.length >= 2) {
@@ -1401,8 +1538,31 @@ export function MapWorkspacePage() {
     return Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
   }
 
+  // Viewport polish — zoom used to always scale from the image's own
+  // top-left corner (translate-then-scale composes that way), so zooming in
+  // dragged the content toward the bottom-right and the DM had to re-pan
+  // after every zoom step. zoomAround solves for the new view.x/y that keeps
+  // the same image point under (viewportX, viewportY) fixed on screen before
+  // and after the scale change — same "solve for offset" approach already
+  // used by the "center on selected hotspot" effect below.
+  function zoomAround(viewportX: number, viewportY: number, factor: number) {
+    setView((v) => {
+      const newScale = clampScale(v.scale * factor);
+      if (newScale === v.scale) return v;
+      const sOld = baseFitScale * v.scale;
+      const sNew = baseFitScale * newScale;
+      const imgX = (viewportX - fitOffsetX - v.x) / sOld;
+      const imgY = (viewportY - fitOffsetY - v.y) / sOld;
+      return {
+        scale: newScale,
+        x: viewportX - fitOffsetX - sNew * imgX,
+        y: viewportY - fitOffsetY - sNew * imgY,
+      };
+    });
+  }
+
   function zoomBy(factor: number) {
-    setView((v) => ({ ...v, scale: clampScale(v.scale * factor) }));
+    zoomAround(viewportSize.width / 2, viewportSize.height / 2, factor);
   }
 
   function resetView() {
@@ -1412,7 +1572,8 @@ export function MapWorkspacePage() {
   function handleWheel(e: WheelEvent<HTMLDivElement>) {
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.1 : 0.9;
-    setView((v) => ({ ...v, scale: clampScale(v.scale * factor) }));
+    const rect = e.currentTarget.getBoundingClientRect();
+    zoomAround(e.clientX - rect.left, e.clientY - rect.top, factor);
   }
 
   function handleMapMouseDownForPan(e: MouseEvent<HTMLDivElement>) {
@@ -1554,6 +1715,18 @@ export function MapWorkspacePage() {
     store.markDelayedTriggerTriggered(trigger.id);
   }
 
+  // Event System + Delayed Triggers MVP — 'activate_event' effect: marks an
+  // EXISTING CampaignEvent (payload.eventId) 'active' instead of creating a
+  // new one. No-ops (leaves the trigger armed) if the referenced event id is
+  // missing/unknown rather than silently fabricating one.
+  function applyActivateEventTrigger(trigger: DelayedTrigger): boolean {
+    const eventId = (trigger.effect.payload as { eventId?: string }).eventId;
+    if (!eventId || !store.eventsById[eventId]) return false;
+    store.updateCampaignEvent(eventId, { status: 'active' });
+    store.markDelayedTriggerTriggered(trigger.id);
+    return true;
+  }
+
   // Manual fallback for any trigger effect type not automated yet — always
   // creates a fresh DM-authored CampaignEvent (same shape as the existing
   // "+ Событие текущей сессии" button) referencing the trigger by name, then
@@ -1640,7 +1813,9 @@ export function MapWorkspacePage() {
       openCompanion({ type: p.entityKind, id: p.entityId });
       return;
     }
-    setDrawer({ kind: p.entityKind, id: p.entityId } as DrawerState);
+    // Only 'battleMap' remains possible here — every other entityKind was
+    // handled/excluded above (location/note/custom/npc/quest/enemy/image).
+    setDrawer({ kind: 'battleMap', id: p.entityId });
   }
 
   // ---------- hotspot editing (DM Edit Mode) ----------
@@ -1869,6 +2044,39 @@ export function MapWorkspacePage() {
       setQuickPinDraft({ x, y, title: '', visibleInPlayerView: false });
       return;
     }
+    // Event System + Delayed Triggers MVP — "Создать событие здесь" arming.
+    // Mirrors the Quick Pin click-handler above exactly, but creates the
+    // CampaignEvent immediately (name prompted) rather than a draft form —
+    // consistent with the existing "+ Событие текущей сессии" prompt-based
+    // creation style already used elsewhere in this file.
+    if (eventCreateArming && mapRef.current && map) {
+      const rect = mapRef.current.getBoundingClientRect();
+      const x = Math.min(1, Math.max(0, Math.round(((e.clientX - rect.left) / rect.width) * 1000) / 1000));
+      const y = Math.min(1, Math.max(0, Math.round(((e.clientY - rect.top) / rect.height) * 1000) / 1000));
+      setEventCreateArming(false);
+      const name = window.prompt('Название события:');
+      if (!name) return;
+      const now = new Date().toISOString();
+      const calendarNow = store.getCalendar(store.currentTimelineId);
+      const newEvent: CampaignEvent = {
+        id: `event-${Date.now()}`,
+        timelineId: store.currentTimelineId,
+        mapId: map.id,
+        mapLevel: scope,
+        position: { x, y },
+        name,
+        type: 'note',
+        date: { day: calendarNow.currentDay, month: calendarNow.currentMonth, year: calendarNow.currentYear },
+        timeOfDay: calendarNow.currentTimeOfDay,
+        visibleInPlayerView: false,
+        status: 'planned',
+        createdAt: now,
+        updatedAt: now,
+      };
+      store.addCampaignEvent(newEvent);
+      setSelectedEventId(newEvent.id);
+      return;
+    }
     // Placement mode works in both DM View and DM Edit (only the trigger
     // button is hidden in Player View) — armed via "Разместить на карте".
     if (placementMode && mapRef.current && map) {
@@ -2020,6 +2228,29 @@ export function MapWorkspacePage() {
   }
   function openImageEditor(img: DmImageItem) {
     setImageEditDraft({ imageId: img.id, title: img.title });
+  }
+  /**
+   * Hotfix — Location source-card editor. Exposes `description` and
+   * `playerView` ("Что видят игроки") as two genuinely separate fields:
+   * earlier seed/migration data for several Greyholm Region locations set
+   * `playerView` equal to `description` (a copy-paste default, not a real
+   * authored player-facing text), which made the card render the same
+   * paragraph twice. This editor lets the DM actually clear `playerView`
+   * to '' — saved as `undefined` (not re-derived from description), which
+   * hides the "Что видят игроки" block for good after reload, matching
+   * CompanionLocationCard's `{loc.playerView && (...)}` guard exactly.
+   */
+  function openLocationEditor(loc: DmLocation) {
+    setLocationEditDraft({
+      locationId: loc.id,
+      name: loc.name,
+      type: loc.type,
+      description: loc.description ?? '',
+      playerView: loc.playerView ?? '',
+      notes: loc.notes ?? '',
+      image: loc.images?.[0] ?? '',
+      restImages: (loc.images ?? []).slice(1),
+    });
   }
   function openBattleEntryEditor(be: BattleEntry) {
     setBattleEntryEditDraft({
@@ -2596,7 +2827,16 @@ export function MapWorkspacePage() {
       setZoneFormError('Нужно минимум 3 точки на карте, чтобы сохранить зону');
       return;
     }
+    // Normalized coordinates from the map-click handler are always derived
+    // from the click position within the map element, but guard anyway —
+    // a zone with a vertex outside the 0..1 image bounds would render
+    // incorrectly off-canvas and break geometry validation.
+    if (zoneDraft.points.some((p) => p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1)) {
+      setZoneFormError('Точка зоны вышла за границы карты — попробуйте добавить вершину заново');
+      return;
+    }
     const now = new Date().toISOString();
+    const blockingDefaults = ZONE_TYPE_BLOCKING_DEFAULTS[zoneDraft.type];
     const newZone: FactionZone = {
       id: `zone-${Date.now()}`,
       timelineId: store.currentTimelineId,
@@ -2607,6 +2847,7 @@ export function MapWorkspacePage() {
       polygon: zoneDraft.points,
       status: zoneDraft.status,
       visibleInPlayerView: zoneDraft.visibleInPlayerView,
+      ...blockingDefaults,
       createdAt: now,
       updatedAt: now,
     };
@@ -2851,6 +3092,197 @@ export function MapWorkspacePage() {
     setIsCreatingNewRoute(false);
   }
 
+  // ---------- party movement guard vs blocking zones (Restricted/Impassable
+  // Zones MVP) ----------
+  // Every party-movement call site below (the Travel Panel's "Начать
+  // путешествие" button, the Journey panel's route-aware move, and the
+  // hotspot double-click shortcut) funnels through this one check before
+  // committing — same "single choke point" pattern already used for
+  // route-aware-vs-teleport movement (see findJourneyPaths' doc comment).
+  // Returns true if the DM may proceed (route is clear, or they explicitly
+  // confirmed past a warning/block), false if the move must not happen.
+  function confirmZoneGuardForRoute(route: MapRoute | undefined | null): boolean {
+    if (!route?.points || route.points.length < 2) return true;
+    const result = validateRouteAgainstZones(route, factionZonesForMap);
+    if (result.status === 'valid') return true;
+    const blockingZoneNames = getBlockingZoneIds(result)
+      .map((id) => store.factionZonesById[id]?.name)
+      .filter(Boolean);
+    if (result.status === 'invalid') {
+      return window.confirm(
+        `Маршрут пересекает непроходимую/запретную зону${blockingZoneNames.length > 1 ? 'ы' : ''} (${blockingZoneNames.join(', ') || 'неизвестная зона'}). ` +
+          'Провести партию всё равно? Это явный DM override — по умолчанию движение через такую зону блокируется.',
+      );
+    }
+    // 'warning' — danger/risk zones never block by themselves, just confirm.
+    const riskMessages = result.issues.filter((i) => i.severity === 'warning').map((i) => i.message);
+    return window.confirm(
+      `Маршрут проходит через опасную зону. ${riskMessages.join(' ')} Продолжить движение партии?`,
+    );
+  }
+
+  // ---------- Time + Travel Engine MVP — staged route travel ----------
+  // Distinct from the existing instant "Начать путешествие"/handleHotspot-
+  // DoubleClick flows above (those still work unchanged for an immediate
+  // one-click move). This is the new "walk a route in stages over multiple
+  // days/phases, can pause and resume" flow built on PartyRouteProgress.
+  // Guarded the same way as every other party-movement call site:
+  // confirmZoneGuardForRoute() before committing.
+  function startStagedTravel(route: MapRoute) {
+    if (!map || !route.points || route.points.length < 2) return;
+    if (!confirmZoneGuardForRoute(route)) return;
+    const calendar = store.getCalendar(store.currentTimelineId);
+    const progress: PartyRouteProgress = {
+      timelineId: store.currentTimelineId,
+      mapId: map.id,
+      routeId: route.id,
+      progressMode: 'at_start',
+      segmentIndex: 0,
+      segmentProgress: 0,
+      currentPosition: route.points[0],
+      currentSpeedPresetId: travelSpeedPreset,
+      startedAt: { day: calendar.currentDay, month: calendar.currentMonth, year: calendar.currentYear },
+      startedTimeOfDay: calendar.currentTimeOfDay,
+      updatedAt: new Date().toISOString(),
+    };
+    store.setPartyRouteProgress(progress);
+    setSelectedRouteId(route.id);
+  }
+
+  /**
+   * Shared by "Advance one phase" and "Advance one day" — walks the staged
+   * route forward by `phases` phases' worth of normalized distance at the
+   * progress's stored speed preset, advances the calendar by the same
+   * number of phases, and marks the route 'completed' once the party
+   * reaches the final point (never overshoots past it — advanceAlongRoute
+   * clamps). No-ops (with an alert) if there's no scale AND no per-route
+   * distanceKm override, since phase-based distance can't be derived from
+   * a purely normalized length without inventing a number — the DM should
+   * configure a map scale or a route distanceKm override first.
+   */
+  function advanceStagedTravel(phases: number) {
+    const progress = store.partyRouteProgress;
+    if (!progress || progress.timelineId !== store.currentTimelineId || progress.mapId !== map?.id) return;
+    const route = routes.find((r) => r.id === progress.routeId);
+    if (!route?.points || route.points.length < 2) return;
+    if (!confirmZoneGuardForRoute(route)) return;
+    const preset = TRAVEL_SPEED_PRESETS[progress.currentSpeedPresetId as TravelSpeedPresetKey] ?? TRAVEL_SPEED_PRESETS.walk_normal;
+    const estimate = getRouteTravelEstimate(route, map?.scale, preset.kmPerDay);
+    const totalNormalized = estimate.normalizedDistance;
+    if (totalNormalized <= 0) return;
+    // Scale-missing fallback (documented in routeUtils.ts/report): without a
+    // real distanceKm, one full route = exactly 1 day (4 phases) regardless
+    // of speed preset — an explicit, labeled approximation, never a
+    // fabricated km figure.
+    const normalizedPerPhase =
+      estimate.distanceKm !== null ? totalNormalized * ((preset.kmPerDay / PHASES_PER_DAY) / estimate.distanceKm) : totalNormalized / PHASES_PER_DAY;
+    let result = advanceAlongRoute(route.points, progress.segmentIndex, progress.segmentProgress, normalizedPerPhase * phases);
+
+    // Travel Interruptions MVP — check whether THIS advance crosses any armed
+    // route-segment/zone-entry trigger between the old and proposed new
+    // position, using the same geometry helpers as zone validation (U4) /
+    // date-trigger evaluation (Stage 3) — no new geometry code, no
+    // auto-pathfinding, no diagonal shortcut (advanceAlongRoute already only
+    // ever walks the polyline). If found, clamp the move to the trigger's
+    // exact point instead of the full requested distance.
+    const armedForTimeline = getArmedTriggersForTimeline(store.triggersById, store.currentTimelineId);
+    const segmentTriggers = getPendingSegmentTriggers(armedForTimeline, route.id, progress.segmentIndex, result.segmentIndex);
+    const zoneTriggers = getPendingZoneEntryTriggers(armedForTimeline, store.factionZonesById, progress.currentPosition, result.position);
+    const earliestSegmentTrigger = segmentTriggers.sort((a, b) => (a.routeSegmentIndex ?? 0) - (b.routeSegmentIndex ?? 0))[0];
+    let firedTrigger: DelayedTrigger | undefined;
+    if (earliestSegmentTrigger) {
+      // Precise clamp: stop exactly at the start of the trigger's segment.
+      firedTrigger = earliestSegmentTrigger;
+      result = { segmentIndex: earliestSegmentTrigger.routeSegmentIndex!, segmentProgress: 0, position: route.points[earliestSegmentTrigger.routeSegmentIndex!], completed: false };
+    } else if (zoneTriggers.length > 0) {
+      // Zone-boundary-exact clamping isn't implemented in this MVP — the
+      // party stops at the full requested-distance position, which is
+      // already confirmed inside the zone (see getPendingZoneEntryTriggers).
+      firedTrigger = zoneTriggers[0];
+    }
+
+    const phasesActuallyAdvanced = firedTrigger ? 1 : phases;
+    for (let i = 0; i < phasesActuallyAdvanced; i++) store.advanceTimePhase(store.currentTimelineId);
+    const calendar = store.getCalendar(store.currentTimelineId);
+    const next: PartyRouteProgress = {
+      ...progress,
+      segmentIndex: result.segmentIndex,
+      segmentProgress: result.segmentProgress,
+      currentPosition: result.position,
+      progressMode: firedTrigger ? 'interrupted' : result.completed ? 'completed' : 'between_waypoints',
+      currentTimeOfDay: calendar.currentTimeOfDay,
+      updatedAt: new Date().toISOString(),
+    };
+    store.setPartyRouteProgress(result.completed && !firedTrigger ? null : next);
+
+    if (firedTrigger) {
+      // Only the two effect types explicitly named "safe and explicit" by
+      // the spec auto-apply; everything else stays armed→triggered with the
+      // existing manual-fallback affordance in the Pending Triggers panel
+      // (createEventManuallyForTrigger), never a silent world rewrite.
+      if (firedTrigger.effect.type === 'create_event') {
+        applyCreateEventTrigger(firedTrigger);
+      } else if (firedTrigger.effect.type === 'activate_event') {
+        if (!applyActivateEventTrigger(firedTrigger)) {
+          window.alert(`Триггер «${firedTrigger.name}» сработал, но effect.payload.eventId не указывает на существующее событие. Отметьте триггер вручную в панели «Ожидающие триггеры».`);
+        }
+      } else {
+        // Not auto-applicable — mark triggered (so it can't re-fire on the
+        // next advance from this same clamped position) and tell the DM
+        // exactly what to do by hand, never faking the effect.
+        store.markDelayedTriggerTriggered(firedTrigger.id);
+        window.alert(`Триггер «${firedTrigger.name}» сработал. Эффект «${firedTrigger.effect.type}» не автоматизирован — примените его вручную.`);
+      }
+      setShowPendingTriggers(true);
+      return;
+    }
+
+    if (result.completed) {
+      // Mirror the existing instant-travel "arrival" side-effects: snap the
+      // party's canonical location to the route's destination hotspot.
+      const destHotspot = route.toHotspotId ? hotspots.find((h) => h.id === route.toHotspotId) : undefined;
+      if (destHotspot?.locationStateId) {
+        store.setCurrentLocation(destHotspot.locationStateId, route.id);
+        store.markVisited(destHotspot.locationStateId);
+      }
+    }
+  }
+
+  function stopStagedTravelHere() {
+    const progress = store.partyRouteProgress;
+    if (!progress) return;
+    store.setPartyRouteProgress({ ...progress, progressMode: 'paused', updatedAt: new Date().toISOString() });
+  }
+
+  function cancelStagedTravel() {
+    if (!window.confirm('Отменить поэтапное путешествие? Партия останется в текущей точке маршрута, но прогресс перестанет отслеживаться.')) return;
+    store.setPartyRouteProgress(null);
+  }
+
+  /** "Camp here" — reuses the existing Quick Pin (MapObjectPlacement,
+   * entityKind:'note') system rather than inventing a new camp-marker type,
+   * since a quick pin already does exactly what a camp marker needs (a
+   * DM-only or player-visible note pinned at a map point). */
+  function campHereAtStagedPosition() {
+    const progress = store.partyRouteProgress;
+    if (!progress || !map) return;
+    const now = new Date().toISOString();
+    const pin: MapObjectPlacement = {
+      id: `placement-camp-${Date.now()}`,
+      arcId: store.currentTimelineId,
+      mapLevel: scope,
+      mapId: map.id,
+      entityKind: 'note',
+      title: 'Лагерь (привал в пути)',
+      position: progress.currentPosition,
+      visibleInPlayerView: false,
+      status: 'active',
+      createdAt: now,
+    };
+    store.addPlacement(pin);
+    store.setPartyRouteProgress({ ...progress, progressMode: 'paused', updatedAt: now });
+  }
+
   function cancelRouteEditing() {
     if (!editingRouteId) return;
     if (isCreatingNewRoute) {
@@ -2890,6 +3322,13 @@ export function MapWorkspacePage() {
   // partyTravelAnim walks through them IN ORDER — no jump between segments.
   function commitMultiSegmentJourney(path: RoutePathResult, destinationLocationStateId: string) {
     if (path.segments.length === 0) return;
+    // Zone guard (Restricted/Impassable Zones MVP) — check every leg's
+    // underlying route, not just the first; a multi-hop journey can cross a
+    // blocking zone on any segment, not only the one nearest the party.
+    for (const segment of path.segments) {
+      const segmentRoute = routes.find((rt) => rt.id === segment.routeId);
+      if (!confirmZoneGuardForRoute(segmentRoute)) return;
+    }
     const lastSegment = path.segments[path.segments.length - 1];
     store.setCurrentLocation(destinationLocationStateId, lastSegment.routeId);
     store.markVisited(destinationLocationStateId);
@@ -2898,6 +3337,57 @@ export function MapWorkspacePage() {
     setPartyTravelAnim({ points: first.points, index: 0 });
     setPendingPathSegments(rest.map((s) => ({ routeId: s.routeId, points: s.points })));
     setPathfindingResult(null);
+  }
+
+  // Route/Travel polish — "Поставить партию здесь" in the object-overview
+  // header (the compact "Ещё" panel) used to call store.setCurrentLocation
+  // directly with no routeId at all, regardless of whether the party already
+  // had a position and a real route connected the two — a straight-line
+  // teleport through walls/rivers exactly like the bug handleHotspotDoubleClick
+  // was already fixed for below. Mirrors that same matching-route /
+  // multi-hop-network / no-path-warning logic so there is only one route-aware
+  // "move party to this location" behavior in the whole page.
+  function movePartyToLocation(ls: LocationState) {
+    const ownHotspot = hotspots.find((h) => h.locationStateId === ls.id);
+    const matchingRoute =
+      partyHotspot && ownHotspot
+        ? routes.find(
+            (r) =>
+              (r.points?.length ?? 0) >= 2 &&
+              ((r.fromHotspotId === partyHotspot.id && r.toHotspotId === ownHotspot.id) ||
+                (r.toHotspotId === partyHotspot.id && r.fromHotspotId === ownHotspot.id)),
+          )
+        : undefined;
+    if (matchingRoute) {
+      if (!confirmZoneGuardForRoute(matchingRoute)) return;
+      store.setCurrentLocation(ls.id, matchingRoute.id);
+      store.markVisited(ls.id);
+      setSelectedRouteId(matchingRoute.id);
+      const path =
+        partyHotspot && matchingRoute.fromHotspotId === partyHotspot.id
+          ? matchingRoute.points!
+          : [...matchingRoute.points!].reverse();
+      setPartyTravelAnim({ points: path, index: 0 });
+      return;
+    }
+    // No party position yet, or this location has no hotspot to path
+    // through — nothing exists to path FROM, so a direct placement is fine
+    // (not a fallback around an existing network, there is no network leg
+    // to bypass).
+    if (!partyHotspot || !ownHotspot) {
+      store.setCurrentLocation(ls.id);
+      store.markVisited(ls.id);
+      return;
+    }
+    const candidatePaths = findJourneyPaths(partyHotspot.id, ownHotspot.id);
+    if (candidatePaths.length > 0) {
+      commitMultiSegmentJourney(candidatePaths[0], ls.id);
+      return;
+    }
+    // Genuinely no path through the route network — surface the warning via
+    // the same pathfindingResult UI everything else uses, never a silent
+    // straight-line move.
+    setPathfindingResult({ targetLocationStateId: ls.id, options: [] });
   }
 
   // Double-click on a hotspot in DM View / Player View moves the party there
@@ -2924,6 +3414,7 @@ export function MapWorkspacePage() {
         )
       : undefined;
     if (matchingRoute) {
+      if (!confirmZoneGuardForRoute(matchingRoute)) return;
       store.setCurrentLocation(h.locationStateId, matchingRoute.id);
       store.markVisited(h.locationStateId);
       selectLocation(h.locationStateId);
@@ -3066,6 +3557,7 @@ export function MapWorkspacePage() {
             .filter((n) => {
               if (!isPlayerView) return true;
               if (n.visibleToPlayers === false) return false;
+              if (!isLinkedEntityPlacementVisible(data.placements, 'npc', n.id)) return false;
               if (!n.location) return true;
               const ls = locationsForTimeline.find((l) => l.locationId === n.location || l.id === n.location);
               return !ls || isLocationVisibleToPlayers(ls, store.progress);
@@ -3076,6 +3568,7 @@ export function MapWorkspacePage() {
             .filter((qq) => {
               if (!isPlayerView) return true;
               if (effectiveQuestStatus(qq.id, qq.status, store.progress) === 'hidden') return false;
+              if (!isLinkedEntityPlacementVisible(data.placements, 'quest', qq.id)) return false;
               if (!qq.location) return true;
               const ls = locationsForTimeline.find((l) => l.locationId === qq.location || l.id === qq.location);
               return !ls || isLocationVisibleToPlayers(ls, store.progress);
@@ -3664,6 +4157,46 @@ export function MapWorkspacePage() {
               >
                 + Событие текущей сессии
               </button>
+              {/* Event System + Delayed Triggers MVP — position-aware
+                  creation. "Здесь" arms a map click (mirrors Quick Pin);
+                  "от партии" creates immediately at the party's current
+                  position if one exists. */}
+              <button
+                className={eventCreateArming ? 'active' : ''}
+                onClick={() => setEventCreateArming((v) => !v)}
+              >
+                {eventCreateArming ? 'Кликните по карте…' : '+ Событие здесь (клик по карте)'}
+              </button>
+              <button
+                disabled={!map || !partyMarkerPoint}
+                onClick={() => {
+                  if (!map || !partyMarkerPoint) return;
+                  const name = window.prompt('Название события (в текущей точке партии):');
+                  if (!name) return;
+                  const now = new Date().toISOString();
+                  const calendarNow = store.getCalendar(store.currentTimelineId);
+                  const newEvent: CampaignEvent = {
+                    id: `event-${Date.now()}`,
+                    timelineId: store.currentTimelineId,
+                    mapId: map.id,
+                    mapLevel: scope,
+                    position: partyMarkerPoint,
+                    name,
+                    type: 'note',
+                    linkedLocationStateIds: partyLocationState ? [partyLocationState.id] : undefined,
+                    date: { day: calendarNow.currentDay, month: calendarNow.currentMonth, year: calendarNow.currentYear },
+                    timeOfDay: calendarNow.currentTimeOfDay,
+                    visibleInPlayerView: false,
+                    status: 'planned',
+                    createdAt: now,
+                    updatedAt: now,
+                  };
+                  store.addCampaignEvent(newEvent);
+                  setSelectedEventId(newEvent.id);
+                }}
+              >
+                + Событие в позиции партии
+              </button>
             </div>
             {sessionCampaignEvents.length === 0 ? (
               <p className="muted">Нет активных/запланированных событий на этой арке.</p>
@@ -3671,7 +4204,7 @@ export function MapWorkspacePage() {
               <ul className="route-list">
                 {sessionCampaignEvents.map((ev) => (
                   <li key={ev.id}>
-                    <strong>{ev.name}</strong>
+                    <button className="link-like" onClick={() => setSelectedEventId(ev.id)}><strong>{ev.name}</strong></button>
                     <span className="status-badge"> {ev.type}</span>
                     <span className="status-badge"> {ev.status}</span>
                     <div className="actions">
@@ -4348,6 +4881,21 @@ export function MapWorkspacePage() {
             <button onClick={() => zoomBy(1 / 1.2)}>−</button>
             <button onClick={resetView}>Сброс</button>
             <button onClick={resetView}>По размеру экрана</button>
+            {partyHotspot && (
+              <button
+                onClick={() =>
+                  setView((v) => ({
+                    ...v,
+                    // Same "solve for offset" centering math as HotspotInspector's
+                    // onCenter above — keeps this as the only centering formula.
+                    x: viewportSize.width / 2 - fitOffsetX - partyHotspot!.x * renderedImageWidth * v.scale,
+                    y: viewportSize.height / 2 - fitOffsetY - partyHotspot!.y * renderedImageHeight * v.scale,
+                  }))
+                }
+              >
+                Партия
+              </button>
+            )}
             {!isPlayerView && (
               <button
                 className={store.placementLayerVisible ? 'active' : ''}
@@ -5063,8 +5611,8 @@ export function MapWorkspacePage() {
                 </div>
                 <div className="library-drawer-body">
                   <LibraryPanel
-                    locations={locationsForTimeline}
-                    npcs={npcsForArc}
+                    locations={locationsForLibraryScope}
+                    npcs={npcsForLibraryScope}
                     taverns={data.taverns}
                     shops={data.shops}
                     hotspotsOnCurrentMap={hotspots}
@@ -5127,6 +5675,10 @@ export function MapWorkspacePage() {
                       openImageEditor(full ?? img);
                     }}
                     onEditBattleEntry={(be) => openBattleEntryEditor(be)}
+                    onEditLocation={(locationId) => {
+                      const loc = data.locations.find((l) => l.id === locationId);
+                      if (loc) openLocationEditor(loc);
+                    }}
                     contentMovableEntities={Object.values(store.movableEntitiesById).filter(
                       (m) => m.entityType === 'quest' || m.entityType === 'enemy' || m.entityType === 'image',
                     )}
@@ -5168,7 +5720,9 @@ export function MapWorkspacePage() {
                       ? shopEditDraft?.image || undefined
                       : imagePickerTarget.kind === 'battleEntry'
                         ? battleEntryEditDraft?.previewImageId || undefined
-                        : (locationDataDraft?.headerImageId as string | undefined)
+                        : imagePickerTarget.kind === 'locationSource'
+                          ? locationEditDraft?.image || undefined
+                          : (locationDataDraft?.headerImageId as string | undefined)
               }
               onSelect={(imageId) => {
                 if (imagePickerTarget.kind === 'npc') {
@@ -5179,6 +5733,8 @@ export function MapWorkspacePage() {
                   setShopEditDraft((d) => (d ? { ...d, image: imageId } : d));
                 } else if (imagePickerTarget.kind === 'battleEntry') {
                   setBattleEntryEditDraft((d) => (d ? { ...d, previewImageId: imageId } : d));
+                } else if (imagePickerTarget.kind === 'locationSource') {
+                  setLocationEditDraft((d) => (d ? { ...d, image: imageId } : d));
                 } else {
                   setLocationDataDraft((d) => (d ? { ...d, headerImageId: imageId } : d));
                 }
@@ -5193,10 +5749,13 @@ export function MapWorkspacePage() {
                   setShopEditDraft((d) => (d ? { ...d, image: '' } : d));
                 } else if (imagePickerTarget.kind === 'battleEntry') {
                   setBattleEntryEditDraft((d) => (d ? { ...d, previewImageId: '' } : d));
+                } else if (imagePickerTarget.kind === 'locationSource') {
+                  setLocationEditDraft((d) => (d ? { ...d, image: '' } : d));
                 } else {
                   setLocationDataDraft((d) => (d ? { ...d, headerImageId: '' } : d));
                 }
               }}
+              onUpload={(image) => store.addImage(image)}
               onClose={() => setImagePickerTarget(null)}
             />
           )}
@@ -5393,6 +5952,115 @@ export function MapWorkspacePage() {
                       if (window.confirm('Сбросить локальные правки этой таверны? Действие необратимо.')) {
                         store.resetOverride('tavern', tavernEditDraft.tavernId);
                         setTavernEditDraft(null);
+                      }
+                    }}
+                  >
+                    Сбросить локальные правки
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+          {isEditMode && locationEditDraft && data && (
+            <div className="route-draft-form">
+              <strong>Редактировать локацию</strong>
+              <p className="muted">
+                Правки сохраняются как локальный оверлей (locationPatches) — исходный JSON dm-companion не меняется.
+              </p>
+              <div className="library-card-row">
+                {locationEditDraft.image ? (
+                  <img
+                    className="library-thumb"
+                    src={
+                      data.images.find((i) => i.id === locationEditDraft.image)?.thumbnailSrc ??
+                      data.images.find((i) => i.id === locationEditDraft.image)?.src
+                    }
+                    alt=""
+                    loading="lazy"
+                  />
+                ) : (
+                  <span className="library-thumb library-thumb-fallback" aria-hidden="true">{LIBRARY_FALLBACK_ICON.location}</span>
+                )}
+                <div className="library-card-body actions">
+                  <button type="button" onClick={() => setImagePickerTarget({ kind: 'locationSource', locationId: locationEditDraft.locationId })}>
+                    Сменить изображение
+                  </button>
+                  {!!locationEditDraft.image && (
+                    <button type="button" onClick={() => setLocationEditDraft({ ...locationEditDraft, image: '' })}>
+                      Убрать
+                    </button>
+                  )}
+                </div>
+              </div>
+              <label>
+                Название
+                <input
+                  type="text"
+                  value={locationEditDraft.name}
+                  onChange={(e) => setLocationEditDraft({ ...locationEditDraft, name: e.target.value })}
+                />
+              </label>
+              <label>
+                Тип
+                <input
+                  type="text"
+                  value={locationEditDraft.type}
+                  onChange={(e) => setLocationEditDraft({ ...locationEditDraft, type: e.target.value })}
+                />
+              </label>
+              <label>
+                Основное описание
+                <textarea
+                  value={locationEditDraft.description}
+                  onChange={(e) => setLocationEditDraft({ ...locationEditDraft, description: e.target.value })}
+                />
+              </label>
+              <label>
+                Что видят игроки (отдельное поле — оставьте пустым, чтобы скрыть блок в карточке)
+                <textarea
+                  value={locationEditDraft.playerView}
+                  onChange={(e) => setLocationEditDraft({ ...locationEditDraft, playerView: e.target.value })}
+                />
+              </label>
+              <label>
+                Заметки ДМ (никогда не видны игрокам/Observer)
+                <textarea
+                  value={locationEditDraft.notes}
+                  onChange={(e) => setLocationEditDraft({ ...locationEditDraft, notes: e.target.value })}
+                />
+              </label>
+              {!locationEditDraft.name.trim() && <p className="route-editor-error">Название не может быть пустым</p>}
+              <div className="actions">
+                <button
+                  className="btn-primary"
+                  disabled={!locationEditDraft.name.trim()}
+                  onClick={() => {
+                    store.patchLocation(locationEditDraft.locationId, {
+                      name: locationEditDraft.name.trim(),
+                      type: locationEditDraft.type.trim(),
+                      description: locationEditDraft.description.trim(),
+                      // Explicitly saved even when empty — '' (not undefined)
+                      // so a cleared field never falls back to a stale prior
+                      // patch value still sitting in locationPatches.
+                      playerView: locationEditDraft.playerView.trim() || undefined,
+                      notes: locationEditDraft.notes.trim() || undefined,
+                      images: locationEditDraft.image
+                        ? [locationEditDraft.image, ...locationEditDraft.restImages]
+                        : locationEditDraft.restImages,
+                    });
+                    setLocationEditDraft(null);
+                  }}
+                >
+                  Сохранить
+                </button>
+                <button onClick={() => setLocationEditDraft(null)}>Отмена</button>
+                {locationEditDraft.locationId in store.locationPatches && (
+                  <button
+                    className="btn-secondary"
+                    onClick={() => {
+                      if (window.confirm('Сбросить локальные правки этой локации? Действие необратимо.')) {
+                        store.resetOverride('location', locationEditDraft.locationId);
+                        setLocationEditDraft(null);
                       }
                     }}
                   >
@@ -5930,6 +6598,7 @@ export function MapWorkspacePage() {
             const to = hotspots.find((h) => h.id === r.toHotspotId);
             const pointCount = r.points?.length ?? 0;
             const warnings = getRouteValidationWarnings(r);
+            const zoneValidation = validateRouteAgainstZones(r, factionZonesForMap);
             const normalizedDistance = calculateRouteNormalizedDistance(r);
             const distanceKm = r.distanceKm ?? null;
             const days = distanceKm !== null ? estimateTravelDays(distanceKm, travelSpeedPreset) : null;
@@ -5989,11 +6658,116 @@ export function MapWorkspacePage() {
                     ))}
                   </ul>
                 )}
+                {/* Zone validation report (Restricted/Impassable Zones MVP) —
+                    geometric check against every zone on this map, separate
+                    from the structural warnings above (missing points/
+                    endpoints). Always shown for a selected route, even when
+                    clear, so "no zone conflicts" is an explicit, visible
+                    state rather than silence. */}
+                <p className="session-panel-row">
+                  <strong>Проверка зон:</strong>{' '}
+                  <span
+                    className={`status-badge status-badge--${zoneValidation.status === 'valid' ? 'player-visible' : zoneValidation.status === 'warning' ? 'dm-only' : 'danger'}`}
+                  >
+                    {zoneValidation.status === 'valid' ? 'Чисто' : zoneValidation.status === 'warning' ? 'Предупреждение' : 'Блокируется'}
+                  </span>
+                </p>
+                {zoneValidation.issues.length > 0 && (
+                  <ul className="route-list">
+                    {zoneValidation.issues.map((issue, i) => (
+                      <li key={i} className={issue.severity === 'error' ? 'route-editor-error' : undefined}>
+                        {issue.message}
+                        {issue.zoneId && (
+                          <button
+                            className="btn-ghost"
+                            onClick={() => {
+                              setSelectedZoneId(issue.zoneId!);
+                              setSelectedRouteId(null);
+                            }}
+                          >
+                            Перейти к зоне
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {/* Time + Travel Engine MVP — staged ("walk in stages, can
+                    pause/resume across multiple days") travel block. Distinct
+                    from the existing one-click "Начать путешествие" button
+                    below, which still works unchanged for an instant move. */}
+                {(() => {
+                  const travelEstimate = getRouteTravelEstimate(r, map?.scale, TRAVEL_SPEED_PRESETS[travelSpeedPreset].kmPerDay);
+                  const stagedProgress =
+                    store.partyRouteProgress?.routeId === r.id && store.partyRouteProgress.timelineId === store.currentTimelineId
+                      ? store.partyRouteProgress
+                      : null;
+                  const totalSegments = Math.max((r.points?.length ?? 1) - 1, 1);
+                  const progressPercent = stagedProgress
+                    ? Math.round(((stagedProgress.segmentIndex + stagedProgress.segmentProgress) / totalSegments) * 100)
+                    : 0;
+                  return (
+                    <div className="travel-stage-panel">
+                      <p className="session-panel-row">
+                        <strong>Длина:</strong>{' '}
+                        {travelEstimate.distanceKm !== null
+                          ? `${travelEstimate.distanceKm.toFixed(1)} км`
+                          : travelEstimate.normalizedDistance > 0
+                            ? `${travelEstimate.normalizedDistance.toFixed(3)} усл. ед. (масштаб карты не задан)`
+                            : 'путь не размечен'}
+                      </p>
+                      <p className="session-panel-row">
+                        <strong>Скорость:</strong> {TRAVEL_SPEED_PRESETS[travelSpeedPreset].label} — {TRAVEL_SPEED_PRESETS[travelSpeedPreset].kmPerDay} км/день
+                      </p>
+                      <p className="session-panel-row">
+                        <strong>Оценка:</strong>{' '}
+                        {travelEstimate.estimatedDays !== null
+                          ? `≈ ${travelEstimate.estimatedDays.toFixed(1)} дн. (${Math.ceil(travelEstimate.estimatedPhases ?? 0)} фаз)`
+                          : travelEstimate.scaleMissing
+                            ? 'масштаб карты не задан — оценка в днях невозможна, прогресс будет вестись по % маршрута'
+                            : 'нет данных'}
+                      </p>
+                      {/* Mode Guard — Area Edit Mode (editingZoneId) and Route
+                          Edit Mode (already excludes this whole panel via the
+                          outer `!editingRouteId` condition) must never allow a
+                          travel mutation mid-transaction. */}
+                      {editingZoneId && (
+                        <p className="muted">Сначала завершите/отмените редактирование зоны (Area Edit Mode), чтобы управлять путешествием.</p>
+                      )}
+                      {stagedProgress ? (
+                        <>
+                          <p className="session-panel-row">
+                            <strong>Прогресс:</strong> {progressPercent}% ·{' '}
+                            {stagedProgress.progressMode === 'completed'
+                              ? 'маршрут завершён'
+                              : stagedProgress.progressMode === 'paused'
+                                ? 'на привале'
+                                : `между точкой ${stagedProgress.segmentIndex + 1} и ${stagedProgress.segmentIndex + 2}`}
+                          </p>
+                          <div className="actions">
+                            <button disabled={!!editingZoneId || !!placementMode} onClick={() => advanceStagedTravel(1)}>Пройти 1 фазу</button>
+                            <button disabled={!!editingZoneId || !!placementMode} onClick={() => advanceStagedTravel(PHASES_PER_DAY)}>Пройти 1 день</button>
+                            <button disabled={!!editingZoneId || !!placementMode} onClick={stopStagedTravelHere}>Остановиться здесь</button>
+                            <button disabled={!!editingZoneId || !!placementMode} onClick={campHereAtStagedPosition}>Лагерь здесь</button>
+                            <button className="btn-ghost" disabled={!!editingZoneId || !!placementMode} onClick={cancelStagedTravel}>Отменить путешествие</button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="actions">
+                          <button disabled={!routeUsableForTravel || !!editingZoneId || !!placementMode} onClick={() => startStagedTravel(r)}>
+                            Начать поэтапное путешествие
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="actions">
                   <button
                     disabled={!routeUsableForTravel || !partyHotspot}
                     onClick={() => {
                       if (!partyHotspot) return;
+                      if (!confirmZoneGuardForRoute(r)) return;
                       const path = r.fromHotspotId === partyHotspot.id ? r.points! : [...r.points!].reverse();
                       setPartyTravelAnim({ points: path, index: 0 });
                       // Travel Flow MVP: advance the calendar by the estimated
@@ -6112,6 +6886,33 @@ export function MapWorkspacePage() {
                   >
                     + Триггер «маршрут завершён»
                   </button>
+                  <button
+                    onClick={() => {
+                      const name = window.prompt('Название триггера «пересечён сегмент маршрута»:');
+                      if (!name) return;
+                      const maxSegment = Math.max((r.points?.length ?? 1) - 2, 0);
+                      const idxStr = window.prompt(`Индекс сегмента (0..${maxSegment}):`, '0');
+                      if (idxStr === null) return;
+                      const routeSegmentIndex = Math.min(Math.max(0, Math.floor(Number(idxStr) || 0)), maxSegment);
+                      const now = new Date().toISOString();
+                      const newTrigger: DelayedTrigger = {
+                        id: `trigger-${Date.now()}`,
+                        timelineId: store.currentTimelineId,
+                        name,
+                        triggerType: 'party_crosses_route_segment',
+                        routeId: r.id,
+                        routeSegmentIndex,
+                        effect: { type: 'create_event', payload: { name, type: 'note' } },
+                        status: 'armed',
+                        visibleInPlayerView: false,
+                        createdAt: now,
+                        updatedAt: now,
+                      };
+                      store.addDelayedTrigger(newTrigger);
+                    }}
+                  >
+                    + Триггер на сегменте маршрута
+                  </button>
                 </div>
                 {routeTriggerWarning && routeTriggerWarning.routeId === r.id && (
                   <p className="route-editor-error trigger-warning">
@@ -6208,6 +7009,45 @@ export function MapWorkspacePage() {
                   />
                   Видна игрокам
                 </label>
+                {/* Restricted/Impassable Zones MVP — blocking flags. Plain
+                    checkboxes/number input on the same FactionZone model,
+                    not a separate panel; defaults were applied at creation
+                    time (ZONE_TYPE_BLOCKING_DEFAULTS) but the DM can always
+                    override per-zone. */}
+                <label className="reveal-toggle">
+                  <input
+                    type="checkbox"
+                    checked={z.blocksPartyMovement === true}
+                    onChange={(e) => store.updateFactionZone(z.id, { blocksPartyMovement: e.target.checked })}
+                  />
+                  Блокирует движение партии
+                </label>
+                <label className="reveal-toggle">
+                  <input
+                    type="checkbox"
+                    checked={z.blocksNpcMovement === true}
+                    onChange={(e) => store.updateFactionZone(z.id, { blocksNpcMovement: e.target.checked })}
+                  />
+                  Блокирует движение NPC (на будущее — движения NPC ещё нет)
+                </label>
+                <label className="reveal-toggle">
+                  <input
+                    type="checkbox"
+                    checked={z.increasesTravelRisk === true}
+                    onChange={(e) => store.updateFactionZone(z.id, { increasesTravelRisk: e.target.checked })}
+                  />
+                  Повышает риск путешествия (предупреждение, не блокирует)
+                </label>
+                <label>
+                  Множитель времени в пути (1 = без изменений)
+                  <input
+                    type="number"
+                    min={0.1}
+                    step={0.1}
+                    value={z.travelCostMultiplier ?? 1}
+                    onChange={(e) => store.updateFactionZone(z.id, { travelCostMultiplier: Number(e.target.value) || 1 })}
+                  />
+                </label>
                 <label>
                   Прозрачность ({Math.round((z.opacity ?? 0.35) * 100)}%)
                   <input
@@ -6251,6 +7091,22 @@ export function MapWorkspacePage() {
                 <p className="muted">Связанных событий: {z.linkedEventIds?.length ?? 0}</p>
                 <p className="muted">Связанных локаций: {z.linkedLocationStateIds?.length ?? 0}</p>
                 <p className="muted">Связанных маршрутов: {z.linkedRouteIds?.length ?? 0}</p>
+                {/* Validation impact (Restricted/Impassable Zones MVP) — read-only
+                    summary of which routes on THIS map actually geometrically
+                    cross this zone right now (independent of linkedRouteIds,
+                    which is a manual DM link, not a geometric fact). */}
+                {(z.blocksPartyMovement || z.increasesTravelRisk) && (() => {
+                  const affected = routes.filter((r) => {
+                    const result = validateRouteAgainstZones(r, [z]);
+                    return result.issues.some((iss) => iss.zoneId === z.id);
+                  });
+                  return (
+                    <p className={affected.length > 0 ? 'route-editor-error' : 'muted'} style={{ color: affected.length > 0 ? undefined : undefined }}>
+                      Маршрутов, пересекающих эту зону: {affected.length}
+                      {affected.length > 0 ? ` (${affected.map((r) => r.label || 'без названия').join(', ')})` : ''}
+                    </p>
+                  );
+                })()}
                 {editingZoneId === z.id && (
                   <p className="muted">
                     Кликайте по карте, чтобы добавить вершины зоны. Перетащите вершину, чтобы изменить форму. Кликните по точке, чтобы выбрать её для удаления.
@@ -6280,7 +7136,7 @@ export function MapWorkspacePage() {
                   <button
                     onClick={() => {
                       const now = new Date().toISOString();
-                      store.addCampaignEvent({
+                      const newEvent: CampaignEvent = {
                         id: `event-${Date.now()}`,
                         timelineId: z.timelineId,
                         mapId: z.mapId,
@@ -6289,16 +7145,43 @@ export function MapWorkspacePage() {
                         type: 'note',
                         linkedLocationStateIds: z.linkedLocationStateIds,
                         linkedRouteIds: z.linkedRouteIds,
+                        linkedZoneIds: [z.id],
                         date: { day: store.getCalendar(z.timelineId).currentDay, month: store.getCalendar(z.timelineId).currentMonth, year: store.getCalendar(z.timelineId).currentYear },
                         timeOfDay: store.getCalendar(z.timelineId).currentTimeOfDay,
                         visibleInPlayerView: false,
                         status: 'planned',
                         createdAt: now,
                         updatedAt: now,
-                      });
+                      };
+                      store.addCampaignEvent(newEvent);
+                      setSelectedEventId(newEvent.id);
                     }}
                   >
                     + Связанное событие
+                  </button>
+                  <button
+                    onClick={() => {
+                      const name = window.prompt(`Название триггера «вход партии в зону «${z.name}»»:`);
+                      if (!name) return;
+                      const now = new Date().toISOString();
+                      const newTrigger: DelayedTrigger = {
+                        id: `trigger-${Date.now()}`,
+                        timelineId: z.timelineId,
+                        mapId: z.mapId,
+                        mapLevel: z.mapLevel,
+                        name,
+                        triggerType: 'party_enters_area',
+                        zoneId: z.id,
+                        effect: { type: 'create_event', payload: { name, type: 'note' } },
+                        status: 'armed',
+                        visibleInPlayerView: false,
+                        createdAt: now,
+                        updatedAt: now,
+                      };
+                      store.addDelayedTrigger(newTrigger);
+                    }}
+                  >
+                    + Триггер входа в зону
                   </button>
                   <button
                     onClick={() => {
@@ -6313,6 +7196,119 @@ export function MapWorkspacePage() {
                   </button>
                 </div>
                 {zoneFormError && <p className="route-editor-error">{zoneFormError}</p>}
+              </div>
+            );
+          })()}
+
+          {/* Event Panel MVP (Event System + Delayed Triggers) — same
+              .route-panel shell as the Faction Zone panel above. Never shown
+              in Player View; ObserverViewPage.tsx doesn't render this file's
+              JSX at all, so it's structurally unreachable there too. */}
+          {!isPlayerView && selectedEventId && (() => {
+            const ev = store.eventsById[selectedEventId];
+            if (!ev) return null;
+            const linkedRoute = ev.linkedRouteIds?.[0] ? routes.find((r) => r.id === ev.linkedRouteIds![0]) : undefined;
+            const linkedZone = ev.linkedZoneIds?.[0] ? store.factionZonesById[ev.linkedZoneIds[0]] : undefined;
+            const linkedLocation = ev.linkedLocationStateIds?.[0]
+              ? data.locationStates.find((ls) => ls.id === ev.linkedLocationStateIds![0])
+              : undefined;
+            const linkedQuest = ev.linkedQuestIds?.[0] ? data.quests.find((q) => q.id === ev.linkedQuestIds![0]) : undefined;
+            const linkedBattleEntry = ev.linkedBattleEntryIds?.[0] ? store.battleEntriesById[ev.linkedBattleEntryIds[0]] : undefined;
+            return (
+              <div className="route-panel card dm-only">
+                <h4>Событие: {ev.name}</h4>
+                <label>
+                  Название
+                  <input
+                    type="text"
+                    value={ev.name}
+                    onChange={(e) => store.updateCampaignEvent(ev.id, { name: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Тип
+                  <select value={ev.type} onChange={(e) => store.updateCampaignEvent(ev.id, { type: e.target.value as CampaignEvent['type'] })}>
+                    {(['battle', 'quest_update', 'npc_update', 'discovery', 'danger', 'world_change', 'note', 'travel', 'faction_shift', 'custom'] as CampaignEvent['type'][]).map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Статус
+                  <select value={ev.status} onChange={(e) => store.updateCampaignEvent(ev.id, { status: e.target.value as CampaignEvent['status'] })}>
+                    {(['planned', 'active', 'resolved', 'cancelled', 'hidden'] as CampaignEvent['status'][]).map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </label>
+                <p className="muted">
+                  Дата: {ev.date ? `${ev.date.day} ${ev.date.month} ${ev.date.year}` : 'не задана'}
+                  {ev.timeOfDay ? ` · ${ev.timeOfDay}` : ''}
+                </p>
+                <p className="muted">
+                  Позиция: {ev.position ? `${ev.position.x.toFixed(2)}, ${ev.position.y.toFixed(2)}` : 'без позиции на карте'}
+                  {ev.mapId ? ` · карта: ${ev.mapId}` : ''}
+                </p>
+                <label className="reveal-toggle">
+                  <input
+                    type="checkbox"
+                    checked={ev.visibleInPlayerView === true}
+                    onChange={(e) => store.updateCampaignEvent(ev.id, { visibleInPlayerView: e.target.checked })}
+                  />
+                  Видно игрокам
+                </label>
+                <label>
+                  Описание (для ДМ)
+                  <textarea value={ev.description ?? ''} onChange={(e) => store.updateCampaignEvent(ev.id, { description: e.target.value || undefined })} />
+                </label>
+                <label>
+                  Описание для игроков (необязательно)
+                  <textarea
+                    value={ev.playerSafeDescription ?? ''}
+                    onChange={(e) => store.updateCampaignEvent(ev.id, { playerSafeDescription: e.target.value || undefined })}
+                  />
+                </label>
+                {linkedRoute && (
+                  <p className="muted">
+                    Маршрут: {linkedRoute.label || linkedRoute.id}{' '}
+                    <button className="btn-ghost" onClick={() => { setSelectedRouteId(linkedRoute.id); setSelectedEventId(null); }}>Перейти</button>
+                  </p>
+                )}
+                {linkedZone && (
+                  <p className="muted">
+                    Зона: {linkedZone.name}{' '}
+                    <button className="btn-ghost" onClick={() => { setSelectedZoneId(linkedZone.id); setSelectedEventId(null); }}>Перейти</button>
+                  </p>
+                )}
+                {linkedLocation && <p className="muted">Локация: {linkedLocation.title}</p>}
+                {linkedQuest && <p className="muted">Квест: {linkedQuest.title}</p>}
+                {linkedBattleEntry && <p className="muted">Боевая сцена: {linkedBattleEntry.name}</p>}
+                <div className="actions">
+                  <button onClick={() => store.updateCampaignEvent(ev.id, { status: 'active' })}>Сделать активным</button>
+                  <button onClick={() => store.updateCampaignEvent(ev.id, { status: 'resolved' })}>Завершить</button>
+                  <button onClick={() => store.updateCampaignEvent(ev.id, { status: 'cancelled' })}>Отменить</button>
+                  <button
+                    onClick={() => {
+                      const now = new Date().toISOString();
+                      const calendarNow = store.getCalendar(store.currentTimelineId);
+                      const followUp: CampaignEvent = {
+                        ...ev,
+                        id: `event-${Date.now()}`,
+                        name: `${ev.name} — продолжение`,
+                        status: 'planned',
+                        date: { day: calendarNow.currentDay, month: calendarNow.currentMonth, year: calendarNow.currentYear },
+                        timeOfDay: calendarNow.currentTimeOfDay,
+                        createdAt: now,
+                        updatedAt: now,
+                      };
+                      store.addCampaignEvent(followUp);
+                      setSelectedEventId(followUp.id);
+                    }}
+                  >
+                    Создать продолжение
+                  </button>
+                  <button onClick={() => setSelectedEventId(null)}>Закрыть</button>
+                </div>
               </div>
             );
           })()}
@@ -6775,6 +7771,10 @@ export function MapWorkspacePage() {
                     const zoneStateClass = [
                       'faction-zone',
                       `faction-zone--${z.status}`,
+                      // Restricted/Impassable Zones MVP — boundary-only modifier
+                      // by zone TYPE, layered on top of the existing status fill
+                      // color above (border emphasis, never overrides fill).
+                      `faction-zone-type--${z.type}`,
                       isZoneSelected && 'faction-zone--selected',
                     ]
                       .filter(Boolean)
@@ -6836,6 +7836,12 @@ export function MapWorkspacePage() {
                     const isRouteHiddenFromPlayers = r.visibleInPlayerView === false;
                     const isRouteDangerous = r.dangerLevel === 'dangerous' || r.dangerLevel === 'deadly' || r.status === 'dangerous';
                     const isRouteBlocked = r.status === 'blocked';
+                    // Restricted/Impassable Zones MVP — DM-only geometric check
+                    // (never computed/rendered for isPlayerView, so a hidden
+                    // blocking zone can never leak via this route's outline).
+                    const zoneResult = !isPlayerView && hasRealPath ? validateRouteAgainstZones(r, factionZonesForMap) : null;
+                    const isRouteZoneBlocked = zoneResult?.status === 'invalid';
+                    const isRouteZoneWarning = zoneResult?.status === 'warning';
                     // While one route is actively being drawn/edited, dim every
                     // other route so the DM can see exactly which path their
                     // clicks affect.
@@ -6855,6 +7861,8 @@ export function MapWorkspacePage() {
                       isRouteInvalid && 'route--invalid',
                       isRouteDangerous && 'route--dangerous',
                       isRouteBlocked && 'route--blocked',
+                      isRouteZoneBlocked && 'route--zone-blocked',
+                      isRouteZoneWarning && 'route--zone-warning',
                     ]
                       .filter(Boolean)
                       .join(' ');
@@ -6908,6 +7916,8 @@ export function MapWorkspacePage() {
                   if (ls && isPlayerView && !isLocationVisibleToPlayers(ls, store.progress)) return null;
                   const status = ls ? effectiveLocationStatus(ls, store.progress) : 'unknown';
                   const isSelected = h.id === selectedHotspotId || (!isEditMode && ls?.id === selectedLocationStateId);
+                  const visState = ls ? getLocationVisibilityState(ls, store.progress, store.party) : 'visible';
+                  const showDmVisibilityBadge = !isPlayerView && ls && visState !== 'visible';
                   return (
                     <div
                       key={h.id}
@@ -6917,8 +7927,13 @@ export function MapWorkspacePage() {
                         top: `${h.y * 100}%`,
                         background: STATUS_COLORS[status] || '#999',
                         cursor: isEditMode ? 'grab' : 'pointer',
+                        opacity: !isPlayerView && visState === 'hidden' ? 0.45 : 1,
                       }}
-                      title={h.label}
+                      title={
+                        showDmVisibilityBadge
+                          ? `${ls?.title ?? h.label} · ${visState === 'hidden' ? 'Скрыто от игроков' : 'Открыто партией'}`
+                          : h.label
+                      }
                       onMouseDown={(e) => handleHotspotMouseDown(h, e)}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -6930,27 +7945,54 @@ export function MapWorkspacePage() {
                       }}
                       onDoubleClick={(e) => handleHotspotDoubleClick(h, e)}
                     >
-                      {!h.labelHidden && <span className="hotspot-label">{ls?.title ?? h.label}</span>}
+                      {!h.labelHidden && (
+                        <span className="hotspot-label">
+                          {ls?.title ?? h.label}
+                          {/* Full visibility word only spelled out once the marker is
+                             selected — otherwise it's just the small corner dot below,
+                             so the map doesn't fill up with text pills. */}
+                          {isSelected && showDmVisibilityBadge && (
+                            <span className={`hotspot-label-status hotspot-label-status--${visState}`}>
+                              {visState === 'hidden' ? 'Скрыто' : 'Открыто'}
+                            </span>
+                          )}
+                        </span>
+                      )}
                       {h.needsCoordinateReview && isEditMode && (
                         <span className="review-badge" style={{ position: 'absolute', top: -18 }}>
                           позиция не подтверждена
                         </span>
                       )}
+                      {showDmVisibilityBadge && (
+                        <span
+                          className={`hotspot-visibility-dot hotspot-visibility-dot--${visState}`}
+                          aria-hidden="true"
+                        />
+                      )}
                     </div>
                   );
                 })}
-                {partyHotspot && partyMarkerPoint && (() => {
+                {(partyHotspot || activePartyRouteProgress) && partyMarkerPoint && (() => {
                   // While partyTravelAnim is active, render the WALKED point
                   // (with a per-segment CSS transition) instead of the final
                   // resting position — this is what actually makes the party
                   // visibly follow route.points instead of jumping there.
                   const animPoint = partyTravelAnim?.points[partyTravelAnim.index];
                   const renderPoint = animPoint ?? partyMarkerPoint;
+                  // Time + Travel Engine MVP — status chip text when a staged
+                  // PartyRouteProgress exists, otherwise the existing instant-
+                  // walk route label.
+                  const stagedRoute = activePartyRouteProgress
+                    ? routes.find((rt) => rt.id === activePartyRouteProgress.routeId)
+                    : undefined;
+                  const stagedLabel = activePartyRouteProgress
+                    ? `${stagedRoute?.label ?? 'маршрут'} · ${activePartyRouteProgress.progressMode === 'paused' ? 'привал' : 'в пути'} (${Math.round(((activePartyRouteProgress.segmentIndex + activePartyRouteProgress.segmentProgress) / Math.max((stagedRoute?.points?.length ?? 2) - 1, 1)) * 100)}%)`
+                    : undefined;
                   return (
                     <PartyMarker
                       point={renderPoint}
                       isWalking={!!animPoint}
-                      activeRouteLabel={activePartyRoute?.label ?? (activePartyRoute ? 'без названия' : undefined)}
+                      activeRouteLabel={stagedLabel ?? (activePartyRoute?.label ?? (activePartyRoute ? 'без названия' : undefined))}
                     />
                   );
                 })()}
@@ -7030,6 +8072,38 @@ export function MapWorkspacePage() {
                       className={`map-event-marker map-event-marker--visible ${stateClass}`}
                       style={{ left: `${(ev.position?.x ?? 0) * 100}%`, top: `${(ev.position?.y ?? 0) * 100}%` }}
                       title={ev.name}
+                    />
+                  );
+                })}
+                {/* Event System + Delayed Triggers MVP — DM-only event
+                    markers (dmEventMarkersForMap is always [] for isPlayer-
+                    View/usesPlayerSafeProjection, see its definition above,
+                    so this block can never render in a player-facing
+                    context). Clicking selects the event for the Event Panel
+                    below. Visually distinct (square, not the player-safe
+                    dot) from quest/battle/location markers. */}
+                {dmEventMarkersForMap.map((ev) => {
+                  const isHidden = ev.status === 'hidden' || !ev.visibleInPlayerView;
+                  const isSelected = ev.id === selectedEventId;
+                  const stateClass =
+                    ev.status === 'active' ? 'campaign-event-marker--active' : ev.status === 'resolved' ? 'campaign-event-marker--resolved' : '';
+                  return (
+                    <div
+                      key={ev.id}
+                      className={[
+                        'campaign-event-marker',
+                        stateClass,
+                        isHidden && 'campaign-event-marker--dm-only',
+                        isSelected && 'campaign-event-marker--selected',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      style={{ left: `${(ev.position?.x ?? 0) * 100}%`, top: `${(ev.position?.y ?? 0) * 100}%` }}
+                      title={`${ev.name} · ${ev.type} · ${ev.status}${isHidden ? ' · DM-only' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedEventId(ev.id);
+                      }}
                     />
                   );
                 })}
@@ -7229,8 +8303,8 @@ export function MapWorkspacePage() {
                     {selectedLs.type || 'локация'} · {effectiveLocationStatus(selectedLs, store.progress)}
                   </span>
                 </div>
-                <span className={selectedLs.visibleToPlayers === false ? 'status-badge status-badge--hidden' : 'status-badge status-badge--visible'}>
-                  {selectedLs.visibleToPlayers === false ? 'Скрыто от игроков' : 'Видно игрокам'}
+                <span className={`status-badge status-badge--${getLocationVisibilityState(selectedLs, store.progress, store.party)}`}>
+                  {getVisibilityLabel(getLocationVisibilityState(selectedLs, store.progress, store.party))}
                 </span>
               </div>
               <div className="object-overview-primary-actions">
@@ -7296,8 +8370,13 @@ export function MapWorkspacePage() {
               {sidePanelMoreOpen && (
                 <div className="object-overview-more">
                   <div className="object-overview-map-actions">
-                    <button onClick={() => store.setCurrentLocation(selectedLs.id)}>Поставить партию здесь</button>
+                    <button onClick={() => movePartyToLocation(selectedLs)}>Поставить партию здесь</button>
                     <button onClick={() => store.markVisited(selectedLs.id)}>Отметить посещённой</button>
+                    {store.party.revealedLocationStateIds.includes(selectedLs.id) ? (
+                      <button onClick={() => store.unsetRevealed(selectedLs.id)}>Сбросить открытие</button>
+                    ) : (
+                      <button onClick={() => store.setRevealed(selectedLs.id)}>Отметить открытым</button>
+                    )}
                     <button
                       onClick={() => {
                         const name = window.prompt('Название события для этой локации:');
@@ -7412,9 +8491,15 @@ export function MapWorkspacePage() {
                     const pointCount = r.points?.length ?? 0;
                     const hasRealPath = pointCount >= 2;
                     const warnings = getRouteValidationWarnings(r);
+                    const zoneStatus = hasRealPath ? validateRouteAgainstZones(r, factionZonesForMap).status : 'valid';
                     return (
                       <li key={r.id} className={r.id === selectedRouteId ? 'route-list-row-selected' : undefined}>
-                        <strong>{r.label || `${from?.label ?? '?'} → ${to?.label ?? '?'}`}</strong>
+                        <strong>{r.label || `${from?.label ?? '?'} → ${to?.label ?? '?'}`}</strong>{' '}
+                        {zoneStatus !== 'valid' && (
+                          <span className={`status-badge status-badge--${zoneStatus === 'warning' ? 'dm-only' : 'danger'}`}>
+                            {zoneStatus === 'warning' ? 'зона: предупреждение' : 'зона: блокировано'}
+                          </span>
+                        )}
                         <span className="entity-card-sub">
                           {' '}
                           {r.routeType ?? 'street'} · {r.dangerLevel ?? 'safe'} · {r.status ?? 'статус не задан'} ·{' '}
@@ -7576,9 +8661,37 @@ export function MapWorkspacePage() {
                       {selectedLs.visibleToPlayers === false ? 'Скрыто от игроков' : 'Видно игрокам'}
                     </span>
                   </div>
-                  <button className="btn-ghost" onClick={() => setObjectWindowOpen(false)}>
-                    Закрыть ✕
-                  </button>
+                  <div className="object-window-header-actions">
+                    {/* Prominent header Edit button — content/UI pass:
+                        the only edit entry point used to be the
+                        Действия на карте → Редактирование tab, disabled
+                        outside DM Edit mode and collapsed by default, so
+                        DMs could click a marker and never find edit at
+                        all. This button is reachable in one click from
+                        any mode: it switches on DM Edit, opens the real
+                        location editor (openLocationEditor — same form,
+                        same store.patchLocation save path), and jumps the
+                        collapsed section straight to "Редактирование" so
+                        the form is immediately visible. */}
+                    {selectedLs.sourceLibraryType !== 'tavern' && selectedLs.sourceLibraryType !== 'shop' && (
+                      <button
+                        className="btn-primary btn-compact"
+                        onClick={() => {
+                          const sourceLoc = data?.locations.find((l) => l.id === selectedLs.locationId);
+                          if (!sourceLoc) return;
+                          if (!isEditMode) store.setMode('dm-edit');
+                          openLocationEditor(sourceLoc);
+                          setObjectWindowSection('edit');
+                          setObjectWindowActionsOpen(true);
+                        }}
+                      >
+                        Редактировать
+                      </button>
+                    )}
+                    <button className="btn-ghost" onClick={() => setObjectWindowOpen(false)}>
+                      Закрыть ✕
+                    </button>
+                  </div>
                 </div>
                 <div className="object-window-body">
           {selectedLs && !selectedVisible && (
@@ -7645,7 +8758,11 @@ export function MapWorkspacePage() {
               collapsed by default under this <details>, rendered BELOW the
               Companion*Card content above, not as competing top-level tabs.
               Write-capable sections stay DM-Edit-only via `disabled`. */}
-          <details className="object-window-map-actions">
+          <details
+            className="object-window-map-actions"
+            open={objectWindowActionsOpen}
+            onToggle={(e) => setObjectWindowActionsOpen(e.currentTarget.open)}
+          >
             <summary>Действия на карте</summary>
             <div className="object-window-section-nav">
               <button
@@ -7944,6 +9061,7 @@ export function MapWorkspacePage() {
               onSelectRoute={setSelectedRouteId}
               onSelectLocation={selectLocation}
               onOpenDrawer={setDrawer}
+              onOpenCompanion={openCompanion}
               onOpenPlacement={openPlacementDrawer}
               onStartPlacement={startPlacement}
               onStartMoveHotspot={(hotspotId) => setMovingHotspotId(hotspotId)}
@@ -8011,6 +9129,14 @@ export function MapWorkspacePage() {
                 ? (id) => {
                     const entry = store.battleEntriesById[id];
                     if (entry) openBattleEntryEditor(entry);
+                  }
+                : undefined
+            }
+            onEditLocation={
+              isEditMode
+                ? (id) => {
+                    const loc = data.locations.find((l) => l.id === id);
+                    if (loc) openLocationEditor(loc);
                   }
                 : undefined
             }
@@ -8840,21 +9966,46 @@ function LibraryThumb({
  * NPCs, or by reordering `LocationState.imageIds` for locations) — this
  * component has no opinion about where the id gets stored.
  */
+/** Hotfix — accepted upload mime types and size limit for "Загрузить
+ * изображение с компьютера". svg is deliberately excluded: this app has no
+ * existing safe-SVG-rendering path, and an `<img src="data:image/svg+xml...">`
+ * can execute embedded scripts in some browsers. */
+const UPLOAD_IMAGE_ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+const UPLOAD_IMAGE_MAX_BYTES = 10 * 1024 * 1024; // 10 MB — local/localStorage-persisted, keep modest.
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('Не удалось прочитать файл'));
+    reader.readAsDataURL(file);
+  });
+}
+
 function ImagePickerModal({
   images,
   currentImageId,
   onSelect,
   onClear,
+  onUpload,
   onClose,
 }: {
   images: DmImageItem[];
   currentImageId?: string;
   onSelect: (imageId: string) => void;
   onClear?: () => void;
+  /** Hotfix — called with a brand-new DmImageItem (data: URL `src`) right
+   * after the DM picks a file from their computer; the caller is
+   * responsible for adding it to the store (store.addImage) before this
+   * modal calls onSelect with the new id. Optional only so any other
+   * existing caller of this modal that hasn't been updated keeps working
+   * without upload support rather than crashing. */
+  onUpload?: (image: DmImageItem) => void;
   onClose: () => void;
 }) {
   const [search, setSearch] = useState('');
   const [showAll, setShowAll] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const q = search.trim().toLowerCase();
   const filtered = images.filter(
     (img) =>
@@ -8877,6 +10028,51 @@ function ImagePickerModal({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        {onUpload && (
+          <div className="actions">
+            <label className="btn-secondary btn-compact" style={{ cursor: 'pointer' }}>
+              Загрузить изображение с компьютера
+              <input
+                type="file"
+                accept={UPLOAD_IMAGE_ACCEPTED_TYPES.join(',')}
+                style={{ display: 'none' }}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  setUploadError(null);
+                  if (!UPLOAD_IMAGE_ACCEPTED_TYPES.includes(file.type)) {
+                    setUploadError('Неподдерживаемый формат файла. Поддерживаются: PNG, JPG, WEBP, GIF.');
+                    return;
+                  }
+                  if (file.size > UPLOAD_IMAGE_MAX_BYTES) {
+                    setUploadError('Файл слишком большой (максимум 10 МБ).');
+                    return;
+                  }
+                  try {
+                    const dataUrl = await readFileAsDataUrl(file);
+                    const newImage: DmImageItem = {
+                      id: `img-upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                      title: file.name,
+                      src: dataUrl,
+                      type: 'other',
+                      // DM-only by default — an uploaded image never becomes
+                      // player-visible automatically; the DM must explicitly
+                      // mark it safe-for-players via the Image card editor.
+                      safeForPlayers: false,
+                    };
+                    onUpload(newImage);
+                    onSelect(newImage.id);
+                    onClose();
+                  } catch {
+                    setUploadError('Не удалось загрузить файл.');
+                  }
+                }}
+              />
+            </label>
+          </div>
+        )}
+        {uploadError && <p className="route-editor-error">{uploadError}</p>}
         {onClear && currentImageId && (
           <div className="actions">
             <button
@@ -8950,6 +10146,7 @@ function LibraryPanel({
   onEditShop,
   onEditImage,
   onEditBattleEntry,
+  onEditLocation,
   contentMovableEntities,
   placingContentEntity,
   onPlaceContentEntity,
@@ -8985,6 +10182,10 @@ function LibraryPanel({
   onEditShop: (s: DmShop) => void;
   onEditImage: (img: DmImageItem) => void;
   onEditBattleEntry: (be: BattleEntry) => void;
+  /** Hotfix — Location source-card editor entry point from the Library row,
+   * same as onEditTavern/onEditShop. Takes the raw locationId, not the
+   * LocationState row, since the editor edits the DmLocation source. */
+  onEditLocation?: (locationId: string) => void;
   /** Stage 6C.4E — all standalone Quest/Enemy/Image MovableEntity markers
    * (any map), used to compute the placement-state badge per Library row. */
   contentMovableEntities: MovableEntity[];
@@ -9196,6 +10397,16 @@ function LibraryPanel({
                         <button className="btn-secondary" onClick={() => onOpenCompanion({ type: 'location', id: ls.locationId })}>
                           Открыть карточку
                         </button>
+                        {onEditLocation && (
+                          <button
+                            className="btn-secondary"
+                            disabled={!canWrite}
+                            title={canWrite ? undefined : 'Редактирование доступно в DM Edit'}
+                            onClick={() => onEditLocation(ls.locationId)}
+                          >
+                            Редактировать
+                          </button>
+                        )}
                         <button
                           className="btn-primary"
                           disabled={!canWrite || placement !== 'unplaced' || armed}
@@ -9894,6 +11105,7 @@ function LocationSidePanel({
   onSelectRoute,
   onSelectLocation,
   onOpenDrawer,
+  onOpenCompanion,
   onOpenPlacement,
   onStartPlacement,
   onStartPartyAnimation,
@@ -9909,6 +11121,11 @@ function LocationSidePanel({
   onSelectRoute: (id: string | null) => void;
   onSelectLocation: (id: string) => void;
   onOpenDrawer: (d: DrawerState) => void;
+  /** Hotfix — npc/quest/enemy/image entity cards in this panel must open
+   * through the embedded DM Companion card, not the old EntityDrawer
+   * popup (onOpenDrawer is now exclusively for the map-only kinds left in
+   * DrawerState: battleMap/economy/law/placement). */
+  onOpenCompanion: (entity: EmbeddedCompanionEntity) => void;
   onOpenPlacement: (p: MapObjectPlacement) => void;
   onStartPlacement: (entityKind: MapObjectPlacement['entityKind'], entityId: string | undefined, title: string) => void;
   onStartMoveHotspot: (hotspotId: string) => void;
@@ -9932,11 +11149,18 @@ function LocationSidePanel({
   const status = effectiveLocationStatus(ls, store.progress);
 
   const npcsRaw = data.npcs.filter((n) => ls.npcIds.includes(n.id));
-  const npcs = isPlayerView ? getPlayerSafeNpcs(npcsRaw) : npcsRaw;
+  // Linked-content safety: a visible location must not leak a linked NPC
+  // whose OWN map marker the DM explicitly hid — visibleToPlayers alone
+  // isn't enough, the placement-level hide has to win too.
+  const npcs = isPlayerView
+    ? getPlayerSafeNpcs(npcsRaw).filter((n) => isLinkedEntityPlacementVisible(data.placements, 'npc', n.id))
+    : npcsRaw;
   const quests = data.quests.filter((q) => ls.questIds.includes(q.id));
   const enemies = data.enemies.filter((e) => ls.enemyIds.includes(e.id));
   const imagesForLocation = data.images.filter((i) => ls.imageIds.includes(i.id));
-  const images = isPlayerView ? getPlayerSafeImages(imagesForLocation) : imagesForLocation;
+  const images = isPlayerView
+    ? getPlayerSafeImages(imagesForLocation).filter((i) => isLinkedEntityPlacementVisible(data.placements, 'image', i.id))
+    : imagesForLocation;
   const headerImage = images[0];
   const children = data.locationStates.filter((s) => ls.childLocationStateIds.includes(s.id));
   const ownHotspot = hotspots.find((h) => h.locationStateId === ls.id);
@@ -9948,7 +11172,9 @@ function LocationSidePanel({
 
   const visibleQuests = quests.filter((q) => {
     const qStatus = effectiveQuestStatus(q.id, q.status, store.progress);
-    return !isPlayerView || qStatus !== 'hidden';
+    if (!isPlayerView) return true;
+    if (qStatus === 'hidden') return false;
+    return isLinkedEntityPlacementVisible(data.placements, 'quest', q.id);
   });
 
   // Breadcrumb chain from root to this location.
@@ -10024,7 +11250,7 @@ function LocationSidePanel({
       {headerImage && (
         <button
           className="side-panel-header-image-btn"
-          onClick={() => onOpenDrawer({ kind: 'image', id: headerImage.id })}
+          onClick={() => onOpenCompanion({ type: 'image', id: headerImage.id })}
           aria-label="Открыть изображение"
         >
           <img
@@ -10121,7 +11347,11 @@ function LocationSidePanel({
             {isPartySet ? 'Переместить партию сюда' : 'Поставить партию здесь'}
           </button>
           <button onClick={() => store.markVisited(ls.id)}>Отметить посещённой</button>
-          <button onClick={() => store.setRevealed(ls.id)}>Показать игрокам</button>
+          {store.party.revealedLocationStateIds.includes(ls.id) ? (
+            <button onClick={() => store.unsetRevealed(ls.id)}>Сбросить открытие</button>
+          ) : (
+            <button onClick={() => store.setRevealed(ls.id)}>Отметить открытым</button>
+          )}
           <button
             onClick={() => {
               const name = window.prompt('Название события для этой локации:');
@@ -10186,11 +11416,13 @@ function LocationSidePanel({
           )}
         </div>
       )}
-      {isPlayerView && (
-        <div className="actions">
-          <button onClick={() => store.setCurrentLocation(ls.id)}>Партия здесь</button>
-        </div>
-      )}
+      {/* Route/Travel polish — Player View must have zero write controls
+          (matches the established rule from the visibility pass); this used
+          to be a raw teleport button (store.setCurrentLocation with no
+          routeId) reachable from inside Player View, which both bypassed the
+          route network AND gave a player-facing view a DM-only action.
+          Removed outright rather than made route-aware: the DM already has
+          the same action via movePartyToLocation() in DM View/Edit. */}
 
       {!isPlayerView && ls.dmNotes && (
         <section className="card dm-only">
@@ -10296,7 +11528,7 @@ function LocationSidePanel({
           <div className="entity-card-grid">
             {npcs.map((n) => (
               <div key={n.id} className="entity-card-wrap">
-                <button className="entity-card" onClick={() => onOpenDrawer({ kind: 'npc', id: n.id })}>
+                <button className="entity-card" onClick={() => onOpenCompanion({ type: 'npc', id: n.id })}>
                   <span className="entity-card-title">{n.name}</span>
                   {(n.role || n.race) && (
                     <span className="entity-card-sub">{[n.role, n.race].filter(Boolean).join(' · ')}</span>
@@ -10325,7 +11557,7 @@ function LocationSidePanel({
               const qStatus = effectiveQuestStatus(q.id, q.status, store.progress);
               return (
                 <div key={q.id} className="entity-card-wrap">
-                  <button className="entity-card" onClick={() => onOpenDrawer({ kind: 'quest', id: q.id })}>
+                  <button className="entity-card" onClick={() => onOpenCompanion({ type: 'quest', id: q.id })}>
                     <span className="entity-card-title">{q.title}</span>
                     <span className="entity-card-sub">
                       {isPlayerView ? '' : `${QUEST_STATUS_LABELS[qStatus]}${q.goal ? ' · ' : ''}`}
@@ -10354,7 +11586,7 @@ function LocationSidePanel({
           <div className="entity-card-grid">
             {enemies.map((en) => (
               <div key={en.id} className="entity-card-wrap">
-                <button className="entity-card" onClick={() => onOpenDrawer({ kind: 'enemy', id: en.id })}>
+                <button className="entity-card" onClick={() => onOpenCompanion({ type: 'enemy', id: en.id })}>
                   <span className="entity-card-title">{en.name}</span>
                   <span className="entity-card-stats">
                     {en.cr && <span>CR {en.cr}</span>}
@@ -10383,7 +11615,7 @@ function LocationSidePanel({
               .filter((img) => !isPlayerView || img.safeForPlayers)
               .map((img) => (
                 <div key={img.id} className="entity-card-wrap">
-                  <button className="entity-card" onClick={() => onOpenDrawer({ kind: 'image', id: img.id })}>
+                  <button className="entity-card" onClick={() => onOpenCompanion({ type: 'image', id: img.id })}>
                     {img.title}
                   </button>
                   {!isPlayerView && (
@@ -10734,89 +11966,6 @@ function EntityDrawer({
         </div>
       </>
     );
-  } else if (drawer.kind === 'npc') {
-    const n = data.npcs.find((x) => x.id === drawer.id);
-    if (!n) return null;
-    title = n.name;
-    body = (
-      <>
-        {n.race && <p><strong>Расса:</strong> {n.race}</p>}
-        {n.role && <p><strong>Роль:</strong> {n.role}</p>}
-        {!isPlayerView && n.faction && <p><strong>Фракция:</strong> {n.faction}</p>}
-        {(n.publicDescription || n.personality) && (
-          <p>{n.publicDescription || n.personality}</p>
-        )}
-        {n.goals && <p><strong>Цели:</strong> {n.goals}</p>}
-        {!isPlayerView && n.dmNotes && (
-          <p className="dm-only"><strong>Заметки ДМ:</strong> {n.dmNotes}</p>
-        )}
-        {!isPlayerView && n.secrets && <p className="dm-only"><strong>Секреты (ДМ):</strong> {n.secrets}</p>}
-      </>
-    );
-    if (!isPlayerView) {
-      placementButton = (
-        <button onClick={() => onStartPlacement('npc', n.id, n.name)}>Разместить на карте</button>
-      );
-    }
-  } else if (drawer.kind === 'quest') {
-    const q = data.quests.find((x) => x.id === drawer.id);
-    if (!q) return null;
-    title = q.title;
-    const status = effectiveQuestStatus(q.id, q.status, store.progress);
-    body = (
-      <>
-        {q.giver && <p><strong>Заказчик:</strong> {q.giver}</p>}
-        {q.goal && <p><strong>Цель:</strong> {q.goal}</p>}
-        {q.description && <p>{q.description}</p>}
-        {q.reward && <p><strong>Награда:</strong> {q.reward}</p>}
-        <p className="status-badge">{isPlayerView ? '' : 'Статус: '}{QUEST_STATUS_LABELS[status]}</p>
-        {!isPlayerView && (
-          <div className="actions">
-            {QUEST_STATUSES.filter((s) => s !== status).map((s) => (
-              <button key={s} onClick={() => store.setQuestStatus(q.id, s)}>
-                {s === 'active' && 'Активировать'}
-                {s === 'completed' && 'Завершить'}
-                {s === 'failed' && 'Провалить'}
-                {s === 'hidden' && 'Скрыть'}
-              </button>
-            ))}
-          </div>
-        )}
-      </>
-    );
-    if (!isPlayerView) {
-      placementButton = (
-        <button onClick={() => onStartPlacement('quest', q.id, q.title)}>Разместить на карте</button>
-      );
-    }
-  } else if (drawer.kind === 'enemy') {
-    if (isPlayerView) return null;
-    const en = data.enemies.find((x) => x.id === drawer.id);
-    if (!en) return null;
-    title = en.name;
-    body = (
-      <>
-        {en.role && <p><strong>Роль:</strong> {en.role}</p>}
-        {en.faction && <p><strong>Фракция:</strong> {en.faction}</p>}
-        {en.cr && <p><strong>CR:</strong> {en.cr}</p>}
-      </>
-    );
-    placementButton = <button onClick={() => onStartPlacement('enemy', en.id, en.name)}>Разместить на карте</button>;
-  } else if (drawer.kind === 'image') {
-    const img = data.images.find((x) => x.id === drawer.id);
-    if (!img) return null;
-    if (isPlayerView && !img.safeForPlayers) return null;
-    title = img.title;
-    body = (
-      <div className="lightbox-image-wrap">
-        <img src={img.thumbnailSrc ?? img.src} alt={img.title} className="lightbox-image" />
-      </div>
-    );
-    if (!isPlayerView) {
-      placementButton = (
-        <button onClick={() => onStartPlacement('image', img.id, img.title)}>Разместить на карте</button>
-      );
-    }
   } else if (drawer.kind === 'battleMap') {
     if (isPlayerView) return null;
     const bm = data.battleMaps.find((x) => x.id === drawer.id);

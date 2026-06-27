@@ -236,6 +236,7 @@ function buildLocationStates(
         dmNotes: [loc.dmSecrets, loc.notes].filter(Boolean).join('\n\n') || undefined,
         status,
         tags: loc.tags,
+        region: loc.region,
         parentLocationStateId: effectiveParentId
           ? locationStateId(effectiveParentId, timeline.id)
           : undefined,
