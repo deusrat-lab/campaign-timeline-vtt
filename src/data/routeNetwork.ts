@@ -107,6 +107,8 @@ export interface RoutePathResult {
 
 const DEFAULT_MAX_OFF_ROAD_DISTANCE = 0.05;
 const DANGEROUS_COST_MULTIPLIER = 3;
+const ROUTE_JUNCTION_DISTANCE = 0.018;
+const JUNCTION_ROUTE_ID = '__route_junction__';
 
 function dist(a: { x: number; y: number }, b: { x: number; y: number }): number {
   const dx = a.x - b.x;
@@ -159,16 +161,23 @@ export function buildRouteGraph(
     return nodeId;
   }
 
-  function addEdge(fromNodeId: string, toNodeId: string, route: MapRoute, segmentDistance: number) {
+  function addEdge(
+    fromNodeId: string,
+    toNodeId: string,
+    routeId: string,
+    segmentDistance: number,
+    status?: MapRoute['status'],
+    dangerLevel?: MapRoute['dangerLevel'],
+  ) {
     const edge: RouteGraphEdge = {
-      id: `edge:${route.id}:${fromNodeId}->${toNodeId}`,
+      id: `edge:${routeId}:${fromNodeId}->${toNodeId}`,
       fromNodeId,
       toNodeId,
-      routeId: route.id,
+      routeId,
       distance: segmentDistance,
-      status: route.status,
-      dangerLevel: route.dangerLevel,
-      blocked: route.status === 'blocked',
+      status,
+      dangerLevel,
+      blocked: status === 'blocked',
     };
     const idx = edges.length;
     edges.push(edge);
@@ -182,11 +191,22 @@ export function buildRouteGraph(
     if (!pts || pts.length < 2) continue;
     if (route.status === 'blocked') continue; // never part of the traversable graph
     if (route.status === 'hidden' && !options?.allowHiddenRoutes) continue;
-    if (!route.fromHotspotId || !route.toHotspotId) continue; // can't anchor a hotspot-to-hotspot leg
-
-    // Build the node chain: hotspot(from) -> point[1..n-2] -> hotspot(to).
+    // Build the node chain. Endpoint hotspots are used when present; otherwise
+    // the raw first/last route points still become graph nodes, so freehand
+    // road fragments can participate in nearest-node routing and junctions.
     const chainNodeIds: string[] = [];
-    const fromNodeId = ensureHotspotNode(route.fromHotspotId);
+    const fromNodeId = route.fromHotspotId
+      ? ensureHotspotNode(route.fromHotspotId)
+      : `routept:${route.id}:0`;
+    if (!route.fromHotspotId) {
+      nodes.set(fromNodeId, {
+        id: fromNodeId,
+        position: pts[0],
+        routeId: route.id,
+        pointIndex: 0,
+        kind: 'route_point',
+      });
+    }
     chainNodeIds.push(fromNodeId);
     for (let i = 1; i < pts.length - 1; i++) {
       const nodeId = `routept:${route.id}:${i}`;
@@ -199,7 +219,18 @@ export function buildRouteGraph(
       });
       chainNodeIds.push(nodeId);
     }
-    const toNodeId = ensureHotspotNode(route.toHotspotId);
+    const toNodeId = route.toHotspotId
+      ? ensureHotspotNode(route.toHotspotId)
+      : `routept:${route.id}:${pts.length - 1}`;
+    if (!route.toHotspotId) {
+      nodes.set(toNodeId, {
+        id: toNodeId,
+        position: pts[pts.length - 1],
+        routeId: route.id,
+        pointIndex: pts.length - 1,
+        kind: 'route_point',
+      });
+    }
     chainNodeIds.push(toNodeId);
 
     // Edges both directions (route travel is bidirectional unless future data
@@ -208,8 +239,21 @@ export function buildRouteGraph(
       const a = chainNodeIds[i];
       const b = chainNodeIds[i + 1];
       const segDist = dist(pts[i], pts[i + 1]);
-      addEdge(a, b, route, segDist);
-      addEdge(b, a, route, segDist);
+      addEdge(a, b, route.id, segDist, route.status, route.dangerLevel);
+      addEdge(b, a, route.id, segDist, route.status, route.dangerLevel);
+    }
+  }
+
+  const routePointNodes = [...nodes.values()].filter((node) => node.routeId);
+  for (let i = 0; i < routePointNodes.length; i++) {
+    for (let j = i + 1; j < routePointNodes.length; j++) {
+      const a = routePointNodes[i];
+      const b = routePointNodes[j];
+      if (a.routeId === b.routeId) continue;
+      const gap = dist(a.position, b.position);
+      if (gap > ROUTE_JUNCTION_DISTANCE) continue;
+      addEdge(a.id, b.id, JUNCTION_ROUTE_ID, gap);
+      addEdge(b.id, a.id, JUNCTION_ROUTE_ID, gap);
     }
   }
 

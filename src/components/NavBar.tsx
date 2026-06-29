@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useCampaignStore } from '../state/campaignStore';
 import { useCampaignData } from '../state/campaignDataContext';
 import { getLocationState } from '../data/selectors';
@@ -8,10 +8,11 @@ import type { AppMode } from '../types';
 /** Opens the Observer view in a new tab, correctly resolving the app's base
  * path (Vite `base` config) instead of assuming it's deployed at root. A bare
  * `window.open('/observer', ...)` would 404 under any non-root deploy. */
-function openObserverWindow() {
+function openObserverWindow(selectedLocationStateId?: string) {
   const url = new URL(window.location.href);
   url.hash = '';
   url.pathname = `${import.meta.env.BASE_URL}observer`.replace(/\/+/g, '/');
+  if (selectedLocationStateId) url.searchParams.set('selected', selectedLocationStateId);
   window.open(url.toString(), '_blank', 'noopener,noreferrer');
 }
 
@@ -24,7 +25,9 @@ const MODE_LABELS: Record<AppMode, string> = {
 export function NavBar() {
   const { data } = useCampaignData();
   const store = useCampaignStore();
+  const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const observerLocked = location.pathname === '/observer';
 
   const currentLocation =
     data && store.party.currentLocationStateId ? getLocationState(data, store.party.currentLocationStateId) : undefined;
@@ -122,19 +125,27 @@ export function NavBar() {
               })}
             </div>
           )}
-          <div className="segmented" role="group" aria-label="Режим приложения">
-            {(['dm-view', 'dm-edit', 'player-view'] as AppMode[]).map((m) => (
-              <button
-                key={m}
-                type="button"
-                title={MODE_LABELS[m]}
-                className={`segmented-option${m === store.mode ? ' active' : ''}`}
-                onClick={() => store.setMode(m)}
-              >
-                {MODE_SHORT[m]}
+          {observerLocked ? (
+            <div className="segmented" role="group" aria-label="Режим приложения">
+              <button type="button" title={MODE_LABELS['player-view']} className="segmented-option active" disabled>
+                {MODE_SHORT['player-view']}
               </button>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="segmented" role="group" aria-label="Режим приложения">
+              {(['dm-view', 'dm-edit', 'player-view'] as AppMode[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  title={MODE_LABELS[m]}
+                  className={`segmented-option${m === store.mode ? ' active' : ''}`}
+                  onClick={() => store.setMode(m)}
+                >
+                  {MODE_SHORT[m]}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="navbar-right">
           {store.mode === 'dm-edit' && store.saveStatus !== 'idle' && (
@@ -157,13 +168,15 @@ export function NavBar() {
               Открыть Арку 2 игрокам
             </label>
           )}
-          <button
-            type="button"
-            onClick={openObserverWindow}
-            title="Открыть полноэкранный вид для игроков (Observer) в новой вкладке"
-          >
-            Открыть Observer
-          </button>
+          {!observerLocked && (
+            <button
+              type="button"
+              onClick={() => openObserverWindow(currentLocation?.id)}
+              title="Открыть полноэкранный вид для игроков (Observer) в новой вкладке"
+            >
+              Открыть Observer
+            </button>
+          )}
           {store.mode !== 'player-view' && (
             <div className="navbar-menu">
               <button onClick={downloadExport}>Export JSON</button>
@@ -179,7 +192,7 @@ export function NavBar() {
             </div>
           )}
           <button type="button" className="navbar-avatar" aria-label="Меню пользователя" title="Меню пользователя">
-            ДМ
+            {observerLocked ? 'Иг' : 'ДМ'}
           </button>
         </div>
       </nav>

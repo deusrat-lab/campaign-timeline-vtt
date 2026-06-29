@@ -21,8 +21,12 @@ export function getRootLocationStates(data: CampaignData, timelineId: string): L
   return getLocationStatesForTimeline(data, timelineId).filter((ls) => !ls.parentLocationStateId);
 }
 
-/** Player View must never see hidden-status locations, dmNotes, or Arc 2 unless revealed. */
+/** Player-facing map policy: locations are visible by default so players can
+ * use the same geography as the DM. Only an explicit DM hide flag removes a
+ * location from Player View/Observer; status remains campaign state, not a
+ * map-visibility gate. */
 export function isLocationVisibleToPlayers(ls: LocationState, progress: CampaignProgress): boolean {
+  void progress;
   if (ls.visibleToPlayers === false) return false;
-  return effectiveLocationStatus(ls, progress) !== 'hidden';
+  return true;
 }

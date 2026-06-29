@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useCampaignStore } from '../state/campaignStore';
 
 interface RailItem {
   key: string;
@@ -11,7 +12,11 @@ const RAIL_ITEMS: RailItem[] = [
   { key: 'map', label: 'Карта', icon: '🗺', to: '/map' },
   { key: 'timeline', label: 'Таймлайн', icon: '⏳' },
   { key: 'quests', label: 'Квесты', icon: '📜', to: '/quests' },
-  { key: 'npc', label: 'NPC', icon: '🧑' },
+  { key: 'npc', label: 'NPC', icon: '🧑', to: '/npc' },
+  { key: 'enemies', label: 'Враги', icon: '☠', to: '/enemies' },
+  { key: 'players', label: 'Игроки', icon: '🎭', to: '/players' },
+  { key: 'battle-maps', label: 'Карты боя', icon: '▦', to: '/battle-maps' },
+  { key: 'bestiary', label: 'Бестиарий', icon: '📖', to: '/bestiary' },
   { key: 'factions', label: 'Фракции', icon: '⚔' },
   { key: 'notes', label: 'Заметки', icon: '📝' },
   { key: 'calendar', label: 'Календарь', icon: '📅' },
@@ -21,11 +26,18 @@ const RAIL_ITEMS: RailItem[] = [
 
 export function NavRail() {
   const location = useLocation();
+  const store = useCampaignStore();
+  if (store.mode === 'player-view') return null;
+  const items = RAIL_ITEMS;
 
   return (
     <nav className="nav-rail" aria-label="Основная навигация">
-      {RAIL_ITEMS.map((item) => {
-        const isActive = !!item.to && (location.pathname === item.to || (item.to === '/map' && location.pathname === '/'));
+      {items.map((item) => {
+        const isActive =
+          !!item.to &&
+          (location.pathname + location.search === item.to ||
+            location.pathname === item.to ||
+            (item.to === '/map' && location.pathname === '/'));
         if (item.to) {
           return (
             <Link

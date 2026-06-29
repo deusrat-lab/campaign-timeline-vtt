@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import type { DmQuest, DmImageItem } from '../../types/dmCompanion';
+import type { DmQuest, DmImageItem, DmCustomEnemy } from '../../types/dmCompanion';
 import type { QuestStatus } from '../../types';
 import { resolveEntityPreviewImage } from '../../pages/map-workspace/libraryCards';
 import { CompanionLinkRow } from './CompanionLinkRow';
+import { CompanionEnemyCard } from './CompanionEnemyCard';
 import { ImageLightbox } from './ImageLightbox';
 
 const QUEST_STATUS_LABELS: Record<QuestStatus, string> = {
@@ -16,11 +17,6 @@ const QUEST_STATUS_LABELS: Record<QuestStatus, string> = {
  * Ported field order from dm-companion's real `pages/quests/QuestDetailPage.tsx`:
  * status/tags → hero image → location → giver → goal → description →
  * linked enemies → reward → proof → solutions → consequences → notes.
- *
- * Quest editing intentionally stays out of scope in this app (no override-
- * patch mechanism exists for quests, unlike Location/Tavern/Shop/NPC) — the
- * explicit deferred-editing message is shown instead of a non-functional
- * edit button, matching the same approach already used before this port.
  */
 export function CompanionQuestCard({
   quest,
@@ -31,19 +27,26 @@ export function CompanionQuestCard({
   onOpenNpc,
   onOpenLocation,
   onOpenEnemy,
+  onEditEnemy,
+  onRemoveEnemy,
 }: {
   quest: DmQuest;
   npcs: { id: string; name: string }[];
-  enemies: { id: string; name: string }[];
+  enemies: DmCustomEnemy[];
   images: DmImageItem[];
   locationName?: string;
   onOpenNpc?: (id: string) => void;
   onOpenLocation?: (id: string) => void;
   onOpenEnemy?: (id: string) => void;
+  onEditEnemy?: (id: string) => void;
+  onRemoveEnemy?: (id: string) => void;
 }) {
   const hero = resolveEntityPreviewImage('quest', quest, images);
   const giver = quest.giver ? npcs.find((n) => n.id === quest.giver) : undefined;
-  const enemyItems = (quest.enemies ?? []).map((id) => ({ id, label: enemies.find((e) => e.id === id)?.name ?? id }));
+  const enemyCards = (quest.enemies ?? []).map((id) => enemies.find((e) => e.id === id)).filter((e): e is DmCustomEnemy => Boolean(e));
+  const missingEnemyItems = (quest.enemies ?? [])
+    .filter((id) => !enemyCards.some((enemy) => enemy.id === id))
+    .map((id) => ({ id, label: id }));
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   return (
@@ -91,10 +94,33 @@ export function CompanionQuestCard({
           <p>{quest.description}</p>
         </>
       )}
-      {!!enemyItems.length && (
+      {(!!enemyCards.length || !!missingEnemyItems.length) && (
         <>
           <h4>Враги</h4>
-          {onOpenEnemy ? <CompanionLinkRow items={enemyItems} onOpen={onOpenEnemy} /> : <p>{enemyItems.map((i) => i.label).join(', ')}</p>}
+          {!!enemyCards.length && (
+            <div className="quest-enemy-card-grid">
+              {enemyCards.map((enemy) => (
+                <article key={enemy.id} className="quest-enemy-card">
+                  <CompanionEnemyCard
+                    enemy={enemy}
+                    locations={[]}
+                    quests={[]}
+                    images={images}
+                  />
+                  {(onOpenEnemy || onEditEnemy || onRemoveEnemy) && (
+                    <div className="quest-enemy-card-actions">
+                      {onOpenEnemy && <button type="button" onClick={() => onOpenEnemy(enemy.id)}>Открыть</button>}
+                      {onEditEnemy && <button type="button" onClick={() => onEditEnemy(enemy.id)}>Редактировать</button>}
+                      {onRemoveEnemy && <button type="button" className="btn-danger" onClick={() => onRemoveEnemy(enemy.id)}>Убрать из квеста</button>}
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+          {!!missingEnemyItems.length && (
+            onOpenEnemy ? <CompanionLinkRow items={missingEnemyItems} onOpen={onOpenEnemy} /> : <p>{missingEnemyItems.map((i) => i.label).join(', ')}</p>
+          )}
         </>
       )}
       {quest.reward && (
@@ -131,9 +157,6 @@ export function CompanionQuestCard({
           <p className="muted">{quest.notes}</p>
         </>
       )}
-      <p className="muted companion-readonly-note">
-        Редактирование квестов будет добавлено отдельным этапом. Сейчас используется исходная карточка DM Companion.
-      </p>
     </div>
   );
 }

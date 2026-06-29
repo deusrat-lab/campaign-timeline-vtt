@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent, WheelEvent, ReactElement, DragEvent as ReactDragEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCampaignData } from '../state/campaignDataContext';
+import type { CampaignData } from '../data/loadCampaignData';
 import { useCampaignStore } from '../state/campaignStore';
 import {
   effectiveLocationStatus,
@@ -9,13 +10,13 @@ import {
   getLocationState,
   isLocationVisibleToPlayers,
 } from '../data/selectors';
-import { BATTLE_MAP_VTT_BASE_URL } from '../config';
 import { getPlayerSafeHotspots, getPlayerSafeRoutes, getPlayerSafePlacements, getPlayerSafeImages } from '../data/playerSafeProjection';
 import { getLocationVisibilityState, getVisibilityLabel, isLinkedEntityPlacementVisible } from '../data/visibility';
 import { useMapWorkspaceMode } from './map-workspace/useMapWorkspaceMode';
 import { postObserverFocus } from './map-workspace/observerBroadcast';
 import { BattleMapThumbnail } from './map-workspace/BattleMapThumbnail';
 import { BattleMapVttLinkField } from './map-workspace/BattleMapVttLinkField';
+import { EmbeddedBattleOverlay } from './map-workspace/EmbeddedBattleOverlay';
 import { CalendarChip } from './map-workspace/CalendarChip';
 import { PartyMarker } from './map-workspace/PartyMarker';
 import { QuickPinPanel } from './map-workspace/QuickPinPanel';
@@ -31,7 +32,7 @@ import {
 } from '../data/routeUtils';
 import type { TravelSpeedPresetKey } from '../data/routeUtils';
 import type { PartyRouteProgress } from '../types';
-import { buildRouteGraph, findPathBetweenLocations } from '../data/routeNetwork';
+import { buildRouteGraph, findPathBetweenLocations, findPathBetweenPoints } from '../data/routeNetwork';
 import type { RoutePathResult } from '../data/routeNetwork';
 import { validateRouteAgainstZones, getBlockingZoneIds } from '../data/zoneValidation';
 import { CheckboxList } from '../components/CheckboxList';
@@ -78,9 +79,10 @@ import type {
   BattleEntry,
   BattleEntryStatus,
   BattleSceneSize,
+  BattleMapLocationLink,
 } from '../types';
 import { BattleEntryMarkerLayer } from './map-workspace/BattleEntryMarkerLayer';
-import type { DmTavern, DmShop, DmQuest, DmCustomEnemy, DmImageItem, DmLocation } from '../types/dmCompanion';
+import type { DmTavern, DmShop, DmQuest, DmCustomEnemy, DmImageItem, DmNpc } from '../types/dmCompanion';
 /** The shared embedded-companion navigation entity + the host that renders
  * real ported dm-companion cards for each type now live in
  * src/features/embedded-dm-companion/ (see EmbeddedCompanionWindow.tsx's
@@ -115,6 +117,9 @@ const ROUTE_TYPE_COLORS: Record<string, string> = {
   dangerous: 'rgba(220,90,70,0.6)',
   custom: 'rgba(212,175,55,0.5)',
 };
+
+const ROUTE_ENDPOINT_SNAP_DISTANCE = 0.055;
+const SHOW_LEGACY_ROUTE_TRAVEL_PANEL: boolean = false;
 
 const ZONE_TYPE_OPTIONS: FactionZoneType[] = [
   'control',
@@ -483,6 +488,7 @@ export function MapWorkspacePage() {
   const { data, loading, error } = useCampaignData();
   const store = useCampaignStore();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [scope, setScope] = useState<WorldMap['scope']>(() => loadPersistedScope());
   const [selectedLocationStateId, setSelectedLocationStateId] = useState<string | null>(
@@ -528,6 +534,10 @@ export function MapWorkspacePage() {
   // Stage 6C.5 — Library moved out of the right panel into its own
   // left-side drawer; this just controls whether that drawer is open.
   const [libraryDrawerOpen, setLibraryDrawerOpen] = useState(false);
+  const requestedLibraryCategory = parseLibraryCategory(searchParams.get('library'));
+  const requestedPlaceKind = searchParams.get('placeKind');
+  const requestedPlaceId = searchParams.get('placeId');
+  const requestedBattleMapId = searchParams.get('battleMap');
   // Stage 6C.5 Phase 2G — shared embedded-companion navigation stack. One
   // active window; clicking a linked entity (from Library, the right
   // panel, or a linked row inside any companion card) pushes the
@@ -734,6 +744,10 @@ export function MapWorkspacePage() {
   // click sets that entity's currentPosition instead of any other map-click
   // behavior. Cleared after one placement — never a persistent "drag mode".
   const [manualMoveArmedForEntityId, setManualMoveArmedForEntityId] = useState<string | null>(null);
+  const [manualPartyMoveArmed, setManualPartyMoveArmed] = useState(false);
+  const [draggingParty, setDraggingParty] = useState(false);
+  const [draggingMovableEntityId, setDraggingMovableEntityId] = useState<string | null>(null);
+  const [partyWindowOpen, setPartyWindowOpen] = useState(false);
   // Stage 6B.3: arming a placement click for an EXISTING LocationState that
   // has no hotspot yet ("Разместить на текущей карте" in the Unplaced
   // panel) — the next map click creates only a MapHotspot, never a second
@@ -821,69 +835,8 @@ export function MapWorkspacePage() {
   // level rather than a separate one per editor, same "one modal, many
   // callers" pattern as everything else in this file.
   const [imagePickerTarget, setImagePickerTarget] = useState<
-    | { kind: 'location'; locationStateId: string }
-    | { kind: 'npc'; npcId: string }
-    | { kind: 'tavern'; tavernId: string }
-    | { kind: 'shop'; shopId: string }
-    | { kind: 'battleEntry'; battleEntryId: string }
-    /** Hotfix — distinct from 'location' above: that kind targets a
-     * LocationState's header image (a placed/created map location); this
-     * one targets the raw dm-companion source Location card's own hero
-     * image via locationEditDraft/patchLocation. */
-    | { kind: 'locationSource'; locationId: string }
-    | null
+    { kind: 'location'; locationStateId: string } | null
   >(null);
-  // Stage 6C.4D: same non-destructive override pattern as npcEditDraft, for
-  // the remaining major card types — tavernPatches/shopPatches/imagePatches
-  // (new overlay slots) and BattleEntry's own pre-existing updateBattleEntry.
-  const [tavernEditDraft, setTavernEditDraft] = useState<{
-    tavernId: string;
-    name: string;
-    description: string;
-    notes: string;
-    image: string;
-  } | null>(null);
-  const [shopEditDraft, setShopEditDraft] = useState<{
-    shopId: string;
-    name: string;
-    description: string;
-    notes: string;
-    image: string;
-  } | null>(null);
-  const [imageEditDraft, setImageEditDraft] = useState<{ imageId: string; title: string } | null>(null);
-  // Hotfix — Location source-card editor draft (locationPatches overlay).
-  const [locationEditDraft, setLocationEditDraft] = useState<{
-    locationId: string;
-    name: string;
-    type: string;
-    description: string;
-    playerView: string;
-    notes: string;
-    image: string;
-    /** Gallery images beyond the hero (loc.images[1:]) — preserved as-is on
-     * save; this editor only exposes/changes the hero (images[0]). */
-    restImages: string[];
-  } | null>(null);
-  const [battleEntryEditDraft, setBattleEntryEditDraft] = useState<{
-    battleEntryId: string;
-    name: string;
-    description: string;
-    playerSafeDescription: string;
-    previewImageId: string;
-  } | null>(null);
-  // Stage 6C.4C: NPC editor draft — editing an EXISTING seeded/overlay NPC's
-  // own fields via the pre-existing npcPatches overlay slot (Stage 6B.1),
-  // not a new model. null = editor closed.
-  const [npcEditDraft, setNpcEditDraft] = useState<{
-    npcId: string;
-    name: string;
-    role: string;
-    faction: string;
-    publicDescription: string;
-    dmNotes: string;
-    visibleToPlayers: boolean;
-    image: string;
-  } | null>(null);
 
   // Battle Entry foundation (Stage 5A). Selection mirrors selectedMovableEntityId
   // above. "Новая боевая сцена" arms the next plain map click to create a draft
@@ -946,8 +899,9 @@ export function MapWorkspacePage() {
   // of the auto-computed "fit to screen" base scale (see baseFit below).
   // {scale:1,x:0,y:0} always means "fit to screen" for whichever map is active.
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
-  const panState = useRef<{ panning: boolean; startX: number; startY: number; origX: number; origY: number }>({
+  const panState = useRef<{ panning: boolean; moved: boolean; startX: number; startY: number; origX: number; origY: number }>({
     panning: false,
+    moved: false,
     startX: 0,
     startY: 0,
     origX: 0,
@@ -962,6 +916,8 @@ export function MapWorkspacePage() {
   // exactly what produced the reported diagonal "closing" segment — it was
   // never the route renderer closing a loop, it was an extra erroneous point.
   const suppressNextClickRef = useRef(false);
+  const partyDragState = useRef<{ startX: number; startY: number; moved: boolean }>({ startX: 0, startY: 0, moved: false });
+  const movableDragState = useRef<{ startX: number; startY: number; moved: boolean }>({ startX: 0, startY: 0, moved: false });
 
   // All known per-map cameras, loaded once from their own localStorage key
   // (kept separate from the DM-edit overlay — see CAMERA_STORAGE_KEY comment).
@@ -1054,6 +1010,43 @@ export function MapWorkspacePage() {
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLocationStateId]);
+
+  useEffect(() => {
+    if (!requestedLibraryCategory || store.mode === 'player-view') return;
+    if (store.mode !== 'dm-edit') store.setMode('dm-edit');
+    setLibraryDrawerOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedLibraryCategory]);
+
+  useEffect(() => {
+    if (!data || !requestedPlaceKind || !requestedPlaceId || store.mode === 'player-view') return;
+    if (store.mode !== 'dm-edit') store.setMode('dm-edit');
+    cancelAllEditTools();
+    if (requestedPlaceKind === 'npc' && data.npcs.some((n) => n.id === requestedPlaceId)) {
+      setPlacingNpcEntityId(requestedPlaceId);
+    } else if (
+      (requestedPlaceKind === 'quest' && data.quests.some((q) => q.id === requestedPlaceId)) ||
+      (requestedPlaceKind === 'enemy' && data.enemies.some((en) => en.id === requestedPlaceId)) ||
+      (requestedPlaceKind === 'image' && data.images.some((im) => im.id === requestedPlaceId))
+    ) {
+      setPlacingContentEntity({ type: requestedPlaceKind as 'quest' | 'enemy' | 'image', sourceId: requestedPlaceId });
+    }
+    setLibraryDrawerOpen(false);
+    const next = new URLSearchParams(searchParams);
+    next.delete('placeKind');
+    next.delete('placeId');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, requestedPlaceKind, requestedPlaceId]);
+
+  useEffect(() => {
+    if (!data || !requestedBattleMapId || store.mode === 'player-view') return;
+    startEmbeddedBattle(requestedBattleMapId, selectedLocationStateId ?? undefined);
+    const next = new URLSearchParams(searchParams);
+    next.delete('battleMap');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, requestedBattleMapId, selectedLocationStateId]);
 
   // Battle Return Flow (Stage 5B, Step 2) — on mount or whenever the URL's
   // search string changes (e.g. the DM returns from the battle-map-vtt tab
@@ -1304,12 +1297,23 @@ export function MapWorkspacePage() {
     : undefined;
   const hotspots = mapState ? data.hotspots.filter((h) => mapState.hotspotIds.includes(h.id)) : [];
   const routes = mapState ? data.routes.filter((r) => r.mapStateId === mapState.id) : [];
+  const routeWorkspaceActive = isEditMode && sidePanelTab === 'routes';
+  const routeWorkspaceEditing = routeWorkspaceActive && !!editingRouteId;
   const activeLayerVisibility = LAYER_PRESETS[layerPreset];
   const visibleRoutes = !activeLayerVisibility.routes
     ? []
     : isPlayerView || activeLayerVisibility.usesPlayerSafeProjection
       ? getPlayerSafeRoutes(routes)
       : routes;
+  // Route repair workspace: when the DM opens the dedicated "Маршруты" tool,
+  // every route on the active map must stay visible regardless of layer preset,
+  // player visibility, hidden status, or validation state. This is a DM-only
+  // repair surface; Player View / Observer still use the normal safe projection.
+  const routesForMapRender = routeWorkspaceEditing
+    ? routes.filter((r) => r.id === editingRouteId)
+    : routeWorkspaceActive
+      ? routes
+      : visibleRoutes;
 
   // Object placements scoped to the active arc + map level + specific map.
   // Hidden/archived placements are never shown in Player View regardless of
@@ -1325,6 +1329,52 @@ export function MapWorkspacePage() {
   const enemiesForArc = data.enemies.filter((en) => !en.arcId || en.arcId === activeArcId);
   const imagesForArc = data.images.filter((im) => !im.arcId || im.arcId === activeArcId);
   const battleMapsForArc = data.battleMaps;
+  function startEmbeddedBattle(battleMapId: string, locationStateId?: string) {
+    if (!data) return;
+    const bm = data.battleMaps.find((b) => b.id === battleMapId);
+    if (!bm) return;
+    const ls = locationStateId ? data.locationStates.find((l) => l.id === locationStateId) : selectedLs;
+    const sceneCombatants = (bm.originalSceneTokens ?? [])
+      .filter((token) => token.side !== 'player')
+      .map((token, index) => {
+        const sourceEnemy =
+          data.enemies.find((enemy) => enemy.name.toLowerCase() === token.name.toLowerCase()) ??
+          data.enemies.find((enemy) => enemy.baseMonsterName?.toLowerCase() === token.name.toLowerCase()) ??
+          data.enemies.find((enemy) => token.name.toLowerCase().includes(enemy.name.toLowerCase()) || enemy.name.toLowerCase().includes(token.name.toLowerCase()));
+        const maxHp = sourceEnemy?.hp ?? 8;
+        const speed = Number(String(sourceEnemy?.speed ?? token.speedFeet ?? 30).match(/\d+/)?.[0]) || token.speedFeet || 30;
+        return {
+          id: `scene-${token.id}-${Date.now()}-${index}`,
+          side: 'enemy' as const,
+          sourceId: sourceEnemy?.id ?? token.tokenDefinitionId ?? token.id,
+          name: sourceEnemy?.name ?? token.name,
+          imageId: sourceEnemy?.image,
+          tokenDefinitionId: token.tokenDefinitionId,
+          currentHp: maxHp,
+          maxHp,
+          armorClass: sourceEnemy?.ac,
+          speedFeet: speed,
+          row: token.row,
+          column: token.column,
+          x: 0,
+          y: 0,
+        };
+      });
+    store.startActiveBattle({
+      id: `battle-${Date.now()}`,
+      battleMapId,
+      sceneId: bm.primarySceneId,
+      locationStateId: ls?.id,
+      title: bm.title,
+      variantType: bm.variants.find((variant) => variant.url)?.type ?? 'day',
+      startedAt: new Date().toISOString(),
+      round: 1,
+      currentTurnCombatantId: sceneCombatants[0]?.id,
+      combatants: sceneCombatants,
+      terrainCells: bm.navigationProfile?.terrainCells ? [...bm.navigationProfile.terrainCells] : undefined,
+    });
+  }
+
   const placementsForMap = map
     ? data.placements.filter(
         (p) => p.arcId === activeTimelineForPlacements?.arcId && p.mapLevel === scope && (!p.mapId || p.mapId === map.id),
@@ -1333,7 +1383,7 @@ export function MapWorkspacePage() {
   // Player-view filtering delegates to the Player Safe Projection module
   // (src/data/playerSafeProjection.ts) so the DM-only exclusion rules live in
   // one place instead of being re-derived inline at every call site.
-  const visiblePlacements = !store.placementLayerVisible || !activeLayerVisibility.placements
+  const visiblePlacements = (!isPlayerView && !store.placementLayerVisible) || !activeLayerVisibility.placements
     ? []
     : isPlayerView || activeLayerVisibility.usesPlayerSafeProjection
       ? getPlayerSafePlacements(placementsForMap)
@@ -1494,8 +1544,16 @@ export function MapWorkspacePage() {
     store.partyRouteProgress.mapId === map?.id
       ? store.partyRouteProgress
       : null;
+  const partyManualPoint =
+    store.party.currentMapPosition &&
+    store.party.currentMapPosition.timelineId === store.currentTimelineId &&
+    store.party.currentMapPosition.mapId === map?.id &&
+    store.party.currentMapPosition.mapLevel === scope
+      ? { x: store.party.currentMapPosition.x, y: store.party.currentMapPosition.y }
+      : undefined;
   const partyMarkerPoint = (() => {
     if (activePartyRouteProgress) return activePartyRouteProgress.currentPosition;
+    if (partyManualPoint) return partyManualPoint;
     if (!partyHotspot) return undefined;
     const pts = activePartyRoute?.points;
     if (activePartyRoute && pts && pts.length >= 2) {
@@ -1582,35 +1640,144 @@ export function MapWorkspacePage() {
     // While actively marking a route's path or placing an object, every click
     // must add a point/placement exactly where clicked — even a tiny pan drift
     // mid-click would throw the new point off. Same guard for an active drag.
-    if (editingRouteId || placementMode || zoneDraft || editingZoneId) return;
-    if (draggingId || draggingWaypoint || draggingPlacementId || draggingZoneVertex) return;
-    panState.current = { panning: true, startX: e.clientX, startY: e.clientY, origX: view.x, origY: view.y };
+    if (placementMode || zoneDraft || editingZoneId) return;
+    if (draggingId || draggingWaypoint || draggingPlacementId || draggingZoneVertex || draggingParty || draggingMovableEntityId) return;
+    panState.current = { panning: true, moved: false, startX: e.clientX, startY: e.clientY, origX: view.x, origY: view.y };
   }
 
   function handleMapMouseMovePan(e: MouseEvent<HTMLDivElement>) {
     if (panState.current.panning) {
       const dx = e.clientX - panState.current.startX;
       const dy = e.clientY - panState.current.startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) panState.current.moved = true;
       setView((v) => ({ ...v, x: panState.current.origX + dx, y: panState.current.origY + dy }));
     }
     handleMapMouseMoveHotspotDrag(e);
     handleMapMouseMoveWaypointDrag(e);
     handleMapMouseMovePlacementDrag(e);
     handleMapMouseMoveZoneVertexDrag(e);
+    handleMapMouseMovePartyDrag(e);
+    handleMapMouseMoveMovableEntityDrag(e);
   }
 
   function handleMapMouseUpPan() {
+    const wasPanning = panState.current.panning;
+    const panMoved = panState.current.moved;
     panState.current.panning = false;
+    panState.current.moved = false;
+    if (wasPanning && panMoved) {
+      suppressNextClickRef.current = true;
+    }
     // Capture BEFORE clearing — only suppress the next click if an actual
     // drag (waypoint/hotspot/placement/zone-vertex) was in progress when the
     // mouse went up.
-    if (draggingId || draggingWaypoint || draggingPlacementId || draggingZoneVertex) {
+    if (draggingId || draggingWaypoint || draggingPlacementId || draggingZoneVertex || draggingParty || draggingMovableEntityId) {
       suppressNextClickRef.current = true;
     }
     handleMapMouseUpHotspotDrag();
     handleMapMouseUpWaypointDrag();
     handleMapMouseUpPlacementDrag();
     handleMapMouseUpZoneVertexDrag();
+    handleMapMouseUpPartyDrag();
+    handleMapMouseUpMovableEntityDrag();
+  }
+
+  function setPartyFreeMapPosition(point: { x: number; y: number }) {
+    if (!map) return;
+    store.setPartyMapPosition({
+      timelineId: store.currentTimelineId,
+      mapId: map.id,
+      mapLevel: scope,
+      x: Math.round(point.x * 1000) / 1000,
+      y: Math.round(point.y * 1000) / 1000,
+    });
+    setPartyTravelAnim(null);
+    setActivePathRouteIds([]);
+  }
+
+  function splitPlayerFromParty(playerId: string) {
+    if (!map || !partyMarkerPoint) return;
+    const existing = Object.values(store.movableEntitiesById).find(
+      (m) => m.entityType === 'party' && m.entityId === playerId && m.timelineId === store.currentTimelineId,
+    );
+    const position = {
+      x: Math.round(partyMarkerPoint.x * 1000) / 1000,
+      y: Math.round(partyMarkerPoint.y * 1000) / 1000,
+    };
+    if (existing) {
+      store.updateMovableEntity(existing.id, {
+        currentMapId: map.id,
+        mapLevel: scope,
+        currentPosition: position,
+        movementState: 'stationary',
+      });
+      setSelectedMovableEntityId(existing.id);
+      return;
+    }
+    const id = `party-split-${playerId}-${Date.now()}`;
+    store.upsertMovableEntity({
+      id,
+      entityType: 'party',
+      entityId: playerId,
+      timelineId: store.currentTimelineId,
+      currentMapId: map.id,
+      mapLevel: scope,
+      currentPosition: position,
+      movementState: 'stationary',
+      visibleInPlayerView: true,
+      updatedAt: new Date().toISOString(),
+    });
+    setSelectedMovableEntityId(id);
+  }
+
+  function handlePartyMouseDown(e: MouseEvent<HTMLDivElement>) {
+    if (!map) return;
+    e.stopPropagation();
+    partyDragState.current = { startX: e.clientX, startY: e.clientY, moved: false };
+    setDraggingParty(true);
+  }
+
+  function handleMapMouseMovePartyDrag(e: MouseEvent<HTMLDivElement>) {
+    if (!draggingParty || !mapRef.current) return;
+    if (Math.abs(e.clientX - partyDragState.current.startX) > 4 || Math.abs(e.clientY - partyDragState.current.startY) > 4) {
+      partyDragState.current.moved = true;
+    }
+    const rect = mapRef.current.getBoundingClientRect();
+    setPartyFreeMapPosition({
+      x: Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)),
+      y: Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height)),
+    });
+  }
+
+  function handleMapMouseUpPartyDrag() {
+    setDraggingParty(false);
+  }
+
+  function handleMovableEntityMouseDown(entityId: string, e: MouseEvent<HTMLDivElement>) {
+    e.stopPropagation();
+    movableDragState.current = { startX: e.clientX, startY: e.clientY, moved: false };
+    setDraggingMovableEntityId(entityId);
+  }
+
+  function handleMapMouseMoveMovableEntityDrag(e: MouseEvent<HTMLDivElement>) {
+    if (!draggingMovableEntityId || !mapRef.current || !map) return;
+    if (Math.abs(e.clientX - movableDragState.current.startX) > 4 || Math.abs(e.clientY - movableDragState.current.startY) > 4) {
+      movableDragState.current.moved = true;
+    }
+    const rect = mapRef.current.getBoundingClientRect();
+    store.updateMovableEntity(draggingMovableEntityId, {
+      currentMapId: map.id,
+      mapLevel: scope,
+      currentPosition: {
+        x: Math.round(Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)) * 1000) / 1000,
+        y: Math.round(Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height)) * 1000) / 1000,
+      },
+      movementState: 'stationary',
+    });
+  }
+
+  function handleMapMouseUpMovableEntityDrag() {
+    setDraggingMovableEntityId(null);
   }
 
   // ---------- object placement editing (DM Edit Mode) ----------
@@ -1654,6 +1821,7 @@ export function MapWorkspacePage() {
     // area edit, placement, quick pin) can never leave a stale armed move
     // waiting to hijack that tool's first map click.
     setManualMoveArmedForEntityId(null);
+    setManualPartyMoveArmed(false);
     // Battle Entry creation arming (Stage 5A) is the same one-shot "next click
     // does X" tool as the others above.
     setBattleEntryCreationArmed(false);
@@ -1833,6 +2001,25 @@ export function MapWorkspacePage() {
       suppressNextClickRef.current = false;
       return;
     }
+    if (routeDraft && mapRef.current && mapState) {
+      const rect = mapRef.current.getBoundingClientRect();
+      const point = {
+        x: Math.min(1, Math.max(0, Math.round(((e.clientX - rect.left) / rect.width) * 1000) / 1000)),
+        y: Math.min(1, Math.max(0, Math.round(((e.clientY - rect.top) / rect.height) * 1000) / 1000)),
+      };
+      startRouteFromPoint(point);
+      return;
+    }
+    if (manualPartyMoveArmed && mapRef.current && map) {
+      const rect = mapRef.current.getBoundingClientRect();
+      const point = {
+        x: Math.min(1, Math.max(0, Math.round(((e.clientX - rect.left) / rect.width) * 1000) / 1000)),
+        y: Math.min(1, Math.max(0, Math.round(((e.clientY - rect.top) / rect.height) * 1000) / 1000)),
+      };
+      setPartyFreeMapPosition(point);
+      setManualPartyMoveArmed(false);
+      return;
+    }
     // Movable Entity manual move (Stage 4C, Step 5 flow 1): armed via
     // "Переместить вручную" in the entity panel — the next plain map click
     // sets currentPosition directly (no event created automatically; the DM
@@ -1900,7 +2087,11 @@ export function MapWorkspacePage() {
       const { type, sourceId, title } = placingLibraryEntity;
       const locId = `lib-${type}-${sourceId}`;
       const locationStateId = `${locId}__${store.currentTimelineId}`;
-      if (type === 'tavern') {
+      const existingLocationState = data.locationStates.find(
+        (ls) => ls.sourceLibraryType === type && ls.sourceLibraryId === sourceId && ls.timelineId === store.currentTimelineId,
+      );
+      const targetLocationStateId = existingLocationState?.id ?? locationStateId;
+      if (!existingLocationState && type === 'tavern') {
         const src = data.taverns.find((t) => t.id === sourceId);
         const newLocationState: LocationState = {
           id: locationStateId,
@@ -1926,7 +2117,7 @@ export function MapWorkspacePage() {
           },
         };
         store.addLocationState(newLocationState);
-      } else {
+      } else if (!existingLocationState) {
         const src = data.shops.find((s) => s.id === sourceId);
         const newLocationState: LocationState = {
           id: locationStateId,
@@ -1957,7 +2148,7 @@ export function MapWorkspacePage() {
         id: `hotspot-${Date.now()}`,
         mapId: map.id,
         timelineId: store.currentTimelineId,
-        locationStateId,
+        locationStateId: targetLocationStateId,
         x,
         y,
         label: title,
@@ -2190,75 +2381,32 @@ export function MapWorkspacePage() {
    * referenced by id via `entityId`, exactly like every other
    * MovableEntity.entityId usage in this file.
    */
-  /** Stage 6C.4C — opens the NPC editor draft for an existing NPC, prefilled
-   * from its current (possibly already-overlay-patched) field values. Shared
-   * by every entry point (Library card, NPC marker panel). */
-  function openNpcEditor(npc: { id: string; name: string; role?: string; faction?: string; publicDescription?: string; dmNotes?: string; visibleToPlayers?: boolean; image?: string }) {
-    setNpcEditDraft({
-      npcId: npc.id,
-      name: npc.name,
-      role: npc.role ?? '',
-      faction: npc.faction ?? '',
-      publicDescription: npc.publicDescription ?? '',
-      dmNotes: npc.dmNotes ?? '',
-      visibleToPlayers: npc.visibleToPlayers !== false,
-      image: npc.image ?? '',
-    });
-  }
-
-  /** Stage 6C.4D — same prefill pattern as openNpcEditor, for the remaining
-   * supported card types. */
-  function openTavernEditor(t: DmTavern) {
-    setTavernEditDraft({
-      tavernId: t.id,
-      name: t.name,
-      description: t.description ?? '',
-      notes: t.notes ?? '',
-      image: t.imageOverrideId ?? '',
-    });
-  }
-  function openShopEditor(s: DmShop) {
-    setShopEditDraft({
-      shopId: s.id,
-      name: s.name,
-      description: s.description ?? '',
-      notes: s.notes ?? '',
-      image: s.image ?? '',
-    });
-  }
-  function openImageEditor(img: DmImageItem) {
-    setImageEditDraft({ imageId: img.id, title: img.title });
-  }
-  /**
-   * Hotfix — Location source-card editor. Exposes `description` and
-   * `playerView` ("Что видят игроки") as two genuinely separate fields:
-   * earlier seed/migration data for several Greyholm Region locations set
-   * `playerView` equal to `description` (a copy-paste default, not a real
-   * authored player-facing text), which made the card render the same
-   * paragraph twice. This editor lets the DM actually clear `playerView`
-   * to '' — saved as `undefined` (not re-derived from description), which
-   * hides the "Что видят игроки" block for good after reload, matching
-   * CompanionLocationCard's `{loc.playerView && (...)}` guard exactly.
-   */
-  function openLocationEditor(loc: DmLocation) {
-    setLocationEditDraft({
-      locationId: loc.id,
-      name: loc.name,
-      type: loc.type,
-      description: loc.description ?? '',
-      playerView: loc.playerView ?? '',
-      notes: loc.notes ?? '',
-      image: loc.images?.[0] ?? '',
-      restImages: (loc.images ?? []).slice(1),
-    });
-  }
-  function openBattleEntryEditor(be: BattleEntry) {
-    setBattleEntryEditDraft({
-      battleEntryId: be.id,
-      name: be.name,
-      description: be.description ?? '',
-      playerSafeDescription: be.playerSafeDescription ?? '',
-      previewImageId: be.previewImageId ?? '',
+  function startLocationDataEdit(ls: LocationState) {
+    setLocationDataDraft({
+      title: ls.title,
+      type: ls.type ?? '',
+      publicDescription: ls.publicDescription,
+      playerSafeDescription: ls.playerSafeDescription ?? '',
+      dmNotes: ls.dmNotes ?? '',
+      status: effectiveLocationStatus(ls, store.progress),
+      tags: (ls.tags ?? []).join(', '),
+      parentLocationStateId: ls.parentLocationStateId ?? '',
+      visibleToPlayers: ls.visibleToPlayers !== false,
+      tavern_ownerNpcId: ls.tavernDetails?.ownerNpcId ?? '',
+      tavern_staffNpcIds: (ls.tavernDetails?.staffNpcIds ?? []).join(', '),
+      tavern_roomsServices: ls.tavernDetails?.roomsServices ?? '',
+      tavern_rumors: ls.tavernDetails?.rumors ?? '',
+      tavern_pricesNotes: ls.tavernDetails?.pricesNotes ?? '',
+      tavern_troubleHooks: ls.tavernDetails?.troubleHooks ?? '',
+      tavern_secrets: ls.tavernDetails?.secrets ?? '',
+      shop_shopType: ls.shopDetails?.shopType ?? '',
+      shop_ownerNpcId: ls.shopDetails?.ownerNpcId ?? '',
+      shop_goodsServices: ls.shopDetails?.goodsServices ?? '',
+      shop_inventoryNotes: ls.shopDetails?.inventoryNotes ?? '',
+      shop_pricePolicy: ls.shopDetails?.pricePolicy ?? '',
+      shop_reputationRequirement: ls.shopDetails?.reputationRequirement ?? '',
+      shop_illegalGoods: ls.shopDetails?.illegalGoods ?? '',
+      headerImageId: ls.imageIds?.[0] ?? '',
     });
   }
 
@@ -2389,7 +2537,11 @@ export function MapWorkspacePage() {
     const { x, y } = point;
     const locId = `lib-${type}-${sourceId}`;
     const locationStateId = `${locId}__${store.currentTimelineId}`;
-    if (type === 'tavern') {
+    const existingLocationState = data.locationStates.find(
+      (ls) => ls.sourceLibraryType === type && ls.sourceLibraryId === sourceId && ls.timelineId === store.currentTimelineId,
+    );
+    const targetLocationStateId = existingLocationState?.id ?? locationStateId;
+    if (!existingLocationState && type === 'tavern') {
       const src = data.taverns.find((t) => t.id === sourceId);
       const newLocationState: LocationState = {
         id: locationStateId,
@@ -2415,7 +2567,7 @@ export function MapWorkspacePage() {
         },
       };
       store.addLocationState(newLocationState);
-    } else {
+    } else if (!existingLocationState) {
       const src = data.shops.find((s) => s.id === sourceId);
       const newLocationState: LocationState = {
         id: locationStateId,
@@ -2441,7 +2593,7 @@ export function MapWorkspacePage() {
       id: `hotspot-${Date.now()}`,
       mapId: map.id,
       timelineId: store.currentTimelineId,
-      locationStateId,
+      locationStateId: targetLocationStateId,
       x,
       y,
       label: title,
@@ -2456,11 +2608,10 @@ export function MapWorkspacePage() {
   /** Stage 6C.4F — shared "move if already placed on THIS map, otherwise
    * place fresh" chokepoint for an existing LocationState's hotspot, reused
    * by both drag-and-drop and (going forward) any other Location placement
-   * entry point. Deliberately does NOT move a hotspot that's on a DIFFERENT
-   * map — that ambiguity is unchanged from the pre-existing Library/picker
-   * "Уже размещено" disabled-button behavior; only same-map repositioning is
-   * new here, exactly as the spec asked for. Returns a short status string
-   * for caller feedback (drag/drop warning banner). */
+   * entry point. If the location already exists on another map, this creates
+   * an additional hotspot on the current map instead of blocking placement:
+   * a city/region can legitimately reference the same source card. Returns a
+   * short status string for caller feedback (drag/drop warning banner). */
   function placeOrMoveLocationAtPoint(locationStateId: string, point: { x: number; y: number }): 'moved' | 'placed' | 'elsewhere' {
     if (!map || !mapState) return 'elsewhere';
     const existingHere = hotspots.find((h) => h.locationStateId === locationStateId);
@@ -2469,8 +2620,6 @@ export function MapWorkspacePage() {
       setSelectedHotspotId(existingHere.id);
       return 'moved';
     }
-    const existingElsewhere = data!.hotspots.find((h) => h.locationStateId === locationStateId);
-    if (existingElsewhere) return 'elsewhere';
     placeExistingLocationAtPendingPoint(locationStateId, point);
     return 'placed';
   }
@@ -3002,6 +3151,69 @@ export function MapWorkspacePage() {
     store.patchRoute(routeId, { points: route.points.filter((_, i) => i !== index) });
   }
 
+  function insertWaypointAfter(routeId: string, index: number) {
+    const route = routes.find((r) => r.id === routeId);
+    const points = route?.points;
+    if (!route || !points || index < 0 || index >= points.length - 1) return;
+    const a = points[index];
+    const b = points[index + 1];
+    const inserted = {
+      x: Math.round(((a.x + b.x) / 2) * 1000) / 1000,
+      y: Math.round(((a.y + b.y) / 2) * 1000) / 1000,
+    };
+    store.patchRoute(routeId, {
+      points: [...points.slice(0, index + 1), inserted, ...points.slice(index + 1)],
+    });
+  }
+
+  function getNearestHotspotToPoint(point: { x: number; y: number }, maxDistance = ROUTE_ENDPOINT_SNAP_DISTANCE) {
+    let best: { hotspot: MapHotspot; distance: number } | null = null;
+    for (const h of hotspots) {
+      const dx = h.x - point.x;
+      const dy = h.y - point.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance <= maxDistance && (!best || distance < best.distance)) {
+        best = { hotspot: h, distance };
+      }
+    }
+    return best?.hotspot;
+  }
+
+  function makeRouteLabel(fromHotspotId: string, toHotspotId: string) {
+    const from = hotspots.find((h) => h.id === fromHotspotId);
+    const to = hotspots.find((h) => h.id === toHotspotId);
+    if (from && to) return `${from.label} → ${to.label}`;
+    if (from) return `${from.label} → маршрут`;
+    if (to) return `Маршрут → ${to.label}`;
+    return 'Новый маршрут';
+  }
+
+  function startRouteFromPoint(point: { x: number; y: number }, hotspot?: MapHotspot) {
+    if (!mapState) return;
+    const from = hotspot ?? getNearestHotspotToPoint(point);
+    const newRoute: MapRoute = {
+      id: `route-${Date.now()}`,
+      mapStateId: mapState.id,
+      fromHotspotId: from?.id ?? '',
+      toHotspotId: '',
+      label: from ? `${from.label} → маршрут` : 'Новый маршрут',
+      routeType: 'road',
+      dangerLevel: 'safe',
+      status: 'active',
+      visibleInPlayerView: true,
+      discovered: true,
+      points: [point],
+    };
+    store.addRoute(newRoute);
+    setRouteDraft(null);
+    setSelectedRouteId(newRoute.id);
+    setEditingRouteSnapshot([]);
+    setIsCreatingNewRoute(true);
+    setRouteEditorError(null);
+    setEditingRouteId(newRoute.id);
+    setSidePanelTab('routes');
+  }
+
   function reverseRoute(routeId: string) {
     const route = routes.find((r) => r.id === routeId);
     if (!route) return;
@@ -3019,9 +3231,52 @@ export function MapWorkspacePage() {
     store.addRoute(copy);
   }
 
+  function deleteRouteAndClearState(routeId: string) {
+    store.deleteRoute(routeId);
+    if (selectedRouteId === routeId) setSelectedRouteId(null);
+    if (editingRouteId === routeId) {
+      setEditingRouteId(null);
+      setEditingRouteSnapshot(null);
+      setIsCreatingNewRoute(false);
+      setRouteEditorError(null);
+    }
+    setActivePathRouteIds((ids) => ids.filter((id) => id !== routeId));
+    if (store.partyRouteProgress?.routeId === routeId) {
+      store.setPartyRouteProgress(null);
+    }
+  }
+
+  function focusRouteOnMap(route: MapRoute) {
+    const endpointPoints = [route.fromHotspotId, route.toHotspotId]
+      .map((id) => hotspots.find((h) => h.id === id))
+      .filter(Boolean)
+      .map((h) => ({ x: h!.x, y: h!.y }));
+    const points = route.points && route.points.length > 0 ? route.points : endpointPoints;
+    if (points.length === 0 || viewportSize.width <= 0 || viewportSize.height <= 0) return;
+    const minX = Math.min(...points.map((p) => p.x));
+    const maxX = Math.max(...points.map((p) => p.x));
+    const minY = Math.min(...points.map((p) => p.y));
+    const maxY = Math.max(...points.map((p) => p.y));
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const width = Math.max(maxX - minX, 0.08);
+    const height = Math.max(maxY - minY, 0.08);
+    const fitRouteScale = Math.min(
+      viewportSize.width / (activeMapImageSize.width * baseFitScale * width * 1.5),
+      viewportSize.height / (activeMapImageSize.height * baseFitScale * height * 1.5),
+    );
+    const nextScale = clampScale(Math.max(1, Math.min(2.8, fitRouteScale)));
+    setView({
+      scale: nextScale,
+      x: viewportSize.width / 2 - fitOffsetX - centerX * renderedImageWidth * nextScale,
+      y: viewportSize.height / 2 - fitOffsetY - centerY * renderedImageHeight * nextScale,
+    });
+  }
+
   function markRoutePath(routeId: string) {
     const route = routes.find((r) => r.id === routeId);
     setSelectedRouteId(routeId);
+    setSidePanelTab('routes');
     setEditingRouteSnapshot(route?.points ? [...route.points] : []);
     setIsCreatingNewRoute(false);
     setRouteEditorError(null);
@@ -3068,6 +3323,7 @@ export function MapWorkspacePage() {
     setRouteEditorError(null);
     setEditingRouteId(newRoute.id);
   }
+  void startDrawingNewRoute;
 
   // Bug-fix pass — `openRouteBuilderBetween` (double-click-two-hotspots
   // route creation shortcut) was only ever invoked from the removed
@@ -3085,6 +3341,19 @@ export function MapWorkspacePage() {
     if (pointCount < 2) {
       setRouteEditorError('Нужно добавить минимум две точки маршрута');
       return;
+    }
+    const firstPoint = route?.points?.[0];
+    const lastPoint = route?.points?.[pointCount - 1];
+    const fromHotspot = firstPoint ? getNearestHotspotToPoint(firstPoint) : undefined;
+    const toHotspot = lastPoint ? getNearestHotspotToPoint(lastPoint) : undefined;
+    if (route && (fromHotspot?.id !== route.fromHotspotId || toHotspot?.id !== route.toHotspotId)) {
+      store.patchRoute(route.id, {
+        fromHotspotId: fromHotspot?.id ?? '',
+        toHotspotId: toHotspot?.id ?? '',
+        label: route.label && route.label !== 'Новый маршрут' && !route.label.endsWith('→ маршрут')
+          ? route.label
+          : makeRouteLabel(fromHotspot?.id ?? '', toHotspot?.id ?? ''),
+      });
     }
     setRouteEditorError(null);
     setEditingRouteId(null);
@@ -3308,11 +3577,68 @@ export function MapWorkspacePage() {
   // stop by every caller — never a direct/teleport fallback.
   function findJourneyPaths(fromHotspotId: string, toHotspotId: string): RoutePathResult[] {
     const graph = buildRouteGraph(routes, hotspots, { allowHiddenRoutes: !isPlayerView });
-    return findPathBetweenLocations(fromHotspotId, toHotspotId, graph, {
+    const strictPaths = findPathBetweenLocations(fromHotspotId, toHotspotId, graph, {
       avoidBlockedRoutes: true,
       avoidDangerousRoutes: false,
       allowHiddenRoutes: !isPlayerView,
     });
+    if (strictPaths.length > 0) return strictPaths;
+    const from = hotspots.find((h) => h.id === fromHotspotId);
+    const to = hotspots.find((h) => h.id === toHotspotId);
+    if (!from || !to) return [];
+    return findPathBetweenPoints(
+      { x: from.x, y: from.y },
+      { x: to.x, y: to.y },
+      graph,
+      {
+        allowOffRoad: true,
+        maxOffRoadDistance: 0.08,
+        avoidBlockedRoutes: true,
+        avoidDangerousRoutes: false,
+        allowHiddenRoutes: !isPlayerView,
+      },
+    ).map((path) =>
+      path.isOffRoad
+        ? {
+            ...path,
+            warnings: [
+              ...path.warnings,
+              'Один из концов пути подключён к ближайшей точке дорожной сети. Прямой маршрут между локациями не используется.',
+            ],
+          }
+        : path,
+    );
+  }
+
+  function findJourneyPathsFromPointToHotspot(
+    fromPoint: { x: number; y: number },
+    toHotspotId: string,
+  ): RoutePathResult[] {
+    const to = hotspots.find((h) => h.id === toHotspotId);
+    if (!to) return [];
+    const graph = buildRouteGraph(routes, hotspots, { allowHiddenRoutes: !isPlayerView });
+    return findPathBetweenPoints(
+      fromPoint,
+      { x: to.x, y: to.y },
+      graph,
+      {
+        allowOffRoad: true,
+        maxOffRoadDistance: 0.08,
+        avoidBlockedRoutes: true,
+        avoidDangerousRoutes: false,
+        allowHiddenRoutes: !isPlayerView,
+      },
+    ).map((path) =>
+      path.isOffRoad
+        ? {
+            ...path,
+            warnings: [
+              ...path.warnings,
+              'Путь начинается или заканчивается ближайшей точкой дорожной сети. Прямое движение через всю карту не используется.',
+            ],
+          }
+        : path,
+    );
   }
 
   // Commits a chosen multi-hop RoutePathResult: moves the party to the final
@@ -3349,6 +3675,16 @@ export function MapWorkspacePage() {
   // "move party to this location" behavior in the whole page.
   function movePartyToLocation(ls: LocationState) {
     const ownHotspot = hotspots.find((h) => h.locationStateId === ls.id);
+    const partyIsAtManualPoint = !!partyManualPoint;
+    if (partyIsAtManualPoint && partyMarkerPoint && ownHotspot) {
+      const pathsFromPoint = findJourneyPathsFromPointToHotspot(partyMarkerPoint, ownHotspot.id);
+      if (pathsFromPoint.length > 0) {
+        commitMultiSegmentJourney(pathsFromPoint[0], ls.id);
+        return;
+      }
+      setPathfindingResult({ targetLocationStateId: ls.id, options: [] });
+      return;
+    }
     const matchingRoute =
       partyHotspot && ownHotspot
         ? routes.find(
@@ -3374,7 +3710,21 @@ export function MapWorkspacePage() {
     // through — nothing exists to path FROM, so a direct placement is fine
     // (not a fallback around an existing network, there is no network leg
     // to bypass).
-    if (!partyHotspot || !ownHotspot) {
+    if (!ownHotspot) {
+      store.setCurrentLocation(ls.id);
+      store.markVisited(ls.id);
+      return;
+    }
+    if (!partyHotspot && partyMarkerPoint) {
+      const pathsFromPoint = findJourneyPathsFromPointToHotspot(partyMarkerPoint, ownHotspot.id);
+      if (pathsFromPoint.length > 0) {
+        commitMultiSegmentJourney(pathsFromPoint[0], ls.id);
+        return;
+      }
+      setPathfindingResult({ targetLocationStateId: ls.id, options: [] });
+      return;
+    }
+    if (!partyHotspot) {
       store.setCurrentLocation(ls.id);
       store.markVisited(ls.id);
       return;
@@ -3398,6 +3748,20 @@ export function MapWorkspacePage() {
     e.stopPropagation();
     if (isEditMode) return;
     if (!h.locationStateId) return;
+    const partyIsAtManualPoint = !!partyManualPoint;
+    if (partyIsAtManualPoint && partyMarkerPoint) {
+      const pathsFromPoint = findJourneyPathsFromPointToHotspot(partyMarkerPoint, h.id);
+      if (pathsFromPoint.length > 0) {
+        commitMultiSegmentJourney(pathsFromPoint[0], h.locationStateId);
+        selectLocation(h.locationStateId);
+        setSidePanelTab('card');
+        return;
+      }
+      selectLocation(h.locationStateId);
+      setSidePanelTab('card');
+      setPathfindingResult({ targetLocationStateId: h.locationStateId, options: [] });
+      return;
+    }
     // This was the actual source of "party still teleports directly" even
     // after the Journey panel's route-aware button was fixed: double-clicking
     // a hotspot is a second, independent way to move the party, and it was
@@ -4881,19 +5245,31 @@ export function MapWorkspacePage() {
             <button onClick={() => zoomBy(1 / 1.2)}>−</button>
             <button onClick={resetView}>Сброс</button>
             <button onClick={resetView}>По размеру экрана</button>
-            {partyHotspot && (
+            {partyMarkerPoint && (
               <button
                 onClick={() =>
                   setView((v) => ({
                     ...v,
                     // Same "solve for offset" centering math as HotspotInspector's
                     // onCenter above — keeps this as the only centering formula.
-                    x: viewportSize.width / 2 - fitOffsetX - partyHotspot!.x * renderedImageWidth * v.scale,
-                    y: viewportSize.height / 2 - fitOffsetY - partyHotspot!.y * renderedImageHeight * v.scale,
+                    x: viewportSize.width / 2 - fitOffsetX - partyMarkerPoint.x * renderedImageWidth * v.scale,
+                    y: viewportSize.height / 2 - fitOffsetY - partyMarkerPoint.y * renderedImageHeight * v.scale,
                   }))
                 }
               >
                 Партия
+              </button>
+            )}
+            {(isDmMode || isPlayerView) && map && (
+              <button
+                className={manualPartyMoveArmed ? 'active' : ''}
+                onClick={() => {
+                  cancelAllEditTools();
+                  setManualPartyMoveArmed(true);
+                }}
+                title="Следующий клик по карте поставит маркер партии в выбранную точку без маршрута"
+              >
+                Поставить партию
               </button>
             )}
             {!isPlayerView && (
@@ -4908,11 +5284,13 @@ export function MapWorkspacePage() {
           </div>
 
           {isEditMode && (() => {
-            const activeTool: 'hotspot' | 'route' | 'entity' | 'zone' | 'select' = placingHotspot || locationPlacementDraft
+            const activeTool: 'hotspot' | 'route' | 'entity' | 'zone' | 'party' | 'select' = placingHotspot || locationPlacementDraft
               ? 'hotspot'
-              : routeDraft || editingRouteId
+              : routeDraft || editingRouteId || routeWorkspaceActive
                 ? 'route'
-                : placementMode
+                : manualPartyMoveArmed
+                  ? 'party'
+                  : placementMode
                   ? 'entity'
                   : zoneDraft || editingZoneId
                     ? 'zone'
@@ -4922,8 +5300,13 @@ export function MapWorkspacePage() {
               hotspot: locationPlacementDraft
                 ? 'Заполните форму новой локации ниже и сохраните'
                 : 'Кликните по карте, чтобы поставить новую локацию',
-              route: 'Построение маршрута',
+              route: editingRouteId
+                ? 'Редактирование точек маршрута: клик добавляет точку в конец, + между точками вставляет точку в сегмент'
+                : routeWorkspaceActive
+                  ? 'Маршруты: все линии текущей карты видны и доступны для ремонта'
+                  : 'Построение маршрута',
               entity: `Размещение объекта${placementMode ? `: «${placementMode.title}»` : ''}`,
+              party: 'Кликните по карте, чтобы поставить партию вне маршрута',
               zone: zoneDraft
                 ? `Кликами по карте добавляйте точки зоны (сейчас: ${zoneDraft.points.length}, нужно минимум 3)`
                 : 'Редактирование зоны: клик по карте — добавить точку, клик по точке — выбрать',
@@ -4933,7 +5316,11 @@ export function MapWorkspacePage() {
                 <span className="edit-mode-toolbar-label">Инструмент:</span>
                 <button
                   className={activeTool === 'select' ? 'active' : ''}
-                  onClick={cancelAllEditTools}
+                  onClick={() => {
+                    cancelAllEditTools();
+                    setSidePanelTab('card');
+                    setSelectedRouteId(null);
+                  }}
                   title="Выбрать и редактировать существующие объекты — клик по карте просто выбирает их"
                 >
                   Выбрать / редактировать
@@ -4954,9 +5341,21 @@ export function MapWorkspacePage() {
                 </button>
                 <button
                   className={activeTool === 'route' ? 'active' : ''}
+                  onClick={() => {
+                    cancelAllEditTools();
+                    setSidePanelTab(routeWorkspaceActive ? 'card' : 'routes');
+                    if (routeWorkspaceActive) setSelectedRouteId(null);
+                  }}
+                  title="Открыть отдельный режим ремонта маршрутов: показать все маршруты текущей карты и список правки"
+                >
+                  Маршруты
+                </button>
+                <button
+                  className={routeDraft ? 'active' : ''}
                   disabled={!!routeDraft || !!editingRouteId}
                   onClick={() => {
                     cancelAllEditTools();
+                    setSidePanelTab('routes');
                     setRouteDraft({ title: '', fromHotspotId: '', toHotspotId: '' });
                   }}
                   title="Постройте новый маршрут кликами по карте"
@@ -5068,7 +5467,7 @@ export function MapWorkspacePage() {
                     className="btn-danger"
                     onClick={() => {
                       if (!window.confirm(`Удалить все маршруты этой карты (${routes.length})?`)) return;
-                      routes.forEach((r) => store.deleteRoute(r.id));
+                      routes.forEach((r) => deleteRouteAndClearState(r.id));
                       setSelectedRouteId(null);
                       setEditingRouteId(null);
                       setEditingRouteSnapshot(null);
@@ -5259,50 +5658,12 @@ export function MapWorkspacePage() {
             </div>
           )}
           {isEditMode && routeDraft && (
-            <div className="route-draft-form">
+            <div className="route-draft-form route-draft-form--compact">
               <strong>Новый маршрут</strong>
               <p className="muted">
-                1. Выберите начальную и конечную точку — оба поля обязательны, иначе партия не сможет идти по этому
-                маршруту и будет перемещаться напрямую. 2. Нажмите «Начать рисовать». 3. Кликами по карте нарисуйте путь.
+                Кликните по локации или дороге на карте. Начало и конец будут привязаны к ближайшим локациям при сохранении.
               </p>
-              <label>
-                Название маршрута
-                <input
-                  type="text"
-                  value={routeDraft.title}
-                  placeholder="Например: Рынок — Доки"
-                  onChange={(e) => setRouteDraft({ ...routeDraft, title: e.target.value })}
-                />
-              </label>
-              <label>
-                Откуда
-                <select
-                  value={routeDraft.fromHotspotId}
-                  onChange={(e) => setRouteDraft({ ...routeDraft, fromHotspotId: e.target.value })}
-                >
-                  <option value="">— не выбрано —</option>
-                  {hotspots.map((h) => (
-                    <option key={h.id} value={h.id}>{h.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Куда
-                <select
-                  value={routeDraft.toHotspotId}
-                  onChange={(e) => setRouteDraft({ ...routeDraft, toHotspotId: e.target.value })}
-                >
-                  <option value="">— не выбрано —</option>
-                  {hotspots.map((h) => (
-                    <option key={h.id} value={h.id}>{h.label}</option>
-                  ))}
-                </select>
-              </label>
-              {routeEditorError && <p className="route-editor-error">{routeEditorError}</p>}
-              <div className="actions">
-                <button onClick={startDrawingNewRoute}>Начать рисовать</button>
-                <button onClick={() => { setRouteDraft(null); setRouteEditorError(null); }}>Отмена</button>
-              </div>
+              <button onClick={() => { setRouteDraft(null); setRouteEditorError(null); }}>Отмена</button>
             </div>
           )}
           {isEditMode && pendingPlacementPoint && data && (
@@ -5346,7 +5707,7 @@ export function MapWorkspacePage() {
                 <div className="object-picker-grid">
                   {objectPickerTab === 'locations' &&
                     data.locationStates
-                      .filter((ls) => !data.hotspots.some((h) => h.timelineId === ls.timelineId && h.locationStateId === ls.id))
+                      .filter((ls) => !hotspots.some((h) => h.locationStateId === ls.id))
                       .filter((ls) => ls.timelineId === store.currentTimelineId)
                       .filter((ls) => ls.title.toLowerCase().includes(objectPickerSearch.toLowerCase()))
                       .slice(0, 30)
@@ -5366,9 +5727,10 @@ export function MapWorkspacePage() {
                       .filter((t) => t.name.toLowerCase().includes(objectPickerSearch.toLowerCase()))
                       .slice(0, 30)
                       .map((t) => {
-                        const placedElsewhere = data.locationStates.some(
-                          (ls) => ls.sourceLibraryType === 'tavern' && ls.sourceLibraryId === t.id,
+                        const sourceLs = data.locationStates.find(
+                          (ls) => ls.sourceLibraryType === 'tavern' && ls.sourceLibraryId === t.id && ls.timelineId === store.currentTimelineId,
                         );
+                        const placedHere = !!sourceLs && hotspots.some((h) => h.locationStateId === sourceLs.id);
                         return (
                           <div className="object-picker-card" key={t.id}>
                             <LibraryThumb type="tavern" entity={t} images={data.images} />
@@ -5377,10 +5739,13 @@ export function MapWorkspacePage() {
                             <p>{resolveEntityShortDescription('tavern', t, 90)}</p>
                             <button
                               className="btn-primary btn-compact"
-                              disabled={placedElsewhere}
-                              onClick={() => placeLibraryEntityAtPendingPoint('tavern', t.id, t.name)}
+                              disabled={placedHere}
+                              onClick={() => {
+                                placeOrMoveLibrarySourcedLocationAtPoint('tavern', t.id, t.name, pendingPlacementPoint);
+                                setPendingPlacementPoint(null);
+                              }}
                             >
-                              {placedElsewhere ? 'Уже размещено' : 'Разместить здесь'}
+                              {placedHere ? 'Уже на этой карте' : sourceLs ? 'Добавить на эту карту' : 'Разместить здесь'}
                             </button>
                           </div>
                         );
@@ -5390,9 +5755,10 @@ export function MapWorkspacePage() {
                       .filter((s) => s.name.toLowerCase().includes(objectPickerSearch.toLowerCase()))
                       .slice(0, 30)
                       .map((s) => {
-                        const placedElsewhere = data.locationStates.some(
-                          (ls) => ls.sourceLibraryType === 'shop' && ls.sourceLibraryId === s.id,
+                        const sourceLs = data.locationStates.find(
+                          (ls) => ls.sourceLibraryType === 'shop' && ls.sourceLibraryId === s.id && ls.timelineId === store.currentTimelineId,
                         );
+                        const placedHere = !!sourceLs && hotspots.some((h) => h.locationStateId === sourceLs.id);
                         return (
                           <div className="object-picker-card" key={s.id}>
                             <LibraryThumb type="shop" entity={s} images={data.images} />
@@ -5401,10 +5767,13 @@ export function MapWorkspacePage() {
                             <p>{resolveEntityShortDescription('shop', s, 90)}</p>
                             <button
                               className="btn-primary btn-compact"
-                              disabled={placedElsewhere}
-                              onClick={() => placeLibraryEntityAtPendingPoint('shop', s.id, s.name)}
+                              disabled={placedHere}
+                              onClick={() => {
+                                placeOrMoveLibrarySourcedLocationAtPoint('shop', s.id, s.name, pendingPlacementPoint);
+                                setPendingPlacementPoint(null);
+                              }}
                             >
-                              {placedElsewhere ? 'Уже размещено' : 'Разместить здесь'}
+                              {placedHere ? 'Уже на этой карте' : sourceLs ? 'Добавить на эту карту' : 'Разместить здесь'}
                             </button>
                           </div>
                         );
@@ -5615,13 +5984,9 @@ export function MapWorkspacePage() {
                     npcs={npcsForLibraryScope}
                     taverns={data.taverns}
                     shops={data.shops}
+                    initialCategory={requestedLibraryCategory ?? undefined}
                     hotspotsOnCurrentMap={hotspots}
                     allHotspots={data.hotspots}
-                    placedSourceIds={new Set(
-                      locationsForTimeline
-                        .filter((ls) => ls.sourceLibraryId)
-                        .map((ls) => `${ls.sourceLibraryType}:${ls.sourceLibraryId}`),
-                    )}
                     placingLibraryEntity={placingLibraryEntity}
                     onPlaceOnMap={(type, sourceId, title) => {
                       setPlacingLibraryEntity({ type, sourceId, title });
@@ -5659,25 +6024,36 @@ export function MapWorkspacePage() {
                       setLibraryDrawerOpen(false);
                     }}
                     onEditNpc={(npc) => {
-                      const full = data.npcs.find((n) => n.id === npc.id);
-                      openNpcEditor(full ?? npc);
+                      openCompanion({ type: 'npc', id: npc.id });
+                      setLibraryDrawerOpen(false);
                     }}
                     onEditTavern={(t) => {
-                      const full = data.taverns.find((x) => x.id === t.id);
-                      openTavernEditor(full ?? t);
+                      openCompanion({ type: 'tavern', id: t.id });
+                      setLibraryDrawerOpen(false);
                     }}
                     onEditShop={(s) => {
-                      const full = data.shops.find((x) => x.id === s.id);
-                      openShopEditor(full ?? s);
+                      openCompanion({ type: 'shop', id: s.id });
+                      setLibraryDrawerOpen(false);
+                    }}
+                    onEditQuest={(q) => {
+                      openCompanion({ type: 'quest', id: q.id });
+                      setLibraryDrawerOpen(false);
+                    }}
+                    onEditEnemy={(enemy) => {
+                      openCompanion({ type: 'enemy', id: enemy.id });
+                      setLibraryDrawerOpen(false);
                     }}
                     onEditImage={(img) => {
-                      const full = data.images.find((x) => x.id === img.id);
-                      openImageEditor(full ?? img);
+                      openCompanion({ type: 'image', id: img.id });
+                      setLibraryDrawerOpen(false);
                     }}
-                    onEditBattleEntry={(be) => openBattleEntryEditor(be)}
+                    onEditBattleEntry={(be) => {
+                      openCompanion({ type: 'battleEntry', id: be.id });
+                      setLibraryDrawerOpen(false);
+                    }}
                     onEditLocation={(locationId) => {
-                      const loc = data.locations.find((l) => l.id === locationId);
-                      if (loc) openLocationEditor(loc);
+                      openCompanion({ type: 'location', id: locationId });
+                      setLibraryDrawerOpen(false);
                     }}
                     contentMovableEntities={Object.values(store.movableEntitiesById).filter(
                       (m) => m.entityType === 'quest' || m.entityType === 'enemy' || m.entityType === 'image',
@@ -5692,6 +6068,19 @@ export function MapWorkspacePage() {
                       setPlacingBattleEntryId(beId);
                       setLibraryDrawerOpen(false);
                     }}
+                    onLinkBattleMapsToLocations={(battleMapIds, locationStateIds) => {
+                      for (const locationStateId of locationStateIds) {
+                        for (const battleMapId of battleMapIds) {
+                          store.addManualBattleMapLink(locationStateId, battleMapId, 'Manual bulk link from battle-map library');
+                        }
+                      }
+                    }}
+                    onPlaceBattleMap={(battleMapId, title) => {
+                      startPlacement('battleMap', battleMapId, title);
+                      setLibraryDrawerOpen(false);
+                    }}
+                    battleMapLocationLinks={data.battleMapLocationLinks}
+                    onOpenBattleMapVtt={(battleMapId) => startEmbeddedBattle(battleMapId, selectedLs?.id)}
                     onDragStartCard={(sourceType, sourceId, title) => setDragPayload({ sourceType, sourceId, title })}
                     onDragEndCard={() => {
                       setDragPayload(null);
@@ -5711,575 +6100,19 @@ export function MapWorkspacePage() {
           {isEditMode && imagePickerTarget && data && (
             <ImagePickerModal
               images={data.images}
-              currentImageId={
-                imagePickerTarget.kind === 'npc'
-                  ? npcEditDraft?.image || undefined
-                  : imagePickerTarget.kind === 'tavern'
-                    ? tavernEditDraft?.image || undefined
-                    : imagePickerTarget.kind === 'shop'
-                      ? shopEditDraft?.image || undefined
-                      : imagePickerTarget.kind === 'battleEntry'
-                        ? battleEntryEditDraft?.previewImageId || undefined
-                        : imagePickerTarget.kind === 'locationSource'
-                          ? locationEditDraft?.image || undefined
-                          : (locationDataDraft?.headerImageId as string | undefined)
-              }
+              currentImageId={locationDataDraft?.headerImageId as string | undefined}
               onSelect={(imageId) => {
-                if (imagePickerTarget.kind === 'npc') {
-                  setNpcEditDraft((d) => (d ? { ...d, image: imageId } : d));
-                } else if (imagePickerTarget.kind === 'tavern') {
-                  setTavernEditDraft((d) => (d ? { ...d, image: imageId } : d));
-                } else if (imagePickerTarget.kind === 'shop') {
-                  setShopEditDraft((d) => (d ? { ...d, image: imageId } : d));
-                } else if (imagePickerTarget.kind === 'battleEntry') {
-                  setBattleEntryEditDraft((d) => (d ? { ...d, previewImageId: imageId } : d));
-                } else if (imagePickerTarget.kind === 'locationSource') {
-                  setLocationEditDraft((d) => (d ? { ...d, image: imageId } : d));
-                } else {
-                  setLocationDataDraft((d) => (d ? { ...d, headerImageId: imageId } : d));
-                }
+                setLocationDataDraft((d) => (d ? { ...d, headerImageId: imageId } : d));
                 setImagePickerTarget(null);
               }}
               onClear={() => {
-                if (imagePickerTarget.kind === 'npc') {
-                  setNpcEditDraft((d) => (d ? { ...d, image: '' } : d));
-                } else if (imagePickerTarget.kind === 'tavern') {
-                  setTavernEditDraft((d) => (d ? { ...d, image: '' } : d));
-                } else if (imagePickerTarget.kind === 'shop') {
-                  setShopEditDraft((d) => (d ? { ...d, image: '' } : d));
-                } else if (imagePickerTarget.kind === 'battleEntry') {
-                  setBattleEntryEditDraft((d) => (d ? { ...d, previewImageId: '' } : d));
-                } else if (imagePickerTarget.kind === 'locationSource') {
-                  setLocationEditDraft((d) => (d ? { ...d, image: '' } : d));
-                } else {
-                  setLocationDataDraft((d) => (d ? { ...d, headerImageId: '' } : d));
-                }
+                setLocationDataDraft((d) => (d ? { ...d, headerImageId: '' } : d));
               }}
               onUpload={(image) => store.addImage(image)}
               onClose={() => setImagePickerTarget(null)}
             />
           )}
-          {isEditMode && npcEditDraft && data && (
-            <div className="route-draft-form">
-              <strong>Редактировать NPC</strong>
-              <p className="muted">
-                Правки сохраняются как локальный оверлей (npcPatches) — исходный JSON dm-companion не меняется.
-              </p>
-              <div className="library-card-row">
-                {npcEditDraft.image ? (
-                  <img
-                    className="library-thumb"
-                    src={
-                      data.images.find((i) => i.id === npcEditDraft.image)?.thumbnailSrc ??
-                      data.images.find((i) => i.id === npcEditDraft.image)?.src
-                    }
-                    alt=""
-                    loading="lazy"
-                  />
-                ) : (
-                  <span className="library-thumb library-thumb-fallback" aria-hidden="true">{LIBRARY_FALLBACK_ICON.npc}</span>
-                )}
-                <div className="library-card-body actions">
-                  <button type="button" onClick={() => setImagePickerTarget({ kind: 'npc', npcId: npcEditDraft.npcId })}>
-                    Сменить изображение
-                  </button>
-                  {!!npcEditDraft.image && (
-                    <button type="button" onClick={() => setNpcEditDraft({ ...npcEditDraft, image: '' })}>
-                      Убрать
-                    </button>
-                  )}
-                </div>
-              </div>
-              <label>
-                Имя
-                <input
-                  type="text"
-                  value={npcEditDraft.name}
-                  onChange={(e) => setNpcEditDraft({ ...npcEditDraft, name: e.target.value })}
-                />
-              </label>
-              <label>
-                Роль
-                <input
-                  type="text"
-                  value={npcEditDraft.role}
-                  onChange={(e) => setNpcEditDraft({ ...npcEditDraft, role: e.target.value })}
-                />
-              </label>
-              <label>
-                Фракция
-                <input
-                  type="text"
-                  value={npcEditDraft.faction}
-                  onChange={(e) => setNpcEditDraft({ ...npcEditDraft, faction: e.target.value })}
-                />
-              </label>
-              <label>
-                Описание (видно игрокам — Player Safe)
-                <textarea
-                  value={npcEditDraft.publicDescription}
-                  onChange={(e) => setNpcEditDraft({ ...npcEditDraft, publicDescription: e.target.value })}
-                />
-              </label>
-              <label>
-                Заметки ДМ (никогда не видны игрокам/Observer)
-                <textarea
-                  value={npcEditDraft.dmNotes}
-                  onChange={(e) => setNpcEditDraft({ ...npcEditDraft, dmNotes: e.target.value })}
-                />
-              </label>
-              <label className="reveal-toggle">
-                <input
-                  type="checkbox"
-                  checked={npcEditDraft.visibleToPlayers}
-                  onChange={(e) => setNpcEditDraft({ ...npcEditDraft, visibleToPlayers: e.target.checked })}
-                />
-                Видна игрокам
-              </label>
-              {!npcEditDraft.name.trim() && <p className="route-editor-error">Имя не может быть пустым</p>}
-              <div className="actions">
-                <button
-                  className="btn-primary"
-                  disabled={!npcEditDraft.name.trim()}
-                  onClick={() => {
-                    store.patchNpc(npcEditDraft.npcId, {
-                      name: npcEditDraft.name.trim(),
-                      role: npcEditDraft.role.trim() || undefined,
-                      faction: npcEditDraft.faction.trim() || undefined,
-                      publicDescription: npcEditDraft.publicDescription.trim() || undefined,
-                      dmNotes: npcEditDraft.dmNotes.trim() || undefined,
-                      visibleToPlayers: npcEditDraft.visibleToPlayers,
-                      image: npcEditDraft.image || undefined,
-                    });
-                    setNpcEditDraft(null);
-                  }}
-                >
-                  Сохранить
-                </button>
-                <button onClick={() => setNpcEditDraft(null)}>Отмена</button>
-                {npcEditDraft.npcId in store.npcPatches && (
-                  <button
-                    className="btn-secondary"
-                    onClick={() => {
-                      if (window.confirm('Сбросить локальные правки этого NPC? Действие необратимо.')) {
-                        store.resetOverride('npc', npcEditDraft.npcId);
-                        setNpcEditDraft(null);
-                      }
-                    }}
-                  >
-                    Сбросить локальные правки
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-          {isEditMode && tavernEditDraft && data && (
-            <div className="route-draft-form">
-              <strong>Редактировать таверну</strong>
-              <p className="muted">
-                Правки сохраняются как локальный оверлей (tavernPatches) — исходный JSON dm-companion не меняется.
-                Изображение для таверны — оверлей карточки: в исходных данных у таверны нет своего поля изображения.
-              </p>
-              <div className="library-card-row">
-                {tavernEditDraft.image ? (
-                  <img
-                    className="library-thumb"
-                    src={
-                      data.images.find((i) => i.id === tavernEditDraft.image)?.thumbnailSrc ??
-                      data.images.find((i) => i.id === tavernEditDraft.image)?.src
-                    }
-                    alt=""
-                    loading="lazy"
-                  />
-                ) : (
-                  <span className="library-thumb library-thumb-fallback" aria-hidden="true">{LIBRARY_FALLBACK_ICON.tavern}</span>
-                )}
-                <div className="library-card-body actions">
-                  <button type="button" onClick={() => setImagePickerTarget({ kind: 'tavern', tavernId: tavernEditDraft.tavernId })}>
-                    Сменить изображение
-                  </button>
-                  {!!tavernEditDraft.image && (
-                    <button type="button" onClick={() => setTavernEditDraft({ ...tavernEditDraft, image: '' })}>
-                      Убрать
-                    </button>
-                  )}
-                </div>
-              </div>
-              <label>
-                Название
-                <input
-                  type="text"
-                  value={tavernEditDraft.name}
-                  onChange={(e) => setTavernEditDraft({ ...tavernEditDraft, name: e.target.value })}
-                />
-              </label>
-              <label>
-                Описание
-                <textarea
-                  value={tavernEditDraft.description}
-                  onChange={(e) => setTavernEditDraft({ ...tavernEditDraft, description: e.target.value })}
-                />
-              </label>
-              <label>
-                Заметки ДМ (никогда не видны игрокам/Observer)
-                <textarea
-                  value={tavernEditDraft.notes}
-                  onChange={(e) => setTavernEditDraft({ ...tavernEditDraft, notes: e.target.value })}
-                />
-              </label>
-              {!tavernEditDraft.name.trim() && <p className="route-editor-error">Название не может быть пустым</p>}
-              <div className="actions">
-                <button
-                  className="btn-primary"
-                  disabled={!tavernEditDraft.name.trim()}
-                  onClick={() => {
-                    store.patchTavern(tavernEditDraft.tavernId, {
-                      name: tavernEditDraft.name.trim(),
-                      description: tavernEditDraft.description.trim() || undefined,
-                      notes: tavernEditDraft.notes.trim() || undefined,
-                      imageOverrideId: tavernEditDraft.image || undefined,
-                    });
-                    setTavernEditDraft(null);
-                  }}
-                >
-                  Сохранить
-                </button>
-                <button onClick={() => setTavernEditDraft(null)}>Отмена</button>
-                {tavernEditDraft.tavernId in store.tavernPatches && (
-                  <button
-                    className="btn-secondary"
-                    onClick={() => {
-                      if (window.confirm('Сбросить локальные правки этой таверны? Действие необратимо.')) {
-                        store.resetOverride('tavern', tavernEditDraft.tavernId);
-                        setTavernEditDraft(null);
-                      }
-                    }}
-                  >
-                    Сбросить локальные правки
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-          {isEditMode && locationEditDraft && data && (
-            <div className="route-draft-form">
-              <strong>Редактировать локацию</strong>
-              <p className="muted">
-                Правки сохраняются как локальный оверлей (locationPatches) — исходный JSON dm-companion не меняется.
-              </p>
-              <div className="library-card-row">
-                {locationEditDraft.image ? (
-                  <img
-                    className="library-thumb"
-                    src={
-                      data.images.find((i) => i.id === locationEditDraft.image)?.thumbnailSrc ??
-                      data.images.find((i) => i.id === locationEditDraft.image)?.src
-                    }
-                    alt=""
-                    loading="lazy"
-                  />
-                ) : (
-                  <span className="library-thumb library-thumb-fallback" aria-hidden="true">{LIBRARY_FALLBACK_ICON.location}</span>
-                )}
-                <div className="library-card-body actions">
-                  <button type="button" onClick={() => setImagePickerTarget({ kind: 'locationSource', locationId: locationEditDraft.locationId })}>
-                    Сменить изображение
-                  </button>
-                  {!!locationEditDraft.image && (
-                    <button type="button" onClick={() => setLocationEditDraft({ ...locationEditDraft, image: '' })}>
-                      Убрать
-                    </button>
-                  )}
-                </div>
-              </div>
-              <label>
-                Название
-                <input
-                  type="text"
-                  value={locationEditDraft.name}
-                  onChange={(e) => setLocationEditDraft({ ...locationEditDraft, name: e.target.value })}
-                />
-              </label>
-              <label>
-                Тип
-                <input
-                  type="text"
-                  value={locationEditDraft.type}
-                  onChange={(e) => setLocationEditDraft({ ...locationEditDraft, type: e.target.value })}
-                />
-              </label>
-              <label>
-                Основное описание
-                <textarea
-                  value={locationEditDraft.description}
-                  onChange={(e) => setLocationEditDraft({ ...locationEditDraft, description: e.target.value })}
-                />
-              </label>
-              <label>
-                Что видят игроки (отдельное поле — оставьте пустым, чтобы скрыть блок в карточке)
-                <textarea
-                  value={locationEditDraft.playerView}
-                  onChange={(e) => setLocationEditDraft({ ...locationEditDraft, playerView: e.target.value })}
-                />
-              </label>
-              <label>
-                Заметки ДМ (никогда не видны игрокам/Observer)
-                <textarea
-                  value={locationEditDraft.notes}
-                  onChange={(e) => setLocationEditDraft({ ...locationEditDraft, notes: e.target.value })}
-                />
-              </label>
-              {!locationEditDraft.name.trim() && <p className="route-editor-error">Название не может быть пустым</p>}
-              <div className="actions">
-                <button
-                  className="btn-primary"
-                  disabled={!locationEditDraft.name.trim()}
-                  onClick={() => {
-                    store.patchLocation(locationEditDraft.locationId, {
-                      name: locationEditDraft.name.trim(),
-                      type: locationEditDraft.type.trim(),
-                      description: locationEditDraft.description.trim(),
-                      // Explicitly saved even when empty — '' (not undefined)
-                      // so a cleared field never falls back to a stale prior
-                      // patch value still sitting in locationPatches.
-                      playerView: locationEditDraft.playerView.trim() || undefined,
-                      notes: locationEditDraft.notes.trim() || undefined,
-                      images: locationEditDraft.image
-                        ? [locationEditDraft.image, ...locationEditDraft.restImages]
-                        : locationEditDraft.restImages,
-                    });
-                    setLocationEditDraft(null);
-                  }}
-                >
-                  Сохранить
-                </button>
-                <button onClick={() => setLocationEditDraft(null)}>Отмена</button>
-                {locationEditDraft.locationId in store.locationPatches && (
-                  <button
-                    className="btn-secondary"
-                    onClick={() => {
-                      if (window.confirm('Сбросить локальные правки этой локации? Действие необратимо.')) {
-                        store.resetOverride('location', locationEditDraft.locationId);
-                        setLocationEditDraft(null);
-                      }
-                    }}
-                  >
-                    Сбросить локальные правки
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-          {isEditMode && shopEditDraft && data && (
-            <div className="route-draft-form">
-              <strong>Редактировать лавку</strong>
-              <p className="muted">
-                Правки сохраняются как локальный оверлей (shopPatches) — исходный JSON dm-companion не меняется.
-              </p>
-              <div className="library-card-row">
-                {shopEditDraft.image ? (
-                  <img
-                    className="library-thumb"
-                    src={
-                      data.images.find((i) => i.id === shopEditDraft.image)?.thumbnailSrc ??
-                      data.images.find((i) => i.id === shopEditDraft.image)?.src
-                    }
-                    alt=""
-                    loading="lazy"
-                  />
-                ) : (
-                  <span className="library-thumb library-thumb-fallback" aria-hidden="true">{LIBRARY_FALLBACK_ICON.shop}</span>
-                )}
-                <div className="library-card-body actions">
-                  <button type="button" onClick={() => setImagePickerTarget({ kind: 'shop', shopId: shopEditDraft.shopId })}>
-                    Сменить изображение
-                  </button>
-                  {!!shopEditDraft.image && (
-                    <button type="button" onClick={() => setShopEditDraft({ ...shopEditDraft, image: '' })}>
-                      Убрать
-                    </button>
-                  )}
-                </div>
-              </div>
-              <label>
-                Название
-                <input
-                  type="text"
-                  value={shopEditDraft.name}
-                  onChange={(e) => setShopEditDraft({ ...shopEditDraft, name: e.target.value })}
-                />
-              </label>
-              <label>
-                Описание
-                <textarea
-                  value={shopEditDraft.description}
-                  onChange={(e) => setShopEditDraft({ ...shopEditDraft, description: e.target.value })}
-                />
-              </label>
-              <label>
-                Заметки ДМ (никогда не видны игрокам/Observer)
-                <textarea
-                  value={shopEditDraft.notes}
-                  onChange={(e) => setShopEditDraft({ ...shopEditDraft, notes: e.target.value })}
-                />
-              </label>
-              {!shopEditDraft.name.trim() && <p className="route-editor-error">Название не может быть пустым</p>}
-              <div className="actions">
-                <button
-                  className="btn-primary"
-                  disabled={!shopEditDraft.name.trim()}
-                  onClick={() => {
-                    store.patchShop(shopEditDraft.shopId, {
-                      name: shopEditDraft.name.trim(),
-                      description: shopEditDraft.description.trim() || undefined,
-                      notes: shopEditDraft.notes.trim() || undefined,
-                      image: shopEditDraft.image || undefined,
-                    });
-                    setShopEditDraft(null);
-                  }}
-                >
-                  Сохранить
-                </button>
-                <button onClick={() => setShopEditDraft(null)}>Отмена</button>
-                {shopEditDraft.shopId in store.shopPatches && (
-                  <button
-                    className="btn-secondary"
-                    onClick={() => {
-                      if (window.confirm('Сбросить локальные правки этой лавки? Действие необратимо.')) {
-                        store.resetOverride('shop', shopEditDraft.shopId);
-                        setShopEditDraft(null);
-                      }
-                    }}
-                  >
-                    Сбросить локальные правки
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-          {isEditMode && imageEditDraft && (
-            <div className="route-draft-form">
-              <strong>Редактировать изображение</strong>
-              <p className="muted">
-                Правки сохраняются как локальный оверлей (imagePatches) — исходный файл изображения и его путь не меняются, редактируется только название карточки.
-              </p>
-              <label>
-                Название
-                <input
-                  type="text"
-                  value={imageEditDraft.title}
-                  onChange={(e) => setImageEditDraft({ ...imageEditDraft, title: e.target.value })}
-                />
-              </label>
-              {!imageEditDraft.title.trim() && <p className="route-editor-error">Название не может быть пустым</p>}
-              <div className="actions">
-                <button
-                  className="btn-primary"
-                  disabled={!imageEditDraft.title.trim()}
-                  onClick={() => {
-                    store.patchImage(imageEditDraft.imageId, { title: imageEditDraft.title.trim() });
-                    setImageEditDraft(null);
-                  }}
-                >
-                  Сохранить
-                </button>
-                <button onClick={() => setImageEditDraft(null)}>Отмена</button>
-                {imageEditDraft.imageId in store.imagePatches && (
-                  <button
-                    className="btn-secondary"
-                    onClick={() => {
-                      if (window.confirm('Сбросить локальные правки этого изображения? Действие необратимо.')) {
-                        store.resetOverride('image', imageEditDraft.imageId);
-                        setImageEditDraft(null);
-                      }
-                    }}
-                  >
-                    Сбросить локальные правки
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-          {isEditMode && battleEntryEditDraft && data && (
-            <div className="route-draft-form">
-              <strong>Редактировать боевую сцену</strong>
-              <p className="muted">
-                Правки сохраняются напрямую в BattleEntry (updateBattleEntry) — у боевых сцен нет отдельного seed-файла,
-                это и есть основное хранилище.
-              </p>
-              <div className="library-card-row">
-                {battleEntryEditDraft.previewImageId ? (
-                  <img
-                    className="library-thumb"
-                    src={
-                      data.images.find((i) => i.id === battleEntryEditDraft.previewImageId)?.thumbnailSrc ??
-                      data.images.find((i) => i.id === battleEntryEditDraft.previewImageId)?.src
-                    }
-                    alt=""
-                    loading="lazy"
-                  />
-                ) : (
-                  <span className="library-thumb library-thumb-fallback" aria-hidden="true">{LIBRARY_FALLBACK_ICON.battleEntry}</span>
-                )}
-                <div className="library-card-body actions">
-                  <button
-                    type="button"
-                    onClick={() => setImagePickerTarget({ kind: 'battleEntry', battleEntryId: battleEntryEditDraft.battleEntryId })}
-                  >
-                    Сменить изображение
-                  </button>
-                  {!!battleEntryEditDraft.previewImageId && (
-                    <button type="button" onClick={() => setBattleEntryEditDraft({ ...battleEntryEditDraft, previewImageId: '' })}>
-                      Убрать
-                    </button>
-                  )}
-                </div>
-              </div>
-              <label>
-                Название
-                <input
-                  type="text"
-                  value={battleEntryEditDraft.name}
-                  onChange={(e) => setBattleEntryEditDraft({ ...battleEntryEditDraft, name: e.target.value })}
-                />
-              </label>
-              <label>
-                Описание (DM)
-                <textarea
-                  value={battleEntryEditDraft.description}
-                  onChange={(e) => setBattleEntryEditDraft({ ...battleEntryEditDraft, description: e.target.value })}
-                />
-              </label>
-              <label>
-                Описание (видно игрокам — Player Safe)
-                <textarea
-                  value={battleEntryEditDraft.playerSafeDescription}
-                  onChange={(e) =>
-                    setBattleEntryEditDraft({ ...battleEntryEditDraft, playerSafeDescription: e.target.value })
-                  }
-                />
-              </label>
-              {!battleEntryEditDraft.name.trim() && <p className="route-editor-error">Название не может быть пустым</p>}
-              <div className="actions">
-                <button
-                  className="btn-primary"
-                  disabled={!battleEntryEditDraft.name.trim()}
-                  onClick={() => {
-                    store.updateBattleEntry(battleEntryEditDraft.battleEntryId, {
-                      name: battleEntryEditDraft.name.trim(),
-                      description: battleEntryEditDraft.description.trim() || undefined,
-                      playerSafeDescription: battleEntryEditDraft.playerSafeDescription.trim() || undefined,
-                      previewImageId: battleEntryEditDraft.previewImageId || undefined,
-                    });
-                    setBattleEntryEditDraft(null);
-                  }}
-                >
-                  Сохранить
-                </button>
-                <button onClick={() => setBattleEntryEditDraft(null)}>Отмена</button>
-              </div>
-            </div>
-          )}
+          {/* Legacy external card editors removed: all existing and new objects are edited inside their own card windows. */}
           {isEditMode && locationPlacementDraft && (
             <div className="route-draft-form">
               <strong>Новая локация</strong>
@@ -6451,7 +6284,7 @@ export function MapWorkspacePage() {
             </div>
           )}
 
-          {isEditMode && selectedRouteId && !editingRouteId && (() => {
+          {isEditMode && selectedRouteId && !editingRouteId && !routeWorkspaceActive && (() => {
             const r = routes.find((rt) => rt.id === selectedRouteId);
             if (!r) return null;
             const from = hotspots.find((h) => h.id === r.fromHotspotId);
@@ -6544,9 +6377,7 @@ export function MapWorkspacePage() {
                   <button
                     onClick={() => {
                       if (!window.confirm('Удалить этот маршрут?')) return;
-                      store.deleteRoute(r.id);
-                      setSelectedRouteId(null);
-                      setEditingRouteId(null);
+                      deleteRouteAndClearState(r.id);
                     }}
                   >
                     Удалить
@@ -6556,22 +6387,24 @@ export function MapWorkspacePage() {
             );
           })()}
 
-          {isEditMode && editingRouteId && (() => {
+          {isEditMode && editingRouteId && !routeWorkspaceActive && (() => {
             const r = routes.find((rt) => rt.id === editingRouteId);
             if (!r) return null;
             const from = hotspots.find((h) => h.id === r.fromHotspotId);
             const to = hotspots.find((h) => h.id === r.toHotspotId);
             const pointCount = r.points?.length ?? 0;
             return (
-              <div className="route-edit-mode-panel">
+              <div className={`route-edit-mode-panel${routeWorkspaceActive ? ' route-edit-mode-panel--compact' : ''}`}>
                 <div className="route-edit-mode-header">
                   <strong>{isCreatingNewRoute ? 'Рисование маршрута' : 'Режим разметки маршрута'}</strong>
                   <span>Маршрут: {from?.label ?? '?'} → {to?.label ?? '?'}</span>
                   <span>Точек: {pointCount}</span>
                 </div>
-                <p className="placement-hint">
-                  Кликайте по дороге, чтобы добавить точки маршрута. Перетаскивайте точки для правки, × удаляет точку.
-                </p>
+                {!routeWorkspaceActive && (
+                  <p className="placement-hint">
+                    Кликайте по дороге, чтобы добавить точки маршрута. Перетаскивайте точки для правки, × удаляет точку.
+                  </p>
+                )}
                 {routeEditorError && <p className="route-editor-error">{routeEditorError}</p>}
                 <div className="actions">
                   <button className="btn-primary" onClick={finishRouteEditing}>Готово</button>
@@ -6591,7 +6424,7 @@ export function MapWorkspacePage() {
             );
           })()}
 
-          {!isPlayerView && selectedRouteId && !editingRouteId && (() => {
+          {SHOW_LEGACY_ROUTE_TRAVEL_PANEL && !isPlayerView && selectedRouteId && !editingRouteId && !routeWorkspaceActive && (() => {
             const r = routes.find((rt) => rt.id === selectedRouteId);
             if (!r) return null;
             const from = hotspots.find((h) => h.id === r.fromHotspotId);
@@ -7429,9 +7262,66 @@ export function MapWorkspacePage() {
             const resolvedQuest = m.entityType === 'quest' ? data.quests.find((q) => q.id === m.entityId) : undefined;
             const resolvedEnemy = m.entityType === 'enemy' ? data.enemies.find((en) => en.id === m.entityId) : undefined;
             const resolvedImage = m.entityType === 'image' ? data.images.find((im) => im.id === m.entityId) : undefined;
+            const resolvedPlayer = m.entityType === 'party' ? data.players.find((p) => p.id === m.entityId) : undefined;
             const linkField: 'questIds' | 'enemyIds' | 'imageIds' | null =
               m.entityType === 'quest' ? 'questIds' : m.entityType === 'enemy' ? 'enemyIds' : m.entityType === 'image' ? 'imageIds' : null;
             const isLinkedToSelectedLs = !!(linkField && selectedLs && selectedLs[linkField].includes(m.entityId));
+            if (resolvedPlayer) {
+              return (
+                <div className="party-mini-panel">
+                  <div className="party-mini-panel__header">
+                    <div>
+                      <strong>{resolvedPlayer.characterName}</strong>
+                      <span className="muted">
+                        {[resolvedPlayer.playerName, resolvedPlayer.race, resolvedPlayer.class, resolvedPlayer.level ? `ур. ${resolvedPlayer.level}` : undefined]
+                          .filter(Boolean)
+                          .join(' · ') || 'отделён от партии'}
+                      </span>
+                    </div>
+                    <button onClick={() => { setSelectedMovableEntityId(null); setManualMoveArmedForEntityId(null); }}>Закрыть</button>
+                  </div>
+                  <p className="muted">
+                    Перетащите маркер персонажа по карте. Он двигается независимо от основной партии.
+                  </p>
+                  <p className="muted">
+                    Позиция: {m.currentPosition ? `x=${m.currentPosition.x.toFixed(3)}, y=${m.currentPosition.y.toFixed(3)}` : '— не задана —'}
+                  </p>
+                  <div className="actions">
+                    <button onClick={() => navigate('/players')}>Открыть игроков</button>
+                    {partyMarkerPoint && (
+                      <button onClick={() => applyPartyPositionToMovableEntity(m.id)}>
+                        Поставить к партии
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (!selectedLocationStateId) return;
+                        store.updateMovableEntity(m.id, { currentLocationStateId: selectedLocationStateId });
+                      }}
+                      disabled={!selectedLocationStateId}
+                      title={selectedLocationStateId ? undefined : 'Сначала выберите локацию на карте'}
+                    >
+                      Связать с выбранной локацией
+                    </button>
+                    <button
+                      onClick={() => store.updateMovableEntity(m.id, { currentLocationStateId: undefined })}
+                      disabled={!m.currentLocationStateId}
+                    >
+                      Снять локацию
+                    </button>
+                    <button
+                      className="btn-danger"
+                      onClick={() => {
+                        store.removeMovableEntity(m.id);
+                        setSelectedMovableEntityId(null);
+                      }}
+                    >
+                      Вернуть в партию
+                    </button>
+                  </div>
+                </div>
+              );
+            }
             return (
               <div className="route-panel">
                 <div className="route-panel-header">
@@ -7466,7 +7356,7 @@ export function MapWorkspacePage() {
                     <p className="muted">{resolveEntityShortDescription('npc', resolvedNpc, 300)}</p>
                     <div className="actions">
                       <button onClick={() => openCompanion({ type: 'npc', id: resolvedNpc.id })}>Открыть карточку</button>
-                      <button onClick={() => openNpcEditor(resolvedNpc)}>Редактировать карточку</button>
+                      <button onClick={() => openCompanion({ type: 'npc', id: resolvedNpc.id })}>Редактировать карточку</button>
                     </div>
                   </>
                 ) : resolvedQuest ? (
@@ -7720,7 +7610,7 @@ export function MapWorkspacePage() {
                   height: `${activeMapImageSize.height}px`,
                   transform: `translate(${fitOffsetX + view.x}px, ${fitOffsetY + view.y}px) scale(${baseFitScale * view.scale})`,
                   transformOrigin: '0 0',
-                  cursor: isEditMode ? (placingHotspot ? 'crosshair' : 'grab') : 'grab',
+                  cursor: isEditMode ? (placingHotspot || manualPartyMoveArmed ? 'crosshair' : 'grab') : 'grab',
                   backgroundImage: hasRealArt ? `url(${map.backgroundImageSrc})` : undefined,
                   backgroundSize: '100% 100%',
                 }}
@@ -7811,7 +7701,7 @@ export function MapWorkspacePage() {
                       </g>
                     );
                   })}
-                  {visibleRoutes.map((r) => {
+                  {routesForMapRender.map((r) => {
                     const isBeingEdited = r.id === editingRouteId;
                     const hasRealPath = (r.points?.length ?? 0) >= 2;
                     // Routes are fully manual now — there is no auto-generated
@@ -7866,10 +7756,21 @@ export function MapWorkspacePage() {
                     ]
                       .filter(Boolean)
                       .join(' ');
+                    const routeRepairStroke = isRouteSelected || isBeingEdited
+                      ? 'var(--gold-soft)'
+                      : isRouteBlocked || isRouteZoneBlocked
+                        ? 'rgba(239,68,68,0.95)'
+                        : isRouteDangerous || isRouteZoneWarning
+                          ? 'rgba(245,158,11,0.95)'
+                          : 'rgba(91,154,212,0.95)';
                     return (
-                      <g key={r.id} className={routeStateClassNames || undefined} opacity={dimmed ? 0.25 : isRouteHiddenFromPlayers && !isPlayerView ? 0.4 : 1}>
+                      <g
+                        key={r.id}
+                        className={routeStateClassNames || undefined}
+                        opacity={routeWorkspaceActive ? (dimmed ? 0.35 : 1) : dimmed ? 0.25 : isRouteHiddenFromPlayers && !isPlayerView ? 0.4 : 1}
+                      >
                         {/* Wide invisible hit-stroke so a thin route is easy to click in DM Edit. */}
-                        {isEditMode && pointList.length >= 2 && (
+                        {isEditMode && pointList.length >= 2 && !isBeingEdited && (
                           <polyline
                             points={pixelPoints}
                             fill="none"
@@ -7878,7 +7779,11 @@ export function MapWorkspacePage() {
                             style={{ cursor: 'pointer', pointerEvents: 'stroke' }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedRouteId(r.id);
+                              if (routeWorkspaceActive) {
+                                markRoutePath(r.id);
+                              } else {
+                                setSelectedRouteId(r.id);
+                              }
                             }}
                           />
                         )}
@@ -7887,13 +7792,14 @@ export function MapWorkspacePage() {
                             className={[
                               isRouteSelected || isBeingEdited ? 'route-selected' : undefined,
                               isRouteInvalid ? 'route-invalid' : undefined,
+                              routeWorkspaceActive ? 'route-repair-line' : undefined,
                             ]
                               .filter(Boolean)
                               .join(' ') || undefined}
                             points={pixelPoints}
                             fill="none"
-                            stroke={isRouteSelected || isBeingEdited ? 'var(--gold-soft)' : color}
-                            strokeWidth={isBeingEdited ? 5 : isRouteSelected ? 4 : 2}
+                            stroke={routeWorkspaceActive ? routeRepairStroke : isRouteSelected || isBeingEdited ? 'var(--gold-soft)' : color}
+                            strokeWidth={routeWorkspaceActive ? (isBeingEdited ? 7 : isRouteSelected ? 6 : 4) : isBeingEdited ? 5 : isRouteSelected ? 4 : 2}
                             strokeDasharray={dashed ? '6 5' : undefined}
                             style={{ pointerEvents: 'none' }}
                           />
@@ -7928,6 +7834,7 @@ export function MapWorkspacePage() {
                         background: STATUS_COLORS[status] || '#999',
                         cursor: isEditMode ? 'grab' : 'pointer',
                         opacity: !isPlayerView && visState === 'hidden' ? 0.45 : 1,
+                        pointerEvents: routeWorkspaceEditing ? 'none' : undefined,
                       }}
                       title={
                         showDmVisibilityBadge
@@ -7937,6 +7844,11 @@ export function MapWorkspacePage() {
                       onMouseDown={(e) => handleHotspotMouseDown(h, e)}
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (routeDraft && routeWorkspaceActive) {
+                          startRouteFromPoint({ x: h.x, y: h.y }, h);
+                          return;
+                        }
+                        if (routeWorkspaceActive) return;
                         setSelectedHotspotId(h.id);
                         setSidePanelTab('card');
                         if (ls) {
@@ -7972,7 +7884,7 @@ export function MapWorkspacePage() {
                     </div>
                   );
                 })}
-                {(partyHotspot || activePartyRouteProgress) && partyMarkerPoint && (() => {
+                {partyMarkerPoint && activeLayerVisibility.party && (() => {
                   // While partyTravelAnim is active, render the WALKED point
                   // (with a per-segment CSS transition) instead of the final
                   // resting position — this is what actually makes the party
@@ -7993,6 +7905,15 @@ export function MapWorkspacePage() {
                       point={renderPoint}
                       isWalking={!!animPoint}
                       activeRouteLabel={stagedLabel ?? (activePartyRoute?.label ?? (activePartyRoute ? 'без названия' : undefined))}
+                      onMouseDown={handlePartyMouseDown}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (partyDragState.current.moved) {
+                          partyDragState.current.moved = false;
+                          return;
+                        }
+                        if (isDmMode) setPartyWindowOpen(true);
+                      }}
                     />
                   );
                 })()}
@@ -8000,33 +7921,55 @@ export function MapWorkspacePage() {
                   editingRouteId &&
                   (() => {
                     const editedPoints = routes.find((r) => r.id === editingRouteId)?.points ?? [];
-                    return editedPoints.map((p, i) => {
-                      const isFirst = i === 0;
-                      const isLast = i === editedPoints.length - 1 && editedPoints.length > 1;
-                      const waypointLabel = isFirst ? 'Start' : isLast ? 'End' : String(i + 1);
-                      return (
-                        <div
-                          key={i}
-                          className={`waypoint-dot${isFirst ? ' waypoint-dot-start route-point--start' : ''}${isLast ? ' waypoint-dot-end route-point--end' : ''}`}
-                          style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
-                          title={`${waypointLabel} — перетащите для перемещения`}
-                          onMouseDown={(e) => handleWaypointMouseDown(editingRouteId, i, e)}
-                        >
-                          <span className="waypoint-dot-label">{waypointLabel}</span>
-                          <button
-                            className="waypoint-remove"
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeWaypoint(editingRouteId, i);
-                            }}
-                            title="Удалить точку"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      );
-                    });
+                    return (
+                      <>
+                        {editedPoints.slice(0, -1).map((p, i) => {
+                          const next = editedPoints[i + 1];
+                          return (
+                            <button
+                              key={`insert-${i}`}
+                              className="waypoint-insert"
+                              style={{ left: `${((p.x + next.x) / 2) * 100}%`, top: `${((p.y + next.y) / 2) * 100}%` }}
+                              title="Вставить точку в этот сегмент"
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                insertWaypointAfter(editingRouteId, i);
+                              }}
+                            >
+                              +
+                            </button>
+                          );
+                        })}
+                        {editedPoints.map((p, i) => {
+                          const isFirst = i === 0;
+                          const isLast = i === editedPoints.length - 1 && editedPoints.length > 1;
+                          const waypointLabel = isFirst ? 'Start' : isLast ? 'End' : String(i + 1);
+                          return (
+                            <div
+                              key={i}
+                              className={`waypoint-dot${isFirst ? ' waypoint-dot-start route-point--start' : ''}${isLast ? ' waypoint-dot-end route-point--end' : ''}`}
+                              style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
+                              title={`${waypointLabel} — перетащите для перемещения`}
+                              onMouseDown={(e) => handleWaypointMouseDown(editingRouteId, i, e)}
+                            >
+                              <span className="waypoint-dot-label">{waypointLabel}</span>
+                              <button
+                                className="waypoint-remove"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeWaypoint(editingRouteId, i);
+                                }}
+                                title="Удалить точку"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </>
+                    );
                   })()}
                 {visiblePlacements.map((p) => {
                   const hidden = p.status === 'hidden';
@@ -8035,7 +7978,7 @@ export function MapWorkspacePage() {
                     <div
                       key={p.id}
                       className={`placement-marker${hidden ? ' placement-marker-hidden' : ''}${isSelected ? ' placement-marker-selected' : ''}`}
-                      style={{ left: `${p.position.x * 100}%`, top: `${p.position.y * 100}%` }}
+                      style={{ left: `${p.position.x * 100}%`, top: `${p.position.y * 100}%`, pointerEvents: routeWorkspaceActive ? 'none' : undefined }}
                       title={p.title}
                       onMouseDown={(e) => {
                         // While a waypoint/placement-mode action is armed, let the
@@ -8107,16 +8050,11 @@ export function MapWorkspacePage() {
                     />
                   );
                 })}
-                {/* Movable Entity markers (Stage 4C). 'party' entityType is
-                    excluded — the party token is already rendered above via
-                    PartyMarker/partyMarkerPoint, so a MovableEntity record
-                    with entityType:'party' (if one is ever created) would
-                    otherwise duplicate that marker. Only entities with a
-                    currentPosition render (no fallback to a location's
-                    hotspot position — currentLocationStateId is shown in the
-                    panel/tooltip, not used to derive map coordinates here). */}
+                {/* Movable Entity markers (Stage 4C). The main party token is
+                    rendered above via PartyMarker; party MovableEntity records
+                    are reserved for split-off player markers. */}
                 {visibleMovableEntities
-                  .filter((m) => m.entityType !== 'party' && m.currentPosition)
+                  .filter((m) => (m.entityType !== 'party' || m.entityId.startsWith('player-')) && m.currentPosition)
                   .map((m) => {
                     const isSelected = m.id === selectedMovableEntityId;
                     const isHiddenState = m.movementState === 'hidden';
@@ -8146,8 +8084,10 @@ export function MapWorkspacePage() {
                     const resolvedQuest = m.entityType === 'quest' ? data.quests.find((q) => q.id === m.entityId) : undefined;
                     const resolvedEnemy = m.entityType === 'enemy' ? data.enemies.find((en) => en.id === m.entityId) : undefined;
                     const resolvedImage = m.entityType === 'image' ? data.images.find((im) => im.id === m.entityId) : undefined;
+                    const resolvedPlayer = m.entityType === 'party' ? data.players.find((p) => p.id === m.entityId) : undefined;
                     const resolvedTitle =
-                      resolvedNpc?.name ?? resolvedQuest?.title ?? resolvedEnemy?.name ?? resolvedImage?.title;
+                      resolvedNpc?.name ?? resolvedQuest?.title ?? resolvedEnemy?.name ?? resolvedImage?.title ?? resolvedPlayer?.characterName;
+                    const isSplitPlayerMarker = !!resolvedPlayer;
                     const tooltip = [
                       resolvedTitle ?? MOVABLE_ENTITY_TYPE_LABELS[m.entityType],
                       resolvedNpc?.role ?? resolvedEnemy?.role ?? resolvedQuest?.status,
@@ -8161,15 +8101,27 @@ export function MapWorkspacePage() {
                     return (
                       <div
                         key={m.id}
-                        className={className}
+                        className={isSplitPlayerMarker ? `${className} split-party-marker` : className}
                         style={{ left: `${(m.currentPosition?.x ?? 0) * 100}%`, top: `${(m.currentPosition?.y ?? 0) * 100}%` }}
                         title={tooltip}
+                        onMouseDown={(e) => handleMovableEntityMouseDown(m.id, e)}
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (movableDragState.current.moved) {
+                            movableDragState.current.moved = false;
+                            return;
+                          }
                           setSelectedMovableEntityId(m.id);
                         }}
                       >
-                        {MOVABLE_ENTITY_MARKER_BADGE[m.entityType]}
+                        {isSplitPlayerMarker ? (
+                          <>
+                            <span className="split-party-marker__icon">⚑</span>
+                            <span className="split-party-marker__label">{resolvedPlayer.characterName}</span>
+                          </>
+                        ) : (
+                          MOVABLE_ENTITY_MARKER_BADGE[m.entityType]
+                        )}
                       </div>
                     );
                   })}
@@ -8294,7 +8246,7 @@ export function MapWorkspacePage() {
               into the large object window below. General, non-object tools
               (Маршруты/Объекты/Не размещено) are still here but collapsed
               under "Ещё инструменты" instead of competing as top-level tabs. */}
-          {isDmMode && selectedLs && (
+          {selectedLs && selectedVisible && !routeWorkspaceActive && (
             <div className="object-overview">
               <div className="object-overview-header">
                 <div>
@@ -8321,7 +8273,12 @@ export function MapWorkspacePage() {
                 >
                   Открыть карточку
                 </button>
-                {isEditMode && (
+                {isPlayerView && (
+                  <button className="btn-secondary btn-compact" onClick={() => movePartyToLocation(selectedLs)}>
+                    Поставить партию здесь
+                  </button>
+                )}
+                {isDmMode && (
                   <button
                     className="btn-secondary btn-compact"
                     onClick={() => {
@@ -8355,18 +8312,105 @@ export function MapWorkspacePage() {
               )}
               <div className="object-overview-linked-counts">
                 <button className="link-count-chip" onClick={() => { setObjectWindowSection('links'); setObjectWindowOpen(true); }}>
-                  NPC: {selectedLs.npcIds.length}
+                  NPC:{' '}
+                  {isPlayerView
+                    ? selectedLs.npcIds.filter((id) => data.npcs.find((n) => n.id === id)?.visibleToPlayers === true).length
+                    : `${selectedLs.npcIds.filter((id) => data.npcs.find((n) => n.id === id)?.visibleToPlayers === true).length}/${selectedLs.npcIds.length}`}
                 </button>
                 <button className="link-count-chip" onClick={() => { setObjectWindowSection('links'); setObjectWindowOpen(true); }}>
-                  Квесты: {selectedLs.questIds.length}
+                  Квесты:{' '}
+                  {isPlayerView
+                    ? selectedLs.questIds.filter((id) => data.quests.find((q) => q.id === id)?.status !== 'hidden').length
+                    : selectedLs.questIds.length}
                 </button>
+                {!isPlayerView && (
+                  <button className="link-count-chip" onClick={() => { setObjectWindowSection('links'); setObjectWindowOpen(true); }}>
+                    Враги: {selectedLs.enemyIds.length}
+                  </button>
+                )}
                 <button className="link-count-chip" onClick={() => { setObjectWindowSection('links'); setObjectWindowOpen(true); }}>
-                  Враги: {selectedLs.enemyIds.length}
-                </button>
-                <button className="link-count-chip" onClick={() => { setObjectWindowSection('links'); setObjectWindowOpen(true); }}>
-                  Изображения: {selectedLs.imageIds.length}
+                  Изображения:{' '}
+                  {isPlayerView
+                    ? selectedLs.imageIds.filter((id) => data.images.find((img) => img.id === id)?.safeForPlayers !== false).length
+                    : selectedLs.imageIds.length}
                 </button>
               </div>
+              {isDmMode && (
+                <div className="player-visibility-control">
+                  <div className="player-visibility-control-header">
+                    <strong>Вид игрокам</strong>
+                    <span className="muted">
+                      Локация: {selectedLs.visibleToPlayers === false ? 'скрыта' : 'видна'} · элементы открываются глазиком
+                    </span>
+                  </div>
+                  <button
+                    className="btn-secondary btn-compact"
+                    onClick={() =>
+                      store.patchLocationState(selectedLs.id, { visibleToPlayers: selectedLs.visibleToPlayers === false })
+                    }
+                  >
+                    {selectedLs.visibleToPlayers === false ? 'Показать локацию' : 'Скрыть локацию'}
+                  </button>
+                  {selectedLs.npcIds.length > 0 && (
+                    <div className="player-visibility-npc-list">
+                      {selectedLs.npcIds.map((npcId) => {
+                        const npc = data.npcs.find((n) => n.id === npcId);
+                        if (!npc) return null;
+                        const visible = npc.visibleToPlayers === true;
+                        return (
+                          <button
+                            key={npc.id}
+                            className={visible ? 'player-visibility-chip player-visibility-chip--visible' : 'player-visibility-chip'}
+                            onClick={() => store.patchNpc(npc.id, { visibleToPlayers: !visible })}
+                            title={visible ? 'Скрыть NPC от игроков' : 'Показать NPC игрокам'}
+                          >
+                            {visible ? 'виден' : 'скрыт'} · {npc.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {selectedLs.questIds.length > 0 && (
+                    <div className="player-visibility-npc-list">
+                      {selectedLs.questIds.map((questId) => {
+                        const quest = data.quests.find((q) => q.id === questId);
+                        if (!quest) return null;
+                        const qStatus = effectiveQuestStatus(quest.id, quest.status, store.progress);
+                        const visible = qStatus !== 'hidden';
+                        return (
+                          <button
+                            key={quest.id}
+                            className={visible ? 'player-visibility-chip player-visibility-chip--visible' : 'player-visibility-chip'}
+                            onClick={() => store.setQuestStatus(quest.id, visible ? 'hidden' : 'active')}
+                            title={visible ? 'Скрыть квест от игроков' : 'Показать квест игрокам'}
+                          >
+                            {visible ? '👁' : 'скрыт'} · {quest.title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {selectedLs.imageIds.length > 0 && (
+                    <div className="player-visibility-npc-list">
+                      {selectedLs.imageIds.map((imageId) => {
+                        const image = data.images.find((img) => img.id === imageId);
+                        if (!image) return null;
+                        const visible = image.safeForPlayers !== false;
+                        return (
+                          <button
+                            key={image.id}
+                            className={visible ? 'player-visibility-chip player-visibility-chip--visible' : 'player-visibility-chip'}
+                            onClick={() => store.patchImage(image.id, { safeForPlayers: !visible })}
+                            title={visible ? 'Скрыть изображение от игроков' : 'Показать изображение игрокам'}
+                          >
+                            {visible ? '👁' : 'скрыто'} · {image.title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
               {sidePanelMoreOpen && (
                 <div className="object-overview-more">
                   <div className="object-overview-map-actions">
@@ -8450,7 +8494,7 @@ export function MapWorkspacePage() {
               )}
             </div>
           )}
-          {isEditMode && !selectedLs && (
+          {isEditMode && !selectedLs && !routeWorkspaceActive && (
             <>
               <p className="side-panel-empty">Выберите точку на карте или откройте библиотеку.</p>
               <div className="object-overview-tools-toggle object-overview-tools-toggle--standalone">
@@ -8478,12 +8522,68 @@ export function MapWorkspacePage() {
 
           {isEditMode && sidePanelTab === 'routes' && (
             <div className="route-list-panel">
-              <h3>Маршруты ({routes.length})</h3>
+              {routeWorkspaceEditing ? (() => {
+                const r = routes.find((rt) => rt.id === editingRouteId);
+                const from = r ? hotspots.find((h) => h.id === r.fromHotspotId) : undefined;
+                const to = r ? hotspots.find((h) => h.id === r.toHotspotId) : undefined;
+                const pointCount = r?.points?.length ?? 0;
+                return (
+                  <div className="route-workspace-editor">
+                    <h3>Правка маршрута</h3>
+                    <strong>{r?.label || `${from?.label ?? '?'} → ${to?.label ?? '?'}`}</strong>
+                    <div className="route-workspace-summary">
+                      <span>Точек: {pointCount}</span>
+                      <span>Остальные маршруты скрыты</span>
+                    </div>
+                    <p className="muted">
+                      Перетаскивайте точки на карте. Кнопка + между точками вставляет новую точку в сегмент. Клик по карте
+                      добавляет точку в конец.
+                    </p>
+                    {routeEditorError && <p className="route-editor-error">{routeEditorError}</p>}
+                    <div className="route-workspace-actions">
+                      <button className="btn-primary" onClick={finishRouteEditing}>Готово</button>
+                      <button
+                        className="btn-secondary"
+                        disabled={pointCount === 0}
+                        onClick={() => removeWaypoint(editingRouteId!, pointCount - 1)}
+                      >
+                        Undo
+                      </button>
+                      <button className="btn-danger" disabled={pointCount === 0} onClick={() => store.patchRoute(editingRouteId!, { points: [] })}>
+                        Очистить
+                      </button>
+                      <button
+                        className="btn-danger"
+                        onClick={() => {
+                          if (!editingRouteId || !window.confirm('Удалить этот маршрут?')) return;
+                          deleteRouteAndClearState(editingRouteId);
+                        }}
+                      >
+                        Удалить маршрут
+                      </button>
+                      <button className="btn-ghost" onClick={cancelRouteEditing}>Отменить</button>
+                    </div>
+                  </div>
+                );
+              })() : (
+                <>
+                  <h3>Маршруты ({routes.length})</h3>
+                  <div className="route-workspace-summary">
+                    <span>На карте показаны все маршруты текущего уровня.</span>
+                    <span>Размечено: {routes.filter((r) => (r.points?.length ?? 0) >= 2).length}</span>
+                    <span>Требуют правки: {routes.filter((r) => !isRouteValid(r)).length}</span>
+                  </div>
+                  <p className="muted">
+                    Кликните по линии на карте или нажмите «Править» в списке. Во время правки останется только выбранный
+                    маршрут.
+                  </p>
+                </>
+              )}
               {routes.length === 0 ? (
                 <p className="muted">
                   Маршруты ещё не созданы. Нажмите «Создать маршрут», чтобы нарисовать путь по карте.
                 </p>
-              ) : (
+              ) : !routeWorkspaceEditing ? (
                 <ul className="route-list">
                   {routes.map((r) => {
                     const from = hotspots.find((h) => h.id === r.fromHotspotId);
@@ -8511,15 +8611,24 @@ export function MapWorkspacePage() {
                           <p className="route-editor-error">{warnings.join(' ')}</p>
                         )}
                         <div className="actions">
-                          <button onClick={() => setSelectedRouteId(r.id)}>Показать</button>
-                          <button onClick={() => markRoutePath(r.id)}>Редактировать</button>
-                          <button onClick={() => duplicateRoute(r.id)}>Дублировать</button>
                           <button
                             onClick={() => {
+                              setSelectedRouteId(r.id);
+                              setSidePanelTab('routes');
+                              focusRouteOnMap(r);
+                            }}
+                          >
+                            Показать
+                          </button>
+                          <button onClick={() => markRoutePath(r.id)}>
+                            {hasRealPath ? 'Править' : 'Нарисовать'}
+                          </button>
+                          <button onClick={() => duplicateRoute(r.id)}>Дублировать</button>
+                          <button
+                            className="btn-danger"
+                            onClick={() => {
                               if (!window.confirm('Удалить этот маршрут?')) return;
-                              store.deleteRoute(r.id);
-                              if (selectedRouteId === r.id) setSelectedRouteId(null);
-                              if (editingRouteId === r.id) setEditingRouteId(null);
+                              deleteRouteAndClearState(r.id);
                             }}
                           >
                             Удалить
@@ -8529,7 +8638,7 @@ export function MapWorkspacePage() {
                     );
                   })}
                 </ul>
-              )}
+              ) : null}
               {/* Bug-fix pass — multi-hop route-network pathfinding results
                   used to render as a full-width "Путешествие" block inside
                   the location card (always expanded, theme-inconsistent).
@@ -8539,7 +8648,7 @@ export function MapWorkspacePage() {
                   underlying `onFindAndCommitPath`/`pathfindingResult`/
                   `onCommitPathOption` functionality — just relocated and
                   de-intensified, not removed. */}
-              {pathfindingResult && (
+              {!routeWorkspaceEditing && pathfindingResult && (
                 <details className="route-pathfinding-result" open>
                   <summary>
                     Результат поиска пути ({pathfindingResult.options.length}{' '}
@@ -8640,6 +8749,74 @@ export function MapWorkspacePage() {
             />
           )}
 
+          {isDmMode && partyWindowOpen && (
+            <div className="party-dock-panel">
+                <div className="party-dock-panel__header">
+                  <div>
+                    <h2>Партия</h2>
+                    <span className="muted">
+                      {partyLocationState?.title ?? 'Свободная позиция на карте'} · игроков: {data.players.length}
+                    </span>
+                  </div>
+                  <button className="btn-ghost" onClick={() => setPartyWindowOpen(false)}>Закрыть ✕</button>
+                </div>
+                <div className="party-dock-panel__body">
+                  <article className="companion-source-card">
+                    <p className="muted">
+                      Маркер можно перетаскивать по карте или поставить кнопкой «Поставить партию» без привязки к маршруту.
+                    </p>
+                    {partyMarkerPoint && (
+                      <p>
+                        <strong>Позиция:</strong> x={partyMarkerPoint.x.toFixed(3)}, y={partyMarkerPoint.y.toFixed(3)}
+                      </p>
+                    )}
+                    <div className="entity-card-grid">
+                      {data.players.map((player) => (
+                        <div key={player.id} className="entity-card-wrap">
+                          <button
+                            className="entity-card"
+                            onClick={() => {
+                              setPartyWindowOpen(false);
+                              navigate('/players');
+                            }}
+                          >
+                            <span className="entity-card-title">{player.characterName}</span>
+                            <span className="entity-card-sub">
+                              {[player.playerName, player.race, player.class, player.level ? `ур. ${player.level}` : undefined].filter(Boolean).join(' · ') || 'игрок'}
+                            </span>
+                          </button>
+                          {(() => {
+                            const splitMarker = Object.values(store.movableEntitiesById).find(
+                              (m) => m.entityType === 'party' && m.entityId === player.id && m.timelineId === store.currentTimelineId && m.movementState !== 'hidden',
+                            );
+                            return splitMarker ? (
+                              <button
+                                className="btn-secondary btn-compact"
+                                onClick={() => {
+                                  store.removeMovableEntity(splitMarker.id);
+                                  if (selectedMovableEntityId === splitMarker.id) setSelectedMovableEntityId(null);
+                                }}
+                              >
+                                Вернуть в партию
+                              </button>
+                            ) : (
+                              <button
+                                className="btn-secondary btn-compact"
+                                disabled={!partyMarkerPoint}
+                                onClick={() => splitPlayerFromParty(player.id)}
+                              >
+                                Отделить
+                              </button>
+                            );
+                          })()}
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                </div>
+            </div>
+          )}
+
           {/* Bug-fix pass — this window's tab strip used to include an
               "Обзор" tab competing on equal footing with
               Редактирование/Связи/Карта/Опасная зона, and the technical
@@ -8650,6 +8827,49 @@ export function MapWorkspacePage() {
               into a collapsed-by-default <details> titled "Действия на
               карте" below it, matching EmbeddedCompanionWindow's own
               "Действия на карте" section for the openCompanion() path. */}
+          {isPlayerView && objectWindowOpen && selectedLs && selectedVisible && (
+            <div className="object-window-overlay" onClick={() => setObjectWindowOpen(false)}>
+              <div className="object-window-panel" onClick={(e) => e.stopPropagation()}>
+                <div className="object-window-header">
+                  <div>
+                    <h2>{selectedLs.title}</h2>
+                    <span className="muted">{selectedLs.type || 'локация'} · {effectiveLocationStatus(selectedLs, store.progress)}</span>
+                  </div>
+                  <button className="btn-ghost" onClick={() => setObjectWindowOpen(false)}>
+                    Закрыть ✕
+                  </button>
+                </div>
+                <div className="object-window-body">
+                  <LocationSidePanel
+                    ls={selectedLs}
+                    routes={routes}
+                    hotspots={hotspots}
+                    partyLocationState={partyLocationState}
+                    onSelectRoute={setSelectedRouteId}
+                    onSelectLocation={selectLocation}
+                    onOpenDrawer={setDrawer}
+                    onOpenCompanion={openCompanion}
+                    onOpenPlacement={openPlacementDrawer}
+                    onStartPlacement={startPlacement}
+                    onStartMoveHotspot={(hotspotId) => setMovingHotspotId(hotspotId)}
+                    movingHotspotId={movingHotspotId}
+                    onStartBattle={startEmbeddedBattle}
+                    onStartPartyAnimation={(points) => setPartyTravelAnim({ points, index: 0 })}
+                    onFindAndCommitPath={(fromHotspotId, toHotspotId, destinationLocationStateId) => {
+                      const paths = findJourneyPaths(fromHotspotId, toHotspotId);
+                      if (paths.length === 1) {
+                        commitMultiSegmentJourney(paths[0], destinationLocationStateId);
+                      } else {
+                        setPathfindingResult({ targetLocationStateId: destinationLocationStateId, options: paths });
+                      }
+                    }}
+                    onClose={() => setObjectWindowOpen(false)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {isDmMode && objectWindowOpen && selectedLs && (
             <div className="object-window-overlay" onClick={() => setObjectWindowOpen(false)}>
               <div className="object-window-panel" onClick={(e) => e.stopPropagation()}>
@@ -8668,26 +8888,19 @@ export function MapWorkspacePage() {
                         outside DM Edit mode and collapsed by default, so
                         DMs could click a marker and never find edit at
                         all. This button is reachable in one click from
-                        any mode: it switches on DM Edit, opens the real
-                        location editor (openLocationEditor — same form,
-                        same store.patchLocation save path), and jumps the
-                        collapsed section straight to "Редактирование" so
-                        the form is immediately visible. */}
-                    {selectedLs.sourceLibraryType !== 'tavern' && selectedLs.sourceLibraryType !== 'shop' && (
-                      <button
-                        className="btn-primary btn-compact"
-                        onClick={() => {
-                          const sourceLoc = data?.locations.find((l) => l.id === selectedLs.locationId);
-                          if (!sourceLoc) return;
-                          if (!isEditMode) store.setMode('dm-edit');
-                          openLocationEditor(sourceLoc);
-                          setObjectWindowSection('edit');
-                          setObjectWindowActionsOpen(true);
-                        }}
-                      >
-                        Редактировать
-                      </button>
-                    )}
+                        any mode: it switches on DM Edit and opens the
+                        in-card location data form immediately. */}
+                    <button
+                      className="btn-primary btn-compact"
+                      onClick={() => {
+                        if (!isEditMode) store.setMode('dm-edit');
+                        setObjectWindowSection('edit');
+                        setObjectWindowActionsOpen(true);
+                        startLocationDataEdit(selectedLs);
+                      }}
+                    >
+                      Редактировать
+                    </button>
                     <button className="btn-ghost" onClick={() => setObjectWindowOpen(false)}>
                       Закрыть ✕
                     </button>
@@ -8737,6 +8950,14 @@ export function MapWorkspacePage() {
               ) : null;
             }
             const sourceLoc = data?.locations.find((l) => l.id === selectedLs.locationId);
+            const battleMapLinksForSelectedLocation = (data?.battleMapLocationLinks ?? [])
+              .filter((link) => link.locationStateId === selectedLs.id && !link.rejected)
+              .map((link) => ({
+                locationStateId: link.locationStateId,
+                battleMap: data?.battleMaps.find((bm) => bm.id === link.battleMapId),
+                confidence: link.confidence,
+                manual: link.manual,
+              }));
             return sourceLoc ? (
               <CompanionLocationCard
                 loc={sourceLoc}
@@ -8745,6 +8966,15 @@ export function MapWorkspacePage() {
                 shops={(data?.shops ?? []).filter((s) => s.location === sourceLoc.id)}
                 enemies={(data?.enemies ?? []).filter((e) => e.locationIds?.includes(sourceLoc.id))}
                 images={data?.images ?? []}
+                battleMapLinks={battleMapLinksForSelectedLocation}
+                availableBattleMaps={data?.battleMaps ?? []}
+                onStartBattle={startEmbeddedBattle}
+                onLinkBattleMap={(battleMapId) => {
+                  store.addManualBattleMapLink(selectedLs.id, battleMapId, 'Manual link from location object card');
+                }}
+                onUnlinkBattleMap={(battleMapId, locationStateId) => {
+                  store.removeBattleMapLink(locationStateId, battleMapId);
+                }}
                 onOpenNpc={(id) => openCompanion({ type: 'npc', id })}
                 onOpenQuest={(id) => openCompanion({ type: 'quest', id })}
                 onOpenShop={(id) => openCompanion({ type: 'shop', id })}
@@ -8833,34 +9063,7 @@ export function MapWorkspacePage() {
               locations={locationsForTimeline}
               draft={locationDataDraft}
               npcs={npcsForArc}
-              onStartEdit={() =>
-                setLocationDataDraft({
-                  title: selectedLs.title,
-                  type: selectedLs.type ?? '',
-                  publicDescription: selectedLs.publicDescription,
-                  playerSafeDescription: selectedLs.playerSafeDescription ?? '',
-                  dmNotes: selectedLs.dmNotes ?? '',
-                  status: effectiveLocationStatus(selectedLs, store.progress),
-                  tags: (selectedLs.tags ?? []).join(', '),
-                  parentLocationStateId: selectedLs.parentLocationStateId ?? '',
-                  visibleToPlayers: selectedLs.visibleToPlayers !== false,
-                  tavern_ownerNpcId: selectedLs.tavernDetails?.ownerNpcId ?? '',
-                  tavern_staffNpcIds: (selectedLs.tavernDetails?.staffNpcIds ?? []).join(', '),
-                  tavern_roomsServices: selectedLs.tavernDetails?.roomsServices ?? '',
-                  tavern_rumors: selectedLs.tavernDetails?.rumors ?? '',
-                  tavern_pricesNotes: selectedLs.tavernDetails?.pricesNotes ?? '',
-                  tavern_troubleHooks: selectedLs.tavernDetails?.troubleHooks ?? '',
-                  tavern_secrets: selectedLs.tavernDetails?.secrets ?? '',
-                  shop_shopType: selectedLs.shopDetails?.shopType ?? '',
-                  shop_ownerNpcId: selectedLs.shopDetails?.ownerNpcId ?? '',
-                  shop_goodsServices: selectedLs.shopDetails?.goodsServices ?? '',
-                  shop_inventoryNotes: selectedLs.shopDetails?.inventoryNotes ?? '',
-                  shop_pricePolicy: selectedLs.shopDetails?.pricePolicy ?? '',
-                  shop_reputationRequirement: selectedLs.shopDetails?.reputationRequirement ?? '',
-                  shop_illegalGoods: selectedLs.shopDetails?.illegalGoods ?? '',
-                  headerImageId: selectedLs.imageIds?.[0] ?? '',
-                })
-              }
+              onStartEdit={() => startLocationDataEdit(selectedLs)}
               images={data.images}
               onChangeHeaderImage={() => setImagePickerTarget({ kind: 'location', locationStateId: selectedLs.id })}
               onChange={(patch) => setLocationDataDraft((d) => (d ? { ...d, ...patch } : d))}
@@ -8971,7 +9174,7 @@ export function MapWorkspacePage() {
                   faction: '',
                   publicDescription: '',
                   dmNotes: '',
-                  visibleToPlayers: true,
+                  visibleToPlayers: false,
                 })
               }
               onNpcCreateChange={(patch) => setNpcCreateDraft((d) => (d ? { ...d, ...patch } : d))}
@@ -9052,36 +9255,17 @@ export function MapWorkspacePage() {
             </div>
           )}
 
-          {isPlayerView && selectedLs && selectedVisible && (
-            <LocationSidePanel
-              ls={selectedLs}
-              routes={routes}
-              hotspots={hotspots}
-              partyLocationState={partyLocationState}
-              onSelectRoute={setSelectedRouteId}
-              onSelectLocation={selectLocation}
-              onOpenDrawer={setDrawer}
-              onOpenCompanion={openCompanion}
-              onOpenPlacement={openPlacementDrawer}
-              onStartPlacement={startPlacement}
-              onStartMoveHotspot={(hotspotId) => setMovingHotspotId(hotspotId)}
-              movingHotspotId={movingHotspotId}
-              onStartPartyAnimation={(points) => setPartyTravelAnim({ points, index: 0 })}
-              onFindAndCommitPath={(fromHotspotId, toHotspotId, destinationLocationStateId) => {
-                const paths = findJourneyPaths(fromHotspotId, toHotspotId);
-                if (paths.length === 1) {
-                  commitMultiSegmentJourney(paths[0], destinationLocationStateId);
-                } else {
-                  setPathfindingResult({ targetLocationStateId: destinationLocationStateId, options: paths });
-                }
-              }}
-              onClose={() => {
-                setSelectedLocationStateId(null);
-                setPathfindingResult(null);
-              }}
-            />
-          )}
         </aside>
+        {isPlayerView && companionOpen && data && (
+          <PlayerSafeCompanionWindow
+            entity={companionOpen}
+            data={data}
+            hasBack={companionStack.length > 1}
+            onBack={companionBack}
+            onClose={closeCompanion}
+            onOpen={openCompanion}
+          />
+        )}
         {isDmMode && companionOpen && data && (
           <EmbeddedCompanionWindow
             entity={companionOpen}
@@ -9092,57 +9276,21 @@ export function MapWorkspacePage() {
             data={data}
             npcs={npcsForArc}
             quests={questsForArc}
-            onEditNpc={
-              isEditMode
-                ? (id) => {
-                    const npc = data.npcs.find((n) => n.id === id);
-                    if (npc) openNpcEditor(npc);
-                  }
-                : undefined
-            }
-            onEditTavern={
-              isEditMode
-                ? (id) => {
-                    const tavern = data.taverns.find((t) => t.id === id);
-                    if (tavern) openTavernEditor(tavern);
-                  }
-                : undefined
-            }
-            onEditShop={
-              isEditMode
-                ? (id) => {
-                    const shop = data.shops.find((s) => s.id === id);
-                    if (shop) openShopEditor(shop);
-                  }
-                : undefined
-            }
-            onEditImage={
-              isEditMode
-                ? (id) => {
-                    const img = data.images.find((i) => i.id === id);
-                    if (img) openImageEditor(img);
-                  }
-                : undefined
-            }
-            onEditBattleEntry={
-              isEditMode
-                ? (id) => {
-                    const entry = store.battleEntriesById[id];
-                    if (entry) openBattleEntryEditor(entry);
-                  }
-                : undefined
-            }
-            onEditLocation={
-              isEditMode
-                ? (id) => {
-                    const loc = data.locations.find((l) => l.id === id);
-                    if (loc) openLocationEditor(loc);
-                  }
-                : undefined
-            }
+            onStartBattle={startEmbeddedBattle}
           />
         )}
       </div>
+
+      {store.activeBattle && data && (
+        <EmbeddedBattleOverlay
+          battle={store.activeBattle}
+          battleMap={data.battleMaps.find((bm) => bm.id === store.activeBattle?.battleMapId)}
+          enemies={enemiesForArc}
+          players={data.players}
+          images={data.images}
+          isPlayerView={isPlayerView}
+        />
+      )}
 
       {drawer && (
         <EntityDrawer
@@ -9151,13 +9299,163 @@ export function MapWorkspacePage() {
             setDrawer(null);
             setSelectedPlacementId(null);
           }}
-          onOpenBattleMapVtt={(battleMapId) =>
-            window.open(store.battleMapVttUrlOverrides[battleMapId] || BATTLE_MAP_VTT_BASE_URL, '_blank')
-          }
+          onOpenBattleMapVtt={(battleMapId) => startEmbeddedBattle(battleMapId, selectedLs?.id)}
           onStartPlacement={startPlacement}
           onOpenLinkedEntity={openLinkedEntity}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * Player-facing companion card host. It intentionally does not reuse the DM
+ * Companion cards because those include DM notes/secrets by design.
+ */
+function PlayerSafeCompanionWindow({
+  entity,
+  data,
+  hasBack,
+  onBack,
+  onClose,
+  onOpen,
+}: {
+  entity: EmbeddedCompanionEntity;
+  data: CampaignData;
+  hasBack: boolean;
+  onBack: () => void;
+  onClose: () => void;
+  onOpen: (entity: EmbeddedCompanionEntity) => void;
+}) {
+  let title = 'Карточка';
+  let body: ReactElement = <p className="muted">Эта карточка пока не открыта игрокам.</p>;
+  const openQuest = (id: string) => onOpen({ type: 'quest', id });
+  const openNpc = (id: string) => onOpen({ type: 'npc', id });
+  const openImage = (id: string) => onOpen({ type: 'image', id });
+
+  if (entity.type === 'npc') {
+    const npc = data.npcs.find((n) => n.id === entity.id && n.visibleToPlayers === true);
+    title = npc?.name ?? 'NPC';
+    const hero = npc?.image ? data.images.find((i) => i.id === npc.image && i.safeForPlayers !== false) : undefined;
+    if (npc) {
+      body = (
+        <div className="companion-source-card">
+          {hero && <img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={npc.name} />}
+          {npc.race && <><h4>Раса</h4><p>{npc.race}</p></>}
+          {npc.role && <><h4>Роль</h4><p>{npc.role}</p></>}
+          {npc.publicDescription && <p>{npc.publicDescription}</p>}
+          {npc.personality && <><h4>Характер</h4><p>{npc.personality}</p></>}
+          {npc.speechStyle && <><h4>Манера речи</h4><p>{npc.speechStyle}</p></>}
+          {npc.goals && <><h4>Цели</h4><p>{npc.goals}</p></>}
+          {npc.knowledge && <><h4>Знания</h4><p>{npc.knowledge}</p></>}
+          {(npc.relatedQuests ?? []).length > 0 && (
+            <>
+              <h4>Связанные квесты</h4>
+              <div className="entity-card-grid">
+                {(npc.relatedQuests ?? [])
+                  .map((id) => data.quests.find((q) => q.id === id && q.status !== 'hidden'))
+                  .filter((q): q is DmQuest => !!q)
+                  .map((q) => <button key={q.id} className="entity-card" onClick={() => openQuest(q.id)}>{q.title}</button>)}
+              </div>
+            </>
+          )}
+        </div>
+      );
+    }
+  } else if (entity.type === 'quest') {
+    const quest = data.quests.find((q) => q.id === entity.id && q.status !== 'hidden');
+    title = quest?.title ?? 'Квест';
+    if (quest) {
+      body = (
+        <div className="companion-source-card">
+          {quest.goal && <><h4>Цель</h4><p>{quest.goal}</p></>}
+          {quest.description && <><h4>Описание</h4><p>{quest.description}</p></>}
+          {quest.reward && <><h4>Награда</h4><p>{quest.reward}</p></>}
+          {quest.giver && data.npcs.some((n) => n.id === quest.giver && n.visibleToPlayers === true) && (
+            <>
+              <h4>Квестодатель</h4>
+              <div className="entity-card-grid">
+                {(() => {
+                  const giver = data.npcs.find((n) => n.id === quest.giver && n.visibleToPlayers === true);
+                  return giver ? <button className="entity-card" onClick={() => openNpc(giver.id)}>{giver.name}</button> : null;
+                })()}
+              </div>
+            </>
+          )}
+        </div>
+      );
+    }
+  } else if (entity.type === 'image') {
+    const image = data.images.find((i) => i.id === entity.id && i.safeForPlayers !== false);
+    title = image?.title ?? 'Изображение';
+    if (image) {
+      body = (
+        <div className="companion-source-card">
+          <img className="companion-source-hero" src={image.thumbnailSrc ?? image.src} alt={image.title} />
+        </div>
+      );
+    }
+  } else if (entity.type === 'location') {
+    const loc = data.locations.find((l) => l.id === entity.id);
+    title = loc?.name ?? 'Локация';
+    const hero = loc?.images?.map((id) => data.images.find((i) => i.id === id && i.safeForPlayers !== false)).find(Boolean);
+    if (loc) {
+      body = (
+        <div className="companion-source-card">
+          {hero && <button className="companion-source-hero-wrap" onClick={() => openImage(hero.id)}><img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={loc.name} /></button>}
+          <p>{loc.playerView || loc.description}</p>
+          {(loc.npcs ?? []).length > 0 && (
+            <>
+              <h4>NPC здесь</h4>
+              <div className="entity-card-grid">
+                {(loc.npcs ?? [])
+                  .map((id) => data.npcs.find((n) => n.id === id && n.visibleToPlayers === true))
+                  .filter((n): n is (typeof data.npcs)[number] => !!n)
+                  .map((n) => <button key={n.id} className="entity-card" onClick={() => openNpc(n.id)}>{n.name}</button>)}
+              </div>
+            </>
+          )}
+        </div>
+      );
+    }
+  } else if (entity.type === 'shop') {
+    const shop = data.shops.find((s) => s.id === entity.id);
+    title = shop?.name ?? 'Магазин';
+    if (shop) {
+      body = (
+        <div className="companion-source-card">
+          {shop.description && <p>{shop.description}</p>}
+          {(shop.services ?? []).length > 0 && <><h4>Услуги</h4><ul>{shop.services?.map((s, i) => <li key={i}>{s}</li>)}</ul></>}
+          {shop.relationToPlayers && <p>{shop.relationToPlayers}</p>}
+        </div>
+      );
+    }
+  } else if (entity.type === 'tavern') {
+    const tavern = data.taverns.find((t) => t.id === entity.id);
+    title = tavern?.name ?? 'Таверна';
+    if (tavern) {
+      body = (
+        <div className="companion-source-card">
+          {tavern.description && <p>{tavern.description}</p>}
+          {tavern.atmosphere && <><h4>Атмосфера</h4><p>{tavern.atmosphere}</p></>}
+          {(tavern.services ?? []).length > 0 && <><h4>Услуги</h4><ul>{tavern.services?.map((s, i) => <li key={i}>{s}</li>)}</ul></>}
+        </div>
+      );
+    }
+  }
+
+  return (
+    <div className="companion-window-overlay" onClick={onClose}>
+      <div className="companion-window-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="companion-window-header">
+          <div>
+            {hasBack && <button className="btn-ghost btn-compact" onClick={onBack}>← Назад</button>}
+            <h2>{title}</h2>
+          </div>
+          <button className="btn-ghost" onClick={onClose}>Закрыть ✕</button>
+        </div>
+        <div className="companion-window-body">{body}</div>
+      </div>
     </div>
   );
 }
@@ -9922,6 +10220,24 @@ function UnplacedContentPanel({
 /** Stage 6C.1: a location's placement state relative to the current map,
  * computed from existing hotspot data — never stored separately. */
 type LibraryPlacementFilter = 'all' | 'unplaced' | 'placed_here' | 'placed_elsewhere' | 'linked_only';
+type LibraryCategory = 'locations' | 'npc' | 'taverns' | 'shops' | 'quests' | 'enemies' | 'battleMaps' | 'battleEntries' | 'images';
+
+function parseLibraryCategory(value: string | null): LibraryCategory | null {
+  if (
+    value === 'locations' ||
+    value === 'npc' ||
+    value === 'taverns' ||
+    value === 'shops' ||
+    value === 'quests' ||
+    value === 'enemies' ||
+    value === 'battleMaps' ||
+    value === 'battleEntries' ||
+    value === 'images'
+  ) {
+    return value;
+  }
+  return null;
+}
 
 /** Stage 6C.3A — shared 48px thumbnail for every Library/picker card. Never
  * renders a broken-image icon: falls back to a type-specific glyph the
@@ -10122,9 +10438,9 @@ function LibraryPanel({
   npcs,
   taverns,
   shops,
+  initialCategory,
   hotspotsOnCurrentMap,
   allHotspots,
-  placedSourceIds,
   placingLibraryEntity,
   onPlaceOnMap,
   selectedLs,
@@ -10136,6 +10452,7 @@ function LibraryPanel({
   quests,
   enemies,
   battleMaps,
+  battleMapLocationLinks,
   battleEntries,
   npcMovableEntities,
   currentMapId,
@@ -10144,6 +10461,8 @@ function LibraryPanel({
   onEditNpc,
   onEditTavern,
   onEditShop,
+  onEditQuest,
+  onEditEnemy,
   onEditImage,
   onEditBattleEntry,
   onEditLocation,
@@ -10152,6 +10471,9 @@ function LibraryPanel({
   onPlaceContentEntity,
   placingBattleEntryId,
   onPlaceBattleEntry,
+  onLinkBattleMapsToLocations,
+  onPlaceBattleMap,
+  onOpenBattleMapVtt,
   onDragStartCard,
   onDragEndCard,
   onOpenCompanion,
@@ -10168,10 +10490,12 @@ function LibraryPanel({
   npcs: { id: string; name: string; role?: string; faction?: string; location?: string; image?: string }[];
   taverns: DmTavern[];
   shops: DmShop[];
+  initialCategory?: LibraryCategory;
   images: DmImageItem[];
   quests: DmQuest[];
   enemies: DmCustomEnemy[];
   battleMaps: BattleMapManifestEntry[];
+  battleMapLocationLinks: BattleMapLocationLink[];
   battleEntries: BattleEntry[];
   npcMovableEntities: MovableEntity[];
   currentMapId: string | undefined;
@@ -10180,6 +10504,8 @@ function LibraryPanel({
   onEditNpc: (npc: { id: string; name: string; role?: string; faction?: string; location?: string; image?: string }) => void;
   onEditTavern: (t: DmTavern) => void;
   onEditShop: (s: DmShop) => void;
+  onEditQuest: (q: DmQuest) => void;
+  onEditEnemy: (enemy: DmCustomEnemy) => void;
   onEditImage: (img: DmImageItem) => void;
   onEditBattleEntry: (be: BattleEntry) => void;
   /** Hotfix — Location source-card editor entry point from the Library row,
@@ -10193,6 +10519,9 @@ function LibraryPanel({
   onPlaceContentEntity: (type: 'quest' | 'enemy' | 'image', sourceId: string) => void;
   placingBattleEntryId: string | null;
   onPlaceBattleEntry: (battleEntryId: string) => void;
+  onLinkBattleMapsToLocations: (battleMapIds: string[], locationStateIds: string[]) => void;
+  onPlaceBattleMap: (battleMapId: string, title: string) => void;
+  onOpenBattleMapVtt: (battleMapId: string) => void;
   /** Stage 6C.4F — drag-and-drop. Fired by a card's native onDragStart with
    * the same (type, id, title) shape every "Разместить на карте" button
    * already passes to its own arm-then-click handler — drag/drop is just a
@@ -10206,7 +10535,6 @@ function LibraryPanel({
   onDragEndCard: () => void;
   hotspotsOnCurrentMap: MapHotspot[];
   allHotspots: MapHotspot[];
-  placedSourceIds: Set<string>;
   placingLibraryEntity: { type: 'tavern' | 'shop'; sourceId: string; title: string } | null;
   onPlaceOnMap: (type: 'tavern' | 'shop', sourceId: string, title: string) => void;
   selectedLs: LocationState | null;
@@ -10234,8 +10562,11 @@ function LibraryPanel({
   // locations just to reach the NPC section. Category tabs make only one
   // section visible at a time; search/placement-filter still apply within
   // whichever category is active.
-  type LibraryCategory = 'locations' | 'npc' | 'taverns' | 'shops' | 'quests' | 'enemies' | 'battleEntries' | 'images';
-  const [activeCategory, setActiveCategory] = useState<LibraryCategory>('locations');
+  const [activeCategory, setActiveCategory] = useState<LibraryCategory>(initialCategory ?? 'locations');
+
+  useEffect(() => {
+    if (initialCategory) setActiveCategory(initialCategory);
+  }, [initialCategory]);
 
   const q = search.trim().toLowerCase();
   const matchesSearch = (...parts: (string | undefined)[]) =>
@@ -10284,7 +10615,8 @@ function LibraryPanel({
     filter === 'all' || filter === 'unplaced' || filter === 'placed_here'
       ? taverns.filter((t) => {
           if (!matchesSearch(t.name, t.description)) return false;
-          const placed = placedSourceIds.has(`tavern:${t.id}`);
+          const sourceLs = locations.find((ls) => ls.sourceLibraryType === 'tavern' && ls.sourceLibraryId === t.id);
+          const placed = !!sourceLs && hotspotPlacementState(sourceLs.id, hotspotsOnCurrentMap, allHotspots) === 'placed_current_map';
           if (filter === 'unplaced') return !placed;
           if (filter === 'placed_here') return placed;
           return true;
@@ -10294,12 +10626,16 @@ function LibraryPanel({
     filter === 'all' || filter === 'unplaced' || filter === 'placed_here'
       ? shops.filter((s) => {
           if (!matchesSearch(s.name, s.description)) return false;
-          const placed = placedSourceIds.has(`shop:${s.id}`);
+          const sourceLs = locations.find((ls) => ls.sourceLibraryType === 'shop' && ls.sourceLibraryId === s.id);
+          const placed = !!sourceLs && hotspotPlacementState(sourceLs.id, hotspotsOnCurrentMap, allHotspots) === 'placed_current_map';
           if (filter === 'unplaced') return !placed;
           if (filter === 'placed_here') return placed;
           return true;
         })
       : [];
+  const filteredBattleMaps = battleMaps.filter((bm) =>
+    matchesSearch(bm.title, bm.normalizedName, bm.status, ...bm.variants.map((v) => v.fileName)),
+  );
 
   const shownLocations = showAllLocations ? filteredLocations : filteredLocations.slice(0, LIST_CAP);
   const shownNpcs = showAllNpcs ? filteredNpcs : filteredNpcs.slice(0, LIST_CAP);
@@ -10347,6 +10683,7 @@ function LibraryPanel({
             ['shops', `Лавки (${filteredShops.length})`],
             ['quests', `Квесты (${quests.length})`],
             ['enemies', `Враги (${enemies.length})`],
+            ['battleMaps', `Боевые карты (${filteredBattleMaps.length})`],
             ['battleEntries', `Боевые сцены (${battleEntries.length})`],
             ['images', `Изображения (${images.length})`],
           ] as [LibraryCategory, string][]
@@ -10409,11 +10746,17 @@ function LibraryPanel({
                         )}
                         <button
                           className="btn-primary"
-                          disabled={!canWrite || placement !== 'unplaced' || armed}
+                          disabled={!canWrite || placement === 'placed_here' || armed}
                           title={canWrite ? undefined : 'Размещение доступно в DM Edit'}
                           onClick={() => onPlaceExistingLocation(ls.id)}
                         >
-                          {armed ? 'Кликните по карте…' : placement === 'unplaced' ? 'Разместить на текущей карте' : 'Уже размещено'}
+                          {armed
+                            ? 'Кликните по карте…'
+                            : placement === 'placed_here'
+                              ? 'Уже на этой карте'
+                              : placement === 'placed_elsewhere'
+                                ? 'Добавить на эту карту'
+                                : 'Разместить на текущей карте'}
                         </button>
                       </div>
                     </div>
@@ -10690,6 +11033,7 @@ function LibraryPanel({
         onDragStart={(q) => onDragStartCard('quest', q.id, q.title)}
         onDragEnd={onDragEndCard}
         onOpen={(q) => onOpenCompanion({ type: 'quest', id: q.id })}
+        onEdit={onEditQuest}
         canWrite={canWrite}
       />
       )}
@@ -10711,8 +11055,32 @@ function LibraryPanel({
         onDragStart={(e) => onDragStartCard('enemy', e.id, e.name)}
         onDragEnd={onDragEndCard}
         onOpen={(e) => onOpenCompanion({ type: 'enemy', id: e.id })}
+        onEdit={onEditEnemy}
         canWrite={canWrite}
       />
+      )}
+
+      {activeCategory === 'battleMaps' && (
+        <BattleMapLibrarySection
+          battleMaps={filteredBattleMaps}
+          locations={locations}
+          battleMapLocationLinks={battleMapLocationLinks}
+          images={images}
+          selectedLs={selectedLs}
+          linkedBattleMapIds={
+            new Set(
+              selectedLs
+                ? battleMapLocationLinks
+                    .filter((link) => link.locationStateId === selectedLs.id && !link.rejected)
+                    .map((link) => link.battleMapId)
+                : [],
+            )
+          }
+          canWrite={canWrite}
+          onPlace={(bm) => onPlaceBattleMap(bm.id, bm.title)}
+          onLinkMany={onLinkBattleMapsToLocations}
+          onOpenVtt={(bm) => onOpenBattleMapVtt(bm.id)}
+        />
       )}
 
       {activeCategory === 'battleEntries' && (
@@ -10789,6 +11157,302 @@ function contentMarkerBadge(
     return { label: 'Маркер на этой карте', cls: 'status-badge--active' };
   }
   return { label: 'Маркер на другой карте', cls: 'status-badge--time-gated' };
+}
+
+function inferBattleMapGroup(map: BattleMapManifestEntry): string {
+  const title = `${map.title} ${map.normalizedName ?? ''}`.toLowerCase();
+  if (/(дорог|road|тракт|мост|bridge|переправ)/i.test(title)) return 'Дороги и мосты';
+  if (/(лес|forest|роща|чащ|болот|swamp)/i.test(title)) return 'Леса и дикая местность';
+  if (/(пещер|cave|шахт|mine|подзем|dungeon)/i.test(title)) return 'Пещеры и подземелья';
+  if (/(лагер|camp|засад|ambush|стоян)/i.test(title)) return 'Лагеря и засады';
+  if (/(город|city|таверн|лавк|рын|склад|warehouse)/i.test(title)) return 'Городские сцены';
+  if (/(руин|ruin|храм|temple|крепост|форт|замок)/i.test(title)) return 'Руины и укрепления';
+  return 'Прочие карты';
+}
+
+function BattleMapLibrarySection({
+  battleMaps,
+  locations,
+  battleMapLocationLinks,
+  images,
+  selectedLs,
+  linkedBattleMapIds,
+  canWrite,
+  onPlace,
+  onLinkMany,
+  onOpenVtt,
+}: {
+  battleMaps: BattleMapManifestEntry[];
+  locations: LocationState[];
+  battleMapLocationLinks: BattleMapLocationLink[];
+  images: DmImageItem[];
+  selectedLs: LocationState | null;
+  linkedBattleMapIds: Set<string>;
+  canWrite: boolean;
+  onPlace: (map: BattleMapManifestEntry) => void;
+  onLinkMany: (battleMapIds: string[], locationStateIds: string[]) => void;
+  onOpenVtt: (map: BattleMapManifestEntry) => void;
+}) {
+  const [arcFilter, setArcFilter] = useState('all');
+  const [groupFilter, setGroupFilter] = useState('all');
+  const [sizeFilter, setSizeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortMode, setSortMode] = useState('title');
+  const [locationSearch, setLocationSearch] = useState('');
+  const [selectedLocationIds, setSelectedLocationIds] = useState<Set<string>>(() => selectedLs ? new Set([selectedLs.id]) : new Set());
+  const [selectedBattleMapIds, setSelectedBattleMapIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!selectedLs) return;
+    setSelectedLocationIds((prev) => (prev.size ? prev : new Set([selectedLs.id])));
+  }, [selectedLs]);
+
+  const selectedLocationIdList = Array.from(selectedLocationIds);
+  const selectedBattleMapIdList = Array.from(selectedBattleMapIds);
+  const visibleLocations = locations
+    .filter((loc) => {
+      const q = locationSearch.trim().toLowerCase();
+      return !q || [loc.title, loc.type, loc.publicDescription].some((part) => (part ?? '').toLowerCase().includes(q));
+    })
+    .sort((a, b) => a.title.localeCompare(b.title, 'ru'));
+
+  function isLinkedToEverySelectedLocation(battleMapId: string): boolean {
+    return selectedLocationIdList.length > 0 && selectedLocationIdList.every((locationStateId) =>
+      battleMapLocationLinks.some((link) => link.locationStateId === locationStateId && link.battleMapId === battleMapId && !link.rejected),
+    );
+  }
+
+  function linkMaps(battleMapIds: string[]) {
+    const mapIds = battleMapIds.filter((id) => !isLinkedToEverySelectedLocation(id));
+    if (!mapIds.length || !selectedLocationIdList.length) return;
+    onLinkMany(mapIds, selectedLocationIdList);
+    setSelectedBattleMapIds(new Set());
+  }
+
+  const groupOptions = Array.from(
+    new Set(battleMaps.flatMap((bm) => (bm.groupLabels?.length ? bm.groupLabels : [inferBattleMapGroup(bm)]))),
+  ).sort((a, b) => a.localeCompare(b, 'ru'));
+  const sizeOptions = Array.from(
+    new Set(battleMaps.map((bm) => bm.gridSizeLabel ?? bm.mapSize).filter(Boolean) as string[]),
+  ).sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
+  const statusOptions = Array.from(
+    new Set(battleMaps.map((bm) => bm.status ?? bm.gridStatus).filter(Boolean) as string[]),
+  ).sort((a, b) => a.localeCompare(b, 'ru'));
+  const arcCounts = {
+    all: battleMaps.length,
+    arc1: battleMaps.filter((bm) => bm.arcId === 'arc-1').length,
+    arc2: battleMaps.filter((bm) => bm.arcId === 'arc-2').length,
+    none: battleMaps.filter((bm) => !bm.arcId).length,
+  };
+
+  const filtered = battleMaps
+    .filter((bm) => {
+      if (arcFilter === 'arc-1' && bm.arcId !== 'arc-1') return false;
+      if (arcFilter === 'arc-2' && bm.arcId !== 'arc-2') return false;
+      if (arcFilter === 'none' && bm.arcId) return false;
+      if (groupFilter !== 'all') {
+        const labels = bm.groupLabels?.length ? bm.groupLabels : [inferBattleMapGroup(bm)];
+        if (!labels.includes(groupFilter)) return false;
+      }
+      if (sizeFilter !== 'all' && (bm.gridSizeLabel ?? bm.mapSize) !== sizeFilter) return false;
+      if (statusFilter !== 'all' && (bm.status ?? bm.gridStatus) !== statusFilter) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortMode === 'scene') {
+        return (b.scenes?.length ?? 0) - (a.scenes?.length ?? 0) || a.title.localeCompare(b.title, 'ru');
+      }
+      if (sortMode === 'group') {
+        const ag = (a.groupLabels?.[0] ?? inferBattleMapGroup(a)).toLowerCase();
+        const bg = (b.groupLabels?.[0] ?? inferBattleMapGroup(b)).toLowerCase();
+        return ag.localeCompare(bg, 'ru') || a.title.localeCompare(b.title, 'ru');
+      }
+      return a.title.localeCompare(b.title, 'ru', { numeric: true });
+    });
+
+  const grouped = filtered.reduce<Record<string, BattleMapManifestEntry[]>>((acc, map) => {
+    const group = groupFilter === 'all' ? (map.groupLabels?.[0] ?? inferBattleMapGroup(map)) : groupFilter;
+    acc[group] = [...(acc[group] ?? []), map];
+    return acc;
+  }, {});
+  const orderedGroups = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b, 'ru'));
+  return (
+    <section className="card">
+      <h3>Боевые карты ({filtered.length}/{battleMaps.length})</h3>
+      <p className="muted">
+        Карты из Battle Map VTT уже с группами, размерами сетки и ссылками на конкретные игровые столы.
+      </p>
+      <div className="battle-map-link-panel">
+        <div>
+          <strong>Куда привязать</strong>
+          <p className="muted">Отметьте одну или несколько локаций, затем выберите карты ниже.</p>
+        </div>
+        <input
+          type="search"
+          placeholder="Поиск локации..."
+          value={locationSearch}
+          onChange={(e) => setLocationSearch(e.target.value)}
+        />
+        <div className="battle-map-location-checklist">
+          {visibleLocations.slice(0, 80).map((loc) => (
+            <label key={loc.id}>
+              <input
+                type="checkbox"
+                checked={selectedLocationIds.has(loc.id)}
+                onChange={(e) => {
+                  const next = new Set(selectedLocationIds);
+                  if (e.target.checked) next.add(loc.id);
+                  else next.delete(loc.id);
+                  setSelectedLocationIds(next);
+                }}
+              />
+              <span>{loc.title}</span>
+            </label>
+          ))}
+        </div>
+        <div className="battle-map-bulk-actions">
+          <button
+            className="btn-primary"
+            disabled={!canWrite || selectedBattleMapIdList.length === 0 || selectedLocationIdList.length === 0}
+            onClick={() => linkMaps(selectedBattleMapIdList)}
+          >
+            Привязать выбранные карты ({selectedBattleMapIdList.length})
+          </button>
+          {selectedBattleMapIdList.length > 0 && (
+            <button className="btn-secondary" onClick={() => setSelectedBattleMapIds(new Set())}>
+              Снять выбор карт
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="battle-map-filter-panel">
+        <div className="segmented compact">
+          <button className={arcFilter === 'all' ? 'active' : ''} onClick={() => setArcFilter('all')}>
+            Все ({arcCounts.all})
+          </button>
+          <button className={arcFilter === 'arc-1' ? 'active' : ''} onClick={() => setArcFilter('arc-1')}>
+            Арка 1 ({arcCounts.arc1})
+          </button>
+          <button className={arcFilter === 'arc-2' ? 'active' : ''} onClick={() => setArcFilter('arc-2')}>
+            Арка 2 ({arcCounts.arc2})
+          </button>
+          {arcCounts.none > 0 && (
+            <button className={arcFilter === 'none' ? 'active' : ''} onClick={() => setArcFilter('none')}>
+              Без арки ({arcCounts.none})
+            </button>
+          )}
+        </div>
+        <div className="battle-map-filter-grid">
+          <label>
+            Группа
+            <select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
+              <option value="all">Все группы</option>
+              {groupOptions.map((group) => (
+                <option key={group} value={group}>
+                  {group}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Размер
+            <select value={sizeFilter} onChange={(e) => setSizeFilter(e.target.value)}>
+              <option value="all">Все размеры</option>
+              {sizeOptions.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Статус
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">Все статусы</option>
+              {statusOptions.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Сортировка
+            <select value={sortMode} onChange={(e) => setSortMode(e.target.value)}>
+              <option value="title">Название А-Я</option>
+              <option value="group">Группа</option>
+              <option value="scene">Сначала со столами</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      {filtered.length === 0 ? (
+        <p className="muted">Ничего не найдено.</p>
+      ) : (
+        orderedGroups.map(([group, maps]) => (
+          <div key={group} className="battle-map-library-group">
+            <h4>{group} ({maps.length})</h4>
+            <ul className="route-list">
+              {maps.map((bm) => (
+                <li key={bm.id} className="library-card-row">
+                  <label className="battle-map-row-check" title="Выбрать карту для пакетной привязки">
+                    <input
+                      type="checkbox"
+                      checked={selectedBattleMapIds.has(bm.id)}
+                      onChange={(e) => {
+                        const next = new Set(selectedBattleMapIds);
+                        if (e.target.checked) next.add(bm.id);
+                        else next.delete(bm.id);
+                        setSelectedBattleMapIds(next);
+                      }}
+                    />
+                  </label>
+                  <LibraryThumb type="battleMap" entity={bm} images={images} battleMaps={battleMaps} />
+                  <div className="library-card-body">
+                    <strong>{bm.title}</strong>
+                    <span className="entity-card-sub">
+                      · {bm.arcId === 'arc-2' ? 'Арка 2' : 'Арка 1'}
+                      {bm.gridSizeLabel || bm.mapSize ? ` · ${bm.gridSizeLabel ?? bm.mapSize}` : ''}
+                      {bm.status || bm.gridStatus ? ` · ${bm.status ?? bm.gridStatus}` : ''}
+                    </span>
+                    {linkedBattleMapIds.has(bm.id) && (
+                      <span className="status-badge status-badge--active"> Привязано к выбранной локации</span>
+                    )}
+                    <p className="muted">
+                      {(bm.groupLabels?.length ? bm.groupLabels : [group]).slice(0, 4).join(' · ')}
+                      {bm.variants.length ? ` · ${bm.variants.length} вариант(ов)` : ''}
+                      {bm.primarySceneId ? ` · стол: ${bm.scenes?.[0]?.name ?? bm.primarySceneId}` : ' · стол не найден'}
+                    </p>
+                    <div className="actions">
+                      <button className="btn-secondary" onClick={() => onOpenVtt(bm)}>
+                        Начать битву
+                      </button>
+                      <button
+                        className="btn-primary"
+                        disabled={!canWrite || selectedLocationIdList.length === 0 || isLinkedToEverySelectedLocation(bm.id)}
+                        title={selectedLocationIdList.length === 0 ? 'Выберите одну или несколько локаций выше' : canWrite ? undefined : 'Доступно в DM Edit'}
+                        onClick={() => linkMaps([bm.id])}
+                      >
+                        {isLinkedToEverySelectedLocation(bm.id) ? 'Привязано' : 'Привязать к выбранным'}
+                      </button>
+                      <button
+                        className="btn-secondary"
+                        disabled={!canWrite}
+                        title={canWrite ? undefined : 'Размещение доступно в DM Edit'}
+                        onClick={() => onPlace(bm)}
+                      >
+                        Разместить маркер
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      )}
+    </section>
+  );
 }
 
 function LibraryReadOnlySection<T>({
@@ -11004,7 +11668,7 @@ function LocationLinksTab({
           checked={npcCreateDraft.visibleToPlayers}
           onChange={(e) => onNpcCreateChange({ visibleToPlayers: e.target.checked })}
         />
-        Видим игрокам
+        Показать игрокам сразу
       </label>
       <div className="actions">
         <button className="btn-primary" onClick={onSaveNpcCreate}>Сохранить NPC</button>
@@ -11108,6 +11772,7 @@ function LocationSidePanel({
   onOpenCompanion,
   onOpenPlacement,
   onStartPlacement,
+  onStartBattle,
   onStartPartyAnimation,
   onFindAndCommitPath,
   onClose,
@@ -11128,6 +11793,7 @@ function LocationSidePanel({
   onOpenCompanion: (entity: EmbeddedCompanionEntity) => void;
   onOpenPlacement: (p: MapObjectPlacement) => void;
   onStartPlacement: (entityKind: MapObjectPlacement['entityKind'], entityId: string | undefined, title: string) => void;
+  onStartBattle: (battleMapId: string, locationStateId?: string) => void;
   onStartMoveHotspot: (hotspotId: string) => void;
   movingHotspotId: string | null;
   onStartPartyAnimation: (points: { x: number; y: number }[]) => void;
@@ -11142,6 +11808,7 @@ function LocationSidePanel({
 }) {
   const { data } = useCampaignData();
   const store = useCampaignStore();
+  const [battleMapLinkDraft, setBattleMapLinkDraft] = useState('');
   if (!data) return null;
 
   const isPlayerView = store.mode === 'player-view';
@@ -11186,8 +11853,10 @@ function LocationSidePanel({
   }
 
   const battleMapLinks = data.battleMapLocationLinks.filter((b) => b.locationStateId === ls.id);
-  const exactLinks = battleMapLinks.filter((b) => b.confidence === 'exact');
+  const exactLinks = battleMapLinks.filter((b) => b.confidence === 'exact' || b.manual);
   const likelyLinks = battleMapLinks.filter((b) => b.confidence === 'likely');
+  const linkedBattleMapIds = new Set(battleMapLinks.map((b) => b.battleMapId));
+  const availableBattleMapsToLink = data.battleMaps.filter((b) => !linkedBattleMapIds.has(b.id));
 
   // Placements "belonging to" this location: only entity-linked matches
   // (no invented proximity geometry) — the placement's linked NPC/quest/
@@ -11206,7 +11875,7 @@ function LocationSidePanel({
   const locationPlacements = data.placements.filter((p) => {
     if (p.status === 'archived') return false;
     if (isPlayerView) {
-      if (p.status === 'hidden' || p.visibleInPlayerView !== true) return false;
+      if (getPlayerSafePlacements([p]).length === 0) return false;
     } else if (!isEditMode && p.status === 'hidden') {
       return false;
     }
@@ -11227,6 +11896,16 @@ function LocationSidePanel({
   // ---------- Shops / economy ("Товары и услуги") ----------
   const linkedShops = data.shops.filter((s) => s.location === ls.locationId || s.location === ls.id);
   const showShopsSection = linkedShops.length > 0 || isMarketLikeLocation(ls);
+  const visibilityChip = (visible: boolean, label: string, onToggle: () => void) => (
+    <button
+      type="button"
+      className={visible ? 'player-visibility-chip player-visibility-chip--visible' : 'player-visibility-chip'}
+      onClick={onToggle}
+      title={visible ? 'Скрыть от игроков' : 'Показать игрокам'}
+    >
+      {visible ? '👁' : 'скрыто'} · {label}
+    </button>
+  );
 
   // ---------- Laws ("Законы") ----------
   const relevantLaws = isLawRelevantLocation(ls) ? data.laws.filter((law) => lawMatchesLocation(law, ls)) : [];
@@ -11443,20 +12122,37 @@ function LocationSidePanel({
                 </p>
               );
             }
+            if (isPlayerView && ownerNpc.visibleToPlayers !== true) return null;
+            const visible = ownerNpc.visibleToPlayers === true;
             return (
               <p>
                 <strong>Владелец:</strong> {ownerNpc.name}
+                {!isPlayerView && visibilityChip(visible, 'владелец', () => store.patchNpc(ownerNpc.id, { visibleToPlayers: !visible }))}
               </p>
             );
           })()}
-          {!isPlayerView && (ls.tavernDetails.staffNpcIds?.length ?? 0) > 0 && (
-            <p className="dm-only">
-              <strong>Персонал:</strong>{' '}
-              {ls.tavernDetails.staffNpcIds!
-                .map((id) => data.npcs.find((n) => n.id === id)?.name ?? id)
-                .join(', ')}
-            </p>
-          )}
+          {(ls.tavernDetails.staffNpcIds?.length ?? 0) > 0 && (() => {
+            const staff = ls.tavernDetails!.staffNpcIds!
+              .map((id) => data.npcs.find((n) => n.id === id))
+              .filter((npc): npc is DmNpc => Boolean(npc));
+            const visibleStaff = isPlayerView ? staff.filter((npc) => npc.visibleToPlayers === true) : staff;
+            if (visibleStaff.length === 0) return null;
+            return (
+              <div className={isPlayerView ? undefined : 'dm-only'}>
+                <strong>Персонал:</strong>
+                <div className="player-visibility-npc-list">
+                  {visibleStaff.map((npc) => {
+                    const visible = npc.visibleToPlayers === true;
+                    return isPlayerView ? (
+                      <span key={npc.id} className="status-badge">{npc.name}</span>
+                    ) : (
+                      visibilityChip(visible, npc.name, () => store.patchNpc(npc.id, { visibleToPlayers: !visible }))
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
           {ls.tavernDetails.roomsServices && (
             <p><strong>Комнаты / услуги:</strong> {ls.tavernDetails.roomsServices}</p>
           )}
@@ -11485,9 +12181,12 @@ function LocationSidePanel({
                 </p>
               );
             }
+            if (isPlayerView && ownerNpc.visibleToPlayers !== true) return null;
+            const visible = ownerNpc.visibleToPlayers === true;
             return (
               <p>
                 <strong>Владелец:</strong> {ownerNpc.name}
+                {!isPlayerView && visibilityChip(visible, 'владелец', () => store.patchNpc(ownerNpc.id, { visibleToPlayers: !visible }))}
               </p>
             );
           })()}
@@ -11612,20 +12311,23 @@ function LocationSidePanel({
           <h3>Изображения ({images.length})</h3>
           <div className="entity-card-grid">
             {images
-              .filter((img) => !isPlayerView || img.safeForPlayers)
+              .filter((img) => !isPlayerView || img.safeForPlayers !== false)
               .map((img) => (
                 <div key={img.id} className="entity-card-wrap">
                   <button className="entity-card" onClick={() => onOpenCompanion({ type: 'image', id: img.id })}>
                     {img.title}
                   </button>
                   {!isPlayerView && (
-                    <button
-                      className="entity-card-place"
-                      title="Разместить на карте"
-                      onClick={() => onStartPlacement('image', img.id, img.title)}
-                    >
-                      📍
-                    </button>
+                    <>
+                      {visibilityChip(img.safeForPlayers !== false, img.safeForPlayers !== false ? 'видно' : 'арт', () => store.patchImage(img.id, { safeForPlayers: img.safeForPlayers === false }))}
+                      <button
+                        className="entity-card-place"
+                        title="Разместить на карте"
+                        onClick={() => onStartPlacement('image', img.id, img.title)}
+                      >
+                        📍
+                      </button>
+                    </>
                   )}
                 </div>
               ))}
@@ -11633,30 +12335,51 @@ function LocationSidePanel({
         </section>
       )}
 
-      {!isPlayerView && battleMapLinks.length > 0 && (
+      {!isPlayerView && (
         <section className="card dm-only">
           <h3>Боевые карты</h3>
-          <div className="entity-card-grid">
-            {exactLinks.map((b) => {
-              const bm = data.battleMaps.find((m) => m.id === b.battleMapId);
-              return (
-                <div key={b.battleMapId} className="entity-card-wrap">
-                  <button className="entity-card" onClick={() => onOpenDrawer({ kind: 'battleMap', id: b.battleMapId })}>
-                    <BattleMapThumbnail variant={bm?.variants[0]} title={bm?.title ?? b.battleMapId} size="small" />
-                    <span className="entity-card-title">{bm?.title ?? b.battleMapId}</span>
-                    {isEditMode && <span className="confidence-badge confidence-exact">Точно</span>}
-                  </button>
-                  <button
-                    className="entity-card-place"
-                    title="Разместить на карте"
-                    onClick={() => onStartPlacement('battleMap', b.battleMapId, bm?.title ?? b.battleMapId)}
-                  >
-                    📍
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+          {exactLinks.length > 0 ? (
+            <div className="entity-card-grid">
+              {exactLinks.map((b) => {
+                const bm = data.battleMaps.find((m) => m.id === b.battleMapId);
+                return (
+                  <div key={b.battleMapId} className="entity-card-wrap">
+                    <button className="entity-card" onClick={() => onStartBattle(b.battleMapId, ls.id)}>
+                      <BattleMapThumbnail variant={bm?.variants[0]} title={bm?.title ?? b.battleMapId} size="small" />
+                      <span className="entity-card-title">{bm?.title ?? b.battleMapId}</span>
+                      {isEditMode && <span className="confidence-badge confidence-exact">Точно</span>}
+                    </button>
+                    <button
+                      type="button"
+                      className="entity-card-place"
+                      title="Начать битву"
+                      onClick={() => onStartBattle(b.battleMapId, ls.id)}
+                    >
+                      ⚔
+                    </button>
+                    <button
+                      className="entity-card-place"
+                      title="Разместить на карте"
+                      onClick={() => onStartPlacement('battleMap', b.battleMapId, bm?.title ?? b.battleMapId)}
+                    >
+                      📍
+                    </button>
+                    {isEditMode && (
+                      <button
+                        className="entity-card-place"
+                        title="Отвязать карту боя от локации"
+                        onClick={() => store.removeBattleMapLink(ls.id, b.battleMapId)}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="muted">К этой локации пока не привязаны точные боевые карты.</p>
+          )}
           {likelyLinks.length > 0 && (
             <>
               <p className="side-panel-subheading">Возможно подходящие карты</p>
@@ -11677,6 +12400,31 @@ function LocationSidePanel({
                 })}
               </div>
             </>
+          )}
+          {isEditMode && (
+            <div className="inline-editor compact">
+              <label>
+                Добавить карту боя к локации
+                <select value={battleMapLinkDraft} onChange={(e) => setBattleMapLinkDraft(e.target.value)}>
+                  <option value="">Выберите карту</option>
+                  {availableBattleMapsToLink.map((bm) => (
+                    <option key={bm.id} value={bm.id}>{bm.title}</option>
+                  ))}
+                </select>
+              </label>
+              <div className="actions">
+                <button
+                  disabled={!battleMapLinkDraft}
+                  onClick={() => {
+                    if (!battleMapLinkDraft) return;
+                    store.addManualBattleMapLink(ls.id, battleMapLinkDraft, 'Manual link from location card');
+                    setBattleMapLinkDraft('');
+                  }}
+                >
+                  Привязать
+                </button>
+              </div>
+            </div>
           )}
         </section>
       )}
@@ -11871,9 +12619,7 @@ function EntityDrawer({
     if (!p) return null;
     // Double-guard: visiblePlacements/search already filter what reaches a
     // click in Player View, but never trust that alone for an unsafe-data leak.
-    if (isPlayerView && (p.status === 'hidden' || p.status === 'archived' || p.visibleInPlayerView !== true)) {
-      return null;
-    }
+    if (isPlayerView && getPlayerSafePlacements([p]).length === 0) return null;
     title = p.title;
     const entityExists =
       !!p.entityId &&
@@ -11983,7 +12729,7 @@ function EntityDrawer({
         </ul>
         <BattleMapVttLinkField battleMapId={bm.id} />
         <div className="actions">
-          <button onClick={() => onOpenBattleMapVtt(bm.id)}>Открыть Battle Map VTT</button>
+          <button onClick={() => onOpenBattleMapVtt(bm.id)}>Начать битву</button>
         </div>
       </>
     );

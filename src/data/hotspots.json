@@ -1,1 +1,178 @@
-[]
+[
+  {
+    "id": "hotspot-kingdom-greyholm",
+    "mapId": "map-kingdom",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-greyholm__arc-1-peace",
+    "x": 0.367,
+    "y": 0.223,
+    "label": "Грейхольм",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": false
+  },
+  {
+    "id": "hotspot-region-greyholm-city",
+    "mapId": "map-region",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-greyholm__arc-1-peace",
+    "x": 0.484,
+    "y": 0.211,
+    "label": "Грейхольм",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": false
+  },
+  {
+    "id": "hotspot-region-lashdale",
+    "mapId": "map-region",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-lashdale__arc-1-peace",
+    "x": 0.328,
+    "y": 0.492,
+    "label": "Деревня Lashdale",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": false
+  },
+  {
+    "id": "hotspot-region-dunwood",
+    "mapId": "map-region",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-dunwood__arc-1-peace",
+    "x": 0.563,
+    "y": 0.469,
+    "label": "Деревня Dunwood",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": false
+  },
+  {
+    "id": "hotspot-region-lake-rundel",
+    "mapId": "map-region",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-lake-rundel__arc-1-peace",
+    "x": 0.703,
+    "y": 0.586,
+    "label": "Lake Rundel",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": false
+  },
+  {
+    "id": "hotspot-region-southern-hills",
+    "mapId": "map-region",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-southern-hills__arc-1-peace",
+    "x": 0.453,
+    "y": 0.762,
+    "label": "Южные холмы (район Old Fort / Stratoied)",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": true
+  },
+  {
+    "id": "hotspot-region-dense-forest-road",
+    "mapId": "map-region",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-dense-forest-road__arc-1-peace",
+    "x": 0.758,
+    "y": 0.692,
+    "label": "Лесные дороги (район Grun'Shaa Caves / Black Road)",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": true
+  },
+  {
+    "id": "hotspot-city-market",
+    "mapId": "map-city-greyholm",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-greyholm-market__arc-1-peace",
+    "x": 0.484,
+    "y": 0.41,
+    "label": "Рыночная площадь",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": false
+  },
+  {
+    "id": "hotspot-city-river-docks",
+    "mapId": "map-city-greyholm",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-greyholm-river-docks__arc-1-peace",
+    "x": 0.04,
+    "y": 0.598,
+    "label": "Речные доки",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": false
+  },
+  {
+    "id": "hotspot-city-guild",
+    "mapId": "map-city-greyholm",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-greyholm-guild__arc-1-peace",
+    "x": 0.359,
+    "y": 0.27,
+    "label": "Гильдия авантюристов Грейхольма",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": false
+  },
+  {
+    "id": "hotspot-city-caravan-yards",
+    "mapId": "map-city-greyholm",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-greyholm-caravan-yards__arc-1-peace",
+    "x": 0.313,
+    "y": 0.598,
+    "label": "Караванные дворы",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": false
+  },
+  {
+    "id": "hotspot-city-temple-quarter",
+    "mapId": "map-city-greyholm",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-greyholm-temple-quarter__arc-1-peace",
+    "x": 0.703,
+    "y": 0.41,
+    "label": "Храмовый квартал",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": false
+  },
+  {
+    "id": "hotspot-city-mayor-palace",
+    "mapId": "map-city-greyholm",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-greyholm-mayor-palace__arc-1-peace",
+    "x": 0.227,
+    "y": 0.387,
+    "label": "Дворец мэра",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": false
+  },
+  {
+    "id": "hotspot-city-mage-tower",
+    "mapId": "map-city-greyholm",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-greyholm-mage-tower__arc-1-peace",
+    "x": 0.508,
+    "y": 0.152,
+    "label": "Башня придворного мага",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": false
+  },
+  {
+    "id": "hotspot-city-mage-college",
+    "mapId": "map-city-greyholm",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-greyholm-mage-college__arc-1-peace",
+    "x": 0.703,
+    "y": 0.469,
+    "label": "Магическая коллегия (Mage Academy)",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": false
+  },
+  {
+    "id": "hotspot-city-walls",
+    "mapId": "map-city-greyholm",
+    "timelineId": "arc-1-peace",
+    "locationStateId": "loc-greyholm-walls__arc-1-peace",
+    "x": 0.5,
+    "y": 0.7,
+    "label": "Стены, башни и южные ворота Грейхольма",
+    "visibleInPlayerView": true,
+    "needsCoordinateReview": false
+  }
+]

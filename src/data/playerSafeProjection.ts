@@ -61,26 +61,26 @@ export function getPlayerSafeLocationStates(data: CampaignData, progress: Campai
   );
 }
 
-/** Hotspots are player-safe only if both the hotspot itself is flagged
- * visible AND (when linked to a location) that location is player-visible. */
+/** Hotspots are player-safe by default for locations, matching the table-map
+ * rule that players should see the same geography as the DM. Only explicit
+ * hidden flags remove a location marker from Player View/Observer. */
 export function getPlayerSafeHotspots(data: CampaignData, progress: CampaignProgress, hotspots: MapHotspot[]): MapHotspot[] {
   return hotspots.filter((h) => {
-    if (h.visibleInPlayerView === false) return false;
-    if (!h.locationStateId) return true;
+    if (!h.locationStateId) return h.visibleInPlayerView !== false;
     const ls = data.locationStates.find((l) => l.id === h.locationStateId);
     if (ls && !isLocationVisibleToPlayers(ls, progress)) return false;
     return true;
   });
 }
 
-export function getPlayerSafeRoutes(routes: MapRoute[]): MapRoute[] {
-  return routes.filter((r) => r.visibleInPlayerView);
+export function getPlayerSafeRoutes(_routes: MapRoute[]): MapRoute[] {
+  return [];
 }
 
 /**
- * NPCs (Stage 6B.1) — excludes any NPC explicitly flagged
- * `visibleToPlayers: false` (absent/true means visible, matching every other
- * visibility flag in this module), and always strips `dmNotes`/`secrets`
+ * NPCs — hidden by default. A linked NPC only appears to players when the DM
+ * explicitly sets `visibleToPlayers: true`; absent/false both mean hidden.
+ * Always strips `dmNotes`/`secrets`
  * regardless of visibility. This is belt-and-suspenders: every existing
  * render site (MapWorkspacePage's NPC drawer/cards) already gates
  * `secrets`/`dmNotes` behind `!isPlayerView` inline, but any future
@@ -89,26 +89,30 @@ export function getPlayerSafeRoutes(routes: MapRoute[]): MapRoute[] {
  */
 export function getPlayerSafeNpcs(npcs: Npc[]): Npc[] {
   return npcs
-    .filter((n) => n.visibleToPlayers !== false)
+    .filter((n) => n.visibleToPlayers === true)
     .map((n) => {
       const { dmNotes: _dmNotes, secrets: _secrets, ...rest } = n;
       return { ...rest } as Npc;
     });
 }
 
-/** Placements: archived is never shown to anyone; for players, hidden status
- * AND an explicit visibleInPlayerView:true are both required — unlike DM
- * modes where status!=='hidden' alone is enough. */
+/** Placements: location markers are player-visible by default so the player
+ * map starts with the same geography as the DM map. Other marker types
+ * (NPC/quest/enemy/image/custom notes) still require explicit reveal. */
 export function getPlayerSafePlacements(placements: MapObjectPlacement[]): MapObjectPlacement[] {
-  return placements.filter((p) => p.status !== 'archived' && p.status !== 'hidden' && p.visibleInPlayerView === true);
+  return placements.filter((p) => {
+    if (p.status === 'archived' || p.status === 'hidden') return false;
+    if (p.entityKind === 'location') return true;
+    return p.visibleInPlayerView === true;
+  });
 }
 
-/** Images linked to a location are player-safe only when explicitly flagged
- * `safeForPlayers` (the existing dm-companion field MapWorkspacePage's
- * LocationSidePanel already filters on) — mirrored here so other callers
- * (Observer) can reuse the exact same rule. */
+/** Location/object images are player-safe by default. The DM can explicitly
+ * hide spoilery art with `safeForPlayers:false`; absent/true both mean
+ * visible, matching the table rule that a visible location's default image
+ * should open for players automatically. */
 export function getPlayerSafeImages(images: ImageItem[]): ImageItem[] {
-  return images.filter((im) => im.safeForPlayers === true);
+  return images.filter((im) => im.safeForPlayers !== false);
 }
 
 /** CampaignEvents (Event System MVP) are DM-only by default — only events
@@ -316,7 +320,7 @@ export function getPlayerSafeSearchResults(
   return {
     locs: input.locs.filter((ls) => isLocationVisibleToPlayers(ls, progress)),
     npcs: input.npcs.filter(
-      (n) => n.visibleToPlayers !== false && (!n.location || safeLocIds.has(n.location)),
+      (n) => n.visibleToPlayers === true && (!n.location || safeLocIds.has(n.location)),
     ),
     quests: input.quests.filter((q) => q.status !== 'hidden' && (!q.location || safeLocIds.has(q.location))),
     placements: getPlayerSafePlacements(input.placements),

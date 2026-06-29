@@ -1,0 +1,1381 @@
+{
+  "version": 1,
+  "arc": "arc-2",
+  "generatedAt": "2026-06-18T21:39:17.909868Z",
+  "maps": [
+    {
+      "id": "arc2-875058baba3a1c8c",
+      "normalizedName": "гвоздиный двор",
+      "title": "Гвоздиный Двор",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-storage"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Гвоздиный Двор день.png",
+          "url": "/battle-maps/arc-2/Большие/Гвоздиный Двор день.png",
+          "originalFileName": "Гвоздиный Двор день.png",
+          "fileHash": "eede20011c1ea137"
+        },
+        {
+          "type": "night",
+          "fileName": "Гвоздиный Двор ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Гвоздиный Двор ночь.png",
+          "originalFileName": "Гвоздиный Двор ночь.png",
+          "fileHash": "3872be2546c6ebe7"
+        }
+      ],
+      "sourceKeys": [
+        "Гвоздиный Двор ночь.png",
+        "Гвоздиный Двор день.png"
+      ]
+    },
+    {
+      "id": "arc2-b75dcb4b6748f792",
+      "normalizedName": "лесной маршрут семи узлов",
+      "title": "Лесной маршрут Семи Узлов",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-forests",
+        "arc2-roads"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Лесной маршрут Семи Узлов день.png",
+          "url": "/battle-maps/arc-2/Большие/Лесной маршрут Семи Узлов день.png",
+          "originalFileName": "Лесной маршрут Семи Узлов день.png",
+          "fileHash": "8ba14d3bf978e918"
+        },
+        {
+          "type": "night",
+          "fileName": "Лесной маршрут Семи Узлов ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Лесной маршрут Семи Узлов ночь.png",
+          "originalFileName": "Лесной маршрут Семи Узлов ночь.png",
+          "fileHash": "92ef7c10225a2f82"
+        }
+      ],
+      "sourceKeys": [
+        "Лесной маршрут Семи Узлов ночь.png",
+        "Лесной маршрут Семи Узлов день.png"
+      ]
+    },
+    {
+      "id": "arc2-8e280b9bf157c4e1",
+      "normalizedName": "мельница чёрного колеса",
+      "title": "Мельница Чёрного Колеса",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-settlements"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Мельница Чёрного Колеса день.png",
+          "url": "/battle-maps/arc-2/Большие/Мельница Чёрного Колеса день.png",
+          "originalFileName": "Мельница Чёрного Колеса день.png",
+          "fileHash": "d43ec570ea9cb2f3"
+        },
+        {
+          "type": "night",
+          "fileName": "Мельница Чёрного Колеса ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Мельница Чёрного Колеса ночь.png",
+          "originalFileName": "Мельница Чёрного Колеса ночь.png",
+          "fileHash": "4410759b3b0cabed"
+        }
+      ],
+      "sourceKeys": [
+        "Мельница Чёрного Колеса день.png",
+        "Мельница Чёрного Колеса ночь.png"
+      ]
+    },
+    {
+      "id": "arc2-267b2e5a136075b4",
+      "normalizedName": "мост чёрной воды",
+      "title": "Мост Чёрной Воды",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-bridges"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Мост Чёрной Воды день.png",
+          "url": "/battle-maps/arc-2/Большие/Мост Чёрной Воды день.png",
+          "originalFileName": "Мост Чёрной Воды день.png",
+          "fileHash": "cae286e5a940d6fc"
+        },
+        {
+          "type": "night",
+          "fileName": "Мост Чёрной Воды ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Мост Чёрной Воды ночь.png",
+          "originalFileName": "Мост Чёрной Воды ночь.png",
+          "fileHash": "c735f7bc49ab8bd7"
+        }
+      ],
+      "sourceKeys": [
+        "Мост Чёрной Воды день.png",
+        "Мост Чёрной Воды ночь.png"
+      ]
+    },
+    {
+      "id": "arc2-3bcde24b9d7e1f49",
+      "normalizedName": "пепельный приют",
+      "title": "Пепельный Приют",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-settlements"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Пепельный Приют день.png",
+          "url": "/battle-maps/arc-2/Большие/Пепельный Приют день.png",
+          "originalFileName": "Пепельный Приют день.png",
+          "fileHash": "59656c560e1947b6"
+        },
+        {
+          "type": "night",
+          "fileName": "Пепельный Приют ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Пепельный Приют ночь.png",
+          "originalFileName": "Пепельный Приют ночь.png",
+          "fileHash": "a517713841865cf4"
+        }
+      ],
+      "sourceKeys": [
+        "Пепельный Приют ночь.png",
+        "Пепельный Приют день.png"
+      ]
+    },
+    {
+      "id": "arc2-c4fc3d6007036d5c",
+      "normalizedName": "поле чёрных грачей",
+      "title": "Поле Чёрных Грачей",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-battlefields"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Поле Чёрных Грачей день.png",
+          "url": "/battle-maps/arc-2/Большие/Поле Чёрных Грачей день.png",
+          "originalFileName": "Поле Чёрных Грачей день.png",
+          "fileHash": "b4f1297c1f8d04e9"
+        },
+        {
+          "type": "night",
+          "fileName": "Поле Чёрных Грачей ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Поле Чёрных Грачей ночь.png",
+          "originalFileName": "Поле Чёрных Грачей ночь.png",
+          "fileHash": "34a157c960afc3a1"
+        }
+      ],
+      "sourceKeys": [
+        "Поле Чёрных Грачей ночь.png",
+        "Поле Чёрных Грачей день.png"
+      ]
+    },
+    {
+      "id": "arc2-842eaeb36e531b28",
+      "normalizedName": "роща разбитого менгира",
+      "title": "Роща Разбитого Менгира",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-forests",
+        "arc2-magical"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Роща Разбитого Менгира день.png",
+          "url": "/battle-maps/arc-2/Большие/Роща Разбитого Менгира день.png",
+          "originalFileName": "Роща Разбитого Менгира день.png",
+          "fileHash": "d6524224a1d97e92"
+        },
+        {
+          "type": "night",
+          "fileName": "Роща Разбитого Менгира ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Роща Разбитого Менгира ночь.png",
+          "originalFileName": "Роща Разбитого Менгира ночь.png",
+          "fileHash": "c6293b34563eeab2"
+        }
+      ],
+      "sourceKeys": [
+        "Роща Разбитого Менгира ночь.png",
+        "Роща Разбитого Менгира день.png"
+      ]
+    },
+    {
+      "id": "arc2-178e5bea8a395e47",
+      "normalizedName": "склад № 7",
+      "title": "Склад № 7",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-storage"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Склад 7 день.png",
+          "url": "/battle-maps/arc-2/Большие/Склад 7 день.png",
+          "originalFileName": "Склад 7 день.png",
+          "fileHash": "3efe9491a6845f91"
+        },
+        {
+          "type": "night",
+          "fileName": "Склад 7 ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Склад 7 ночь.png",
+          "originalFileName": "Склад 7 ночь.png",
+          "fileHash": "bbb8797cca2beed5"
+        }
+      ],
+      "sourceKeys": [
+        "Склад 7 день.png",
+        "Склад 7 ночь.png"
+      ]
+    },
+    {
+      "id": "arc2-a2e4940b5802c0bf",
+      "normalizedName": "тихий брод",
+      "title": "Тихий Брод",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-bridges"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Тихий Брод день.png",
+          "url": "/battle-maps/arc-2/Большие/Тихий Брод день.png",
+          "originalFileName": "Тихий Брод день.png",
+          "fileHash": "5a50589738daee97"
+        },
+        {
+          "type": "night",
+          "fileName": "Тихий Брод ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Тихий Брод ночь.png",
+          "originalFileName": "Тихий Брод ночь.png",
+          "fileHash": "08cf408956379317"
+        }
+      ],
+      "sourceKeys": [
+        "Тихий Брод ночь.png",
+        "Тихий Брод день.png"
+      ]
+    },
+    {
+      "id": "arc2-ab1c5db23df4f1e1",
+      "normalizedName": "форт «узкая корона»",
+      "title": "Форт «Узкая Корона»",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-forts",
+        "arc2-military"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Форт «Узкая Корона» день.png",
+          "url": "/battle-maps/arc-2/Большие/Форт «Узкая Корона» день.png",
+          "originalFileName": "Форт «Узкая Корона» день.png",
+          "fileHash": "613c3d620b454bee"
+        },
+        {
+          "type": "night",
+          "fileName": "Форт «Узкая Корона» ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Форт «Узкая Корона» ночь.png",
+          "originalFileName": "Форт «Узкая Корона» ночь.png",
+          "fileHash": "8a36e3935422a3a5"
+        }
+      ],
+      "sourceKeys": [
+        "Форт «Узкая Корона» ночь.png",
+        "Форт «Узкая Корона» день.png"
+      ]
+    },
+    {
+      "id": "arc2-52995726ee0d998d",
+      "normalizedName": "виноградный лазарет без знамени",
+      "title": "Виноградный лазарет без знамени",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-hospitals"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Виноградный лазарет без знамени день.png",
+          "url": "/battle-maps/arc-2/Средние/Виноградный лазарет без знамени день.png",
+          "originalFileName": "Виноградный лазарет без знамени День.png",
+          "fileHash": "5a821651b39dad49"
+        },
+        {
+          "type": "night",
+          "fileName": "Виноградный лазарет без знамени ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Виноградный лазарет без знамени ночь.png",
+          "originalFileName": "Виноградный лазарет без знамени Ночь.png",
+          "fileHash": "b2efcbe71edd722c"
+        }
+      ],
+      "sourceKeys": [
+        "Виноградный лазарет без знамени Ночь.png",
+        "Виноградный лазарет без знамени День.png"
+      ]
+    },
+    {
+      "id": "arc2-65c0568bb15ba5dc",
+      "normalizedName": "двор реквизированных повозок",
+      "title": "Двор реквизированных повозок",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-roads",
+        "arc2-camps"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Двор реквизированных повозок день.png",
+          "url": "/battle-maps/arc-2/Средние/Двор реквизированных повозок день.png",
+          "originalFileName": "Двор реквизированных повозок день.png",
+          "fileHash": "3996600afdc2d575"
+        },
+        {
+          "type": "night",
+          "fileName": "Двор реквизированных повозок ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Двор реквизированных повозок ночь.png",
+          "originalFileName": "Двор реквизированных повозок ночь.png",
+          "fileHash": "ad93b5ce6d12b2d1"
+        }
+      ],
+      "sourceKeys": [
+        "Двор реквизированных повозок ночь.png",
+        "Двор реквизированных повозок день.png"
+      ]
+    },
+    {
+      "id": "arc2-31d8ef61dfa31a34",
+      "normalizedName": "деревня сухой колодец",
+      "title": "Деревня Сухой Колодец",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-settlements"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Деревня Сухой Колодец день.png",
+          "url": "/battle-maps/arc-2/Средние/Деревня Сухой Колодец день.png",
+          "originalFileName": "Деревня Сухой Колодец день.png",
+          "fileHash": "e8a3a8135ee16bfe"
+        },
+        {
+          "type": "night",
+          "fileName": "Деревня Сухой Колодец ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Деревня Сухой Колодец ночь.png",
+          "originalFileName": "Деревня Сухой Колодец ночь.png",
+          "fileHash": "c061cee4d6d6236c"
+        }
+      ],
+      "sourceKeys": [
+        "Деревня Сухой Колодец ночь.png",
+        "Деревня Сухой Колодец день.png"
+      ]
+    },
+    {
+      "id": "arc2-1c3b95554634eb21",
+      "normalizedName": "дом последней свечи",
+      "title": "Дом Последней Свечи",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-settlements"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Дом Последней Свечи день.png",
+          "url": "/battle-maps/arc-2/Средние/Дом Последней Свечи день.png",
+          "originalFileName": "Дом Последней Свечи день.png",
+          "fileHash": "93e583319ef43124"
+        },
+        {
+          "type": "night",
+          "fileName": "Дом Последней Свечи ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Дом Последней Свечи ночь.png",
+          "originalFileName": "Дом Последней Свечи ночь.png",
+          "fileHash": "7317b4237d834534"
+        }
+      ],
+      "sourceKeys": [
+        "Дом Последней Свечи ночь.png",
+        "Дом Последней Свечи день.png"
+      ]
+    },
+    {
+      "id": "arc2-95ea9cc80e18cdd8",
+      "normalizedName": "дорога белых кольев",
+      "title": "Дорога Белых Кольев",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-roads",
+        "arc2-battlefields"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Дорога Белых Кольев день.png",
+          "url": "/battle-maps/arc-2/Средние/Дорога Белых Кольев день.png",
+          "originalFileName": "Дорога Белых Кольев день.png",
+          "fileHash": "e9abccc372bea73a"
+        },
+        {
+          "type": "night",
+          "fileName": "Дорога Белых Кольев ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Дорога Белых Кольев ночь.png",
+          "originalFileName": "Дорога Белых Кольев ночь.png",
+          "fileHash": "9190352d75bd9183"
+        }
+      ],
+      "sourceKeys": [
+        "Дорога Белых Кольев ночь.png",
+        "Дорога Белых Кольев день.png"
+      ]
+    },
+    {
+      "id": "arc2-308fd2c23d8cc1b9",
+      "normalizedName": "дорожная станция «белый фонарь»",
+      "title": "Дорожная станция «Белый Фонарь»",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-roads",
+        "arc2-settlements"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Дорожная станция «Белый Фонарь» день.png",
+          "url": "/battle-maps/arc-2/Средние/Дорожная станция «Белый Фонарь» день.png",
+          "originalFileName": "Дорожная станция «Белый Фонарь» день.png",
+          "fileHash": "ac454079c73d33c3"
+        },
+        {
+          "type": "night",
+          "fileName": "Дорожная станция «Белый Фонарь» ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Дорожная станция «Белый Фонарь» ночь.png",
+          "originalFileName": "Дорожная станция «Белый Фонарь» ночь.png",
+          "fileHash": "912b59f648236c00"
+        }
+      ],
+      "sourceKeys": [
+        "Дорожная станция «Белый Фонарь» ночь.png",
+        "Дорожная станция «Белый Фонарь» день.png"
+      ]
+    },
+    {
+      "id": "arc2-737b45a22b2ae779",
+      "normalizedName": "затопленный хутор лозовое",
+      "title": "Затопленный хутор Лозовое",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-swamps"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Затопленный хутор Лозовое день.png",
+          "url": "/battle-maps/arc-2/Средние/Затопленный хутор Лозовое день.png",
+          "originalFileName": "Затопленный хутор Лозовое день.png",
+          "fileHash": "3f75c610b186dbba"
+        },
+        {
+          "type": "night",
+          "fileName": "Затопленный хутор Лозовое ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Затопленный хутор Лозовое ночь.png",
+          "originalFileName": "Затопленный хутор Лозовое ночь.png",
+          "fileHash": "ce0ee3d8e2273b0f"
+        }
+      ],
+      "sourceKeys": [
+        "Затопленный хутор Лозовое день.png",
+        "Затопленный хутор Лозовое ночь.png"
+      ]
+    },
+    {
+      "id": "arc2-5042499032116452",
+      "normalizedName": "красный учебный двор",
+      "title": "Красный учебный двор",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-military"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Красный учебный двор день.png",
+          "url": "/battle-maps/arc-2/Средние/Красный учебный двор день.png",
+          "originalFileName": "Красный учебный двор день.png",
+          "fileHash": "3a2bf670b1ee47d5"
+        },
+        {
+          "type": "night",
+          "fileName": "Красный учебный двор ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Красный учебный двор ночь.png",
+          "originalFileName": "Красный учебный двор ночь.png",
+          "fileHash": "c1fe38737272ae53"
+        }
+      ],
+      "sourceKeys": [
+        "Красный учебный двор день.png",
+        "Красный учебный двор ночь.png"
+      ]
+    },
+    {
+      "id": "arc2-f6080a367fccc277",
+      "normalizedName": "кривой верстовой камень",
+      "title": "Кривой верстовой камень",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-roads"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Кривой верстовой камень день.png",
+          "url": "/battle-maps/arc-2/Средние/Кривой верстовой камень день.png",
+          "originalFileName": "Кривой верстовой камень день.png",
+          "fileHash": "fee53682b12778e0"
+        },
+        {
+          "type": "night",
+          "fileName": "Кривой верстовой камень ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Кривой верстовой камень ночь.png",
+          "originalFileName": "Кривой верстовой камень ночь.png",
+          "fileHash": "e7f811a8a0ebbabd"
+        }
+      ],
+      "sourceKeys": [
+        "Кривой верстовой камень ночь.png",
+        "Кривой верстовой камень день.png"
+      ]
+    },
+    {
+      "id": "arc2-322ac81b2fa5f4a0",
+      "normalizedName": "лагерь пленных «ровный камень»",
+      "title": "Лагерь пленных «Ровный Камень»",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-camps",
+        "arc2-prisoners"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Лагерь пленных «Ровный Камень» день.png",
+          "url": "/battle-maps/arc-2/Средние/Лагерь пленных «Ровный Камень» день.png",
+          "originalFileName": "Лагерь пленных «Ровный Камень» день.png",
+          "fileHash": "529b5544957c7a2c"
+        },
+        {
+          "type": "night",
+          "fileName": "Лагерь пленных «Ровный Камень» ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Лагерь пленных «Ровный Камень» ночь.png",
+          "originalFileName": "Лагерь пленных «Ровный Камень» ночь.png",
+          "fileHash": "62dc2607f3752326"
+        }
+      ],
+      "sourceKeys": [
+        "Лагерь пленных «Ровный Камень» ночь.png",
+        "Лагерь пленных «Ровный Камень» день.png"
+      ]
+    },
+    {
+      "id": "arc2-299f4dfc3157e926",
+      "normalizedName": "нижние хмели",
+      "title": "Нижние Хмели",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-settlements"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Нижние Хмели день.png",
+          "url": "/battle-maps/arc-2/Средние/Нижние Хмели день.png",
+          "originalFileName": "Нижние Хмели день.png",
+          "fileHash": "53644a9de38ebb20"
+        },
+        {
+          "type": "night",
+          "fileName": "Нижние Хмели ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Нижние Хмели ночь.png",
+          "originalFileName": "Нижние Хмели ночь.png",
+          "fileHash": "0992c457d888e338"
+        }
+      ],
+      "sourceKeys": [
+        "Нижние Хмели день.png",
+        "Нижние Хмели ночь.png"
+      ]
+    },
+    {
+      "id": "arc2-9db0b69d3168b139",
+      "normalizedName": "овечий перевал серых плащей",
+      "title": "Овечий перевал Серых Плащей",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-mountains"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Овечий перевал Серых Плащей день.png",
+          "url": "/battle-maps/arc-2/Средние/Овечий перевал Серых Плащей день.png",
+          "originalFileName": "Овечий перевал Серых Плащей день.png",
+          "fileHash": "2b73afa9c21619bf"
+        },
+        {
+          "type": "night",
+          "fileName": "Овечий перевал Серых Плащей ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Овечий перевал Серых Плащей ночь.png",
+          "originalFileName": "Овечий перевал Серых Плащей ночь.png",
+          "fileHash": "3840078336597124"
+        }
+      ],
+      "sourceKeys": [
+        "Овечий перевал Серых Плащей ночь.png",
+        "Овечий перевал Серых Плащей день.png"
+      ]
+    },
+    {
+      "id": "arc2-dd511ca4f3677207",
+      "normalizedName": "редут лисьего хребта",
+      "title": "Редут Лисьего Хребта",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-military",
+        "arc2-forts"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Редут Лисьего Хребта день.png",
+          "url": "/battle-maps/arc-2/Средние/Редут Лисьего Хребта день.png",
+          "originalFileName": "Редут Лисьего Хребта день.png",
+          "fileHash": "e5a4e29e24de5674"
+        },
+        {
+          "type": "night",
+          "fileName": "Редут Лисьего Хребта ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Редут Лисьего Хребта ночь.png",
+          "originalFileName": "Редут Лисьего Хребта ночь.png",
+          "fileHash": "d1b7cfffd8f19c1b"
+        }
+      ],
+      "sourceKeys": [
+        "Редут Лисьего Хребта ночь.png",
+        "Редут Лисьего Хребта день.png"
+      ]
+    },
+    {
+      "id": "arc2-ce28c182b1daf919",
+      "normalizedName": "старая налоговая дорога",
+      "title": "Старая налоговая дорога",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-roads"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Старая налоговая дорога день.png",
+          "url": "/battle-maps/arc-2/Средние/Старая налоговая дорога день.png",
+          "originalFileName": "Старая налоговая дорога день.png",
+          "fileHash": "39c8bf3de9ba9574"
+        },
+        {
+          "type": "night",
+          "fileName": "Старая налоговая дорога ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Старая налоговая дорога ночь.png",
+          "originalFileName": "Старая налоговая дорога ночь.png",
+          "fileHash": "46d0f9daa2e9771f"
+        }
+      ],
+      "sourceKeys": [
+        "Старая налоговая дорога день.png",
+        "Старая налоговая дорога ночь.png"
+      ]
+    },
+    {
+      "id": "arc2-43f6ea531570327b",
+      "normalizedName": "старая таможенная арка",
+      "title": "Старая таможенная арка",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-forts"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Старая таможенная арка день.png",
+          "url": "/battle-maps/arc-2/Средние/Старая таможенная арка день.png",
+          "originalFileName": "Старая таможенная арка день.png",
+          "fileHash": "d62553d588a82a51"
+        },
+        {
+          "type": "night",
+          "fileName": "Старая таможенная арка ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Старая таможенная арка ночь.png",
+          "originalFileName": "Старая таможенная арка ночь.png",
+          "fileHash": "5bdc1357b821929b"
+        }
+      ],
+      "sourceKeys": [
+        "Старая таможенная арка ночь.png",
+        "Старая таможенная арка день.png"
+      ]
+    },
+    {
+      "id": "arc2-ddbefb9eb8077036",
+      "normalizedName": "три повозки на затопленной дороге",
+      "title": "Три повозки на затопленной дороге",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-roads",
+        "arc2-swamps"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Три повозки на затопленной дороге день.png",
+          "url": "/battle-maps/arc-2/Средние/Три повозки на затопленной дороге день.png",
+          "originalFileName": "Три повозки на затопленной дороге день.png",
+          "fileHash": "1b21b92375c241cb"
+        },
+        {
+          "type": "night",
+          "fileName": "Три повозки на затопленной дороге ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Три повозки на затопленной дороге ночь.png",
+          "originalFileName": "Три повозки на затопленной дороге ночь.png",
+          "fileHash": "0a79184300465403"
+        }
+      ],
+      "sourceKeys": [
+        "Три повозки на затопленной дороге ночь.png",
+        "Три повозки на затопленной дороге день.png"
+      ]
+    },
+    {
+      "id": "arc2-e34d143039610c97",
+      "normalizedName": "холодный погреб",
+      "title": "Холодный погреб",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-dungeons"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Холодный погреб день.png",
+          "url": "/battle-maps/arc-2/Средние/Холодный погреб день.png",
+          "originalFileName": "Холодный погреб  день.png",
+          "fileHash": "c4a0addfecc978a6"
+        },
+        {
+          "type": "night",
+          "fileName": "Холодный погреб ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Холодный погреб ночь.png",
+          "originalFileName": "Холодный погреб вечер.png",
+          "fileHash": "f9335f1387337a39"
+        }
+      ],
+      "sourceKeys": [
+        "Холодный погреб вечер.png",
+        "Холодный погреб  день.png"
+      ]
+    },
+    {
+      "id": "arc2-e50152200959b47d",
+      "normalizedName": "временная военная застава",
+      "title": "Временная военная застава",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-forts",
+        "arc2-military",
+        "arc2-reserve-scenes"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Дот форт день.png",
+          "url": "/battle-maps/arc-2/Большие/Дот форт день.png",
+          "originalFileName": "Дот форт день.png",
+          "fileHash": "5157d1593deb8aae"
+        },
+        {
+          "type": "night",
+          "fileName": "Дот форт ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Дот форт ночь.png",
+          "originalFileName": "Дот форт ночь.png",
+          "fileHash": "0d6757dea7600efd"
+        }
+      ],
+      "sourceKeys": [
+        "Дот форт день.png",
+        "Дот форт ночь.png"
+      ]
+    },
+    {
+      "id": "arc2-ea1a2a7c4041711f",
+      "normalizedName": "форт «узкая корона» — вариант",
+      "title": "Форт «Узкая Корона» — вариант",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-forts",
+        "arc2-extra-scenes"
+      ],
+      "needsReview": true,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Крепость день.png",
+          "url": "/battle-maps/arc-2/Большие/Крепость день.png",
+          "originalFileName": "Крепость день.png",
+          "fileHash": "2bd22cbe91f76874"
+        },
+        {
+          "type": "night",
+          "fileName": "Крепость ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Крепость ночь.png",
+          "originalFileName": "Крепость ночь.png",
+          "fileHash": "1e8f4622c5888b9f"
+        }
+      ],
+      "sourceKeys": [
+        "Крепость ночь.png",
+        "Крепость день.png"
+      ]
+    },
+    {
+      "id": "arc2-7945f32e375c4568",
+      "normalizedName": "полевой лагерь с обозом",
+      "title": "Полевой лагерь с обозом",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-camps",
+        "arc2-roads"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Лагерь конвая день.png",
+          "url": "/battle-maps/arc-2/Большие/Лагерь конвая день.png",
+          "originalFileName": "Лагерь конвая день.png",
+          "fileHash": "cb41691e941b52c1"
+        },
+        {
+          "type": "night",
+          "fileName": "Лагерь конвоя ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Лагерь конвоя ночь.png",
+          "originalFileName": "Лагерь конвоя ночь.png",
+          "fileHash": "3ac96d76eded4f07"
+        }
+      ],
+      "sourceKeys": [
+        "Лагерь конвая день.png",
+        "Лагерь конвоя ночь.png"
+      ]
+    },
+    {
+      "id": "arc2-90d26faa52394bd7",
+      "normalizedName": "мост каменного предела",
+      "title": "Мост Каменного Предела",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-bridges"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Переправа день.png",
+          "url": "/battle-maps/arc-2/Большие/Переправа день.png",
+          "originalFileName": "Переправа день.png",
+          "fileHash": "dab588fb33a17e26"
+        },
+        {
+          "type": "night",
+          "fileName": "Переправа ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Переправа ночь.png",
+          "originalFileName": "Переправа ночь.png",
+          "fileHash": "de314a16940900a4"
+        }
+      ],
+      "sourceKeys": [
+        "Переправа день.png",
+        "Переправа ночь.png"
+      ]
+    },
+    {
+      "id": "arc2-8fff85e73378a7b8",
+      "normalizedName": "склад № 8",
+      "title": "Склад № 8",
+      "arcId": "arc-2",
+      "mapSize": "large",
+      "suggestedGroups": [
+        "arc2-large-scenes",
+        "arc2-storage",
+        "arc2-extra-scenes"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Склад 8 день.png",
+          "url": "/battle-maps/arc-2/Большие/Склад 8 день.png",
+          "originalFileName": "Склад 8 день.png",
+          "fileHash": "1d5ebf3c1b1d83db"
+        },
+        {
+          "type": "night",
+          "fileName": "Склад 8 ночь.png",
+          "url": "/battle-maps/arc-2/Большие/Склад 8 ночь.png",
+          "originalFileName": "Склад 8 ночь.png",
+          "fileHash": "0c95f3adc9dd0f6d"
+        }
+      ],
+      "sourceKeys": [
+        "Склад 8 ночь.png",
+        "Склад 8 день.png"
+      ]
+    },
+    {
+      "id": "arc2-7ca7f64c93a82d2a",
+      "normalizedName": "разрушенная приграничная деревня",
+      "title": "Разрушенная приграничная деревня",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-reserve-scenes",
+        "arc2-settlements"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Деревня день.png",
+          "url": "/battle-maps/arc-2/Средние/Деревня день.png",
+          "originalFileName": "Деревня день.png",
+          "fileHash": "9fe5bbe4928bbb7e"
+        },
+        {
+          "type": "night",
+          "fileName": "Деревня ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Деревня ночь.png",
+          "originalFileName": "Деревня ночь.png",
+          "fileHash": "b21f9f557216f448"
+        }
+      ],
+      "sourceKeys": [
+        "Деревня ночь.png",
+        "Деревня день.png"
+      ]
+    },
+    {
+      "id": "arc2-9e5afb9afe09ea9a",
+      "normalizedName": "пограничная застава возвращения",
+      "title": "Пограничная застава возвращения",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-forts",
+        "arc2-military"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Застава день.png",
+          "url": "/battle-maps/arc-2/Средние/Застава день.png",
+          "originalFileName": "Застава день.png",
+          "fileHash": "92aa5d0a2459374f"
+        },
+        {
+          "type": "night",
+          "fileName": "Застава ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Застава ночь.png",
+          "originalFileName": "Застава ночь.png",
+          "fileHash": "1d9bcbfdfdf11435"
+        }
+      ],
+      "sourceKeys": [
+        "Застава день.png",
+        "Застава ночь.png"
+      ]
+    },
+    {
+      "id": "arc2-bc7ffede323251e1",
+      "normalizedName": "временная военная застава",
+      "title": "Временная военная застава",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-forts",
+        "arc2-military",
+        "arc2-reserve-scenes"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Застава 1 день.png",
+          "url": "/battle-maps/arc-2/Средние/Застава 1 день.png",
+          "originalFileName": "Застава 1 день.png",
+          "fileHash": "1258a032cd148904"
+        },
+        {
+          "type": "night",
+          "fileName": "Застава 1 ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Застава 1 ночь.png",
+          "originalFileName": "Застава 1 ночь.png",
+          "fileHash": "6568d2f3aff3f3f2"
+        }
+      ],
+      "sourceKeys": [
+        "Застава 1 день.png",
+        "Застава 1 ночь.png"
+      ]
+    },
+    {
+      "id": "arc2-671e3667aeb35749",
+      "normalizedName": "полевой лагерь с обозом",
+      "title": "Полевой лагерь с обозом",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-camps",
+        "arc2-swamps",
+        "arc2-reserve-scenes"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "караван в болоте день.png",
+          "url": "/battle-maps/arc-2/Средние/караван в болоте день.png",
+          "originalFileName": "караван в болоте день.png",
+          "fileHash": "7376f1bfe9039773"
+        },
+        {
+          "type": "night",
+          "fileName": "караван в болоте ночь.png",
+          "url": "/battle-maps/arc-2/Средние/караван в болоте ночь.png",
+          "originalFileName": "караван в болоте ночь.png",
+          "fileHash": "1649d209d29517ac"
+        }
+      ],
+      "sourceKeys": [
+        "караван в болоте ночь.png",
+        "караван в болоте день.png"
+      ]
+    },
+    {
+      "id": "arc2-530cdffdd241d523",
+      "normalizedName": "пещера",
+      "title": "Пещера",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-dungeons",
+        "arc2-extra-scenes"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "пещера день.png",
+          "url": "/battle-maps/arc-2/Средние/пещера день.png",
+          "originalFileName": "пещера день.png",
+          "fileHash": "d76e10c7f0ad3e37"
+        },
+        {
+          "type": "night",
+          "fileName": "Пещера ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Пещера ночь.png",
+          "originalFileName": "Пещера ночь.png",
+          "fileHash": "6317549d7bfbe86c"
+        }
+      ],
+      "sourceKeys": [
+        "Пещера ночь.png",
+        "пещера день.png"
+      ]
+    },
+    {
+      "id": "arc2-5744b5263ea0d3b9",
+      "normalizedName": "овражные бараки",
+      "title": "Овражные бараки",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-dungeons",
+        "arc2-camps"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Подземный лагерь день.png",
+          "url": "/battle-maps/arc-2/Средние/Подземный лагерь день.png",
+          "originalFileName": "Подземный лагерь день.png",
+          "fileHash": "3e4f1f28932fd42a"
+        },
+        {
+          "type": "night",
+          "fileName": "Подземный лагерь ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Подземный лагерь ночь.png",
+          "originalFileName": "Подземный лагерь ночь.png",
+          "fileHash": "316230962c732035"
+        }
+      ],
+      "sourceKeys": [
+        "Подземный лагерь ночь.png",
+        "Подземный лагерь день.png"
+      ]
+    },
+    {
+      "id": "arc2-cc308f4c014d136b",
+      "normalizedName": "стоянка каравана",
+      "title": "Стоянка каравана",
+      "arcId": "arc-2",
+      "mapSize": "medium",
+      "suggestedGroups": [
+        "arc2-medium-scenes",
+        "arc2-camps",
+        "arc2-roads",
+        "arc2-extra-scenes"
+      ],
+      "needsReview": false,
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Стоянка каравана 1 день.png",
+          "url": "/battle-maps/arc-2/Средние/Стоянка каравана 1 день.png",
+          "originalFileName": "Стоянка каравана 1 день.png",
+          "fileHash": "a1388c0e363554a1"
+        },
+        {
+          "type": "night",
+          "fileName": "Стоянка каравана 1 ночь.png",
+          "url": "/battle-maps/arc-2/Средние/Стоянка каравана 1 ночь.png",
+          "originalFileName": "Стоянка каравана 1 ночь.png",
+          "fileHash": "894a4d19ffb9f4f6"
+        }
+      ],
+      "sourceKeys": [
+        "Стоянка каравана 1 ночь.png",
+        "Стоянка каравана 1 день.png"
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "id": "arc2-large-scenes",
+      "arcId": "arc-2",
+      "title": "Большие сцены"
+    },
+    {
+      "id": "arc2-medium-scenes",
+      "arcId": "arc-2",
+      "title": "Средние сцены"
+    },
+    {
+      "id": "arc2-reserve-scenes",
+      "arcId": "arc-2",
+      "title": "Резервные сцены"
+    },
+    {
+      "id": "arc2-extra-scenes",
+      "arcId": "arc-2",
+      "title": "Дополнительные сцены"
+    },
+    {
+      "id": "arc2-bridges",
+      "arcId": "arc-2",
+      "title": "Мосты и переправы"
+    },
+    {
+      "id": "arc2-forts",
+      "arcId": "arc-2",
+      "title": "Форты и заставы"
+    },
+    {
+      "id": "arc2-storage",
+      "arcId": "arc-2",
+      "title": "Склады и снабжение"
+    },
+    {
+      "id": "arc2-settlements",
+      "arcId": "arc-2",
+      "title": "Поселения и убежища"
+    },
+    {
+      "id": "arc2-camps",
+      "arcId": "arc-2",
+      "title": "Лагеря и стоянки"
+    },
+    {
+      "id": "arc2-prisoners",
+      "arcId": "arc-2",
+      "title": "Пленные и беженцы"
+    },
+    {
+      "id": "arc2-hospitals",
+      "arcId": "arc-2",
+      "title": "Госпитали и нейтральные места"
+    },
+    {
+      "id": "arc2-roads",
+      "arcId": "arc-2",
+      "title": "Дороги и караваны"
+    },
+    {
+      "id": "arc2-forests",
+      "arcId": "arc-2",
+      "title": "Леса и природные зоны"
+    },
+    {
+      "id": "arc2-swamps",
+      "arcId": "arc-2",
+      "title": "Болота и затопленные территории"
+    },
+    {
+      "id": "arc2-mountains",
+      "arcId": "arc-2",
+      "title": "Горы, перевалы и карьеры"
+    },
+    {
+      "id": "arc2-dungeons",
+      "arcId": "arc-2",
+      "title": "Подземелья и скрытые места"
+    },
+    {
+      "id": "arc2-magical",
+      "arcId": "arc-2",
+      "title": "Магические и ритуальные места"
+    },
+    {
+      "id": "arc2-battlefields",
+      "arcId": "arc-2",
+      "title": "Поля сражений и руины"
+    },
+    {
+      "id": "arc2-military",
+      "arcId": "arc-2",
+      "title": "Военные объекты"
+    },
+    {
+      "id": "arc2-needs-review",
+      "arcId": "arc-2",
+      "title": "Требует распределения"
+    }
+  ]
+}

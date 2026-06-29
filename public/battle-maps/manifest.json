@@ -1,0 +1,1697 @@
+{
+  "version": 2,
+  "generatedAt": "2026-06-17T16:06:56.328Z",
+  "sourceFolder": "Новые карты боя",
+  "totalFiles": 99,
+  "totalMaps": 59,
+  "mergedCount": 42,
+  "standaloneCount": 17,
+  "needsReviewCount": 0,
+  "maps": [
+    {
+      "id": "map-32c8501fd2fdbee8",
+      "normalizedName": "большая дорога",
+      "groupKey": "большая дорога",
+      "proposedTitle": "Большая Дорога",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Большая дорога день.png",
+          "url": "/battle-maps/%D0%91%D0%BE%D0%BB%D1%8C%D1%88%D0%B0%D1%8F%20%D0%B4%D0%BE%D1%80%D0%BE%D0%B3%D0%B0%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Большая дорога день.png",
+          "fingerprint": "Большая дорога день.png:3448818",
+          "hash": "2dbd3a93c48cffc1"
+        },
+        {
+          "type": "night",
+          "fileName": "Большая дорога ночь.png",
+          "url": "/battle-maps/%D0%91%D0%BE%D0%BB%D1%8C%D1%88%D0%B0%D1%8F%20%D0%B4%D0%BE%D1%80%D0%BE%D0%B3%D0%B0%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Большая дорога ночь.png",
+          "fingerprint": "Большая дорога ночь.png:2900318",
+          "hash": "8515ce4b8c37b711"
+        }
+      ],
+      "suggestedGroups": [
+        "Дорога"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-f2b75cd321075a53",
+      "normalizedName": "большая дорога у реки",
+      "groupKey": "большая дорога у реки",
+      "proposedTitle": "Большая Дорога У Реки",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Большая дорога у реки день.png",
+          "url": "/battle-maps/%D0%91%D0%BE%D0%BB%D1%8C%D1%88%D0%B0%D1%8F%20%D0%B4%D0%BE%D1%80%D0%BE%D0%B3%D0%B0%20%D1%83%20%D1%80%D0%B5%D0%BA%D0%B8%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Большая дорога у реки день.png",
+          "fingerprint": "Большая дорога у реки день.png:3436465",
+          "hash": "8291a95e731dd0ae"
+        },
+        {
+          "type": "night",
+          "fileName": "Большая дорога у реки ночь.png",
+          "url": "/battle-maps/%D0%91%D0%BE%D0%BB%D1%8C%D1%88%D0%B0%D1%8F%20%D0%B4%D0%BE%D1%80%D0%BE%D0%B3%D0%B0%20%D1%83%20%D1%80%D0%B5%D0%BA%D0%B8%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Большая дорога у реки ночь.png",
+          "fingerprint": "Большая дорога у реки ночь.png:2877051",
+          "hash": "15be7c2d99408a38"
+        }
+      ],
+      "suggestedGroups": [
+        "Дорога"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-76c3d2be739ca413",
+      "normalizedName": "большое логово гоблинов",
+      "groupKey": "большое логово гоблинов",
+      "proposedTitle": "Большое Логово Гоблинов",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Большое логово гоблинов день.png",
+          "url": "/battle-maps/%D0%91%D0%BE%D0%BB%D1%8C%D1%88%D0%BE%D0%B5%20%D0%BB%D0%BE%D0%B3%D0%BE%D0%B2%D0%BE%20%D0%B3%D0%BE%D0%B1%D0%BB%D0%B8%D0%BD%D0%BE%D0%B2%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Большое логово гоблинов день.png",
+          "fingerprint": "Большое логово гоблинов день.png:3184006",
+          "hash": "5908641a6c75bd81"
+        },
+        {
+          "type": "night",
+          "fileName": "Большое логово гоблинов ночь.png",
+          "url": "/battle-maps/%D0%91%D0%BE%D0%BB%D1%8C%D1%88%D0%BE%D0%B5%20%D0%BB%D0%BE%D0%B3%D0%BE%D0%B2%D0%BE%20%D0%B3%D0%BE%D0%B1%D0%BB%D0%B8%D0%BD%D0%BE%D0%B2%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Большое логово гоблинов ночь.png",
+          "fingerprint": "Большое логово гоблинов ночь.png:2700704",
+          "hash": "d14fbea13969faee"
+        }
+      ],
+      "suggestedGroups": [
+        "Логово"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-577b83878a6cc2b5",
+      "normalizedName": "большой рынок",
+      "groupKey": "большой рынок",
+      "proposedTitle": "Большой Рынок",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Большой рынок день.png",
+          "url": "/battle-maps/%D0%91%D0%BE%D0%BB%D1%8C%D1%88%D0%BE%D0%B9%20%D1%80%D1%8B%D0%BD%D0%BE%D0%BA%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Большой рынок день.png",
+          "fingerprint": "Большой рынок день.png:3273292",
+          "hash": "4bafc4016ea2bf1b"
+        },
+        {
+          "type": "night",
+          "fileName": "Большой рынок ночь.png",
+          "url": "/battle-maps/%D0%91%D0%BE%D0%BB%D1%8C%D1%88%D0%BE%D0%B9%20%D1%80%D1%8B%D0%BD%D0%BE%D0%BA%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Большой рынок ночь.png",
+          "fingerprint": "Большой рынок ночь.png:3171907",
+          "hash": "f7d9cc7f45fdda1a"
+        }
+      ],
+      "suggestedGroups": [
+        "Рынок"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-1ab915d021582a57",
+      "normalizedName": "внутри шахты",
+      "groupKey": "внутри шахты",
+      "proposedTitle": "Внутри Шахты",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Внутри шахты.png",
+          "url": "/battle-maps/%D0%92%D0%BD%D1%83%D1%82%D1%80%D0%B8%20%D1%88%D0%B0%D1%85%D1%82%D1%8B.png",
+          "originalFileName": "Внутри шахты.png",
+          "fingerprint": "Внутри шахты.png:2789212",
+          "hash": "9918b8f782a3a246"
+        }
+      ],
+      "suggestedGroups": [
+        "Шахта"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-27e47971be822ae5",
+      "normalizedName": "внутри шахты 1",
+      "groupKey": "внутри шахты 1",
+      "proposedTitle": "Внутри Шахты 1",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Внутри шахты 1.png",
+          "url": "/battle-maps/%D0%92%D0%BD%D1%83%D1%82%D1%80%D0%B8%20%D1%88%D0%B0%D1%85%D1%82%D1%8B%201.png",
+          "originalFileName": "Внутри шахты 1.png",
+          "fingerprint": "Внутри шахты 1.png:3063662",
+          "hash": "11ef97e4ae829b96"
+        }
+      ],
+      "suggestedGroups": [
+        "Шахта"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-2de290da3e62802f",
+      "normalizedName": "водопой",
+      "groupKey": "водопой",
+      "proposedTitle": "Водопой",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "водопой.png",
+          "url": "/battle-maps/%D0%B2%D0%BE%D0%B4%D0%BE%D0%BF%D0%BE%D0%B9.png",
+          "originalFileName": "водопой.png",
+          "fingerprint": "водопой.png:3188268",
+          "hash": "03c68303435c934b"
+        }
+      ],
+      "suggestedGroups": [
+        "Поле"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-3c1d0bd78a70c6d7",
+      "normalizedName": "ворота",
+      "groupKey": "ворота",
+      "proposedTitle": "Ворота",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Ворота день.png",
+          "url": "/battle-maps/%D0%92%D0%BE%D1%80%D0%BE%D1%82%D0%B0%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Ворота день.png",
+          "fingerprint": "Ворота день.png:3183563",
+          "hash": "9186bc39903b465f"
+        },
+        {
+          "type": "night",
+          "fileName": "Ворота ночь.png",
+          "url": "/battle-maps/%D0%92%D0%BE%D1%80%D0%BE%D1%82%D0%B0%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Ворота ночь.png",
+          "fingerprint": "Ворота ночь.png:2791762",
+          "hash": "5318622d4bca09a1"
+        }
+      ],
+      "suggestedGroups": [
+        "Город"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-a6b45f92711bdd2f",
+      "normalizedName": "ворота 2",
+      "groupKey": "ворота 2",
+      "proposedTitle": "Ворота 2",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Ворота день 2.png",
+          "url": "/battle-maps/%D0%92%D0%BE%D1%80%D0%BE%D1%82%D0%B0%20%D0%B4%D0%B5%D0%BD%D1%8C%202.png",
+          "originalFileName": "Ворота день 2.png",
+          "fingerprint": "Ворота день 2.png:3495616",
+          "hash": "0cc89c543a246266"
+        },
+        {
+          "type": "night",
+          "fileName": "Ворота ночь 2.png",
+          "url": "/battle-maps/%D0%92%D0%BE%D1%80%D0%BE%D1%82%D0%B0%20%D0%BD%D0%BE%D1%87%D1%8C%202.png",
+          "originalFileName": "Ворота ночь 2.png",
+          "fingerprint": "Ворота ночь 2.png:2857471",
+          "hash": "e21c2e3a6ee89e74"
+        }
+      ],
+      "suggestedGroups": [
+        "Город"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-829e34d98e8afb4e",
+      "normalizedName": "глубокие шахты",
+      "groupKey": "глубокие шахты",
+      "proposedTitle": "Глубокие Шахты",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Глубокие шахты.png",
+          "url": "/battle-maps/%D0%93%D0%BB%D1%83%D0%B1%D0%BE%D0%BA%D0%B8%D0%B5%20%D1%88%D0%B0%D1%85%D1%82%D1%8B.png",
+          "originalFileName": "Глубокие шахты.png",
+          "fingerprint": "Глубокие шахты.png:2682639",
+          "hash": "d4f2448ef7ccb784"
+        }
+      ],
+      "suggestedGroups": [
+        "Шахта"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-e83500e3953cc9d4",
+      "normalizedName": "город улицы",
+      "groupKey": "город улицы",
+      "proposedTitle": "Город Улицы",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Город - улицы.png",
+          "url": "/battle-maps/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%20-%20%D1%83%D0%BB%D0%B8%D1%86%D1%8B.png",
+          "originalFileName": "Город - улицы.png",
+          "fingerprint": "Город - улицы.png:2520727",
+          "hash": "b31dee3728477e21"
+        }
+      ],
+      "suggestedGroups": [
+        "Город"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-6f3344e4cf9fdb05",
+      "normalizedName": "город улицы и двор",
+      "groupKey": "город улицы и двор",
+      "proposedTitle": "Город Улицы И Двор",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Город - улицы и двор.png",
+          "url": "/battle-maps/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%20-%20%D1%83%D0%BB%D0%B8%D1%86%D1%8B%20%D0%B8%20%D0%B4%D0%B2%D0%BE%D1%80.png",
+          "originalFileName": "Город - улицы и двор.png",
+          "fingerprint": "Город - улицы и двор.png:2760059",
+          "hash": "7e1ecd6888c99308"
+        }
+      ],
+      "suggestedGroups": [
+        "Город"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-f5ab1bef4f63ef24",
+      "normalizedName": "город улицы у стен",
+      "groupKey": "город улицы у стен",
+      "proposedTitle": "Город Улицы У Стен",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Город - улицы у стен.png",
+          "url": "/battle-maps/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%20-%20%D1%83%D0%BB%D0%B8%D1%86%D1%8B%20%D1%83%20%D1%81%D1%82%D0%B5%D0%BD.png",
+          "originalFileName": "Город - улицы у стен.png",
+          "fingerprint": "Город - улицы у стен.png:2931173",
+          "hash": "d21247f16a421564"
+        }
+      ],
+      "suggestedGroups": [
+        "Город"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-a5ef5c218e8858c3",
+      "normalizedName": "город улицы2",
+      "groupKey": "город улицы2",
+      "proposedTitle": "Город Улицы2",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Город улицы2.png",
+          "url": "/battle-maps/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%20%D1%83%D0%BB%D0%B8%D1%86%D1%8B2.png",
+          "originalFileName": "Город улицы2.png",
+          "fingerprint": "Город улицы2.png:2802847",
+          "hash": "10885b55e034b1d0"
+        }
+      ],
+      "suggestedGroups": [
+        "Город"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-ed32e7fdf67cd3e8",
+      "normalizedName": "деревня",
+      "groupKey": "деревня",
+      "proposedTitle": "Деревня",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Деревня день.png",
+          "url": "/battle-maps/%D0%94%D0%B5%D1%80%D0%B5%D0%B2%D0%BD%D1%8F%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Деревня день.png",
+          "fingerprint": "Деревня день.png:3268787",
+          "hash": "d1f2b41b9ddfe270"
+        },
+        {
+          "type": "night",
+          "fileName": "Деревня ночь.png",
+          "url": "/battle-maps/%D0%94%D0%B5%D1%80%D0%B5%D0%B2%D0%BD%D1%8F%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Деревня ночь.png",
+          "fingerprint": "Деревня ночь.png:2762182",
+          "hash": "b02c78b7b25fa724"
+        }
+      ],
+      "suggestedGroups": [
+        "Село"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-b7ad722b47e36e5f",
+      "normalizedName": "деревня у реки",
+      "groupKey": "деревня у реки",
+      "proposedTitle": "Деревня У Реки",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Деревня у реки день.png",
+          "url": "/battle-maps/%D0%94%D0%B5%D1%80%D0%B5%D0%B2%D0%BD%D1%8F%20%D1%83%20%D1%80%D0%B5%D0%BA%D0%B8%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Деревня у реки день.png",
+          "fingerprint": "Деревня у реки день.png:3417879",
+          "hash": "d18c690eafe88061"
+        },
+        {
+          "type": "night",
+          "fileName": "Деревня у реки ночь.png",
+          "url": "/battle-maps/%D0%94%D0%B5%D1%80%D0%B5%D0%B2%D0%BD%D1%8F%20%D1%83%20%D1%80%D0%B5%D0%BA%D0%B8%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Деревня у реки ночь.png",
+          "fingerprint": "Деревня у реки ночь.png:2970376",
+          "hash": "a95c80e793f19bc8"
+        }
+      ],
+      "suggestedGroups": [
+        "Село"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-fa9766bb367fafda",
+      "normalizedName": "док3",
+      "groupKey": "док3",
+      "proposedTitle": "Док3",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "док3 день.png",
+          "url": "/battle-maps/%D0%B4%D0%BE%D0%BA3%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "док3 день.png",
+          "fingerprint": "док3 день.png:2688627",
+          "hash": "e70536a4edce9f8e"
+        },
+        {
+          "type": "night",
+          "fileName": "Док3 ночь.png",
+          "url": "/battle-maps/%D0%94%D0%BE%D0%BA3%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Док3 ночь.png",
+          "fingerprint": "Док3 ночь.png:2660400",
+          "hash": "523ed31858e207ac"
+        }
+      ],
+      "suggestedGroups": [],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-81d76919956ba45e",
+      "normalizedName": "доки",
+      "groupKey": "доки",
+      "proposedTitle": "Доки",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Доки день.png",
+          "url": "/battle-maps/%D0%94%D0%BE%D0%BA%D0%B8%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Доки день.png",
+          "fingerprint": "Доки день.png:3533367",
+          "hash": "05042f7e34590f46"
+        },
+        {
+          "type": "evening",
+          "fileName": "Доки вечер.png",
+          "url": "/battle-maps/%D0%94%D0%BE%D0%BA%D0%B8%20%D0%B2%D0%B5%D1%87%D0%B5%D1%80.png",
+          "originalFileName": "Доки вечер.png",
+          "fingerprint": "Доки вечер.png:3041100",
+          "hash": "b830d886d85091fb"
+        }
+      ],
+      "suggestedGroups": [
+        "Доки"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-edcc5ca4dd0a6b59",
+      "normalizedName": "дорога у леса",
+      "groupKey": "дорога у леса",
+      "proposedTitle": "Дорога У Леса",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Дорога у леса день.png",
+          "url": "/battle-maps/%D0%94%D0%BE%D1%80%D0%BE%D0%B3%D0%B0%20%D1%83%20%D0%BB%D0%B5%D1%81%D0%B0%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Дорога у леса день.png",
+          "fingerprint": "Дорога у леса день.png:3388345",
+          "hash": "8248aada0aa3187f"
+        },
+        {
+          "type": "default",
+          "fileName": "Дорога у леса.png",
+          "url": "/battle-maps/%D0%94%D0%BE%D1%80%D0%BE%D0%B3%D0%B0%20%D1%83%20%D0%BB%D0%B5%D1%81%D0%B0.png",
+          "originalFileName": "Дорога у леса.png",
+          "fingerprint": "Дорога у леса.png:2737752",
+          "hash": "3365c629e5a7d2f1"
+        }
+      ],
+      "suggestedGroups": [
+        "Лес",
+        "Дорога"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-fbeb9fead417bdaa",
+      "normalizedName": "за стенами",
+      "groupKey": "за стенами",
+      "proposedTitle": "За Стенами",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "За стенами день.png",
+          "url": "/battle-maps/%D0%97%D0%B0%20%D1%81%D1%82%D0%B5%D0%BD%D0%B0%D0%BC%D0%B8%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "За стенами день.png",
+          "fingerprint": "За стенами день.png:3233909",
+          "hash": "431928a58c0abaf8"
+        },
+        {
+          "type": "evening",
+          "fileName": "За стенами вечер.png",
+          "url": "/battle-maps/%D0%97%D0%B0%20%D1%81%D1%82%D0%B5%D0%BD%D0%B0%D0%BC%D0%B8%20%D0%B2%D0%B5%D1%87%D0%B5%D1%80.png",
+          "originalFileName": "За стенами вечер.png",
+          "fingerprint": "За стенами вечер.png:2866241",
+          "hash": "b058146e60a8ed5f"
+        }
+      ],
+      "suggestedGroups": [
+        "Город"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-66f2b6a231252bbf",
+      "normalizedName": "за стенами 1",
+      "groupKey": "за стенами 1",
+      "proposedTitle": "За Стенами 1",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "За стенами день1.png",
+          "url": "/battle-maps/%D0%97%D0%B0%20%D1%81%D1%82%D0%B5%D0%BD%D0%B0%D0%BC%D0%B8%20%D0%B4%D0%B5%D0%BD%D1%8C1.png",
+          "originalFileName": "За стенами день1.png",
+          "fingerprint": "За стенами день1.png:3154202",
+          "hash": "dd31de51e2a43f64"
+        },
+        {
+          "type": "evening",
+          "fileName": "За стенами вечер1.png",
+          "url": "/battle-maps/%D0%97%D0%B0%20%D1%81%D1%82%D0%B5%D0%BD%D0%B0%D0%BC%D0%B8%20%D0%B2%D0%B5%D1%87%D0%B5%D1%801.png",
+          "originalFileName": "За стенами вечер1.png",
+          "fingerprint": "За стенами вечер1.png:2779028",
+          "hash": "e7508e322c6fe3a0"
+        }
+      ],
+      "suggestedGroups": [
+        "Город"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-c44734e77a62ba1d",
+      "normalizedName": "зал культа",
+      "groupKey": "зал культа",
+      "proposedTitle": "Зал Культа",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Зал культа.png",
+          "url": "/battle-maps/%D0%97%D0%B0%D0%BB%20%D0%BA%D1%83%D0%BB%D1%8C%D1%82%D0%B0.png",
+          "originalFileName": "Зал культа.png",
+          "fingerprint": "Зал культа.png:2554790",
+          "hash": "359e0c638634a49a"
+        }
+      ],
+      "suggestedGroups": [
+        "Культ",
+        "Здание"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-f809817d79e114bb",
+      "normalizedName": "каменоломня",
+      "groupKey": "каменоломня",
+      "proposedTitle": "Каменоломня",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Каменоломня день.png",
+          "url": "/battle-maps/%D0%9A%D0%B0%D0%BC%D0%B5%D0%BD%D0%BE%D0%BB%D0%BE%D0%BC%D0%BD%D1%8F%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Каменоломня день.png",
+          "fingerprint": "Каменоломня день.png:3245229",
+          "hash": "a7db5fa0b51dc5ea"
+        },
+        {
+          "type": "night",
+          "fileName": "Каменоломня ночь.png",
+          "url": "/battle-maps/%D0%9A%D0%B0%D0%BC%D0%B5%D0%BD%D0%BE%D0%BB%D0%BE%D0%BC%D0%BD%D1%8F%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Каменоломня ночь.png",
+          "fingerprint": "Каменоломня ночь.png:2749127",
+          "hash": "e90256ab3f57d3a5"
+        }
+      ],
+      "suggestedGroups": [
+        "Шахта"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-597d73dd6f2749d1",
+      "normalizedName": "каменоломья 1",
+      "groupKey": "каменоломья 1",
+      "proposedTitle": "Каменоломья 1",
+      "variants": [
+        {
+          "type": "night",
+          "fileName": "Каменоломья ночь 1.png",
+          "url": "/battle-maps/%D0%9A%D0%B0%D0%BC%D0%B5%D0%BD%D0%BE%D0%BB%D0%BE%D0%BC%D1%8C%D1%8F%20%D0%BD%D0%BE%D1%87%D1%8C%201.png",
+          "originalFileName": "Каменоломья ночь 1.png",
+          "fingerprint": "Каменоломья ночь 1.png:2945549",
+          "hash": "78851ac66fdc8094"
+        }
+      ],
+      "suggestedGroups": [
+        "Шахта"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-02fd2dc149375c7a",
+      "normalizedName": "каменоломья 2",
+      "groupKey": "каменоломья 2",
+      "proposedTitle": "Каменоломья 2",
+      "variants": [
+        {
+          "type": "night",
+          "fileName": "Каменоломья ночь 2.png",
+          "url": "/battle-maps/%D0%9A%D0%B0%D0%BC%D0%B5%D0%BD%D0%BE%D0%BB%D0%BE%D0%BC%D1%8C%D1%8F%20%D0%BD%D0%BE%D1%87%D1%8C%202.png",
+          "originalFileName": "Каменоломья ночь 2.png",
+          "fingerprint": "Каменоломья ночь 2.png:3460448",
+          "hash": "8ca5a93f31cd41ea"
+        }
+      ],
+      "suggestedGroups": [
+        "Шахта"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-42e91a5b4414a3cc",
+      "normalizedName": "лагерь разбойников",
+      "groupKey": "лагерь разбойников",
+      "proposedTitle": "Лагерь Разбойников",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Лагерь разбойников день.png",
+          "url": "/battle-maps/%D0%9B%D0%B0%D0%B3%D0%B5%D1%80%D1%8C%20%D1%80%D0%B0%D0%B7%D0%B1%D0%BE%D0%B9%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Лагерь разбойников день.png",
+          "fingerprint": "Лагерь разбойников день.png:3318333",
+          "hash": "f0d5a0e61b83a27e"
+        },
+        {
+          "type": "night",
+          "fileName": "Лагерь разбойников ночь.png",
+          "url": "/battle-maps/%D0%9B%D0%B0%D0%B3%D0%B5%D1%80%D1%8C%20%D1%80%D0%B0%D0%B7%D0%B1%D0%BE%D0%B9%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Лагерь разбойников ночь.png",
+          "fingerprint": "Лагерь разбойников ночь.png:2878439",
+          "hash": "cd006d8a45139fa8"
+        }
+      ],
+      "suggestedGroups": [
+        "Лагерь",
+        "Разбойники"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-1b63140b6bcde982",
+      "normalizedName": "лагерь разбойников 1",
+      "groupKey": "лагерь разбойников 1",
+      "proposedTitle": "Лагерь Разбойников 1",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Лагерь разбойников день 1.png",
+          "url": "/battle-maps/%D0%9B%D0%B0%D0%B3%D0%B5%D1%80%D1%8C%20%D1%80%D0%B0%D0%B7%D0%B1%D0%BE%D0%B9%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2%20%D0%B4%D0%B5%D0%BD%D1%8C%201.png",
+          "originalFileName": "Лагерь разбойников день 1.png",
+          "fingerprint": "Лагерь разбойников день 1.png:3367925",
+          "hash": "8b1acfbeadcc2118"
+        },
+        {
+          "type": "night",
+          "fileName": "Лагерь разбойников ночь 1.png",
+          "url": "/battle-maps/%D0%9B%D0%B0%D0%B3%D0%B5%D1%80%D1%8C%20%D1%80%D0%B0%D0%B7%D0%B1%D0%BE%D0%B9%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2%20%D0%BD%D0%BE%D1%87%D1%8C%201.png",
+          "originalFileName": "Лагерь разбойников ночь 1.png",
+          "fingerprint": "Лагерь разбойников ночь 1.png:2696394",
+          "hash": "20324e7bfd48a75a"
+        }
+      ],
+      "suggestedGroups": [
+        "Лагерь",
+        "Разбойники"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-c8bed6f369735dda",
+      "normalizedName": "лесная развилка",
+      "groupKey": "лесная развилка",
+      "proposedTitle": "Лесная Развилка",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Лесная развилка день.png",
+          "url": "/battle-maps/%D0%9B%D0%B5%D1%81%D0%BD%D0%B0%D1%8F%20%D1%80%D0%B0%D0%B7%D0%B2%D0%B8%D0%BB%D0%BA%D0%B0%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Лесная развилка день.png",
+          "fingerprint": "Лесная развилка день.png:3229958",
+          "hash": "eb3c58a325aa3909"
+        },
+        {
+          "type": "night",
+          "fileName": "Лесная развилка ночь.png",
+          "url": "/battle-maps/%D0%9B%D0%B5%D1%81%D0%BD%D0%B0%D1%8F%20%D1%80%D0%B0%D0%B7%D0%B2%D0%B8%D0%BB%D0%BA%D0%B0%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Лесная развилка ночь.png",
+          "fingerprint": "Лесная развилка ночь.png:2635789",
+          "hash": "b8ff429c535c5ef7"
+        }
+      ],
+      "suggestedGroups": [
+        "Лес"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-e7cc886c4cb388d2",
+      "normalizedName": "лесная тропа",
+      "groupKey": "лесная тропа",
+      "proposedTitle": "Лесная Тропа",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Лесная тропа день.png",
+          "url": "/battle-maps/%D0%9B%D0%B5%D1%81%D0%BD%D0%B0%D1%8F%20%D1%82%D1%80%D0%BE%D0%BF%D0%B0%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Лесная тропа день.png",
+          "fingerprint": "Лесная тропа день.png:3564166",
+          "hash": "b4af68f67f77dc39"
+        },
+        {
+          "type": "night",
+          "fileName": "Лесная тропа ночь.png",
+          "url": "/battle-maps/%D0%9B%D0%B5%D1%81%D0%BD%D0%B0%D1%8F%20%D1%82%D1%80%D0%BE%D0%BF%D0%B0%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Лесная тропа ночь.png",
+          "fingerprint": "Лесная тропа ночь.png:2933637",
+          "hash": "5ee783fd7693f2b2"
+        }
+      ],
+      "suggestedGroups": [
+        "Лес",
+        "Дорога"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-2191330aadc5bd0f",
+      "normalizedName": "логово",
+      "groupKey": "логово",
+      "proposedTitle": "Логово",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Логово день.png",
+          "url": "/battle-maps/%D0%9B%D0%BE%D0%B3%D0%BE%D0%B2%D0%BE%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Логово день.png",
+          "fingerprint": "Логово день.png:3425964",
+          "hash": "dab776f0618c7930"
+        },
+        {
+          "type": "night",
+          "fileName": "Логово ночь.png",
+          "url": "/battle-maps/%D0%9B%D0%BE%D0%B3%D0%BE%D0%B2%D0%BE%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Логово ночь.png",
+          "fingerprint": "Логово ночь.png:2983447",
+          "hash": "02b6e3163d38cdd2"
+        }
+      ],
+      "suggestedGroups": [
+        "Логово"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-787954779321e4a3",
+      "normalizedName": "логово 1",
+      "groupKey": "логово 1",
+      "proposedTitle": "Логово 1",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Логово день1.png",
+          "url": "/battle-maps/%D0%9B%D0%BE%D0%B3%D0%BE%D0%B2%D0%BE%20%D0%B4%D0%B5%D0%BD%D1%8C1.png",
+          "originalFileName": "Логово день1.png",
+          "fingerprint": "Логово день1.png:3193963",
+          "hash": "bb2616c7400e8560"
+        },
+        {
+          "type": "night",
+          "fileName": "Логово ночь1.png",
+          "url": "/battle-maps/%D0%9B%D0%BE%D0%B3%D0%BE%D0%B2%D0%BE%20%D0%BD%D0%BE%D1%87%D1%8C1.png",
+          "originalFileName": "Логово ночь1.png",
+          "fingerprint": "Логово ночь1.png:2814779",
+          "hash": "25623408f7cf518e"
+        }
+      ],
+      "suggestedGroups": [
+        "Логово"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-028e70a4a927efd9",
+      "normalizedName": "логово гоблинов",
+      "groupKey": "логово гоблинов",
+      "proposedTitle": "Логово Гоблинов",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Логово гоблинов день.png",
+          "url": "/battle-maps/%D0%9B%D0%BE%D0%B3%D0%BE%D0%B2%D0%BE%20%D0%B3%D0%BE%D0%B1%D0%BB%D0%B8%D0%BD%D0%BE%D0%B2%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Логово гоблинов день.png",
+          "fingerprint": "Логово гоблинов день.png:3149803",
+          "hash": "ba61b6c610098873"
+        },
+        {
+          "type": "night",
+          "fileName": "Логово гоблинов ночь.png",
+          "url": "/battle-maps/%D0%9B%D0%BE%D0%B3%D0%BE%D0%B2%D0%BE%20%D0%B3%D0%BE%D0%B1%D0%BB%D0%B8%D0%BD%D0%BE%D0%B2%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Логово гоблинов ночь.png",
+          "fingerprint": "Логово гоблинов ночь.png:3089350",
+          "hash": "207d202a55a2124e"
+        }
+      ],
+      "suggestedGroups": [
+        "Логово"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-c4696449746293cb",
+      "normalizedName": "малый зал культа",
+      "groupKey": "малый зал культа",
+      "proposedTitle": "Малый Зал Культа",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Малый зал культа.png",
+          "url": "/battle-maps/%D0%9C%D0%B0%D0%BB%D1%8B%D0%B9%20%D0%B7%D0%B0%D0%BB%20%D0%BA%D1%83%D0%BB%D1%8C%D1%82%D0%B0.png",
+          "originalFileName": "Малый зал культа.png",
+          "fingerprint": "Малый зал культа.png:2619122",
+          "hash": "15bad5d20b8a594d"
+        }
+      ],
+      "suggestedGroups": [
+        "Культ",
+        "Здание"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-9f699a40502b6b0d",
+      "normalizedName": "малый рынок",
+      "groupKey": "малый рынок",
+      "proposedTitle": "Малый Рынок",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Малый рынок день.png",
+          "url": "/battle-maps/%D0%9C%D0%B0%D0%BB%D1%8B%D0%B9%20%D1%80%D1%8B%D0%BD%D0%BE%D0%BA%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Малый рынок день.png",
+          "fingerprint": "Малый рынок день.png:3417168",
+          "hash": "28dbbd8bcd018993"
+        },
+        {
+          "type": "night",
+          "fileName": "Малый рынок ночь.png",
+          "url": "/battle-maps/%D0%9C%D0%B0%D0%BB%D1%8B%D0%B9%20%D1%80%D1%8B%D0%BD%D0%BE%D0%BA%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Малый рынок ночь.png",
+          "fingerprint": "Малый рынок ночь.png:2792598",
+          "hash": "0133784095c6e3f4"
+        }
+      ],
+      "suggestedGroups": [
+        "Рынок"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-90eb189a2332cc20",
+      "normalizedName": "мрачный лес",
+      "groupKey": "мрачный лес",
+      "proposedTitle": "Мрачный Лес",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Мрачный лес день.png",
+          "url": "/battle-maps/%D0%9C%D1%80%D0%B0%D1%87%D0%BD%D1%8B%D0%B9%20%D0%BB%D0%B5%D1%81%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Мрачный лес день.png",
+          "fingerprint": "Мрачный лес день.png:2953934",
+          "hash": "6e829b15308fe3f1"
+        },
+        {
+          "type": "night",
+          "fileName": "Мрачный лес ночь.png",
+          "url": "/battle-maps/%D0%9C%D1%80%D0%B0%D1%87%D0%BD%D1%8B%D0%B9%20%D0%BB%D0%B5%D1%81%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Мрачный лес ночь.png",
+          "fingerprint": "Мрачный лес ночь.png:2912157",
+          "hash": "db2d5a6e8a30b629"
+        }
+      ],
+      "suggestedGroups": [
+        "Лес"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-14b86f77a86572e1",
+      "normalizedName": "мрачный лес 1",
+      "groupKey": "мрачный лес 1",
+      "proposedTitle": "Мрачный Лес 1",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Мрачный лес день 1.png",
+          "url": "/battle-maps/%D0%9C%D1%80%D0%B0%D1%87%D0%BD%D1%8B%D0%B9%20%D0%BB%D0%B5%D1%81%20%D0%B4%D0%B5%D0%BD%D1%8C%201.png",
+          "originalFileName": "Мрачный лес день 1.png",
+          "fingerprint": "Мрачный лес день 1.png:3080856",
+          "hash": "7688045319acee92"
+        },
+        {
+          "type": "night",
+          "fileName": "Мрачный лес ночь 1.png",
+          "url": "/battle-maps/%D0%9C%D1%80%D0%B0%D1%87%D0%BD%D1%8B%D0%B9%20%D0%BB%D0%B5%D1%81%20%D0%BD%D0%BE%D1%87%D1%8C%201.png",
+          "originalFileName": "Мрачный лес ночь 1.png",
+          "fingerprint": "Мрачный лес ночь 1.png:3061593",
+          "hash": "2613296b79cb74ac"
+        }
+      ],
+      "suggestedGroups": [
+        "Лес"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-0ac51070eb7acede",
+      "normalizedName": "нападение на караван",
+      "groupKey": "нападение на караван",
+      "proposedTitle": "Нападение На Караван",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Нападение на караван день.png",
+          "url": "/battle-maps/%D0%9D%D0%B0%D0%BF%D0%B0%D0%B4%D0%B5%D0%BD%D0%B8%D0%B5%20%D0%BD%D0%B0%20%D0%BA%D0%B0%D1%80%D0%B0%D0%B2%D0%B0%D0%BD%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Нападение на караван день.png",
+          "fingerprint": "Нападение на караван день.png:3299741",
+          "hash": "da7fadf86fc27131"
+        },
+        {
+          "type": "night",
+          "fileName": "Нападение на караван ночь.png",
+          "url": "/battle-maps/%D0%9D%D0%B0%D0%BF%D0%B0%D0%B4%D0%B5%D0%BD%D0%B8%D0%B5%20%D0%BD%D0%B0%20%D0%BA%D0%B0%D1%80%D0%B0%D0%B2%D0%B0%D0%BD%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Нападение на караван ночь.png",
+          "fingerprint": "Нападение на караван ночь.png:3083197",
+          "hash": "8c088a11874462d0"
+        }
+      ],
+      "suggestedGroups": [
+        "Дорога"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-9b81c2809408d757",
+      "normalizedName": "огород",
+      "groupKey": "огород",
+      "proposedTitle": "Огород",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Огород.png",
+          "url": "/battle-maps/%D0%9E%D0%B3%D0%BE%D1%80%D0%BE%D0%B4.png",
+          "originalFileName": "Огород.png",
+          "fingerprint": "Огород.png:3184755",
+          "hash": "772f07b97ea30c16"
+        }
+      ],
+      "suggestedGroups": [
+        "Город",
+        "Поле"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-9637cbb477fc1ed1",
+      "normalizedName": "окраина руин",
+      "groupKey": "окраина руин",
+      "proposedTitle": "Окраина Руин",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Окраина руин день.png",
+          "url": "/battle-maps/%D0%9E%D0%BA%D1%80%D0%B0%D0%B8%D0%BD%D0%B0%20%D1%80%D1%83%D0%B8%D0%BD%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Окраина руин день.png",
+          "fingerprint": "Окраина руин день.png:3284111",
+          "hash": "589b2b1959849e42"
+        },
+        {
+          "type": "night",
+          "fileName": "окраина руин ночь.png",
+          "url": "/battle-maps/%D0%BE%D0%BA%D1%80%D0%B0%D0%B8%D0%BD%D0%B0%20%D1%80%D1%83%D0%B8%D0%BD%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "окраина руин ночь.png",
+          "fingerprint": "окраина руин ночь.png:2900128",
+          "hash": "f05c9790e31dee1b"
+        }
+      ],
+      "suggestedGroups": [
+        "Руины"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-b6a0f8e0d2469a9a",
+      "normalizedName": "пастбище",
+      "groupKey": "пастбище",
+      "proposedTitle": "Пастбище",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Пастбище день.png",
+          "url": "/battle-maps/%D0%9F%D0%B0%D1%81%D1%82%D0%B1%D0%B8%D1%89%D0%B5%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Пастбище день.png",
+          "fingerprint": "Пастбище день.png:3534235",
+          "hash": "9e3e739895bc3e54"
+        },
+        {
+          "type": "night",
+          "fileName": "Пастбище ночь.png",
+          "url": "/battle-maps/%D0%9F%D0%B0%D1%81%D1%82%D0%B1%D0%B8%D1%89%D0%B5%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Пастбище ночь.png",
+          "fingerprint": "Пастбище ночь.png:2981775",
+          "hash": "14beaa32d204b6ec"
+        },
+        {
+          "type": "default",
+          "fileName": "Пастбище.png",
+          "url": "/battle-maps/%D0%9F%D0%B0%D1%81%D1%82%D0%B1%D0%B8%D1%89%D0%B5.png",
+          "originalFileName": "Пастбище.png",
+          "fingerprint": "Пастбище.png:3129493",
+          "hash": "88a64b4a2eb8783b"
+        }
+      ],
+      "suggestedGroups": [
+        "Поле"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-2608295f1f8963a5",
+      "normalizedName": "пастбище 1",
+      "groupKey": "пастбище 1",
+      "proposedTitle": "Пастбище 1",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "пастбище день1.png",
+          "url": "/battle-maps/%D0%BF%D0%B0%D1%81%D1%82%D0%B1%D0%B8%D1%89%D0%B5%20%D0%B4%D0%B5%D0%BD%D1%8C1.png",
+          "originalFileName": "пастбище день1.png",
+          "fingerprint": "пастбище день1.png:3171618",
+          "hash": "7f6cc6efdbc68a9b"
+        },
+        {
+          "type": "night",
+          "fileName": "Пастбище ночь1.png",
+          "url": "/battle-maps/%D0%9F%D0%B0%D1%81%D1%82%D0%B1%D0%B8%D1%89%D0%B5%20%D0%BD%D0%BE%D1%87%D1%8C1.png",
+          "originalFileName": "Пастбище ночь1.png",
+          "fingerprint": "Пастбище ночь1.png:2693949",
+          "hash": "099985ad946e473e"
+        }
+      ],
+      "suggestedGroups": [
+        "Поле"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-fb5479bc46e5f635",
+      "normalizedName": "перекресток",
+      "groupKey": "перекресток",
+      "proposedTitle": "Перекресток",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Перекресток.png",
+          "url": "/battle-maps/%D0%9F%D0%B5%D1%80%D0%B5%D0%BA%D1%80%D0%B5%D1%81%D1%82%D0%BE%D0%BA.png",
+          "originalFileName": "Перекресток.png",
+          "fingerprint": "Перекресток.png:3254290",
+          "hash": "9e13fda7f41f3395"
+        }
+      ],
+      "suggestedGroups": [
+        "Дорога"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-12dc1d0dec59402c",
+      "normalizedName": "подвал 1",
+      "groupKey": "подвал 1",
+      "proposedTitle": "Подвал 1",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Подвал 1.png",
+          "url": "/battle-maps/%D0%9F%D0%BE%D0%B4%D0%B2%D0%B0%D0%BB%201.png",
+          "originalFileName": "Подвал 1.png",
+          "fingerprint": "Подвал 1.png:2364062",
+          "hash": "2b45830c84145b57"
+        }
+      ],
+      "suggestedGroups": [
+        "Подвал"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-22a0789cb5c598f3",
+      "normalizedName": "подвал 2",
+      "groupKey": "подвал 2",
+      "proposedTitle": "Подвал 2",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Подвал 2.png",
+          "url": "/battle-maps/%D0%9F%D0%BE%D0%B4%D0%B2%D0%B0%D0%BB%202.png",
+          "originalFileName": "Подвал 2.png",
+          "fingerprint": "Подвал 2.png:2774366",
+          "hash": "ae497db790fe69b2"
+        }
+      ],
+      "suggestedGroups": [
+        "Подвал"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-f27c8fff37dba944",
+      "normalizedName": "подвал 3",
+      "groupKey": "подвал 3",
+      "proposedTitle": "Подвал 3",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Подвал 3.png",
+          "url": "/battle-maps/%D0%9F%D0%BE%D0%B4%D0%B2%D0%B0%D0%BB%203.png",
+          "originalFileName": "Подвал 3.png",
+          "fingerprint": "Подвал 3.png:3196871",
+          "hash": "f08e4e28d44e1b9a"
+        }
+      ],
+      "suggestedGroups": [
+        "Подвал"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-50ce28b119f70b5e",
+      "normalizedName": "подвал 4",
+      "groupKey": "подвал 4",
+      "proposedTitle": "Подвал 4",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Подвал 4.png",
+          "url": "/battle-maps/%D0%9F%D0%BE%D0%B4%D0%B2%D0%B0%D0%BB%204.png",
+          "originalFileName": "Подвал 4.png",
+          "fingerprint": "Подвал 4.png:3205373",
+          "hash": "cce9793a4dc92253"
+        }
+      ],
+      "suggestedGroups": [
+        "Подвал"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-f4148a7894ec7124",
+      "normalizedName": "рынок",
+      "groupKey": "рынок",
+      "proposedTitle": "Рынок",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Рынок день.png",
+          "url": "/battle-maps/%D0%A0%D1%8B%D0%BD%D0%BE%D0%BA%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Рынок день.png",
+          "fingerprint": "Рынок день.png:3209143",
+          "hash": "eca84ace9f47aa4d"
+        },
+        {
+          "type": "evening",
+          "fileName": "Рынок вечер.png",
+          "url": "/battle-maps/%D0%A0%D1%8B%D0%BD%D0%BE%D0%BA%20%D0%B2%D0%B5%D1%87%D0%B5%D1%80.png",
+          "originalFileName": "Рынок вечер.png",
+          "fingerprint": "Рынок вечер.png:2911747",
+          "hash": "09a74ad3a2ed4b05"
+        }
+      ],
+      "suggestedGroups": [
+        "Рынок"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-a0ce3b02b995b59b",
+      "normalizedName": "рынок 2",
+      "groupKey": "рынок 2",
+      "proposedTitle": "Рынок 2",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Рынок день2.png",
+          "url": "/battle-maps/%D0%A0%D1%8B%D0%BD%D0%BE%D0%BA%20%D0%B4%D0%B5%D0%BD%D1%8C2.png",
+          "originalFileName": "Рынок день2.png",
+          "fingerprint": "Рынок день2.png:3604822",
+          "hash": "1b6a06a7823e2d44"
+        }
+      ],
+      "suggestedGroups": [
+        "Рынок"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-40d0dd5ee392843a",
+      "normalizedName": "сельские дороги",
+      "groupKey": "сельские дороги",
+      "proposedTitle": "Сельские Дороги",
+      "variants": [
+        {
+          "type": "default",
+          "fileName": "Сельские дороги.png",
+          "url": "/battle-maps/%D0%A1%D0%B5%D0%BB%D1%8C%D1%81%D0%BA%D0%B8%D0%B5%20%D0%B4%D0%BE%D1%80%D0%BE%D0%B3%D0%B8.png",
+          "originalFileName": "Сельские дороги.png",
+          "fingerprint": "Сельские дороги.png:3034995",
+          "hash": "8a3f096c7485c342"
+        }
+      ],
+      "suggestedGroups": [
+        "Село",
+        "Дорога"
+      ],
+      "status": "standalone",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-6d7cf8bda1e81095",
+      "normalizedName": "склад у дока",
+      "groupKey": "склад у дока",
+      "proposedTitle": "Склад У Дока",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Склад у дока день.png",
+          "url": "/battle-maps/%D0%A1%D0%BA%D0%BB%D0%B0%D0%B4%20%D1%83%20%D0%B4%D0%BE%D0%BA%D0%B0%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Склад у дока день.png",
+          "fingerprint": "Склад у дока день.png:2784534",
+          "hash": "fc70a5d96ef7b25b"
+        },
+        {
+          "type": "night",
+          "fileName": "Склад у дока ночь.png",
+          "url": "/battle-maps/%D0%A1%D0%BA%D0%BB%D0%B0%D0%B4%20%D1%83%20%D0%B4%D0%BE%D0%BA%D0%B0%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Склад у дока ночь.png",
+          "fingerprint": "Склад у дока ночь.png:2908720",
+          "hash": "2920b4ac1363edc9"
+        }
+      ],
+      "suggestedGroups": [
+        "Рынок",
+        "Доки"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-fcf479b7dba17c94",
+      "normalizedName": "склады",
+      "groupKey": "склады",
+      "proposedTitle": "Склады",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Склады день.png",
+          "url": "/battle-maps/%D0%A1%D0%BA%D0%BB%D0%B0%D0%B4%D1%8B%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Склады день.png",
+          "fingerprint": "Склады день.png:3461427",
+          "hash": "4a60359517b99815"
+        },
+        {
+          "type": "night",
+          "fileName": "Склады ночь.png",
+          "url": "/battle-maps/%D0%A1%D0%BA%D0%BB%D0%B0%D0%B4%D1%8B%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Склады ночь.png",
+          "fingerprint": "Склады ночь.png:2963697",
+          "hash": "6d1fb5cf08179aa1"
+        }
+      ],
+      "suggestedGroups": [
+        "Рынок"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-dd6a6256bfada047",
+      "normalizedName": "стоянка разбойников",
+      "groupKey": "стоянка разбойников",
+      "proposedTitle": "Стоянка Разбойников",
+      "variants": [
+        {
+          "type": "night",
+          "fileName": "Стоянка разбойников ночь.png",
+          "url": "/battle-maps/%D0%A1%D1%82%D0%BE%D1%8F%D0%BD%D0%BA%D0%B0%20%D1%80%D0%B0%D0%B7%D0%B1%D0%BE%D0%B9%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Стоянка разбойников ночь.png",
+          "fingerprint": "Стоянка разбойников ночь.png:2772223",
+          "hash": "3e65b452dd2d4371"
+        },
+        {
+          "type": "default",
+          "fileName": "Стоянка разбойников.png",
+          "url": "/battle-maps/%D0%A1%D1%82%D0%BE%D1%8F%D0%BD%D0%BA%D0%B0%20%D1%80%D0%B0%D0%B7%D0%B1%D0%BE%D0%B9%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2.png",
+          "originalFileName": "Стоянка разбойников.png",
+          "fingerprint": "Стоянка разбойников.png:3229973",
+          "hash": "471b56bb8ca2c8f2"
+        }
+      ],
+      "suggestedGroups": [
+        "Лагерь",
+        "Разбойники"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-e41aca329403cbb5",
+      "normalizedName": "стоянка разбойников 1",
+      "groupKey": "стоянка разбойников 1",
+      "proposedTitle": "Стоянка Разбойников 1",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Стоянка разбойников день 1.png",
+          "url": "/battle-maps/%D0%A1%D1%82%D0%BE%D1%8F%D0%BD%D0%BA%D0%B0%20%D1%80%D0%B0%D0%B7%D0%B1%D0%BE%D0%B9%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2%20%D0%B4%D0%B5%D0%BD%D1%8C%201.png",
+          "originalFileName": "Стоянка разбойников день 1.png",
+          "fingerprint": "Стоянка разбойников день 1.png:3338755",
+          "hash": "3184ac012ce9e1a2"
+        },
+        {
+          "type": "night",
+          "fileName": "Стоянка разбойников ночь 1.png",
+          "url": "/battle-maps/%D0%A1%D1%82%D0%BE%D1%8F%D0%BD%D0%BA%D0%B0%20%D1%80%D0%B0%D0%B7%D0%B1%D0%BE%D0%B9%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2%20%D0%BD%D0%BE%D1%87%D1%8C%201.png",
+          "originalFileName": "Стоянка разбойников ночь 1.png",
+          "fingerprint": "Стоянка разбойников ночь 1.png:2716742",
+          "hash": "80a30409aa4503f3"
+        }
+      ],
+      "suggestedGroups": [
+        "Лагерь",
+        "Разбойники"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-368c49af40dd77db",
+      "normalizedName": "торговые ряды",
+      "groupKey": "торговые ряды",
+      "proposedTitle": "Торговые Ряды",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Торговые ряды день.png",
+          "url": "/battle-maps/%D0%A2%D0%BE%D1%80%D0%B3%D0%BE%D0%B2%D1%8B%D0%B5%20%D1%80%D1%8F%D0%B4%D1%8B%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Торговые ряды день.png",
+          "fingerprint": "Торговые ряды день.png:3306059",
+          "hash": "0dfd2cb98d9839dc"
+        },
+        {
+          "type": "night",
+          "fileName": "Торговые ряды ночь.png",
+          "url": "/battle-maps/%D0%A2%D0%BE%D1%80%D0%B3%D0%BE%D0%B2%D1%8B%D0%B5%20%D1%80%D1%8F%D0%B4%D1%8B%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Торговые ряды ночь.png",
+          "fingerprint": "Торговые ряды ночь.png:2966081",
+          "hash": "a4c1a6dc2f567cb5"
+        }
+      ],
+      "suggestedGroups": [
+        "Рынок"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-5072b78ce434be70",
+      "normalizedName": "тренировочное гильдии",
+      "groupKey": "тренировочное гильдии",
+      "proposedTitle": "Тренировочное Гильдии",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Тренировочное гильдии день.png",
+          "url": "/battle-maps/%D0%A2%D1%80%D0%B5%D0%BD%D0%B8%D1%80%D0%BE%D0%B2%D0%BE%D1%87%D0%BD%D0%BE%D0%B5%20%D0%B3%D0%B8%D0%BB%D1%8C%D0%B4%D0%B8%D0%B8%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Тренировочное гильдии день.png",
+          "fingerprint": "Тренировочное гильдии день.png:3251641",
+          "hash": "aa92ba6a438ef345"
+        },
+        {
+          "type": "evening",
+          "fileName": "Тренировочное гильдии вечер.png",
+          "url": "/battle-maps/%D0%A2%D1%80%D0%B5%D0%BD%D0%B8%D1%80%D0%BE%D0%B2%D0%BE%D1%87%D0%BD%D0%BE%D0%B5%20%D0%B3%D0%B8%D0%BB%D1%8C%D0%B4%D0%B8%D0%B8%20%D0%B2%D0%B5%D1%87%D0%B5%D1%80.png",
+          "originalFileName": "Тренировочное гильдии вечер.png",
+          "fingerprint": "Тренировочное гильдии вечер.png:2661574",
+          "hash": "251c567c76aab11e"
+        }
+      ],
+      "suggestedGroups": [
+        "Лагерь",
+        "Гильдия"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-73c43068d8e854c3",
+      "normalizedName": "тренировочный лагерь",
+      "groupKey": "тренировочный лагерь",
+      "proposedTitle": "Тренировочный Лагерь",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "тренировочный лагерь день.png",
+          "url": "/battle-maps/%D1%82%D1%80%D0%B5%D0%BD%D0%B8%D1%80%D0%BE%D0%B2%D0%BE%D1%87%D0%BD%D1%8B%D0%B9%20%D0%BB%D0%B0%D0%B3%D0%B5%D1%80%D1%8C%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "тренировочный лагерь день.png",
+          "fingerprint": "тренировочный лагерь день.png:3474113",
+          "hash": "9674818cfa705c18"
+        },
+        {
+          "type": "night",
+          "fileName": "Тренировочный лагерь ночь.png",
+          "url": "/battle-maps/%D0%A2%D1%80%D0%B5%D0%BD%D0%B8%D1%80%D0%BE%D0%B2%D0%BE%D1%87%D0%BD%D1%8B%D0%B9%20%D0%BB%D0%B0%D0%B3%D0%B5%D1%80%D1%8C%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Тренировочный лагерь ночь.png",
+          "fingerprint": "Тренировочный лагерь ночь.png:3049641",
+          "hash": "069bb298201864a8"
+        }
+      ],
+      "suggestedGroups": [
+        "Лагерь"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-c8df751e4956ffe3",
+      "normalizedName": "центр руин села",
+      "groupKey": "центр руин села",
+      "proposedTitle": "Центр Руин Села",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Центр руин села день.png",
+          "url": "/battle-maps/%D0%A6%D0%B5%D0%BD%D1%82%D1%80%20%D1%80%D1%83%D0%B8%D0%BD%20%D1%81%D0%B5%D0%BB%D0%B0%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Центр руин села день.png",
+          "fingerprint": "Центр руин села день.png:3131731",
+          "hash": "bf6b1ed822ca9157"
+        },
+        {
+          "type": "night",
+          "fileName": "Центр руин села ночь.png",
+          "url": "/battle-maps/%D0%A6%D0%B5%D0%BD%D1%82%D1%80%20%D1%80%D1%83%D0%B8%D0%BD%20%D1%81%D0%B5%D0%BB%D0%B0%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Центр руин села ночь.png",
+          "fingerprint": "Центр руин села ночь.png:2808875",
+          "hash": "70ab7d36e6e0ff6d"
+        }
+      ],
+      "suggestedGroups": [
+        "Руины"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-9be06dbd7baa486b",
+      "normalizedName": "южные холмы",
+      "groupKey": "южные холмы",
+      "proposedTitle": "Южные Холмы",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "южные холмы день.png",
+          "url": "/battle-maps/%D1%8E%D0%B6%D0%BD%D1%8B%D0%B5%20%D1%85%D0%BE%D0%BB%D0%BC%D1%8B%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "южные холмы день.png",
+          "fingerprint": "южные холмы день.png:3512249",
+          "hash": "60de1b97d251a9ba"
+        },
+        {
+          "type": "night",
+          "fileName": "южные холмы ночь.png",
+          "url": "/battle-maps/%D1%8E%D0%B6%D0%BD%D1%8B%D0%B5%20%D1%85%D0%BE%D0%BB%D0%BC%D1%8B%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "южные холмы ночь.png",
+          "fingerprint": "южные холмы ночь.png:3222776",
+          "hash": "819ea1b93b83b58d"
+        }
+      ],
+      "suggestedGroups": [
+        "Поле"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-1411713700a89c01",
+      "normalizedName": "южные холмы водопой",
+      "groupKey": "южные холмы водопой",
+      "proposedTitle": "Южные Холмы Водопой",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "южные холмы водопой день.png",
+          "url": "/battle-maps/%D1%8E%D0%B6%D0%BD%D1%8B%D0%B5%20%D1%85%D0%BE%D0%BB%D0%BC%D1%8B%20%D0%B2%D0%BE%D0%B4%D0%BE%D0%BF%D0%BE%D0%B9%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "южные холмы водопой день.png",
+          "fingerprint": "южные холмы водопой день.png:3437571",
+          "hash": "056b410ef2426641"
+        },
+        {
+          "type": "night",
+          "fileName": "южные холмы водопой ночь.png",
+          "url": "/battle-maps/%D1%8E%D0%B6%D0%BD%D1%8B%D0%B5%20%D1%85%D0%BE%D0%BB%D0%BC%D1%8B%20%D0%B2%D0%BE%D0%B4%D0%BE%D0%BF%D0%BE%D0%B9%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "южные холмы водопой ночь.png",
+          "fingerprint": "южные холмы водопой ночь.png:3091916",
+          "hash": "45690ef36c8929b4"
+        }
+      ],
+      "suggestedGroups": [
+        "Поле"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false
+    },
+    {
+      "id": "map-1f9187382230174a",
+      "normalizedName": "в городе",
+      "groupKey": "в городе",
+      "proposedTitle": "В городе",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "В городе день.png",
+          "url": "/battle-maps/%D0%92%20%D0%B3%D0%BE%D1%80%D0%BE%D0%B4%D0%B5%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "В городе день.png",
+          "fingerprint": "В городе день.png:3493107"
+        },
+        {
+          "type": "night",
+          "fileName": "В городе ночь.png",
+          "url": "/battle-maps/%D0%92%20%D0%B3%D0%BE%D1%80%D0%BE%D0%B4%D0%B5%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "В городе ночь.png",
+          "fingerprint": "В городе ночь.png:2892842"
+        }
+      ],
+      "suggestedGroups": [
+        "Финал"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false,
+      "mapSize": "large",
+      "storyArcId": "arc-1"
+    },
+    {
+      "id": "map-0eb413b37e671fa2",
+      "normalizedName": "пригород",
+      "groupKey": "пригород",
+      "proposedTitle": "Пригород",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "Пригород день.png",
+          "url": "/battle-maps/%D0%9F%D1%80%D0%B8%D0%B3%D0%BE%D1%80%D0%BE%D0%B4%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "Пригород день.png",
+          "fingerprint": "Пригород день.png:3371432"
+        },
+        {
+          "type": "night",
+          "fileName": "Пригород ночь.png",
+          "url": "/battle-maps/%D0%9F%D1%80%D0%B8%D0%B3%D0%BE%D1%80%D0%BE%D0%B4%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "Пригород ночь.png",
+          "fingerprint": "Пригород ночь.png:2829589"
+        }
+      ],
+      "suggestedGroups": [
+        "Финал"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false,
+      "mapSize": "large",
+      "storyArcId": "arc-1"
+    },
+    {
+      "id": "map-f1842b02fc4a61d4",
+      "normalizedName": "за стенами",
+      "groupKey": "за стенами",
+      "proposedTitle": "За стенами",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "За стенами день.png",
+          "url": "/battle-maps/%D0%97%D0%B0%20%D1%81%D1%82%D0%B5%D0%BD%D0%B0%D0%BC%D0%B8%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "За стенами день.png",
+          "fingerprint": "За стенами день.png:3279565"
+        },
+        {
+          "type": "night",
+          "fileName": "За стенами ночь.png",
+          "url": "/battle-maps/%D0%97%D0%B0%20%D1%81%D1%82%D0%B5%D0%BD%D0%B0%D0%BC%D0%B8%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "За стенами ночь.png",
+          "fingerprint": "За стенами ночь.png:2929171"
+        }
+      ],
+      "suggestedGroups": [
+        "Финал"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false,
+      "mapSize": "large",
+      "storyArcId": "arc-1"
+    },
+    {
+      "id": "map-1fccd30619fd73d6",
+      "normalizedName": "у стен",
+      "groupKey": "у стен",
+      "proposedTitle": "У стен",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "У стен день.png",
+          "url": "/battle-maps/%D0%A3%20%D1%81%D1%82%D0%B5%D0%BD%20%D0%B4%D0%B5%D0%BD%D1%8C.png",
+          "originalFileName": "У стен день.png",
+          "fingerprint": "У стен день.png:3375128"
+        },
+        {
+          "type": "night",
+          "fileName": "У стен ночь.png",
+          "url": "/battle-maps/%D0%A3%20%D1%81%D1%82%D0%B5%D0%BD%20%D0%BD%D0%BE%D1%87%D1%8C.png",
+          "originalFileName": "У стен ночь.png",
+          "fingerprint": "У стен ночь.png:2871209"
+        }
+      ],
+      "suggestedGroups": [
+        "Финал"
+      ],
+      "status": "merged",
+      "userModifiedGrid": false,
+      "mapSize": "large",
+      "storyArcId": "arc-1"
+    }
+  ]
+}

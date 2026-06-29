@@ -5,6 +5,7 @@ import { CompanionLinkRow } from './CompanionLinkRow';
 import { PurchaseCart, type BuyableItem } from './PurchaseCart';
 import { parseAnyPrice } from './currency';
 import { ImageLightbox } from './ImageLightbox';
+import { useCampaignStore } from '../../state/campaignStore';
 
 /**
  * Ported field order/content from dm-companion's real
@@ -32,7 +33,7 @@ export function CompanionTavernCard({
   onOpenLocation,
 }: {
   tavern: DmTavern;
-  npcs: { id: string; name: string }[];
+  npcs: { id: string; name: string; visibleToPlayers?: boolean }[];
   quests: { id: string; title: string }[];
   images: DmImageItem[];
   /** Bug-fix pass: dm-companion's real TavernDetailPage shows "Локация"
@@ -43,11 +44,23 @@ export function CompanionTavernCard({
   onOpenQuest?: (id: string) => void;
   onOpenLocation?: () => void;
 }) {
+  const store = useCampaignStore();
+  const revealButton = (visible: boolean, label: string, onToggle: () => void) => (
+    <button
+      type="button"
+      className={visible ? 'player-visibility-chip player-visibility-chip--visible' : 'player-visibility-chip'}
+      onClick={onToggle}
+      title={visible ? 'Скрыть от игроков' : 'Показать игрокам'}
+    >
+      {visible ? '👁' : 'скрыто'} · {label}
+    </button>
+  );
   const owner = tavern.ownerNpcId ? npcs.find((n) => n.id === tavern.ownerNpcId) : undefined;
   const staffItems = (tavern.staff ?? []).map((id) => ({ id, label: npcs.find((n) => n.id === id)?.name ?? id }));
   const relatedNpcItems = (tavern.relatedNpcs ?? []).map((id) => ({ id, label: npcs.find((n) => n.id === id)?.name ?? id }));
   const relatedQuestItems = (tavern.relatedQuests ?? []).map((id) => ({ id, label: quests.find((q) => q.id === id)?.title ?? id }));
   const hero = resolveEntityPreviewImage('tavern', tavern, images);
+  const heroSourceImage = hero ? images.find((img) => img.src === hero.src || img.thumbnailSrc === hero.thumbnailSrc) : undefined;
   const galleryImages = (tavern.relatedImages ?? [])
     .map((id) => images.find((i) => i.id === id))
     .filter((i): i is DmImageItem => !!i);
@@ -84,6 +97,7 @@ export function CompanionTavernCard({
           <img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={tavern.name} />
         </button>
       )}
+      {heroSourceImage && revealButton(heroSourceImage.safeForPlayers !== false, 'арт таверны', () => store.patchImage(heroSourceImage.id, { safeForPlayers: heroSourceImage.safeForPlayers === false }))}
       {hero && lightboxOpen && (
         <ImageLightbox image={{ ...hero, title: hero.title ?? tavern.name }} onClose={() => setLightboxOpen(false)} />
       )}
@@ -110,7 +124,10 @@ export function CompanionTavernCard({
         <>
           <h4>Владелец</h4>
           {owner && onOpenNpc ? (
-            <CompanionLinkRow items={[{ id: owner.id, label: owner.name }]} onOpen={onOpenNpc} />
+            <>
+              <CompanionLinkRow items={[{ id: owner.id, label: owner.name }]} onOpen={onOpenNpc} />
+              {revealButton(owner.visibleToPlayers === true, owner.name, () => store.patchNpc(owner.id, { visibleToPlayers: owner.visibleToPlayers !== true }))}
+            </>
           ) : (
             <p>{owner?.name ?? tavern.ownerName}</p>
           )}
@@ -120,6 +137,13 @@ export function CompanionTavernCard({
         <>
           <h4>Персонал</h4>
           {onOpenNpc ? <CompanionLinkRow items={staffItems} onOpen={onOpenNpc} /> : <p>{staffItems.map((i) => i.label).join(', ')}</p>}
+          <div className="player-visibility-npc-list">
+            {staffItems.map((item) => {
+              const npc = npcs.find((n) => n.id === item.id);
+              if (!npc) return null;
+              return revealButton(npc.visibleToPlayers === true, npc.name, () => store.patchNpc(npc.id, { visibleToPlayers: npc.visibleToPlayers !== true }));
+            })}
+          </div>
         </>
       )}
       {!!tavern.menu?.length && (
@@ -183,7 +207,10 @@ export function CompanionTavernCard({
           <h4>Изображения</h4>
           <div className="companion-image-gallery">
             {galleryImages.map((img) => (
-              <img key={img.id} src={img.thumbnailSrc ?? img.src} alt={img.title} />
+              <div key={img.id} className="entity-card-wrap">
+                <img src={img.thumbnailSrc ?? img.src} alt={img.title} />
+                {revealButton(img.safeForPlayers !== false, img.title, () => store.patchImage(img.id, { safeForPlayers: img.safeForPlayers === false }))}
+              </div>
             ))}
           </div>
         </>

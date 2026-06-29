@@ -29,8 +29,9 @@ import type {
   BattleEntry,
   Npc,
   PartyRouteProgress,
+  ActiveBattleState,
 } from '../types';
-import type { DmTavern, DmShop, DmImageItem, DmLocation } from '../types/dmCompanion';
+import type { DmTavern, DmShop, DmImageItem, DmLocation, DmQuest, DmCustomEnemy } from '../types/dmCompanion';
 
 export const DELETED = '__deleted__' as const;
 
@@ -62,6 +63,8 @@ export interface CampaignOverlay {
   tavernPatches: Record<string, Patch<DmTavern>>;
   shopPatches: Record<string, Patch<DmShop>>;
   imagePatches: Record<string, Patch<DmImageItem>>;
+  questPatches: Record<string, Patch<DmQuest>>;
+  enemyPatches: Record<string, Patch<DmCustomEnemy>>;
   /** Hotfix — DM edits to a dm-companion-seeded *source* Location (the
    * embedded-companion content card, e.g. "Cardlarein Road"). Distinct from
    * locationStatePatches, which patches the per-timeline map projection
@@ -85,6 +88,8 @@ export interface CampaignOverlay {
    * "Загрузить изображение с компьютера" button. Same "no seed data, 100%
    * DM-created" pattern as newNpcs; `src` is a data: URL. */
   newImages: DmImageItem[];
+  /** DM-created enemies copied/customized from the bestiary. */
+  newEnemies: DmCustomEnemy[];
 
   /** These have no separate "seed" — the overlay IS the full value. */
   party: PartyState;
@@ -143,6 +148,10 @@ export interface CampaignOverlay {
    * instant-walk flow). Always defaulted to null for old overlay JSON. */
   partyRouteProgress: PartyRouteProgress | null;
 
+  /** Active embedded battle window. Persisted so DM and player/observer
+   * tabs in the same browser can open/close the same battle without a server. */
+  activeBattle: ActiveBattleState | null;
+
   currentTimelineId: string;
   mode: 'dm-view' | 'dm-edit' | 'player-view';
 
@@ -184,6 +193,8 @@ export const EMPTY_OVERLAY: CampaignOverlay = {
   tavernPatches: {},
   shopPatches: {},
   imagePatches: {},
+  questPatches: {},
+  enemyPatches: {},
   locationPatches: {},
   newTimelines: [],
   newWorldMaps: [],
@@ -195,7 +206,8 @@ export const EMPTY_OVERLAY: CampaignOverlay = {
   newPlacements: [],
   newNpcs: [],
   newImages: [],
-  party: { visitedLocationStateIds: [], knownLocationStateIds: [], revealedLocationStateIds: [] },
+  newEnemies: [],
+  party: { currentMapPosition: undefined, visitedLocationStateIds: [], knownLocationStateIds: [], revealedLocationStateIds: [] },
   progress: { questStatusOverrides: {}, locationStatusOverrides: {}, notesByLocationStateId: {} },
   battleMapLocationLinkOverrides: {},
   battleMapVttUrlOverrides: {},
@@ -208,6 +220,7 @@ export const EMPTY_OVERLAY: CampaignOverlay = {
   movableEntitiesById: {},
   battleEntriesById: {},
   partyRouteProgress: null,
+  activeBattle: null,
   currentTimelineId: '',
   mode: 'dm-view',
   routeEditorVersion: 0,

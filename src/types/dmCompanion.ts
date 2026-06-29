@@ -181,6 +181,50 @@ export interface DmCustomEnemy {
   importedFromBestiaryAt?: string;
 }
 
+export interface DmPlayerJournalEntry {
+  id: string;
+  date: string;
+  text: string;
+}
+
+export interface DmPlayerReputationChange {
+  id: string;
+  date: string;
+  delta: number;
+  reason: string;
+}
+
+export interface DmPlayerReputationEntry {
+  id: string;
+  arcId?: string;
+  faction: string;
+  value: number;
+  history: DmPlayerReputationChange[];
+}
+
+export interface DmPlayer {
+  id: string;
+  characterName: string;
+  playerName: string;
+  race: string;
+  class: string;
+  level: string;
+  image: string;
+  description: string;
+  backstory: string;
+  personality?: string;
+  ideals?: string;
+  bonds?: string;
+  flaws?: string;
+  dmNotes: string;
+  dmSecrets?: string;
+  journal: DmPlayerJournalEntry[];
+  reputation: DmPlayerReputationEntry[];
+  relatedQuests: string[];
+  relatedNpcs: string[];
+  tags: string[];
+}
+
 export type ImageType = 'npc' | 'location' | 'enemy' | 'item' | 'map' | 'other' | 'battle_map';
 
 export interface DmImageItem {
@@ -294,6 +338,7 @@ export interface DmShopItem {
   quality?: string;
   notes?: string;
   priceSource?: string;
+  hidden?: boolean;
 }
 
 export interface DmShop {

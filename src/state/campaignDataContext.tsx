@@ -93,10 +93,16 @@ export function useCampaignData(): CampaignDataState {
       routes: applyOverlayToList(base.data.routes, overlay.routePatches, overlay.newRoutes),
       travelEvents: applyOverlayToList(base.data.travelEvents, overlay.travelEventPatches, overlay.newTravelEvents),
       placements: applyOverlayToList(base.data.placements, overlay.placementPatches, overlay.newPlacements),
-      npcs: applyOverlayToList(base.data.npcs, overlay.npcPatches, overlay.newNpcs),
+      npcs: applyOverlayToList(
+        base.data.npcs.map((npc) => ({ ...npc, visibleToPlayers: false })),
+        overlay.npcPatches,
+        overlay.newNpcs,
+      ),
       taverns: applyOverlayToList(base.data.taverns, overlay.tavernPatches, []),
       shops: applyOverlayToList(base.data.shops, overlay.shopPatches, []),
       images: applyOverlayToList(base.data.images, overlay.imagePatches, overlay.newImages),
+      quests: applyOverlayToList(base.data.quests, overlay.questPatches, []),
+      enemies: applyOverlayToList(base.data.enemies, overlay.enemyPatches, overlay.newEnemies),
       locations: applyOverlayToList(base.data.locations, overlay.locationPatches, []),
       battleMapLocationLinks: mergeBattleMapLocationLinks(
         base.data.battleMapLocationLinks,

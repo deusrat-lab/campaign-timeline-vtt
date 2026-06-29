@@ -1,12 +1,12 @@
 import { Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { NavBar } from './components/NavBar';
 import { NavRail } from './components/NavRail';
 import { MapWorkspacePage } from './pages/MapWorkspacePage';
 import { HomePage } from './pages/HomePage';
-import { QuestsPage } from './pages/QuestsPage';
-import { ObserverViewPage } from './pages/ObserverViewPage';
+import { EntityLibraryPage } from './pages/EntityLibraryPage';
 import { CampaignDataProvider } from './state/campaignDataContext';
-import { CampaignStoreProvider } from './state/campaignStore';
+import { CampaignStoreProvider, useCampaignStore } from './state/campaignStore';
 
 /** Legacy /location/:id deep links now resolve inside the Map Workspace instead of a standalone page. */
 function LocationRedirect() {
@@ -14,18 +14,32 @@ function LocationRedirect() {
   return <Navigate to={`/map?selected=${encodeURIComponent(id ?? '')}`} replace />;
 }
 
-/** Observer (Etap C) is a deliberately bare full-screen route — no NavRail,
- * no NavBar, no app-shell chrome at all, so it's safe to project on a second
- * screen/TV the players can see. */
+function PlayerWorkspaceRoute() {
+  const store = useCampaignStore();
+  useEffect(() => {
+    store.setMode('player-view');
+    // mode is intentionally local to this tab; campaignStore does not persist it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return <MapWorkspacePage />;
+}
+
+/** /observer now opens the same usable workspace in Player View. */
 function AppShell() {
   const location = useLocation();
   if (location.pathname === '/observer') {
     return (
-      <main>
-        <Routes>
-          <Route path="/observer" element={<ObserverViewPage />} />
-        </Routes>
-      </main>
+      <div className="app-shell app-shell--observer-player">
+        <NavRail />
+        <div className="app-shell-main">
+          <NavBar />
+          <main>
+            <Routes>
+              <Route path="/observer" element={<PlayerWorkspaceRoute />} />
+            </Routes>
+          </main>
+        </div>
+      </div>
     );
   }
   return (
@@ -38,7 +52,12 @@ function AppShell() {
             <Route path="/" element={<MapWorkspacePage />} />
             <Route path="/map" element={<MapWorkspacePage />} />
             <Route path="/location/:id" element={<LocationRedirect />} />
-            <Route path="/quests" element={<QuestsPage />} />
+            <Route path="/quests" element={<EntityLibraryPage kind="quests" />} />
+            <Route path="/npc" element={<EntityLibraryPage kind="npc" />} />
+            <Route path="/enemies" element={<EntityLibraryPage kind="enemies" />} />
+            <Route path="/bestiary" element={<EntityLibraryPage kind="bestiary" />} />
+            <Route path="/players" element={<EntityLibraryPage kind="players" />} />
+            <Route path="/battle-maps" element={<EntityLibraryPage kind="battleMaps" />} />
             {/* New-location creation + the prefill/needs-review report still live here
                until they're migrated into the Map Workspace side panel. */}
             <Route path="/admin" element={<HomePage />} />

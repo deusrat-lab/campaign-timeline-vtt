@@ -5,6 +5,7 @@ import { CompanionLinkRow } from './CompanionLinkRow';
 import { PurchaseCart, type BuyableItem } from './PurchaseCart';
 import { parseAnyPrice } from './currency';
 import { ImageLightbox } from './ImageLightbox';
+import { useCampaignStore } from '../../state/campaignStore';
 
 /**
  * Ported field order/content from dm-companion's real
@@ -30,7 +31,7 @@ export function CompanionShopCard({
   onOpenLocation,
 }: {
   shop: DmShop;
-  npcs: { id: string; name: string }[];
+  npcs: { id: string; name: string; visibleToPlayers?: boolean }[];
   images: DmImageItem[];
   /** Bug-fix pass: dm-companion's real ShopDetailPage shows "Локация"
    * (`shop.location`) right after Слухи — this card was missing it. */
@@ -38,10 +39,22 @@ export function CompanionShopCard({
   onOpenNpc?: (id: string) => void;
   onOpenLocation?: () => void;
 }) {
+  const store = useCampaignStore();
+  const revealButton = (visible: boolean, label: string, onToggle: () => void) => (
+    <button
+      type="button"
+      className={visible ? 'player-visibility-chip player-visibility-chip--visible' : 'player-visibility-chip'}
+      onClick={onToggle}
+      title={visible ? 'Скрыть от игроков' : 'Показать игрокам'}
+    >
+      {visible ? '👁' : 'скрыто'} · {label}
+    </button>
+  );
   const owner = shop.ownerNpcId ? npcs.find((n) => n.id === shop.ownerNpcId) : undefined;
   const hero = resolveEntityPreviewImage('shop', shop, images);
+  const heroSourceImage = hero ? images.find((img) => img.src === hero.src || img.thumbnailSrc === hero.thumbnailSrc) : undefined;
   const itemsByCategory = new Map<string, NonNullable<DmShop['items']>>();
-  for (const item of shop.items ?? []) {
+  for (const item of (shop.items ?? []).filter((entry) => !entry.hidden)) {
     const cat = item.category ?? 'Прочее';
     const list = itemsByCategory.get(cat) ?? [];
     list.push(item);
@@ -63,6 +76,7 @@ export function CompanionShopCard({
           <img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={shop.name} />
         </button>
       )}
+      {heroSourceImage && revealButton(heroSourceImage.safeForPlayers !== false, 'арт магазина', () => store.patchImage(heroSourceImage.id, { safeForPlayers: heroSourceImage.safeForPlayers === false }))}
       {hero && lightboxOpen && (
         <ImageLightbox image={{ ...hero, title: hero.title ?? shop.name }} onClose={() => setLightboxOpen(false)} />
       )}
@@ -105,7 +119,10 @@ export function CompanionShopCard({
         <>
           <h4>Владелец</h4>
           {onOpenNpc ? (
-            <CompanionLinkRow items={[{ id: owner.id, label: owner.name }]} onOpen={onOpenNpc} />
+            <>
+              <CompanionLinkRow items={[{ id: owner.id, label: owner.name }]} onOpen={onOpenNpc} />
+              {revealButton(owner.visibleToPlayers === true, owner.name, () => store.patchNpc(owner.id, { visibleToPlayers: owner.visibleToPlayers !== true }))}
+            </>
           ) : (
             <p>{owner.name}</p>
           )}
@@ -129,7 +146,12 @@ export function CompanionShopCard({
               .map((item) => {
                 const parsed = parseAnyPrice(item.price, item.currency);
                 if (!parsed) return null;
-                const metaParts = [item.description, item.availability].filter(Boolean);
+                const metaParts = [
+                  item.description,
+                  item.availability,
+                  item.quality,
+                  item.priceSource && item.priceSource !== 'Экономика Грейхольма' ? `источник: ${item.priceSource}` : undefined,
+                ].filter(Boolean);
                 const result: BuyableItem = { id: item.id, name: item.name, meta: metaParts.join(' · ') || undefined, amount: parsed.amount, currency: parsed.currency };
                 return result;
               })

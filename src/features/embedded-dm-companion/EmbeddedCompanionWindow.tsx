@@ -1,8 +1,9 @@
+import { useEffect, useState } from 'react';
 import type { CampaignData } from '../../data/loadCampaignData';
 import { useCampaignStore } from '../../state/campaignStore';
 import { effectiveQuestStatus } from '../../data/selectors';
 import { getPlacementVisibilityState, getVisibilityLabel } from '../../data/visibility';
-import type { DmQuest } from '../../types/dmCompanion';
+import type { DmImageItem, DmLocation, DmQuest, DmShop, DmTavern } from '../../types/dmCompanion';
 import type { QuestStatus, BattleEntry } from '../../types';
 import { CompanionLocationCard } from './CompanionLocationCard';
 import { CompanionTavernCard } from './CompanionTavernCard';
@@ -12,6 +13,7 @@ import { CompanionQuestCard } from './CompanionQuestCard';
 import { CompanionEnemyCard } from './CompanionEnemyCard';
 import { CompanionImageCard } from './CompanionImageCard';
 import { CompanionBattleEntryCard } from './CompanionBattleEntryCard';
+import { EntityEditor } from '../../pages/EntityLibraryPage';
 
 /**
  * The shared embedded-companion navigation entity. Names kept as
@@ -65,12 +67,7 @@ export function EmbeddedCompanionWindow({
   data,
   npcs,
   quests,
-  onEditNpc,
-  onEditTavern,
-  onEditShop,
-  onEditImage,
-  onEditBattleEntry,
-  onEditLocation,
+  onStartBattle,
 }: {
   entity: EmbeddedCompanionEntity;
   hasBack: boolean;
@@ -80,32 +77,19 @@ export function EmbeddedCompanionWindow({
   data: CampaignData;
   npcs: { id: string; name: string }[];
   quests: { id: string; title: string }[];
-  /** Bug-fix pass — "Редактировать" bottom action bar (see dm-companion's
-   * real ShopDetailPage.tsx/NpcDetailPage.tsx btn-row: Редактировать /
-   * Перенести в архив / Удалить). Only npc/tavern/shop/image/battleEntry
-   * have a real override-patch edit mechanism in this app today
-   * (MapWorkspacePage's `open*Editor` functions) — location/quest/enemy
-   * genuinely have none yet (same pre-existing limitation already
-   * documented in CompanionQuestCard's/CompanionEnemyCard's own
-   * "Редактирование ... будет добавлено отдельным этапом" notes), so those
-   * three omit this prop and the bar shows that same disabled message
-   * instead of a non-functional button. */
-  onEditNpc?: (npcId: string) => void;
-  onEditTavern?: (tavernId: string) => void;
-  onEditShop?: (shopId: string) => void;
-  onEditImage?: (imageId: string) => void;
-  onEditBattleEntry?: (battleEntryId: string) => void;
-  /** Hotfix — Location now has a real overlay-patch editor too
-   * (locationPatches), same pattern as onEditTavern/onEditShop. Quest/Enemy
-   * still have none and keep showing editUnsupportedNote below. */
-  onEditLocation?: (locationId: string) => void;
+  onStartBattle?: (battleMapId: string, locationStateId?: string) => void;
 }) {
   const store = useCampaignStore();
+  const [inlineEditing, setInlineEditing] = useState(false);
   const openNpc = (id: string) => onOpen({ type: 'npc', id });
   const openQuest = (id: string) => onOpen({ type: 'quest', id });
   const openShop = (id: string) => onOpen({ type: 'shop', id });
   const openLocation = (id: string) => onOpen({ type: 'location', id });
   const openEnemy = (id: string) => onOpen({ type: 'enemy', id });
+
+  useEffect(() => {
+    setInlineEditing(false);
+  }, [entity.type, entity.id]);
 
   let title: string;
   let body: React.ReactNode;
@@ -134,6 +118,23 @@ export function EmbeddedCompanionWindow({
     // same as it does, not stored directly on DmLocation.
     const shopsHere = loc ? data.shops.filter((s) => s.location === loc.id) : [];
     const enemiesHere = loc ? data.enemies.filter((e) => e.locationIds?.includes(loc.id)) : [];
+    const locationStatesHere = loc ? data.locationStates.filter((ls) => ls.locationId === loc.id) : [];
+    const locationStateIdsHere = new Set(locationStatesHere.map((ls) => ls.id));
+    const battleMapLinkByKey = new Map(
+      data.battleMapLocationLinks
+        .filter((link) => locationStateIdsHere.has(link.locationStateId) && !link.rejected)
+        .map((link) => [`${link.locationStateId}__${link.battleMapId}`, link]),
+    );
+    for (const override of Object.values(store.battleMapLocationLinkOverrides)) {
+      if (override.rejected || !locationStateIdsHere.has(override.locationStateId)) continue;
+      battleMapLinkByKey.set(`${override.locationStateId}__${override.battleMapId}`, override);
+    }
+    const battleMapLinksHere = Array.from(battleMapLinkByKey.values()).map((link) => ({
+      locationStateId: link.locationStateId,
+      battleMap: data.battleMaps.find((bm) => bm.id === link.battleMapId),
+      confidence: link.confidence,
+      manual: link.manual,
+    }));
     body = loc ? (
       <CompanionLocationCard
         loc={loc}
@@ -142,6 +143,17 @@ export function EmbeddedCompanionWindow({
         shops={shopsHere}
         enemies={enemiesHere}
         images={data.images}
+        battleMapLinks={battleMapLinksHere}
+        availableBattleMaps={data.battleMaps}
+        onStartBattle={onStartBattle}
+        onLinkBattleMap={(battleMapId) => {
+          const targetLocationState = locationStatesHere[0];
+          if (!targetLocationState) return;
+          store.addManualBattleMapLink(targetLocationState.id, battleMapId, 'Manual link from location card');
+        }}
+        onUnlinkBattleMap={(battleMapId, locationStateId) => {
+          store.removeBattleMapLink(locationStateId, battleMapId);
+        }}
         onOpenNpc={openNpc}
         onOpenQuest={openQuest}
         onOpenShop={openShop}
@@ -206,9 +218,15 @@ export function EmbeddedCompanionWindow({
         images={data.images}
         locationName={loc?.name}
         onOpenNpc={openNpc}
-        onOpenLocation={openLocation}
-        onOpenEnemy={openEnemy}
-      />
+	        onOpenLocation={openLocation}
+	        onOpenEnemy={openEnemy}
+          onEditEnemy={openEnemy}
+          onRemoveEnemy={(enemyId) => {
+            store.patchQuest(quest.id, { enemies: (quest.enemies ?? []).filter((id) => id !== enemyId) });
+            const enemy = data.enemies.find((e) => e.id === enemyId);
+            if (enemy) store.patchEnemy(enemy.id, { questIds: (enemy.questIds ?? []).filter((id) => id !== quest.id) });
+          }}
+	      />
     ) : (
       <p className="muted">Квест не найден.</p>
     );
@@ -284,23 +302,43 @@ export function EmbeddedCompanionWindow({
   // overlay for the types that have one; the others show the same
   // already-established disabled/read-only note instead of faking a save.
   const editAction: (() => void) | undefined =
-    entity.type === 'npc' && onEditNpc
-      ? () => onEditNpc(entity.id)
-      : entity.type === 'tavern' && onEditTavern
-        ? () => onEditTavern(entity.id)
-        : entity.type === 'shop' && onEditShop
-          ? () => onEditShop(entity.id)
-          : entity.type === 'image' && onEditImage
-            ? () => onEditImage(entity.id)
-            : entity.type === 'battleEntry' && onEditBattleEntry
-              ? () => onEditBattleEntry(entity.id)
-              : entity.type === 'location' && onEditLocation
-                ? () => onEditLocation(entity.id)
-                : undefined;
-  const editUnsupportedNote =
-    entity.type === 'quest' || entity.type === 'enemy'
-      ? 'Редактирование исходной карточки будет добавлено отдельным этапом.'
-      : undefined;
+    entity.type === 'npc'
+      ? () => setInlineEditing(true)
+      : entity.type === 'tavern'
+        ? () => setInlineEditing(true)
+        : entity.type === 'shop'
+          ? () => setInlineEditing(true)
+          : entity.type === 'quest'
+            ? () => setInlineEditing(true)
+            : entity.type === 'enemy'
+              ? () => setInlineEditing(true)
+              : entity.type === 'image'
+                ? () => setInlineEditing(true)
+                : entity.type === 'battleEntry'
+                  ? () => setInlineEditing(true)
+                  : entity.type === 'location'
+                    ? () => setInlineEditing(true)
+                    : undefined;
+  const editUnsupportedNote = undefined;
+  const inlineEntity =
+	    entity.type === 'npc'
+	      ? data.npcs.find((n) => n.id === entity.id)
+	      : entity.type === 'quest'
+	        ? data.quests.find((q) => q.id === entity.id)
+	        : entity.type === 'enemy'
+	          ? data.enemies.find((e) => e.id === entity.id)
+	          : entity.type === 'location'
+	            ? data.locations.find((l) => l.id === entity.id)
+	            : entity.type === 'tavern'
+	              ? data.taverns.find((t) => t.id === entity.id)
+	              : entity.type === 'shop'
+	                ? data.shops.find((s) => s.id === entity.id)
+	                : entity.type === 'image'
+	                  ? data.images.find((i) => i.id === entity.id)
+	                  : entity.type === 'battleEntry'
+	                    ? store.battleEntriesById[entity.id]
+	                    : undefined;
+	  const inlineKind = entity.type === 'npc' ? 'npc' : entity.type === 'quest' ? 'quests' : entity.type === 'enemy' ? 'enemies' : null;
 
   return (
     <div className="companion-window-overlay" onClick={onClose}>
@@ -321,7 +359,7 @@ export function EmbeddedCompanionWindow({
                 map's object-window-panel header for the marker-click path. */}
             {editAction && (
               <button className="btn-primary btn-compact" onClick={editAction}>
-                Редактировать
+                {inlineEditing ? 'Редактирование' : 'Редактировать'}
               </button>
             )}
             <button className="btn-ghost" onClick={onClose}>
@@ -329,9 +367,17 @@ export function EmbeddedCompanionWindow({
             </button>
           </div>
         </div>
-        <div className="companion-window-body">
-          {body}
-          {questForStatus && (
+	        <div className="companion-window-body">
+	          {inlineEditing && inlineEntity ? (
+	            inlineKind ? (
+	              <EntityEditor kind={inlineKind} entity={inlineEntity as Parameters<typeof EntityEditor>[0]['entity']} data={data} onDone={() => setInlineEditing(false)} />
+	            ) : (
+	              <InlineCompanionEditor entity={entity} value={inlineEntity as DmLocation | DmTavern | DmShop | DmImageItem | BattleEntry} data={data} onDone={() => setInlineEditing(false)} />
+	            )
+          ) : (
+            body
+          )}
+          {!inlineEditing && questForStatus && (
             <div className="companion-map-actions-body">
               <p className="muted">
                 Статус квеста: {QUEST_STATUS_LABELS[effectiveQuestStatus(questForStatus.id, questForStatus.status, store.progress)]}
@@ -417,6 +463,245 @@ export function EmbeddedCompanionWindow({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function splitLines(value: string): string[] | undefined {
+  const lines = value.split('\n').map((line) => line.trim()).filter(Boolean);
+  return lines.length ? lines : undefined;
+}
+
+function splitTags(value: string): string[] | undefined {
+  const tags = value.split(',').map((tag) => tag.trim()).filter(Boolean);
+  return tags.length ? tags : undefined;
+}
+
+function InlineCompanionEditor({
+  entity,
+  value,
+  data,
+  onDone,
+}: {
+  entity: EmbeddedCompanionEntity;
+  value: DmLocation | DmTavern | DmShop | DmImageItem | BattleEntry;
+  data: CampaignData;
+  onDone: () => void;
+}) {
+  if (entity.type === 'location') return <LocationInlineEditor location={value as DmLocation} onDone={onDone} />;
+  if (entity.type === 'tavern') return <TavernInlineEditor tavern={value as DmTavern} data={data} onDone={onDone} />;
+  if (entity.type === 'shop') return <ShopInlineEditor shop={value as DmShop} data={data} onDone={onDone} />;
+  if (entity.type === 'image') return <ImageInlineEditor image={value as DmImageItem} onDone={onDone} />;
+  if (entity.type === 'battleEntry') return <BattleEntryInlineEditor entry={value as BattleEntry} onDone={onDone} />;
+  return <p className="muted">Редактор для этой карточки недоступен.</p>;
+}
+
+function LocationInlineEditor({ location, onDone }: { location: DmLocation; onDone: () => void }) {
+  const store = useCampaignStore();
+  const [draft, setDraft] = useState({
+    name: location.name,
+    type: location.type,
+    region: location.region,
+    description: location.description ?? '',
+    atmosphere: location.atmosphere ?? '',
+    lore: location.lore ?? '',
+    playerView: location.playerView ?? '',
+    rumors: (location.rumors ?? []).join('\n'),
+    dmSecrets: location.dmSecrets ?? '',
+    notes: location.notes ?? '',
+    tags: (location.tags ?? []).join(', '),
+  });
+  return (
+    <form className="entity-inline-editor" onSubmit={(e) => {
+      e.preventDefault();
+      store.patchLocation(location.id, {
+        name: draft.name.trim(),
+        type: draft.type.trim(),
+        region: draft.region.trim(),
+        description: draft.description.trim(),
+        atmosphere: draft.atmosphere.trim() || undefined,
+        lore: draft.lore.trim() || undefined,
+        playerView: draft.playerView.trim() || undefined,
+        rumors: splitLines(draft.rumors),
+        dmSecrets: draft.dmSecrets.trim() || undefined,
+        notes: draft.notes.trim() || undefined,
+        tags: splitTags(draft.tags),
+      });
+      onDone();
+    }}>
+      <label>Название<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
+      <label>Тип<input value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value })} /></label>
+      <label>Регион<input value={draft.region} onChange={(e) => setDraft({ ...draft, region: e.target.value })} /></label>
+      <label>Описание<textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} /></label>
+      <label>Атмосфера<textarea value={draft.atmosphere} onChange={(e) => setDraft({ ...draft, atmosphere: e.target.value })} /></label>
+      <label>Лор<textarea value={draft.lore} onChange={(e) => setDraft({ ...draft, lore: e.target.value })} /></label>
+      <label>Что видят игроки<textarea value={draft.playerView} onChange={(e) => setDraft({ ...draft, playerView: e.target.value })} /></label>
+      <label>Слухи<textarea value={draft.rumors} onChange={(e) => setDraft({ ...draft, rumors: e.target.value })} /></label>
+      <label>Секреты ДМ<textarea value={draft.dmSecrets} onChange={(e) => setDraft({ ...draft, dmSecrets: e.target.value })} /></label>
+      <label>Заметки<textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} /></label>
+      <label>Теги через запятую<input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} /></label>
+      <EditorButtons disabled={!draft.name.trim()} onCancel={onDone} />
+    </form>
+  );
+}
+
+function TavernInlineEditor({ tavern, data, onDone }: { tavern: DmTavern; data: CampaignData; onDone: () => void }) {
+  const store = useCampaignStore();
+  const [draft, setDraft] = useState({
+    name: tavern.name,
+    location: tavern.location,
+    ownerNpcId: tavern.ownerNpcId ?? '',
+    description: tavern.description ?? '',
+    atmosphere: tavern.atmosphere ?? '',
+    services: (tavern.services ?? []).join('\n'),
+    rumors: (tavern.rumors ?? []).join('\n'),
+    notes: tavern.notes ?? '',
+    tags: (tavern.tags ?? []).join(', '),
+  });
+  return (
+    <form className="entity-inline-editor" onSubmit={(e) => {
+      e.preventDefault();
+      store.patchTavern(tavern.id, {
+        name: draft.name.trim(),
+        location: draft.location,
+        ownerNpcId: draft.ownerNpcId || undefined,
+        description: draft.description.trim() || undefined,
+        atmosphere: draft.atmosphere.trim() || undefined,
+        services: splitLines(draft.services),
+        rumors: splitLines(draft.rumors),
+        notes: draft.notes.trim() || undefined,
+        tags: splitTags(draft.tags),
+      });
+      onDone();
+    }}>
+      <label>Название<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
+      <label>Локация<select value={draft.location} onChange={(e) => setDraft({ ...draft, location: e.target.value })}>{data.locations.map((loc) => <option key={loc.id} value={loc.id}>{loc.name}</option>)}</select></label>
+      <label>Владелец<select value={draft.ownerNpcId} onChange={(e) => setDraft({ ...draft, ownerNpcId: e.target.value })}><option value="">Не задан</option>{data.npcs.map((npc) => <option key={npc.id} value={npc.id}>{npc.name}</option>)}</select></label>
+      <label>Описание<textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} /></label>
+      <label>Атмосфера<textarea value={draft.atmosphere} onChange={(e) => setDraft({ ...draft, atmosphere: e.target.value })} /></label>
+      <label>Услуги по строкам<textarea value={draft.services} onChange={(e) => setDraft({ ...draft, services: e.target.value })} /></label>
+      <label>Слухи по строкам<textarea value={draft.rumors} onChange={(e) => setDraft({ ...draft, rumors: e.target.value })} /></label>
+      <label>Заметки ДМ<textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} /></label>
+      <label>Теги через запятую<input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} /></label>
+      <EditorButtons disabled={!draft.name.trim()} onCancel={onDone} />
+    </form>
+  );
+}
+
+function ShopInlineEditor({ shop, data, onDone }: { shop: DmShop; data: CampaignData; onDone: () => void }) {
+  const store = useCampaignStore();
+  const [draft, setDraft] = useState({
+    name: shop.name,
+    type: shop.type ?? '',
+    location: shop.location,
+    ownerNpcId: shop.ownerNpcId ?? '',
+    description: shop.description ?? '',
+    services: (shop.services ?? []).join('\n'),
+    relationToPlayers: shop.relationToPlayers ?? '',
+    discounts: shop.discounts ?? '',
+    rumors: (shop.rumors ?? []).join('\n'),
+    notes: shop.notes ?? '',
+    tags: (shop.tags ?? []).join(', '),
+  });
+  return (
+    <form className="entity-inline-editor" onSubmit={(e) => {
+      e.preventDefault();
+      store.patchShop(shop.id, {
+        name: draft.name.trim(),
+        type: draft.type.trim() || undefined,
+        location: draft.location,
+        ownerNpcId: draft.ownerNpcId || undefined,
+        description: draft.description.trim() || undefined,
+        services: splitLines(draft.services),
+        relationToPlayers: draft.relationToPlayers.trim() || undefined,
+        discounts: draft.discounts.trim() || undefined,
+        rumors: splitLines(draft.rumors),
+        notes: draft.notes.trim() || undefined,
+        tags: splitTags(draft.tags),
+      });
+      onDone();
+    }}>
+      <label>Название<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
+      <label>Тип<input value={draft.type} onChange={(e) => setDraft({ ...draft, type: e.target.value })} /></label>
+      <label>Локация<select value={draft.location} onChange={(e) => setDraft({ ...draft, location: e.target.value })}>{data.locations.map((loc) => <option key={loc.id} value={loc.id}>{loc.name}</option>)}</select></label>
+      <label>Владелец<select value={draft.ownerNpcId} onChange={(e) => setDraft({ ...draft, ownerNpcId: e.target.value })}><option value="">Не задан</option>{data.npcs.map((npc) => <option key={npc.id} value={npc.id}>{npc.name}</option>)}</select></label>
+      <label>Описание<textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} /></label>
+      <label>Услуги по строкам<textarea value={draft.services} onChange={(e) => setDraft({ ...draft, services: e.target.value })} /></label>
+      <label>Отношение к игрокам<textarea value={draft.relationToPlayers} onChange={(e) => setDraft({ ...draft, relationToPlayers: e.target.value })} /></label>
+      <label>Скидки<textarea value={draft.discounts} onChange={(e) => setDraft({ ...draft, discounts: e.target.value })} /></label>
+      <label>Слухи по строкам<textarea value={draft.rumors} onChange={(e) => setDraft({ ...draft, rumors: e.target.value })} /></label>
+      <label>Заметки ДМ<textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} /></label>
+      <label>Теги через запятую<input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} /></label>
+      <EditorButtons disabled={!draft.name.trim()} onCancel={onDone} />
+    </form>
+  );
+}
+
+function ImageInlineEditor({ image, onDone }: { image: DmImageItem; onDone: () => void }) {
+  const store = useCampaignStore();
+  const [draft, setDraft] = useState({
+    title: image.title,
+    safeForPlayers: image.safeForPlayers,
+  });
+  return (
+    <form className="entity-inline-editor" onSubmit={(e) => {
+      e.preventDefault();
+      store.patchImage(image.id, {
+        title: draft.title.trim(),
+        safeForPlayers: draft.safeForPlayers,
+      });
+      onDone();
+    }}>
+      <label>Название<input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></label>
+      <label className="reveal-toggle"><input type="checkbox" checked={draft.safeForPlayers} onChange={(e) => setDraft({ ...draft, safeForPlayers: e.target.checked })} /> Безопасно для игроков</label>
+      <EditorButtons disabled={!draft.title.trim()} onCancel={onDone} />
+    </form>
+  );
+}
+
+function BattleEntryInlineEditor({ entry, onDone }: { entry: BattleEntry; onDone: () => void }) {
+  const store = useCampaignStore();
+  const [draft, setDraft] = useState({
+    name: entry.name,
+    status: entry.status,
+    visibleInPlayerView: entry.visibleInPlayerView === true,
+    playerSafeDescription: entry.playerSafeDescription ?? '',
+    dmNotes: entry.dmNotes ?? '',
+  });
+  return (
+    <form className="entity-inline-editor" onSubmit={(e) => {
+      e.preventDefault();
+      store.updateBattleEntry(entry.id, {
+        name: draft.name.trim(),
+        status: draft.status,
+        visibleInPlayerView: draft.visibleInPlayerView,
+        playerSafeDescription: draft.playerSafeDescription.trim() || undefined,
+        dmNotes: draft.dmNotes.trim() || undefined,
+      });
+      onDone();
+    }}>
+      <label>Название<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
+      <label>Статус<select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value as BattleEntry['status'] })}>
+        <option value="prepared">Подготовлена</option>
+        <option value="available">Доступна</option>
+        <option value="active">Активна</option>
+        <option value="completed">Завершена</option>
+        <option value="hidden">Скрыта</option>
+        <option value="disabled">Отключена</option>
+      </select></label>
+      <label className="reveal-toggle"><input type="checkbox" checked={draft.visibleInPlayerView} onChange={(e) => setDraft({ ...draft, visibleInPlayerView: e.target.checked })} /> Видна игрокам</label>
+      <label>Описание для игроков<textarea value={draft.playerSafeDescription} onChange={(e) => setDraft({ ...draft, playerSafeDescription: e.target.value })} /></label>
+      <label>Заметки ДМ<textarea value={draft.dmNotes} onChange={(e) => setDraft({ ...draft, dmNotes: e.target.value })} /></label>
+      <EditorButtons disabled={!draft.name.trim()} onCancel={onDone} />
+    </form>
+  );
+}
+
+function EditorButtons({ disabled, onCancel }: { disabled: boolean; onCancel: () => void }) {
+  return (
+    <div className="entity-editor-actions">
+      <button className="btn-primary" type="submit" disabled={disabled}>Сохранить</button>
+      <button type="button" onClick={onCancel}>Отмена</button>
     </div>
   );
 }

@@ -16,9 +16,6 @@ import { ImageLightbox } from './ImageLightbox';
  * EmbeddedCompanionWindow host itself, plus every Library/right-panel/
  * linked-row opener) — same convention as CompanionLocationCard's
  * dmSecrets block. There is no player-facing rendering path for this card.
- *
- * Enemy editing stays read-only, same reasoning as quests: no
- * override-patch mechanism exists for enemies yet in this app.
  */
 export function CompanionEnemyCard({
   enemy,
@@ -204,9 +201,6 @@ export function CompanionEnemyCard({
           <p className="muted">{enemy.dmNotes}</p>
         </>
       )}
-      <p className="muted companion-readonly-note">
-        Редактирование врагов будет добавлено отдельным этапом. Сейчас используется исходная карточка DM Companion.
-      </p>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { BATTLE_MAP_VTT_ORIGIN } from '../../config';
+import { BATTLE_MAP_ASSET_ORIGIN } from '../../config';
 import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
 
 /**
@@ -11,8 +11,8 @@ import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
  * `BattleMapManifestEntry` only ever carries `id`/`title`/`normalizedName?`/
  * `variants`/`status?` — there is no scene size, grid size, tag, or arc id on
  * a manifest entry, so none of those are resolved here. The preview-url logic
- * mirrors `BattleMapThumbnail.tsx`'s existing `${BATTLE_MAP_VTT_BASE_URL}${variant.url}`
- * pattern rather than reinventing it.
+ * mirrors `BattleMapThumbnail.tsx`'s existing local asset-url resolution
+ * rather than reinventing it.
  */
 
 export function getBattleMapById(
@@ -33,7 +33,7 @@ export function getBattleMapPreviewUrl(battleMap: BattleMapManifestEntry | undef
   if (!battleMap) return undefined;
   const variantWithUrl = battleMap.variants?.find((v) => v.url);
   if (!variantWithUrl?.url) return undefined;
-  return `${BATTLE_MAP_VTT_ORIGIN}${variantWithUrl.url}`;
+  return `${BATTLE_MAP_ASSET_ORIGIN}${variantWithUrl.url}`;
 }
 
 export function getBattleMapDisplayName(

@@ -294,6 +294,14 @@ export interface MapObjectPlacement {
 /** Where the party currently is and where they've been. */
 export interface PartyState {
   currentLocationStateId?: string;
+  /** Free map position for the party when the DM places/drags it outside a location or route. */
+  currentMapPosition?: {
+    timelineId: string;
+    mapId: string;
+    mapLevel: WorldMap['scope'];
+    x: number;
+    y: number;
+  };
   visitedLocationStateIds: string[];
   /** LocationState ids explicitly revealed to players (beyond normal "known" status). */
   knownLocationStateIds: string[];
@@ -785,4 +793,41 @@ export interface BattleEntry {
   dmNotes?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type ActiveBattleRole = 'dm' | 'player';
+export type ActiveBattleSide = 'enemy' | 'player';
+
+export interface ActiveBattleCombatant {
+  id: string;
+  side: ActiveBattleSide;
+  sourceId: string;
+  name: string;
+  imageId?: string;
+  tokenSrc?: string;
+  currentHp: number;
+  maxHp: number;
+  armorClass?: number;
+  initiative?: number;
+  notes?: string;
+  row?: number;
+  column?: number;
+  speedFeet?: number;
+  tokenDefinitionId?: string;
+  x: number;
+  y: number;
+}
+
+export interface ActiveBattleState {
+  id: string;
+  battleMapId: string;
+  sceneId?: string;
+  locationStateId?: string;
+  title: string;
+  variantType: string;
+  startedAt: string;
+  currentTurnCombatantId?: string;
+  round: number;
+  combatants: ActiveBattleCombatant[];
+  terrainCells?: Array<{ row: number; column: number; type: 'blocked' | 'difficult' }>;
 }

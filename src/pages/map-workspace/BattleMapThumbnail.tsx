@@ -1,4 +1,4 @@
-import { BATTLE_MAP_VTT_ORIGIN } from '../../config';
+import { BATTLE_MAP_ASSET_ORIGIN } from '../../config';
 
 /**
  * Extracted from MapWorkspacePage.tsx (Etap D decomposition) — fully self-
@@ -15,7 +15,7 @@ export function BattleMapThumbnail({
   title: string;
   size: 'small' | 'large';
 }) {
-  const src = variant?.url ? `${BATTLE_MAP_VTT_ORIGIN}${variant.url}` : undefined;
+  const src = variant?.url ? `${BATTLE_MAP_ASSET_ORIGIN}${variant.url}` : undefined;
   return (
     <div className={`battle-map-thumb battle-map-thumb-${size}`}>
       {src ? (
@@ -31,7 +31,7 @@ export function BattleMapThumbnail({
         />
       ) : null}
       <div className="battle-map-thumb-fallback" style={{ display: src ? 'none' : 'flex' }}>
-        🗺️ <span>Превью недоступно — запустите Battle Map VTT</span>
+        🗺️ <span>Превью недоступно</span>
       </div>
     </div>
   );

@@ -25,9 +25,12 @@ import type {
   BattleEntry,
   Npc,
   PartyRouteProgress,
+  ActiveBattleState,
+  ActiveBattleCombatant,
 } from '../types';
 import { TIMELINES } from '../data/loadCampaignData';
-import type { DmTavern, DmShop, DmImageItem, DmLocation } from '../types/dmCompanion';
+import projectOverlaySnapshot from '../data/campaignOverlaySnapshot.json';
+import type { DmTavern, DmShop, DmImageItem, DmLocation, DmQuest, DmCustomEnemy } from '../types/dmCompanion';
 import { DELETED, EMPTY_OVERLAY, DEFAULT_CALENDAR } from './overlay';
 import type { CampaignOverlay, Patch } from './overlay';
 
@@ -59,7 +62,7 @@ const CANON_MAP_VERSION = 1;
 function defaultOverlay(): CampaignOverlay {
   return {
     ...EMPTY_OVERLAY,
-    party: { visitedLocationStateIds: [], knownLocationStateIds: [], revealedLocationStateIds: [] },
+    party: { currentMapPosition: undefined, visitedLocationStateIds: [], knownLocationStateIds: [], revealedLocationStateIds: [] },
     progress: { questStatusOverrides: {}, locationStatusOverrides: {}, notesByLocationStateId: {} },
     currentTimelineId: TIMELINES.find((t) => t.isDefault)?.id ?? TIMELINES[0].id,
     mode: 'dm-view',
@@ -106,6 +109,7 @@ function clearCanonMapOverlayState(overlay: CampaignOverlay): CampaignOverlay {
       ...overlay.party,
       currentLocationStateId: undefined,
       currentPartyRouteId: undefined,
+      currentMapPosition: undefined,
     },
     partyRouteProgress: null,
     canonMapVersion: CANON_MAP_VERSION,
@@ -134,19 +138,44 @@ function autoConfirmManuallyPositionedHotspots(overlay: CampaignOverlay): Campai
   return changed ? { ...overlay, hotspotPatches: nextPatches } : overlay;
 }
 
+function normalizeOverlay(input?: Partial<CampaignOverlay> | null): CampaignOverlay {
+  const raw = input ?? {};
+  let merged: CampaignOverlay = {
+    ...defaultOverlay(),
+    ...raw,
+    calendarsByTimelineId: raw.calendarsByTimelineId ?? {},
+    eventsById: raw.eventsById ?? {},
+    triggersById: raw.triggersById ?? {},
+    factionZonesById: raw.factionZonesById ?? {},
+    dynamicMapOverlaysById: raw.dynamicMapOverlaysById ?? {},
+    movableEntitiesById: raw.movableEntitiesById ?? {},
+    battleEntriesById: raw.battleEntriesById ?? {},
+    partyRouteProgress: raw.partyRouteProgress ?? null,
+    activeBattle: raw.activeBattle ?? null,
+    newEnemies: raw.newEnemies ?? [],
+    party: { ...defaultOverlay().party, ...raw.party },
+    progress: { ...defaultOverlay().progress, ...raw.progress },
+    battleMapLocationLinkOverrides: raw.battleMapLocationLinkOverrides ?? {},
+    battleMapVttUrlOverrides: raw.battleMapVttUrlOverrides ?? {},
+  };
+  if (!raw.routeEditorVersion || raw.routeEditorVersion < ROUTE_EDITOR_VERSION) {
+    merged = clearRouteOverlayState(merged);
+  }
+  if (!raw.canonMapVersion || raw.canonMapVersion < CANON_MAP_VERSION) {
+    merged = clearCanonMapOverlayState(merged);
+  }
+  return autoConfirmManuallyPositionedHotspots(merged);
+}
+
+function loadProjectSnapshot(): CampaignOverlay {
+  return normalizeOverlay(projectOverlaySnapshot as Partial<CampaignOverlay>);
+}
+
 function loadPersisted(): CampaignOverlay {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw);
-      let merged = { ...defaultOverlay(), ...parsed };
-      if (!parsed.routeEditorVersion || parsed.routeEditorVersion < ROUTE_EDITOR_VERSION) {
-        merged = clearRouteOverlayState(merged);
-      }
-      if (!parsed.canonMapVersion || parsed.canonMapVersion < CANON_MAP_VERSION) {
-        merged = clearCanonMapOverlayState(merged);
-      }
-      return autoConfirmManuallyPositionedHotspots(merged);
+      return normalizeOverlay(JSON.parse(raw) as Partial<CampaignOverlay>);
     }
     // Migrate the old v1 single-state shape if present, then drop it.
     const oldRaw = localStorage.getItem(OLD_STORAGE_KEY);
@@ -162,11 +191,11 @@ function loadPersisted(): CampaignOverlay {
         currentTimelineId: old.currentTimelineId ?? defaultOverlay().currentTimelineId,
         mode: old.isDmView === false ? 'player-view' : 'dm-view',
       };
-      return migrated;
+      return normalizeOverlay(migrated);
     }
-    return defaultOverlay();
+    return loadProjectSnapshot();
   } catch {
-    return defaultOverlay();
+    return loadProjectSnapshot();
   }
 }
 
@@ -183,6 +212,8 @@ type EntityKind =
   | 'tavern'
   | 'shop'
   | 'image'
+  | 'quest'
+  | 'enemy'
   | 'location';
 
 type Action =
@@ -209,8 +240,14 @@ type Action =
   | { type: 'ADD_PLACEMENT'; placement: MapObjectPlacement }
   | { type: 'ADD_NPC'; npc: Npc }
   | { type: 'ADD_IMAGE'; image: DmImageItem }
+  | { type: 'ADD_ENEMY'; enemy: DmCustomEnemy }
   | { type: 'SET_BATTLE_MAP_LINK'; link: BattleMapLocationLink }
   | { type: 'SET_BATTLE_MAP_VTT_URL'; battleMapId: string; url: string }
+  | { type: 'START_ACTIVE_BATTLE'; battle: ActiveBattleState }
+  | { type: 'UPDATE_ACTIVE_BATTLE'; patch: Partial<ActiveBattleState> }
+  | { type: 'UPDATE_ACTIVE_BATTLE_COMBATANT'; combatantId: string; patch: Partial<ActiveBattleCombatant> }
+  | { type: 'ADD_ACTIVE_BATTLE_COMBATANT'; combatant: ActiveBattleCombatant }
+  | { type: 'END_ACTIVE_BATTLE' }
   | { type: 'SET_PLACEMENT_LAYER_VISIBLE'; visible: boolean }
   | { type: 'SET_CALENDAR'; timelineId: string; calendar: CampaignCalendar }
   | { type: 'ADVANCE_TIME_PHASE'; timelineId: string }
@@ -238,6 +275,7 @@ type Action =
   | { type: 'ARCHIVE_BATTLE_ENTRY'; entryId: string }
   | { type: 'MARK_BATTLE_ENTRY_ACTIVE'; entryId: string }
   | { type: 'MARK_BATTLE_ENTRY_COMPLETED'; entryId: string }
+  | { type: 'SET_PARTY_MAP_POSITION'; position: NonNullable<PartyState['currentMapPosition']> }
   | { type: 'SET_PARTY_ROUTE_PROGRESS'; progress: PartyRouteProgress | null }
   | { type: 'IMPORT_OVERLAY'; overlay: CampaignOverlay }
   | { type: 'RESET' };
@@ -274,6 +312,10 @@ function patchesKey(kind: EntityKind): keyof CampaignOverlay {
       return 'shopPatches';
     case 'image':
       return 'imagePatches';
+    case 'quest':
+      return 'questPatches';
+    case 'enemy':
+      return 'enemyPatches';
     case 'location':
       return 'locationPatches';
   }
@@ -287,7 +329,13 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
       // rather than leaving a previous trip's route looking "current" forever.
       return {
         ...state,
-        party: { ...state.party, currentLocationStateId: action.locationStateId, currentPartyRouteId: action.routeId },
+        party: {
+          ...state.party,
+          currentLocationStateId: action.locationStateId,
+          currentPartyRouteId: action.routeId,
+          currentMapPosition: undefined,
+        },
+        partyRouteProgress: null,
       };
     case 'MARK_VISITED': {
       const already = state.party.visitedLocationStateIds.includes(action.locationStateId);
@@ -448,6 +496,8 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
       return { ...state, newNpcs: [...state.newNpcs, action.npc] };
     case 'ADD_IMAGE':
       return { ...state, newImages: [...state.newImages, action.image] };
+    case 'ADD_ENEMY':
+      return { ...state, newEnemies: [...state.newEnemies, action.enemy] };
     case 'SET_PLACEMENT_LAYER_VISIBLE':
       return { ...state, placementLayerVisible: action.visible };
     case 'SET_CALENDAR':
@@ -708,8 +758,53 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
           [action.battleMapId]: action.url,
         },
       };
+    case 'START_ACTIVE_BATTLE':
+      return { ...state, activeBattle: action.battle };
+    case 'UPDATE_ACTIVE_BATTLE':
+      return state.activeBattle
+        ? { ...state, activeBattle: { ...state.activeBattle, ...action.patch } }
+        : state;
+    case 'UPDATE_ACTIVE_BATTLE_COMBATANT':
+      return state.activeBattle
+        ? {
+            ...state,
+            activeBattle: {
+              ...state.activeBattle,
+              combatants: state.activeBattle.combatants.map((combatant) =>
+                combatant.id === action.combatantId ? { ...combatant, ...action.patch } : combatant,
+              ),
+            },
+          }
+        : state;
+    case 'ADD_ACTIVE_BATTLE_COMBATANT':
+      return state.activeBattle
+        ? {
+            ...state,
+            activeBattle: {
+              ...state.activeBattle,
+              combatants: [...state.activeBattle.combatants, action.combatant],
+            },
+          }
+        : state;
+    case 'END_ACTIVE_BATTLE':
+      return { ...state, activeBattle: null };
     case 'SET_PARTY_ROUTE_PROGRESS':
-      return { ...state, partyRouteProgress: action.progress };
+      return {
+        ...state,
+        party: action.progress ? { ...state.party, currentMapPosition: undefined } : state.party,
+        partyRouteProgress: action.progress,
+      };
+    case 'SET_PARTY_MAP_POSITION':
+      return {
+        ...state,
+        party: {
+          ...state.party,
+          currentLocationStateId: undefined,
+          currentPartyRouteId: undefined,
+          currentMapPosition: action.position,
+        },
+        partyRouteProgress: null,
+      };
     case 'IMPORT_OVERLAY':
       // Defensive merge: an imported overlay JSON file may predate any field
       // added since it was exported (calendars, events, route hardening
@@ -717,24 +812,9 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
       // newer top-level key exists, then the imported overlay overrides
       // whatever it actually has — so old exports never crash a reader that
       // assumes a field is always present (e.g. calendarsByTimelineId[id]).
-      return {
-        ...defaultOverlay(),
-        ...action.overlay,
-        calendarsByTimelineId: action.overlay.calendarsByTimelineId ?? {},
-        eventsById: (action.overlay as Partial<CampaignOverlay>).eventsById ?? {},
-        triggersById: (action.overlay as Partial<CampaignOverlay>).triggersById ?? {},
-        factionZonesById: (action.overlay as Partial<CampaignOverlay>).factionZonesById ?? {},
-        dynamicMapOverlaysById: (action.overlay as Partial<CampaignOverlay>).dynamicMapOverlaysById ?? {},
-        movableEntitiesById: (action.overlay as Partial<CampaignOverlay>).movableEntitiesById ?? {},
-        battleEntriesById: (action.overlay as Partial<CampaignOverlay>).battleEntriesById ?? {},
-        partyRouteProgress: (action.overlay as Partial<CampaignOverlay>).partyRouteProgress ?? null,
-        party: { ...defaultOverlay().party, ...action.overlay.party },
-        progress: { ...defaultOverlay().progress, ...action.overlay.progress },
-        battleMapLocationLinkOverrides: action.overlay.battleMapLocationLinkOverrides ?? {},
-        battleMapVttUrlOverrides: action.overlay.battleMapVttUrlOverrides ?? {},
-      };
+      return { ...normalizeOverlay(action.overlay), mode: state.mode };
     case 'RESET':
-      return defaultOverlay();
+      return loadProjectSnapshot();
     default:
       return state;
   }
@@ -770,6 +850,8 @@ interface CampaignStoreValue extends CampaignOverlay {
   patchTavern: (id: string, patch: Patch<DmTavern>) => void;
   patchShop: (id: string, patch: Patch<DmShop>) => void;
   patchImage: (id: string, patch: Patch<DmImageItem>) => void;
+  patchQuest: (id: string, patch: Patch<DmQuest>) => void;
+  patchEnemy: (id: string, patch: Patch<DmCustomEnemy>) => void;
   /** Hotfix — edits a dm-companion-seeded source Location's own content
    * fields (description/playerView/dmSecrets/notes/image), distinct from
    * patchLocationState above. */
@@ -780,7 +862,7 @@ interface CampaignStoreValue extends CampaignOverlay {
   /** Stage 6C.4D — removes the local override for one entity, restoring seed
    * defaults. Never deletes the source entity, a placement marker, or a
    * relationship link. */
-  resetOverride: (kind: 'npc' | 'tavern' | 'shop' | 'image' | 'locationState' | 'location', id: string) => void;
+  resetOverride: (kind: 'npc' | 'tavern' | 'shop' | 'image' | 'quest' | 'enemy' | 'locationState' | 'location', id: string) => void;
   deleteLocationState: (id: string) => void;
   deleteHotspot: (id: string) => void;
   deleteRoute: (id: string) => void;
@@ -794,6 +876,7 @@ interface CampaignStoreValue extends CampaignOverlay {
   addTravelEvent: (event: TravelEvent) => void;
   addPlacement: (placement: MapObjectPlacement) => void;
   addNpc: (npc: Npc) => void;
+  addEnemy: (enemy: DmCustomEnemy) => void;
   setPlacementLayerVisible: (visible: boolean) => void;
   /** Returns the timeline's calendar, defaulting lazily if it's never been set. */
   getCalendar: (timelineId: string) => CampaignCalendar;
@@ -831,6 +914,12 @@ interface CampaignStoreValue extends CampaignOverlay {
   removeBattleMapLink: (locationStateId: string, battleMapId: string) => void;
   addManualBattleMapLink: (locationStateId: string, battleMapId: string, reason?: string) => void;
   setBattleMapVttUrl: (battleMapId: string, url: string) => void;
+  startActiveBattle: (battle: ActiveBattleState) => void;
+  updateActiveBattle: (patch: Partial<ActiveBattleState>) => void;
+  updateActiveBattleCombatant: (combatantId: string, patch: Partial<ActiveBattleCombatant>) => void;
+  addActiveBattleCombatant: (combatant: ActiveBattleCombatant) => void;
+  endActiveBattle: () => void;
+  setPartyMapPosition: (position: NonNullable<PartyState['currentMapPosition']>) => void;
   setPartyRouteProgress: (progress: PartyRouteProgress | null) => void;
   exportOverlay: () => CampaignOverlay;
   importOverlay: (overlay: CampaignOverlay) => void;
@@ -850,6 +939,11 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
   // "Saved" flash before the DM has touched anything.
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const isFirstSave = useRef(true);
+  const stateRef = useRef(state);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     if (isFirstSave.current) {
@@ -857,12 +951,28 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      const { mode: _mode, ...persistedState } = state;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedState));
       setSaveStatus('saved');
     } catch {
       setSaveStatus('error');
     }
   }, [state]);
+
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key !== STORAGE_KEY || !e.newValue) return;
+      try {
+        if (e.newValue === JSON.stringify(stateRef.current)) return;
+        dispatch({ type: 'IMPORT_OVERLAY', overlay: JSON.parse(e.newValue) as CampaignOverlay });
+      } catch {
+        // Ignore malformed external writes; the current tab keeps its last
+        // valid in-memory overlay and the next valid save can resync it.
+      }
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   useEffect(() => {
     if (saveStatus === 'idle') return;
@@ -911,6 +1021,8 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       patchTavern: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'tavern', id, patch: patch as Patch<unknown> }),
       patchShop: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'shop', id, patch: patch as Patch<unknown> }),
       patchImage: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'image', id, patch: patch as Patch<unknown> }),
+      patchQuest: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'quest', id, patch: patch as Patch<unknown> }),
+      patchEnemy: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'enemy', id, patch: patch as Patch<unknown> }),
       patchLocation: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'location', id, patch: patch as Patch<unknown> }),
       addImage: (image) => dispatch({ type: 'ADD_IMAGE', image }),
       resetOverride: (kind, id) => dispatch({ type: 'RESET_PATCH', kind, id }),
@@ -927,6 +1039,7 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       addTravelEvent: (event) => dispatch({ type: 'ADD_TRAVEL_EVENT', event }),
       addPlacement: (placement) => dispatch({ type: 'ADD_PLACEMENT', placement }),
       addNpc: (npc) => dispatch({ type: 'ADD_NPC', npc }),
+      addEnemy: (enemy) => dispatch({ type: 'ADD_ENEMY', enemy }),
       setPlacementLayerVisible: (visible) => dispatch({ type: 'SET_PLACEMENT_LAYER_VISIBLE', visible }),
       getCalendar: (timelineId) => state.calendarsByTimelineId[timelineId] ?? DEFAULT_CALENDAR,
       setCalendar: (timelineId, calendar) => dispatch({ type: 'SET_CALENDAR', timelineId, calendar }),
@@ -957,6 +1070,13 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       markBattleEntryCompleted: (entryId) => dispatch({ type: 'MARK_BATTLE_ENTRY_COMPLETED', entryId }),
       setBattleMapLink: (link) => dispatch({ type: 'SET_BATTLE_MAP_LINK', link }),
       setBattleMapVttUrl: (battleMapId, url) => dispatch({ type: 'SET_BATTLE_MAP_VTT_URL', battleMapId, url }),
+      startActiveBattle: (battle) => dispatch({ type: 'START_ACTIVE_BATTLE', battle }),
+      updateActiveBattle: (patch) => dispatch({ type: 'UPDATE_ACTIVE_BATTLE', patch }),
+      updateActiveBattleCombatant: (combatantId, patch) =>
+        dispatch({ type: 'UPDATE_ACTIVE_BATTLE_COMBATANT', combatantId, patch }),
+      addActiveBattleCombatant: (combatant) => dispatch({ type: 'ADD_ACTIVE_BATTLE_COMBATANT', combatant }),
+      endActiveBattle: () => dispatch({ type: 'END_ACTIVE_BATTLE' }),
+      setPartyMapPosition: (position) => dispatch({ type: 'SET_PARTY_MAP_POSITION', position }),
       setPartyRouteProgress: (progress) => dispatch({ type: 'SET_PARTY_ROUTE_PROGRESS', progress }),
       confirmBattleMapLink: (locationStateId, battleMapId) => {
         const key = `${locationStateId}__${battleMapId}`;

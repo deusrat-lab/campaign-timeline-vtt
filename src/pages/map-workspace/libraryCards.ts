@@ -20,6 +20,7 @@ export type LibrarySourceType =
   | 'shop'
   | 'quest'
   | 'enemy'
+  | 'battleMap'
   | 'battleEntry'
   | 'image';
 
@@ -32,6 +33,7 @@ export const LIBRARY_FALLBACK_ICON: Record<LibrarySourceType, string> = {
   shop: '🛒',
   quest: '📜',
   enemy: '⚔️',
+  battleMap: '🗺️',
   battleEntry: '🗡️',
   image: '🖼️',
 };
@@ -126,6 +128,11 @@ export function resolveEntityPreviewImage(
       const url = getBattleMapPreviewUrl(manifestEntry);
       return url ? { src: url, title: be.name } : undefined;
     }
+    case 'battleMap': {
+      const bm = entity as BattleMapManifestEntry;
+      const url = getBattleMapPreviewUrl(bm);
+      return url ? { src: url, title: bm.title } : undefined;
+    }
     default:
       return undefined;
   }
@@ -171,6 +178,11 @@ export function resolveEntityShortDescription(type: LibrarySourceType, entity: u
     case 'battleEntry': {
       const be = entity as BattleEntry;
       text = be.playerSafeDescription || be.description;
+      break;
+    }
+    case 'battleMap': {
+      const bm = entity as BattleMapManifestEntry;
+      text = bm.variants.map((v) => v.type ?? v.fileName).filter(Boolean).join(' · ');
       break;
     }
     case 'image': {

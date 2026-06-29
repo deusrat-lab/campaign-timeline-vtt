@@ -19,6 +19,7 @@
  * each tab reads localStorage fresh on its own.
  */
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCampaignData } from '../state/campaignDataContext';
 import { useCampaignStore } from '../state/campaignStore';
 import {
@@ -38,6 +39,7 @@ import {
 export function ObserverViewPage() {
   const { data, loading, error } = useCampaignData();
   const store = useCampaignStore();
+  const [searchParams] = useSearchParams();
 
   // Local-only camera/focus state driven by BroadcastChannel messages from
   // the DM tab. Never written back anywhere — Observer is strictly a reader.
@@ -53,16 +55,56 @@ export function ObserverViewPage() {
   if (loading) return <div className="observer-shell observer-loading">Загрузка…</div>;
   if (error || !data) return <div className="observer-shell observer-loading">Ошибка загрузки: {error}</div>;
 
-  const timelineId = focus?.timelineId ?? store.currentTimelineId;
-  const scope = focus?.scope ?? 'city';
-  const map = data.worldMaps.find((m) => m.scope === scope);
-  const mapState = map ? data.worldMapStates.find((ms) => ms.mapId === map.id && ms.timelineId === timelineId) : undefined;
+  const selectedParam = searchParams.get('selected');
+  const exactSelectedLocation = selectedParam ? data.locationStates.find((ls) => ls.id === selectedParam) : undefined;
+  const selectedSeparatorIndex = exactSelectedLocation ? -1 : (selectedParam?.lastIndexOf('__') ?? -1);
+  const selectedLocationStateId =
+    exactSelectedLocation?.id ??
+    (selectedParam && selectedSeparatorIndex > 0 ? selectedParam.slice(0, selectedSeparatorIndex) : selectedParam ?? undefined);
+  const selectedTimelineId =
+    exactSelectedLocation?.timelineId ??
+    (selectedParam && selectedSeparatorIndex > 0 ? selectedParam.slice(selectedSeparatorIndex + 2) : undefined);
+  const urlScopeParam = searchParams.get('scope');
+  const urlScope =
+    urlScopeParam === 'kingdom' || urlScopeParam === 'region' || urlScopeParam === 'city' ? urlScopeParam : undefined;
+  const timelineId = focus?.timelineId ?? selectedTimelineId ?? store.currentTimelineId;
+  const selectedMapState = selectedLocationStateId
+    ? data.worldMapStates.find(
+        (ms) =>
+          ms.timelineId === timelineId &&
+          ms.hotspotIds.some((hotspotId) => data.hotspots.find((h) => h.id === hotspotId)?.locationStateId === selectedLocationStateId),
+      )
+    : undefined;
+  const inferredSelectedScope =
+    exactSelectedLocation?.locationId === 'loc-kingdom-aurelon'
+      ? 'kingdom'
+      : exactSelectedLocation?.locationId === 'loc-region-caldran'
+        ? 'region'
+        : exactSelectedLocation?.locationId === 'loc-greyholm'
+          ? 'region'
+          : exactSelectedLocation?.locationId.startsWith('loc-greyholm-') || exactSelectedLocation?.region === 'Грейхольм'
+            ? 'city'
+            : exactSelectedLocation
+              ? 'region'
+              : undefined;
+  const selectedMap = selectedMapState ? data.worldMaps.find((m) => m.id === selectedMapState.mapId) : undefined;
+  const scope = focus?.scope ?? selectedMap?.scope ?? inferredSelectedScope ?? urlScope ?? 'city';
+  const map = focus?.scope
+    ? data.worldMaps.find((m) => m.scope === scope)
+    : selectedMap ?? data.worldMaps.find((m) => m.scope === scope);
+  const mapState = focus?.scope
+    ? map
+      ? data.worldMapStates.find((ms) => ms.mapId === map.id && ms.timelineId === timelineId)
+      : undefined
+    : selectedMapState ?? (map ? data.worldMapStates.find((ms) => ms.mapId === map.id && ms.timelineId === timelineId) : undefined);
+  const activeTimeline = data.timelines.find((t) => t.id === timelineId);
+  const activeArcId = activeTimeline?.arcId;
 
   const hotspotsRaw = mapState ? data.hotspots.filter((h) => mapState.hotspotIds.includes(h.id)) : [];
   const routesRaw = mapState ? data.routes.filter((r) => r.mapStateId === mapState.id) : [];
   const placementsRaw = map
     ? data.placements.filter(
-        (p) => p.mapLevel === scope && (!p.mapId || p.mapId === map.id) && p.status !== 'archived',
+        (p) => p.arcId === activeArcId && p.mapLevel === scope && (!p.mapId || p.mapId === map.id) && p.status !== 'archived',
       )
     : [];
 
@@ -112,6 +154,14 @@ export function ObserverViewPage() {
     partyLocationState && isLocationVisibleToPlayers(partyLocationState, store.progress)
       ? hotspots.find((h) => h.locationStateId === partyLocationState.id)
       : undefined;
+  const partyManualPoint =
+    store.party.currentMapPosition &&
+    store.party.currentMapPosition.timelineId === timelineId &&
+    store.party.currentMapPosition.mapId === map?.id &&
+    store.party.currentMapPosition.mapLevel === scope
+      ? { x: store.party.currentMapPosition.x, y: store.party.currentMapPosition.y }
+      : undefined;
+  const partyPoint = partyManualPoint ?? (partyHotspot ? { x: partyHotspot.x, y: partyHotspot.y } : undefined);
 
   const showNoMap = !map || !mapState;
 
@@ -152,23 +202,28 @@ export function ObserverViewPage() {
               ) : null,
             )}
           </svg>
-          {hotspots.map((h) => (
-            <div key={h.id} className="observer-hotspot" style={{ left: `${h.x * 100}%`, top: `${h.y * 100}%` }}>
-              {!h.labelHidden && <span className="observer-hotspot-label">{h.label}</span>}
-            </div>
-          ))}
+          {hotspots.map((h) => {
+            const ls = h.locationStateId ? getLocationState(data, h.locationStateId) : undefined;
+            return (
+              <div key={h.id} className="observer-hotspot" style={{ left: `${h.x * 100}%`, top: `${h.y * 100}%` }}>
+                {!h.labelHidden && <span className="observer-hotspot-label">{ls?.title ?? h.label}</span>}
+              </div>
+            );
+          })}
           {placements.map((p) => (
             <div
               key={p.id}
               className="observer-placement"
               style={{ left: `${p.position.x * 100}%`, top: `${p.position.y * 100}%` }}
               title={p.title}
-            />
+            >
+              <span className="observer-hotspot-label">{p.title}</span>
+            </div>
           ))}
-          {partyHotspot && (
+          {partyPoint && (
             <div
               className="observer-party-marker"
-              style={{ left: `${partyHotspot.x * 100}%`, top: `${partyHotspot.y * 100}%` }}
+              style={{ left: `${partyPoint.x * 100}%`, top: `${partyPoint.y * 100}%` }}
             >
               ⚔
             </div>

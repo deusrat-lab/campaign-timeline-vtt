@@ -10,6 +10,13 @@
 export const BATTLE_MAP_VTT_ORIGIN = 'http://localhost:4174';
 
 /**
+ * Battle-map image assets are vendored into this campaign app's own
+ * /public/battle-maps folder, so embedded previews and combat overlays do
+ * not depend on the separate Battle Map VTT dev server.
+ */
+export const BATTLE_MAP_ASSET_ORIGIN = '';
+
+/**
  * URL to open to LAUNCH the separate Battle Map VTT app's maps screen.
  * Stage 6C.4: corrected from the stale `:5174` placeholder to the real
  * running dev server, which uses hash-based routing (`/#/maps?arc=...`)

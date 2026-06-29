@@ -10,6 +10,7 @@ import type {
   DmEconomyReferenceItem,
   DmLaw,
   DmShop,
+  DmPlayer,
 } from '../types/dmCompanion';
 import { ARC_1_ID, ARC_2_ID } from '../types/dmCompanion';
 import type { Timeline, LocationState, WorldMap, WorldMapState, MapHotspot, MapRoute, TravelEvent, MapObjectPlacement, BattleMapLink, BattleMapLocationLink } from '../types';
@@ -54,6 +55,7 @@ export interface CampaignData {
   economyReference: DmEconomyReferenceItem[];
   laws: DmLaw[];
   shops: DmShop[];
+  players: DmPlayer[];
 }
 
 export const TIMELINES: Timeline[] = [
@@ -345,7 +347,7 @@ function buildTravelEvents(): TravelEvent[] {
 }
 
 export async function loadCampaignData(): Promise<CampaignData> {
-  const [locations, npcs, quests, enemies, images, factions, taverns, battleMaps, economy, economyReference, laws, shops] =
+  const [locations, npcs, quests, enemies, images, factions, taverns, battleMaps, economy, economyReference, laws, shops, players] =
     await Promise.all([
       fetchJson<DmLocation[]>('locations.json'),
       fetchJson<DmNpc[]>('npcs.json'),
@@ -359,6 +361,7 @@ export async function loadCampaignData(): Promise<CampaignData> {
       fetchJson<DmEconomyReferenceItem[]>('economy-reference.json'),
       fetchJson<DmLaw[]>('laws.json'),
       fetchJson<DmShop[]>('shops.json'),
+      fetchJson<DmPlayer[]>('players.json'),
     ]);
 
   // TODO(DM): no quest in the seed data is marked completed yet, but the party
@@ -371,6 +374,29 @@ export async function loadCampaignData(): Promise<CampaignData> {
   const routes = buildRoutes();
   const travelEvents = buildTravelEvents();
   const battleMapLocationLinks = buildBattleMapLocationLinks(battleMaps, locationStates, locations);
+  const ensureBattleMapLocationLink = (locationStateId: string, battleMapId: string, reason: string) => {
+    const existing = battleMapLocationLinks.find((link) => link.locationStateId === locationStateId && link.battleMapId === battleMapId);
+    if (existing) {
+      existing.confidence = 'exact';
+      existing.manual = true;
+      existing.rejected = false;
+      existing.reason = reason;
+      return;
+    }
+    battleMapLocationLinks.push({
+      locationStateId,
+      battleMapId,
+      confidence: 'exact',
+      reason,
+      manual: true,
+      rejected: false,
+    });
+  };
+  ensureBattleMapLocationLink(
+    'loc-greyholm-river-docks__arc-1-peace',
+    'arc2-8fff85e73378a7b8',
+    'Каноническая ручная связь: Склад №8 находится у речных доков Грейхольма',
+  );
 
   return {
     timelines,
@@ -395,5 +421,6 @@ export async function loadCampaignData(): Promise<CampaignData> {
     economyReference,
     laws,
     shops,
+    players,
   };
 }
