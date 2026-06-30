@@ -58,6 +58,7 @@ function AppShell() {
             <Route path="/bestiary" element={<EntityLibraryPage kind="bestiary" />} />
             <Route path="/players" element={<EntityLibraryPage kind="players" />} />
             <Route path="/battle-maps" element={<EntityLibraryPage kind="battleMaps" />} />
+            <Route path="/factions" element={<EntityLibraryPage kind="factions" />} />
             {/* New-location creation + the prefill/needs-review report still live here
                until they're migrated into the Map Workspace side panel. */}
             <Route path="/admin" element={<HomePage />} />

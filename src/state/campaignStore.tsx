@@ -29,8 +29,9 @@ import type {
   ActiveBattleCombatant,
 } from '../types';
 import { TIMELINES } from '../data/loadCampaignData';
+import { ARC2_FACTION_ZONES_BY_ID, LEGACY_ARC2_SEEDED_FACTION_ZONE_IDS } from '../data/arc2FactionZones';
 import projectOverlaySnapshot from '../data/campaignOverlaySnapshot.json';
-import type { DmTavern, DmShop, DmImageItem, DmLocation, DmQuest, DmCustomEnemy } from '../types/dmCompanion';
+import type { DmTavern, DmShop, DmImageItem, DmLocation, DmQuest, DmCustomEnemy, DmPlayer } from '../types/dmCompanion';
 import { DELETED, EMPTY_OVERLAY, DEFAULT_CALENDAR } from './overlay';
 import type { CampaignOverlay, Patch } from './overlay';
 
@@ -68,6 +69,7 @@ function defaultOverlay(): CampaignOverlay {
     mode: 'dm-view',
     routeEditorVersion: ROUTE_EDITOR_VERSION,
     canonMapVersion: CANON_MAP_VERSION,
+    factionZonesById: { ...ARC2_FACTION_ZONES_BY_ID },
   };
 }
 
@@ -102,7 +104,7 @@ function clearCanonMapOverlayState(overlay: CampaignOverlay): CampaignOverlay {
     newRoutes: [],
     placementPatches: {},
     newPlacements: [],
-    factionZonesById: {},
+    factionZonesById: { ...ARC2_FACTION_ZONES_BY_ID },
     dynamicMapOverlaysById: {},
     movableEntitiesById: {},
     party: {
@@ -138,6 +140,14 @@ function autoConfirmManuallyPositionedHotspots(overlay: CampaignOverlay): Campai
   return changed ? { ...overlay, hotspotPatches: nextPatches } : overlay;
 }
 
+function removeLegacyArc2SeededFactionZones(zones: Record<string, FactionZone> | undefined): Record<string, FactionZone> {
+  const next = { ...(zones ?? {}) };
+  for (const id of LEGACY_ARC2_SEEDED_FACTION_ZONE_IDS) {
+    delete next[id];
+  }
+  return next;
+}
+
 function normalizeOverlay(input?: Partial<CampaignOverlay> | null): CampaignOverlay {
   const raw = input ?? {};
   let merged: CampaignOverlay = {
@@ -146,7 +156,10 @@ function normalizeOverlay(input?: Partial<CampaignOverlay> | null): CampaignOver
     calendarsByTimelineId: raw.calendarsByTimelineId ?? {},
     eventsById: raw.eventsById ?? {},
     triggersById: raw.triggersById ?? {},
-    factionZonesById: raw.factionZonesById ?? {},
+    factionZonesById: {
+      ...defaultOverlay().factionZonesById,
+      ...removeLegacyArc2SeededFactionZones(raw.factionZonesById),
+    },
     dynamicMapOverlaysById: raw.dynamicMapOverlaysById ?? {},
     movableEntitiesById: raw.movableEntitiesById ?? {},
     battleEntriesById: raw.battleEntriesById ?? {},
@@ -164,6 +177,10 @@ function normalizeOverlay(input?: Partial<CampaignOverlay> | null): CampaignOver
   if (!raw.canonMapVersion || raw.canonMapVersion < CANON_MAP_VERSION) {
     merged = clearCanonMapOverlayState(merged);
   }
+  merged = {
+    ...merged,
+    factionZonesById: removeLegacyArc2SeededFactionZones(merged.factionZonesById),
+  };
   return autoConfirmManuallyPositionedHotspots(merged);
 }
 
@@ -214,6 +231,7 @@ type EntityKind =
   | 'image'
   | 'quest'
   | 'enemy'
+  | 'player'
   | 'location';
 
 type Action =
@@ -316,6 +334,8 @@ function patchesKey(kind: EntityKind): keyof CampaignOverlay {
       return 'questPatches';
     case 'enemy':
       return 'enemyPatches';
+    case 'player':
+      return 'playerPatches';
     case 'location':
       return 'locationPatches';
   }
@@ -852,6 +872,7 @@ interface CampaignStoreValue extends CampaignOverlay {
   patchImage: (id: string, patch: Patch<DmImageItem>) => void;
   patchQuest: (id: string, patch: Patch<DmQuest>) => void;
   patchEnemy: (id: string, patch: Patch<DmCustomEnemy>) => void;
+  patchPlayer: (id: string, patch: Patch<DmPlayer>) => void;
   /** Hotfix — edits a dm-companion-seeded source Location's own content
    * fields (description/playerView/dmSecrets/notes/image), distinct from
    * patchLocationState above. */
@@ -862,7 +883,7 @@ interface CampaignStoreValue extends CampaignOverlay {
   /** Stage 6C.4D — removes the local override for one entity, restoring seed
    * defaults. Never deletes the source entity, a placement marker, or a
    * relationship link. */
-  resetOverride: (kind: 'npc' | 'tavern' | 'shop' | 'image' | 'quest' | 'enemy' | 'locationState' | 'location', id: string) => void;
+  resetOverride: (kind: 'npc' | 'tavern' | 'shop' | 'image' | 'quest' | 'enemy' | 'player' | 'locationState' | 'location', id: string) => void;
   deleteLocationState: (id: string) => void;
   deleteHotspot: (id: string) => void;
   deleteRoute: (id: string) => void;
@@ -1023,6 +1044,7 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       patchImage: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'image', id, patch: patch as Patch<unknown> }),
       patchQuest: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'quest', id, patch: patch as Patch<unknown> }),
       patchEnemy: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'enemy', id, patch: patch as Patch<unknown> }),
+      patchPlayer: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'player', id, patch: patch as Patch<unknown> }),
       patchLocation: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'location', id, patch: patch as Patch<unknown> }),
       addImage: (image) => dispatch({ type: 'ADD_IMAGE', image }),
       resetOverride: (kind, id) => dispatch({ type: 'RESET_PATCH', kind, id }),

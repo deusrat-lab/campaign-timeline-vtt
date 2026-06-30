@@ -58,6 +58,53 @@ const QUEST_STATUS_ACTION_LABELS: Record<QuestStatus, string> = {
   hidden: 'Скрыть',
 };
 
+function imageSrcFromId(data: CampaignData, imageId?: string): string | undefined {
+  if (!imageId) return undefined;
+  if (imageId.startsWith('/') || imageId.startsWith('http') || imageId.startsWith('data:')) return imageId;
+  const image = imageId ? data.images.find((item) => item.id === imageId) : undefined;
+  return image?.thumbnailSrc ?? image?.src;
+}
+
+function InlineImagePicker({
+  label = 'Изображение',
+  value,
+  data,
+  onChange,
+}: {
+  label?: string;
+  value: string;
+  data: CampaignData;
+  onChange: (value: string) => void;
+}) {
+  const preview = imageSrcFromId(data, value);
+  return (
+    <label>
+      {label}
+      <div className="inline-image-picker">
+        {preview ? <img src={preview} alt="" /> : <span>Нет изображения</span>}
+        <select value={value} onChange={(e) => onChange(e.target.value)}>
+          <option value="">Нет изображения</option>
+          {data.images.map((image) => <option key={image.id} value={image.id}>{image.title}</option>)}
+        </select>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const file = e.currentTarget.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+              if (typeof reader.result === 'string') onChange(reader.result);
+            };
+            reader.readAsDataURL(file);
+            e.currentTarget.value = '';
+          }}
+        />
+      </div>
+    </label>
+  );
+}
+
 export function EmbeddedCompanionWindow({
   entity,
   hasBack,
@@ -65,9 +112,10 @@ export function EmbeddedCompanionWindow({
   onClose,
   onOpen,
   data,
-  npcs,
-  quests,
+  npcs: _npcs,
+  quests: _quests,
   onStartBattle,
+  onPlaceLocation,
 }: {
   entity: EmbeddedCompanionEntity;
   hasBack: boolean;
@@ -78,6 +126,7 @@ export function EmbeddedCompanionWindow({
   npcs: { id: string; name: string }[];
   quests: { id: string; title: string }[];
   onStartBattle?: (battleMapId: string, locationStateId?: string) => void;
+  onPlaceLocation?: (locationId: string) => void;
 }) {
   const store = useCampaignStore();
   const [inlineEditing, setInlineEditing] = useState(false);
@@ -117,7 +166,6 @@ export function EmbeddedCompanionWindow({
     // (`enemy.locationIds.includes(loc.id)`); both are reverse lookups,
     // same as it does, not stored directly on DmLocation.
     const shopsHere = loc ? data.shops.filter((s) => s.location === loc.id) : [];
-    const enemiesHere = loc ? data.enemies.filter((e) => e.locationIds?.includes(loc.id)) : [];
     const locationStatesHere = loc ? data.locationStates.filter((ls) => ls.locationId === loc.id) : [];
     const locationStateIdsHere = new Set(locationStatesHere.map((ls) => ls.id));
     const battleMapLinkByKey = new Map(
@@ -138,10 +186,10 @@ export function EmbeddedCompanionWindow({
     body = loc ? (
       <CompanionLocationCard
         loc={loc}
-        npcs={npcs}
-        quests={quests}
+        npcs={data.npcs}
+        quests={data.quests}
         shops={shopsHere}
-        enemies={enemiesHere}
+        enemies={data.enemies}
         images={data.images}
         battleMapLinks={battleMapLinksHere}
         availableBattleMaps={data.battleMaps}
@@ -158,6 +206,7 @@ export function EmbeddedCompanionWindow({
         onOpenQuest={openQuest}
         onOpenShop={openShop}
         onOpenEnemy={openEnemy}
+        onPlaceLocation={onPlaceLocation}
       />
     ) : (
       <p className="muted">Локация не найдена.</p>
@@ -169,8 +218,8 @@ export function EmbeddedCompanionWindow({
     body = tavern ? (
       <CompanionTavernCard
         tavern={tavern}
-        npcs={npcs}
-        quests={quests}
+        npcs={data.npcs}
+        quests={data.quests}
         images={data.images}
         locationName={tavernLoc?.name}
         onOpenNpc={openNpc}
@@ -187,7 +236,7 @@ export function EmbeddedCompanionWindow({
     body = shop ? (
       <CompanionShopCard
         shop={shop}
-        npcs={npcs}
+        npcs={data.npcs}
         images={data.images}
         locationName={shopLoc?.name}
         onOpenNpc={openNpc}
@@ -202,7 +251,7 @@ export function EmbeddedCompanionWindow({
     const loc = npc ? data.locations.find((l) => l.id === npc.location) : undefined;
     const shop = npc ? data.shops.find((s) => s.ownerNpcId === npc.id) : undefined;
     body = npc ? (
-      <CompanionNpcCard npc={npc} locationName={loc?.name} shop={shop} quests={quests} images={data.images} onOpenQuest={openQuest} onOpenShop={openShop} />
+      <CompanionNpcCard npc={npc} locationName={loc?.name} shop={shop} quests={data.quests} images={data.images} onOpenQuest={openQuest} onOpenShop={openShop} />
     ) : (
       <p className="muted">NPC не найден.</p>
     );
@@ -213,7 +262,7 @@ export function EmbeddedCompanionWindow({
     body = quest ? (
       <CompanionQuestCard
         quest={quest}
-        npcs={npcs}
+        npcs={data.npcs}
         enemies={data.enemies}
         images={data.images}
         locationName={loc?.name}
@@ -235,7 +284,7 @@ export function EmbeddedCompanionWindow({
     const enemy = data.enemies.find((e) => e.id === entity.id);
     title = enemy?.name ?? 'Враг';
     body = enemy ? (
-      <CompanionEnemyCard enemy={enemy} locations={data.locations} quests={quests} images={data.images} onOpenLocation={openLocation} onOpenQuest={openQuest} />
+      <CompanionEnemyCard enemy={enemy} locations={data.locations} quests={data.quests} images={data.images} onOpenLocation={openLocation} onOpenQuest={openQuest} />
     ) : (
       <p className="muted">Враг не найден.</p>
     );
@@ -248,17 +297,26 @@ export function EmbeddedCompanionWindow({
       const loc = image.relatedEntity ? data.locations.find((l) => l.id === image.relatedEntity) : undefined;
       const npc = image.relatedEntity ? data.npcs.find((n) => n.id === image.relatedEntity) : undefined;
       const enemy = image.relatedEntity ? data.enemies.find((e) => e.id === image.relatedEntity) : undefined;
-      const questNames = (image.linkedQuestIds ?? []).map((id) => data.quests.find((q) => q.id === id)?.title ?? id);
+      const questItems = (image.linkedQuestIds ?? []).map((id) => {
+        const quest = data.quests.find((q) => q.id === id);
+        return {
+          id,
+          label: quest?.title ?? id,
+          subtitle: quest?.goal,
+          imageSrc: imageSrcFromId(data, quest?.image),
+        };
+      });
       body = (
         <CompanionImageCard
           image={image}
           locationName={loc?.name}
           npcName={npc?.name}
           enemyName={enemy?.name}
-          questNames={questNames}
+          questItems={questItems}
           onOpenLocation={loc ? () => openLocation(loc.id) : undefined}
           onOpenNpc={npc ? () => openNpc(npc.id) : undefined}
           onOpenEnemy={enemy ? () => openEnemy(enemy.id) : undefined}
+          onOpenQuest={openQuest}
         />
       );
     }
@@ -488,15 +546,15 @@ function InlineCompanionEditor({
   data: CampaignData;
   onDone: () => void;
 }) {
-  if (entity.type === 'location') return <LocationInlineEditor location={value as DmLocation} onDone={onDone} />;
+  if (entity.type === 'location') return <LocationInlineEditor location={value as DmLocation} data={data} onDone={onDone} />;
   if (entity.type === 'tavern') return <TavernInlineEditor tavern={value as DmTavern} data={data} onDone={onDone} />;
   if (entity.type === 'shop') return <ShopInlineEditor shop={value as DmShop} data={data} onDone={onDone} />;
-  if (entity.type === 'image') return <ImageInlineEditor image={value as DmImageItem} onDone={onDone} />;
+  if (entity.type === 'image') return <ImageInlineEditor image={value as DmImageItem} data={data} onDone={onDone} />;
   if (entity.type === 'battleEntry') return <BattleEntryInlineEditor entry={value as BattleEntry} onDone={onDone} />;
   return <p className="muted">Редактор для этой карточки недоступен.</p>;
 }
 
-function LocationInlineEditor({ location, onDone }: { location: DmLocation; onDone: () => void }) {
+function LocationInlineEditor({ location, data, onDone }: { location: DmLocation; data: CampaignData; onDone: () => void }) {
   const store = useCampaignStore();
   const [draft, setDraft] = useState({
     name: location.name,
@@ -510,6 +568,7 @@ function LocationInlineEditor({ location, onDone }: { location: DmLocation; onDo
     dmSecrets: location.dmSecrets ?? '',
     notes: location.notes ?? '',
     tags: (location.tags ?? []).join(', '),
+    image: location.images?.[0] ?? '',
   });
   return (
     <form className="entity-inline-editor" onSubmit={(e) => {
@@ -526,6 +585,7 @@ function LocationInlineEditor({ location, onDone }: { location: DmLocation; onDo
         dmSecrets: draft.dmSecrets.trim() || undefined,
         notes: draft.notes.trim() || undefined,
         tags: splitTags(draft.tags),
+        images: draft.image ? [draft.image, ...(location.images ?? []).filter((id) => id !== draft.image)] : (location.images ?? []).slice(1),
       });
       onDone();
     }}>
@@ -539,6 +599,7 @@ function LocationInlineEditor({ location, onDone }: { location: DmLocation; onDo
       <label>Слухи<textarea value={draft.rumors} onChange={(e) => setDraft({ ...draft, rumors: e.target.value })} /></label>
       <label>Секреты ДМ<textarea value={draft.dmSecrets} onChange={(e) => setDraft({ ...draft, dmSecrets: e.target.value })} /></label>
       <label>Заметки<textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} /></label>
+      <InlineImagePicker value={draft.image} data={data} onChange={(image) => setDraft({ ...draft, image })} />
       <label>Теги через запятую<input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} /></label>
       <EditorButtons disabled={!draft.name.trim()} onCancel={onDone} />
     </form>
@@ -557,6 +618,7 @@ function TavernInlineEditor({ tavern, data, onDone }: { tavern: DmTavern; data: 
     rumors: (tavern.rumors ?? []).join('\n'),
     notes: tavern.notes ?? '',
     tags: (tavern.tags ?? []).join(', '),
+    image: tavern.imageOverrideId ?? '',
   });
   return (
     <form className="entity-inline-editor" onSubmit={(e) => {
@@ -571,6 +633,7 @@ function TavernInlineEditor({ tavern, data, onDone }: { tavern: DmTavern; data: 
         rumors: splitLines(draft.rumors),
         notes: draft.notes.trim() || undefined,
         tags: splitTags(draft.tags),
+        imageOverrideId: draft.image || undefined,
       });
       onDone();
     }}>
@@ -582,6 +645,7 @@ function TavernInlineEditor({ tavern, data, onDone }: { tavern: DmTavern; data: 
       <label>Услуги по строкам<textarea value={draft.services} onChange={(e) => setDraft({ ...draft, services: e.target.value })} /></label>
       <label>Слухи по строкам<textarea value={draft.rumors} onChange={(e) => setDraft({ ...draft, rumors: e.target.value })} /></label>
       <label>Заметки ДМ<textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} /></label>
+      <InlineImagePicker value={draft.image} data={data} onChange={(image) => setDraft({ ...draft, image })} />
       <label>Теги через запятую<input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} /></label>
       <EditorButtons disabled={!draft.name.trim()} onCancel={onDone} />
     </form>
@@ -602,6 +666,7 @@ function ShopInlineEditor({ shop, data, onDone }: { shop: DmShop; data: Campaign
     rumors: (shop.rumors ?? []).join('\n'),
     notes: shop.notes ?? '',
     tags: (shop.tags ?? []).join(', '),
+    image: shop.image ?? '',
   });
   return (
     <form className="entity-inline-editor" onSubmit={(e) => {
@@ -618,6 +683,7 @@ function ShopInlineEditor({ shop, data, onDone }: { shop: DmShop; data: Campaign
         rumors: splitLines(draft.rumors),
         notes: draft.notes.trim() || undefined,
         tags: splitTags(draft.tags),
+        image: draft.image || undefined,
       });
       onDone();
     }}>
@@ -631,17 +697,19 @@ function ShopInlineEditor({ shop, data, onDone }: { shop: DmShop; data: Campaign
       <label>Скидки<textarea value={draft.discounts} onChange={(e) => setDraft({ ...draft, discounts: e.target.value })} /></label>
       <label>Слухи по строкам<textarea value={draft.rumors} onChange={(e) => setDraft({ ...draft, rumors: e.target.value })} /></label>
       <label>Заметки ДМ<textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} /></label>
+      <InlineImagePicker value={draft.image} data={data} onChange={(image) => setDraft({ ...draft, image })} />
       <label>Теги через запятую<input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} /></label>
       <EditorButtons disabled={!draft.name.trim()} onCancel={onDone} />
     </form>
   );
 }
 
-function ImageInlineEditor({ image, onDone }: { image: DmImageItem; onDone: () => void }) {
+function ImageInlineEditor({ image, data, onDone }: { image: DmImageItem; data: CampaignData; onDone: () => void }) {
   const store = useCampaignStore();
   const [draft, setDraft] = useState({
     title: image.title,
     safeForPlayers: image.safeForPlayers,
+    src: image.src,
   });
   return (
     <form className="entity-inline-editor" onSubmit={(e) => {
@@ -649,10 +717,13 @@ function ImageInlineEditor({ image, onDone }: { image: DmImageItem; onDone: () =
       store.patchImage(image.id, {
         title: draft.title.trim(),
         safeForPlayers: draft.safeForPlayers,
+        src: draft.src,
+        thumbnailSrc: draft.src,
       });
       onDone();
     }}>
       <label>Название<input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></label>
+      <InlineImagePicker value={draft.src} data={data} onChange={(src) => setDraft({ ...draft, src })} />
       <label className="reveal-toggle"><input type="checkbox" checked={draft.safeForPlayers} onChange={(e) => setDraft({ ...draft, safeForPlayers: e.target.checked })} /> Безопасно для игроков</label>
       <EditorButtons disabled={!draft.title.trim()} onCancel={onDone} />
     </form>

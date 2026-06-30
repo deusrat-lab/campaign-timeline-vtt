@@ -38,6 +38,8 @@ export interface DmLocation {
   images: string[];
   notes?: string;
   tags?: string[];
+  primaryFactionId?: string;
+  factionIds?: string[];
   controlStatus?: ControlStatus;
   aliases?: string[];
   parentLocationId?: string;
@@ -74,6 +76,8 @@ export interface DmNpc {
    * edited afterward.
    */
   faction?: string;
+  primaryFactionId?: string;
+  factionIds?: string[];
   /** Player-safe description. Falls back to `personality` (pre-existing
    * field, already shown to both DM and players) when unset. */
   publicDescription?: string;
@@ -106,13 +110,13 @@ export interface DmQuest {
   reward?: string;
   status: QuestStatus;
   tags?: string[];
-  /** Stage 6C.5 Phase 2H — confirmed against `public/data/dm-companion/
-   * quests.json`: `proof` is free text, `solutions` is a string ARRAY (not
-   * a single string — verified against real data, not guessed), `notes`
-   * is the DM-only field rendered as "Заметки" by DM Companion's own
-   * `QuestDetailPage.tsx`. */
+  primaryFactionId?: string;
+  factionIds?: string[];
+  /** Imported quest data is not fully normalized across arcs: `proof` is free
+   * text, `solutions` can be either text or a text array, and `notes` is the
+   * DM-only field rendered as "Заметки". */
   proof?: string;
-  solutions?: string[];
+  solutions?: string[] | string;
   consequences?: string;
   notes?: string;
 }
@@ -144,6 +148,8 @@ export interface DmCustomEnemy {
   name: string;
   role?: string;
   faction?: string;
+  primaryFactionId?: string;
+  factionIds?: string[];
   locationIds: string[];
   questIds: string[];
   image?: string;
@@ -283,9 +289,17 @@ export interface DmTavern {
 
 export interface DmFaction {
   id: string;
+  arcId?: string;
   name: string;
+  shortName?: string;
   subtype?: string;
   description?: string;
+  icon?: string;
+  color?: string;
+  leader?: string;
+  goals?: string;
+  resources?: string;
+  tags?: string[];
 }
 
 /** economy.json — lore/reference text about the economy, not a price list. */

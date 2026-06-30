@@ -17,7 +17,7 @@ const RAIL_ITEMS: RailItem[] = [
   { key: 'players', label: 'Игроки', icon: '🎭', to: '/players' },
   { key: 'battle-maps', label: 'Карты боя', icon: '▦', to: '/battle-maps' },
   { key: 'bestiary', label: 'Бестиарий', icon: '📖', to: '/bestiary' },
-  { key: 'factions', label: 'Фракции', icon: '⚔' },
+  { key: 'factions', label: 'Фракции', icon: '⚔', to: '/factions' },
   { key: 'notes', label: 'Заметки', icon: '📝' },
   { key: 'calendar', label: 'Календарь', icon: '📅' },
   { key: 'resources', label: 'Ресурсы', icon: '🎒' },

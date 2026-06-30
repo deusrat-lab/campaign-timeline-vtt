@@ -3,15 +3,13 @@ import type { DmNpc, DmImageItem } from '../../types/dmCompanion';
 import { resolveEntityPreviewImage } from '../../pages/map-workspace/libraryCards';
 import { CompanionLinkRow } from './CompanionLinkRow';
 import { ImageLightbox } from './ImageLightbox';
+import { useCampaignData } from '../../state/campaignDataContext';
 
 /**
  * Ported field order from dm-companion's real `pages/npcs/NpcDetailPage.tsx`:
  * tags/shop badge → race → role → hero image → gallery → location link →
  * shop link → personality → speechStyle → goals → knowledge → secrets
- * (DM-only) → related quests → notes (DM-only). Faction badges are
- * intentionally skipped — campaign-timeline-vtt has no faction-context
- * equivalent to dm-companion's `useFactions()`/`useArcContext()`, and
- * adding one is out of scope for this port.
+ * (DM-only) → related quests → notes (DM-only).
  */
 export function CompanionNpcCard({
   npc,
@@ -25,16 +23,28 @@ export function CompanionNpcCard({
   npc: DmNpc;
   locationName?: string;
   shop?: { id: string; name: string };
-  quests: { id: string; title: string }[];
+  quests: { id: string; title: string; goal?: string; image?: string }[];
   images: DmImageItem[];
   onOpenQuest?: (id: string) => void;
   onOpenShop?: (id: string) => void;
 }) {
+  const { data } = useCampaignData();
   const heroImg = images.find((i) => i.id === npc.image);
   const hero = heroImg ?? resolveEntityPreviewImage('npc', npc, images);
   const galleryImages = images.filter((i) => i.relatedEntity === npc.id && i.id !== heroImg?.id);
-  const questItems = (npc.relatedQuests ?? []).map((id) => ({ id, label: quests.find((q) => q.id === id)?.title ?? id }));
+  const imageSrc = (imageId?: string) => {
+    if (!imageId) return undefined;
+    if (imageId.startsWith('/') || imageId.startsWith('http')) return imageId;
+    const image = images.find((i) => i.id === imageId);
+    return image?.thumbnailSrc ?? image?.src;
+  };
+  const questItems = (npc.relatedQuests ?? []).map((id) => {
+    const quest = quests.find((q) => q.id === id);
+    return { id, label: quest?.title ?? id, subtitle: quest?.goal, imageSrc: imageSrc(quest?.image) };
+  });
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const factionLabels = Array.from(new Set([...(npc.factionIds ?? []), npc.primaryFactionId, npc.faction].filter(Boolean) as string[]))
+    .map((id) => data?.factions.find((f) => f.id === id || f.name === id || f.shortName === id)?.shortName ?? data?.factions.find((f) => f.id === id || f.name === id || f.shortName === id)?.name ?? id);
 
   return (
     <div className="companion-source-card">
@@ -44,11 +54,22 @@ export function CompanionNpcCard({
           {shop ? 'Торговец' : ''}
           {npc.tags?.length ? `${shop ? ' · ' : ''}${npc.tags.join(', ')}` : ''}
         </span>
+        {!!factionLabels.length && (
+          <div className="companion-tag-row">
+            {factionLabels.map((label) => (
+              <span key={label} className="companion-tag-chip">{label}</span>
+            ))}
+          </div>
+        )}
       </div>
-      {hero && (
+      {hero ? (
         <button type="button" className="companion-source-hero-wrap" onClick={() => setLightboxOpen(true)}>
           <img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={npc.name} />
         </button>
+      ) : (
+        <div className="companion-source-hero-wrap companion-source-hero-wrap--empty" aria-label="Изображение не привязано">
+          <span className="companion-source-hero-placeholder">Нет изображения</span>
+        </div>
       )}
       {hero && lightboxOpen && (
         <ImageLightbox image={{ ...hero, title: hero.title ?? npc.name }} onClose={() => setLightboxOpen(false)} />

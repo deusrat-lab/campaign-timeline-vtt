@@ -31,7 +31,7 @@ export function CompanionShopCard({
   onOpenLocation,
 }: {
   shop: DmShop;
-  npcs: { id: string; name: string; visibleToPlayers?: boolean }[];
+  npcs: { id: string; name: string; role?: string; image?: string; visibleToPlayers?: boolean }[];
   images: DmImageItem[];
   /** Bug-fix pass: dm-companion's real ShopDetailPage shows "Локация"
    * (`shop.location`) right after Слухи — this card was missing it. */
@@ -40,6 +40,10 @@ export function CompanionShopCard({
   onOpenLocation?: () => void;
 }) {
   const store = useCampaignStore();
+  const imageSrc = (imageId?: string) => {
+    const image = imageId ? images.find((item) => item.id === imageId) : undefined;
+    return image?.thumbnailSrc ?? image?.src;
+  };
   const revealButton = (visible: boolean, label: string, onToggle: () => void) => (
     <button
       type="button"
@@ -80,6 +84,11 @@ export function CompanionShopCard({
       {hero && lightboxOpen && (
         <ImageLightbox image={{ ...hero, title: hero.title ?? shop.name }} onClose={() => setLightboxOpen(false)} />
       )}
+      {!hero && (
+        <div className="companion-source-hero-wrap companion-source-hero-wrap--empty">
+          <span className="companion-source-hero-placeholder">Нет изображения</span>
+        </div>
+      )}
       <p>{shop.description}</p>
       {shop.relationToPlayers && (
         <>
@@ -107,9 +116,7 @@ export function CompanionShopCard({
         <>
           <h4>Локация</h4>
           {onOpenLocation ? (
-            <button type="button" className="companion-link-chip" onClick={onOpenLocation}>
-              {locationName}
-            </button>
+            <CompanionLinkRow items={[{ id: 'location', label: locationName }]} onOpen={() => onOpenLocation()} />
           ) : (
             <p>{locationName}</p>
           )}
@@ -120,7 +127,7 @@ export function CompanionShopCard({
           <h4>Владелец</h4>
           {onOpenNpc ? (
             <>
-              <CompanionLinkRow items={[{ id: owner.id, label: owner.name }]} onOpen={onOpenNpc} />
+              <CompanionLinkRow items={[{ id: owner.id, label: owner.name, subtitle: owner.role, imageSrc: imageSrc(owner.image) }]} onOpen={onOpenNpc} />
               {revealButton(owner.visibleToPlayers === true, owner.name, () => store.patchNpc(owner.id, { visibleToPlayers: owner.visibleToPlayers !== true }))}
             </>
           ) : (

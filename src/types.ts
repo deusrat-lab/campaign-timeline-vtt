@@ -31,6 +31,8 @@ export interface Timeline {
 export interface WorldMap {
   id: string;
   title: string;
+  /** Optional timeline-specific map variant. When set, this map is preferred only for that timeline. */
+  timelineId?: string;
   /** 'kingdom' | 'region' | 'city' — free text scope label. */
   scope: 'kingdom' | 'region' | 'city';
   /** Path under /public to a background image, if one exists. */

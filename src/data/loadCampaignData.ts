@@ -15,6 +15,7 @@ import type {
 import { ARC_1_ID, ARC_2_ID } from '../types/dmCompanion';
 import type { Timeline, LocationState, WorldMap, WorldMapState, MapHotspot, MapRoute, TravelEvent, MapObjectPlacement, BattleMapLink, BattleMapLocationLink } from '../types';
 import hotspotsSeed from './hotspots.json';
+import { ARC2_HOTSPOTS } from './arc2Hotspots';
 import routesSeed from './routes.json';
 import travelEventsSeed from './travelEvents.json';
 import battleMapsIndexSeed from './battle-maps-index.json';
@@ -73,7 +74,7 @@ export const TIMELINES: Timeline[] = [
     id: 'arc-2-war',
     arcId: ARC_2_ID,
     title: 'Арка 2',
-    description: 'Следующее состояние мира — ограничено тем, что уже размечено arcId:"arc-2" в locations.json.',
+    description: 'Война за Грейхольм после падения города: фронт Кальдрана и Ауролеона, серая зона и независимые силы.',
     order: 2,
     visibleToPlayers: false,
     isCurrent: false,
@@ -124,6 +125,21 @@ const WORLD_MAPS: WorldMap[] = [
     isPlayerVisible: true,
   },
   {
+    id: 'map-region-arc2-war',
+    title: 'Грейхольмский театр войны',
+    timelineId: 'arc-2-war',
+    scope: 'region',
+    backgroundImageSrc: '/maps/regions/greyholm_region_arc2_war.png',
+    level: 'region',
+    parentMapId: 'map-kingdom',
+    originalImageWidth: 1448,
+    originalImageHeight: 1086,
+    aspectRatio: 1448 / 1086,
+    defaultZoom: 1,
+    defaultCenter: { x: 0.5, y: 0.5 },
+    isPlayerVisible: true,
+  },
+  {
     id: 'map-city-greyholm',
     title: 'Грейхольм',
     scope: 'city',
@@ -143,15 +159,75 @@ function locationStateId(locationId: string, timelineId: string): string {
   return `${locationId}__${timelineId}`;
 }
 
+function normalizeLinkText(value?: string): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/№/g, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+function splitLocationNameParts(location: DmLocation): string[] {
+  return [location.name, ...(location.aliases ?? [])]
+    .flatMap((name) => name.split(/[\/|]/g))
+    .map(normalizeLinkText)
+    .filter((part) => part.length >= 5);
+}
+
+function locationsLookLikeSamePlace(a: DmLocation, b: DmLocation): boolean {
+  const aParts = splitLocationNameParts(a);
+  const bParts = splitLocationNameParts(b);
+  return aParts.some((aPart) =>
+    bParts.some((bPart) => aPart === bPart || (aPart.length >= 10 && bPart.includes(aPart)) || (bPart.length >= 10 && aPart.includes(bPart))),
+  );
+}
+
+function findArc2BaseLocation(location: DmLocation, locations: DmLocation[]): DmLocation | undefined {
+  if (location.arcId !== ARC_2_ID) return undefined;
+  return locations.find((candidate) => (candidate.arcId ?? ARC_1_ID) === ARC_1_ID && locationsLookLikeSamePlace(candidate, location));
+}
+
+function getArc2SupplementLocations(location: DmLocation, timeline: Timeline, locations: DmLocation[]): DmLocation[] {
+  if (timeline.arcId !== ARC_2_ID || (location.arcId ?? ARC_1_ID) !== ARC_1_ID) return [];
+  return locations.filter((candidate) => candidate.arcId === ARC_2_ID && locationsLookLikeSamePlace(location, candidate));
+}
+
+function locationTextHaystack(location: DmLocation): string {
+  return normalizeLinkText(
+    [
+      location.name,
+      location.description,
+      location.atmosphere,
+      location.lore,
+      location.playerView,
+      location.dmSecrets,
+      location.notes,
+      ...(location.tags ?? []),
+      ...(location.aliases ?? []),
+    ]
+      .filter(Boolean)
+      .join(' '),
+  );
+}
+
+function locationMentionsEntity(location: DmLocation, entityName?: string): boolean {
+  const needle = normalizeLinkText(entityName);
+  return needle.length >= 5 && locationTextHaystack(location).includes(needle);
+}
+
+function mergeUnique<T>(...groups: T[][]): T[] {
+  return Array.from(new Set(groups.flat()));
+}
+
 /**
  * Derive LocationStates from dm-companion locations for every timeline whose
- * arcId matches the location's own arcId (locations with no arcId are treated
- * as Arc-1-only — we never invent Arc 2 content for them).
+ * arcId matches the location's own arcId.
  *
- * EXPLICIT BOUNDARY: a location only appears under Arc 2 if it has
- * arcId === 'arc-2' in the original seed data. We do not synthesize Arc 2
- * projections for Arc-1/unspecified locations — Arc 2 coverage is exactly
- * as authored in dm-companion/public/data/locations.json today.
+ * Arc 2 is a wartime continuation of the same region, so Arc 1/untagged
+ * locations are projected forward as cards too. Arc 2-specific locations
+ * still come from dm-companion as authored; only map placement is left to
+ * the DM unless a real Arc 1 region hotspot can be safely mirrored.
  */
 function buildLocationStates(
   locations: DmLocation[],
@@ -206,19 +282,40 @@ function buildLocationStates(
 
   for (const timeline of timelines) {
     for (const loc of locations) {
+      const locationArcId = loc.arcId ?? ARC_1_ID;
       const matchesTimeline =
-        loc.arcId === timeline.arcId || (!loc.arcId && timeline.arcId === ARC_1_ID);
+        locationArcId === timeline.arcId || (timeline.arcId === ARC_2_ID && locationArcId === ARC_1_ID);
       if (!matchesTimeline) continue;
+      if (timeline.arcId === ARC_2_ID && loc.arcId === ARC_2_ID && findArc2BaseLocation(loc, locations)) {
+        continue;
+      }
 
-      const npcIds = npcs.filter((n) => n.location === loc.id).map((n) => n.id);
-      const questIds = quests.filter((q) => q.location === loc.id).map((q) => q.id);
-      const enemyIds = enemies.filter((e) => e.locationIds?.includes(loc.id)).map((e) => e.id);
+      const locationSources = [loc, ...getArc2SupplementLocations(loc, timeline, locations)];
+      const locationSourceIds = new Set(locationSources.map((source) => source.id));
+
+      const npcIds = npcs
+        .filter(
+          (n) =>
+            locationSourceIds.has(n.location) ||
+            locationSources.some((source) => source.npcs?.includes(n.id)) ||
+            locationSources.some((source) => !n.location && (n.arcId ?? timeline.arcId) === timeline.arcId && locationMentionsEntity(source, n.name)),
+        )
+        .map((n) => n.id);
+      const questIds = quests
+        .filter(
+          (q) =>
+            locationSourceIds.has(q.location) ||
+            locationSources.some((source) => source.quests?.includes(q.id)) ||
+            locationSources.some((source) => !q.location && (q.arcId ?? timeline.arcId) === timeline.arcId && locationMentionsEntity(source, q.title)),
+        )
+        .map((q) => q.id);
+      const enemyIds = enemies.filter((e) => e.locationIds?.some((id) => locationSourceIds.has(id))).map((e) => e.id);
       const imageIds = images
         .filter(
           (i) =>
-            i.linkedLocationIds?.includes(loc.id) ||
-            loc.images?.includes(i.id) ||
-            i.relatedEntity === loc.id,
+            i.linkedLocationIds?.some((id) => locationSourceIds.has(id)) ||
+            locationSources.some((source) => source.images?.includes(i.id)) ||
+            (i.relatedEntity ? locationSourceIds.has(i.relatedEntity) : false),
         )
         .map((i) => i.id);
 
@@ -245,8 +342,8 @@ function buildLocationStates(
         childLocationStateIds: (loc.childLocationIds || []).map((childId) =>
           locationStateId(childId, timeline.id),
         ),
-        npcIds: Array.from(new Set([...(loc.npcs || []), ...npcIds])),
-        questIds: Array.from(new Set([...(loc.quests || []), ...questIds])),
+        npcIds: mergeUnique(locationSources.flatMap((source) => source.npcs || []), npcIds),
+        questIds: mergeUnique(locationSources.flatMap((source) => source.quests || []), questIds),
         enemyIds,
         imageIds,
       });
@@ -300,6 +397,19 @@ function buildLocationStates(
   return states;
 }
 
+function mirrorArc1RegionHotspotsForArc2(hotspots: MapHotspot[]): MapHotspot[] {
+  return hotspots
+    .filter((h) => h.mapId === 'map-region' && h.timelineId === 'arc-1-peace' && h.locationStateId.endsWith('__arc-1-peace'))
+    .map((h) => ({
+      ...h,
+      id: `arc2-region-copy:${h.id}`,
+      mapId: 'map-region-arc2-war',
+      timelineId: 'arc-2-war',
+      locationStateId: h.locationStateId.replace('__arc-1-peace', '__arc-2-war'),
+      needsCoordinateReview: false,
+    }));
+}
+
 /**
  * Arc-1 levels have a real background image (the Stage 6A canon art). Arc-2
  * has NO seeded map content at all (per spec, we never invent Arc-2 map
@@ -319,10 +429,17 @@ function buildLocationStates(
 function buildWorldMapStatesAndHotspots(
   timelines: Timeline[],
 ): { worldMapStates: WorldMapState[]; hotspots: MapHotspot[] } {
-  const hotspots = hotspotsSeed as MapHotspot[];
+  const baseHotspots = hotspotsSeed as MapHotspot[];
+  const hotspots = [...baseHotspots, ...mirrorArc1RegionHotspotsForArc2(baseHotspots), ...ARC2_HOTSPOTS];
   const worldMapStates: WorldMapState[] = [];
   for (const map of WORLD_MAPS) {
     for (const timeline of timelines) {
+      if (map.timelineId && map.timelineId !== timeline.id) continue;
+      if (!map.timelineId && timeline.id === 'arc-2-war') {
+        const timelineSpecificMapExists = WORLD_MAPS.some((m) => m.timelineId === timeline.id && m.scope === map.scope);
+        if (timelineSpecificMapExists) continue;
+        if (map.scope === 'city') continue;
+      }
       const idsForThis = hotspots
         .filter((h) => h.mapId === map.id && h.timelineId === timeline.id)
         .map((h) => h.id);
@@ -331,7 +448,7 @@ function buildWorldMapStatesAndHotspots(
         mapId: map.id,
         timelineId: timeline.id,
         hotspotIds: idsForThis,
-        needsArtReview: timeline.arcId === ARC_2_ID || !map.backgroundImageSrc,
+        needsArtReview: !map.backgroundImageSrc,
       });
     }
   }

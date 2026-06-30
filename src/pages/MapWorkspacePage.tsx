@@ -43,6 +43,7 @@ import type {
   MapRoute,
   MapObjectPlacement,
   WorldMap,
+  WorldMapState,
   QuestStatus,
   CampaignEvent,
   CampaignCalendar,
@@ -292,6 +293,26 @@ const SCOPE_LABELS: Record<WorldMap['scope'], string> = {
 };
 
 const SCOPE_ORDER: WorldMap['scope'][] = ['kingdom', 'region', 'city'];
+
+function getTimelineMap(
+  worldMaps: WorldMap[] | undefined,
+  worldMapStates: WorldMapState[] | undefined,
+  scope: WorldMap['scope'],
+  timelineId: string,
+): WorldMap | undefined {
+  if (!worldMaps || !worldMapStates) return undefined;
+  const hasState = (mapId: string) => worldMapStates.some((ms) => ms.mapId === mapId && ms.timelineId === timelineId);
+  const scoped = worldMaps.filter((m) => m.scope === scope);
+  return scoped.find((m) => m.timelineId === timelineId && hasState(m.id)) ?? scoped.find((m) => !m.timelineId && hasState(m.id));
+}
+
+function getTimelineScopes(
+  worldMaps: WorldMap[] | undefined,
+  worldMapStates: WorldMapState[] | undefined,
+  timelineId: string,
+): WorldMap['scope'][] {
+  return SCOPE_ORDER.filter((scope) => !!getTimelineMap(worldMaps, worldMapStates, scope, timelineId));
+}
 
 // The Greyholm city map (map-city-greyholm) and the Greyholm region map
 // (map-region) share the same Arc-1 timeline and would otherwise show an
@@ -699,6 +720,11 @@ export function MapWorkspacePage() {
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [selectedZoneVertexIndex, setSelectedZoneVertexIndex] = useState<number | null>(null);
   const [draggingZoneVertex, setDraggingZoneVertex] = useState<{ zoneId: string; index: number } | null>(null);
+  const [zoneAddPointMode, setZoneAddPointMode] = useState(false);
+  const [mapFactionZonesVisible, setMapFactionZonesVisible] = useState(true);
+  const [mapRoutesVisible, setMapRoutesVisible] = useState(true);
+  const [factionZoneHitTesting, setFactionZoneHitTesting] = useState(false);
+  const [implicitNeutralVisible, setImplicitNeutralVisible] = useState(true);
   // Hoisted above the loading/error early-returns below — a hook declared
   // after those guards only runs once `data` is loaded, changing the hook
   // count between renders and crashing the whole page (Rules of Hooks).
@@ -986,7 +1012,7 @@ export function MapWorkspacePage() {
   // dependency arrays can react to "which map is active" without referencing
   // the full `map`/`mapState` consts declared below the early returns — those
   // must stay below the returns, but hooks must stay above them.
-  const earlyMap = data ? data.worldMaps.find((m) => m.scope === scope) : undefined;
+  const earlyMap = data ? getTimelineMap(data.worldMaps, data.worldMapStates, scope, store.currentTimelineId) : undefined;
   const earlyCameraKey = earlyMap ? cameraKey(store.currentTimelineId, scope, earlyMap.id) : null;
 
   // Observe the map viewport's size so the fit-to-screen scale stays correct
@@ -1048,6 +1074,16 @@ export function MapWorkspacePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, requestedBattleMapId, selectedLocationStateId]);
 
+  useEffect(() => {
+    if (!data || !selectedLocationStateId) return;
+    if (data.locationStates.some((ls) => ls.id === selectedLocationStateId)) return;
+    setSelectedLocationStateId(null);
+    setSelectedHotspotId(null);
+    const next = new URLSearchParams(searchParams);
+    next.delete('selected');
+    setSearchParams(next, { replace: true });
+  }, [data, searchParams, selectedLocationStateId, setSearchParams]);
+
   // Battle Return Flow (Stage 5B, Step 2) — on mount or whenever the URL's
   // search string changes (e.g. the DM returns from the battle-map-vtt tab
   // and this tab's URL gets updated by that app, or simply on a fresh load
@@ -1074,6 +1110,13 @@ export function MapWorkspacePage() {
       // ignore storage failures (private mode / quota)
     }
   }, [scope]);
+
+  useEffect(() => {
+    if (!data) return;
+    const availableScopes = getTimelineScopes(data.worldMaps, data.worldMapStates, store.currentTimelineId);
+    if (availableScopes.length === 0 || availableScopes.includes(scope)) return;
+    setScope(availableScopes.includes('region') ? 'region' : availableScopes[0]);
+  }, [data, scope, store.currentTimelineId]);
 
   // Whenever the active arc/level/map actually changes (including the very
   // first mount, once data has loaded), load that map's own persisted camera
@@ -1207,6 +1250,33 @@ export function MapWorkspacePage() {
     libraryDrawerOpen,
   ]);
 
+  useEffect(() => {
+    if (!zoneDraft && !editingZoneId) return;
+    function onKeyDown(e: KeyboardEvent) {
+      const tag = (document.activeElement?.tagName ?? '').toLowerCase();
+      if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (zoneAddPointMode) {
+          setZoneAddPointMode(false);
+          return;
+        }
+        if (editingZoneId) {
+          setEditingZoneId(null);
+          setSelectedZoneVertexIndex(null);
+          return;
+        }
+        setZoneDraft(null);
+        setZoneFormError(null);
+      } else if (editingZoneId && (e.key === 'Delete' || e.key === 'Backspace')) {
+        e.preventDefault();
+        deleteSelectedZoneVertex();
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [zoneDraft, editingZoneId, zoneAddPointMode, selectedZoneVertexIndex]);
+
   // Persist the live camera for the active map. Guarded so we never write back
   // a bogus camera computed before the viewport was actually measured (which
   // is exactly what caused cameras to "stick" in a broken position before).
@@ -1276,7 +1346,7 @@ export function MapWorkspacePage() {
   // computed here (using optional chaining since `data` may still be null on
   // the loading render) rather than after the guards below, for the exact
   // same hook-order reason explained in the comment immediately below.
-  const mapForImageSize = data?.worldMaps.find((m) => m.scope === scope);
+  const mapForImageSize = data ? getTimelineMap(data.worldMaps, data.worldMapStates, scope, store.currentTimelineId) : undefined;
   const activeMapImageSize = useActiveMapImageSize(mapForImageSize);
 
   // Keep ALL hooks (useState/useEffect/useMemo/useCallback/custom hooks) above
@@ -1291,16 +1361,17 @@ export function MapWorkspacePage() {
 
   const calendar = store.getCalendar(store.currentTimelineId);
 
-  const map = data.worldMaps.find((m) => m.scope === scope);
+  const map = getTimelineMap(data.worldMaps, data.worldMapStates, scope, store.currentTimelineId);
   const mapState = map
     ? data.worldMapStates.find((ms) => ms.mapId === map.id && ms.timelineId === store.currentTimelineId)
     : undefined;
+  const availableScopes = getTimelineScopes(data.worldMaps, data.worldMapStates, store.currentTimelineId);
   const hotspots = mapState ? data.hotspots.filter((h) => mapState.hotspotIds.includes(h.id)) : [];
   const routes = mapState ? data.routes.filter((r) => r.mapStateId === mapState.id) : [];
   const routeWorkspaceActive = isEditMode && sidePanelTab === 'routes';
   const routeWorkspaceEditing = routeWorkspaceActive && !!editingRouteId;
   const activeLayerVisibility = LAYER_PRESETS[layerPreset];
-  const visibleRoutes = !activeLayerVisibility.routes
+  const visibleRoutes = !activeLayerVisibility.routes || !mapRoutesVisible
     ? []
     : isPlayerView || activeLayerVisibility.usesPlayerSafeProjection
       ? getPlayerSafeRoutes(routes)
@@ -1403,11 +1474,17 @@ export function MapWorkspacePage() {
   const factionZonesForMap = Object.values(store.factionZonesById).filter(
     (z) => z.timelineId === store.currentTimelineId && (!z.mapLevel || z.mapLevel === scope) && (!z.mapId || !map || z.mapId === map.id),
   );
-  const visibleFactionZones = !activeLayerVisibility.factionZones
+  const visibleFactionZones = !activeLayerVisibility.factionZones || !mapFactionZonesVisible
     ? []
     : isPlayerView || activeLayerVisibility.usesPlayerSafeProjection
       ? getPlayerSafeFactionZones(factionZonesForMap)
       : factionZonesForMap;
+  const showImplicitNeutralZone =
+    mapFactionZonesVisible &&
+    implicitNeutralVisible &&
+    activeLayerVisibility.factionZones &&
+    !isPlayerView &&
+    activeTimelineForPlacements?.arcId === 'arc-2';
 
   // Dynamic Map Overlays (Stage 4B) — scoped to current timeline + map
   // level/id exactly like Faction Zones above. DM-side branches read
@@ -1640,7 +1717,7 @@ export function MapWorkspacePage() {
     // While actively marking a route's path or placing an object, every click
     // must add a point/placement exactly where clicked — even a tiny pan drift
     // mid-click would throw the new point off. Same guard for an active drag.
-    if (placementMode || zoneDraft || editingZoneId) return;
+    if (placementMode) return;
     if (draggingId || draggingWaypoint || draggingPlacementId || draggingZoneVertex || draggingParty || draggingMovableEntityId) return;
     panState.current = { panning: true, moved: false, startX: e.clientX, startY: e.clientY, origX: view.x, origY: view.y };
   }
@@ -1815,6 +1892,7 @@ export function MapWorkspacePage() {
     setZoneDraft(null);
     setEditingZoneId(null);
     setSelectedZoneVertexIndex(null);
+    setZoneAddPointMode(false);
     // Movable Entity manual-move arming (Stage 4C) is also a one-shot
     // "next click does X" tool exactly like quickPinArming/placementMode
     // above — clear it here too so starting any OTHER tool (route edit,
@@ -2000,6 +2078,28 @@ export function MapWorkspacePage() {
     if (suppressNextClickRef.current) {
       suppressNextClickRef.current = false;
       return;
+    }
+    // Zone drawing must win over generic map selection/placement. The draft is
+    // intentionally visible before it has 3 points, so every click gives the DM
+    // immediate feedback instead of feeling like nothing happened.
+    if (isEditMode && zoneDraft && zoneAddPointMode && mapRef.current) {
+      const rect = mapRef.current.getBoundingClientRect();
+      const x = Math.min(1, Math.max(0, Math.round(((e.clientX - rect.left) / rect.width) * 1000) / 1000));
+      const y = Math.min(1, Math.max(0, Math.round(((e.clientY - rect.top) / rect.height) * 1000) / 1000));
+      setZoneDraft({ ...zoneDraft, points: [...zoneDraft.points, { x, y }] });
+      setZoneFormError(null);
+      return;
+    }
+    if (isEditMode && editingZoneId && zoneAddPointMode && mapRef.current) {
+      const zone = store.factionZonesById[editingZoneId];
+      if (zone) {
+        const rect = mapRef.current.getBoundingClientRect();
+        const x = Math.min(1, Math.max(0, Math.round(((e.clientX - rect.left) / rect.width) * 1000) / 1000));
+        const y = Math.min(1, Math.max(0, Math.round(((e.clientY - rect.top) / rect.height) * 1000) / 1000));
+        store.updateFactionZone(zone.id, { polygon: insertZonePointOnNearestEdge(zone.polygon, { x, y }) });
+        setZoneFormError(null);
+        return;
+      }
     }
     if (routeDraft && mapRef.current && mapState) {
       const rect = mapRef.current.getBoundingClientRect();
@@ -2295,33 +2395,6 @@ export function MapWorkspacePage() {
       // Plain click on empty map area in non-edit mode deselects.
       setSelectedHotspotId(null);
       return;
-    }
-    // Area Edit Mode (Stage 4A) — creating a new zone: each click adds a
-    // vertex to the in-progress polygon (same click-to-add pattern as the
-    // route builder, never drag-to-draw).
-    if (zoneDraft && mapRef.current) {
-      const rect = mapRef.current.getBoundingClientRect();
-      const x = Math.min(1, Math.max(0, Math.round(((e.clientX - rect.left) / rect.width) * 1000) / 1000));
-      const y = Math.min(1, Math.max(0, Math.round(((e.clientY - rect.top) / rect.height) * 1000) / 1000));
-      setZoneDraft({ ...zoneDraft, points: [...zoneDraft.points, { x, y }] });
-      return;
-    }
-    // Area Edit Mode — editing an existing zone: clicking the map while a
-    // zone is being edited appends a new vertex to its polygon (acceptable
-    // Stage 4A MVP per the brief; precise edge-click insertion is skipped —
-    // see report/TODO below).
-    // TODO(stage-4b): edge-click vertex insertion (insert a vertex at the
-    // nearest point on the polygon's nearest edge instead of always
-    // appending to the end) — skipped for Stage 4A as a nontrivial addition.
-    if (editingZoneId && mapRef.current) {
-      const zone = store.factionZonesById[editingZoneId];
-      if (zone) {
-        const rect = mapRef.current.getBoundingClientRect();
-        const x = Math.min(1, Math.max(0, Math.round(((e.clientX - rect.left) / rect.width) * 1000) / 1000));
-        const y = Math.min(1, Math.max(0, Math.round(((e.clientY - rect.top) / rect.height) * 1000) / 1000));
-        store.updateFactionZone(zone.id, { polygon: [...zone.polygon, { x, y }] });
-        return;
-      }
     }
     if (editingRouteId && mapRef.current) {
       const route = routes.find((r) => r.id === editingRouteId);
@@ -2963,6 +3036,7 @@ export function MapWorkspacePage() {
   function startNewZoneDraft() {
     cancelAllEditTools();
     setZoneDraft({ name: '', type: 'control', status: 'stable', visibleInPlayerView: false, points: [] });
+    setZoneAddPointMode(true);
     setZoneFormError(null);
   }
 
@@ -3002,8 +3076,31 @@ export function MapWorkspacePage() {
     };
     store.addFactionZone(newZone);
     setZoneDraft(null);
+    setZoneAddPointMode(false);
     setZoneFormError(null);
     setSelectedZoneId(newZone.id);
+  }
+
+  function insertZonePointOnNearestEdge(points: Array<{ x: number; y: number }>, point: { x: number; y: number }) {
+    if (points.length < 2) return [...points, point];
+    let bestIndex = points.length - 1;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < points.length; i++) {
+      const a = points[i];
+      const b = points[(i + 1) % points.length];
+      const abx = b.x - a.x;
+      const aby = b.y - a.y;
+      const ab2 = abx * abx + aby * aby || 1;
+      const t = Math.max(0, Math.min(1, ((point.x - a.x) * abx + (point.y - a.y) * aby) / ab2));
+      const px = a.x + abx * t;
+      const py = a.y + aby * t;
+      const distance = (point.x - px) ** 2 + (point.y - py) ** 2;
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = i;
+      }
+    }
+    return [...points.slice(0, bestIndex + 1), point, ...points.slice(bestIndex + 1)];
   }
 
   function handleZoneVertexMouseDown(zoneId: string, index: number, e: MouseEvent) {
@@ -3041,6 +3138,7 @@ export function MapWorkspacePage() {
     const nextPoints = zone.polygon.filter((_, i) => i !== selectedZoneVertexIndex);
     store.updateFactionZone(zone.id, { polygon: nextPoints });
     setSelectedZoneVertexIndex(null);
+    setZoneFormError(null);
   }
 
   /** Shared "Использовать позицию партии" helper (Stage 4C, Step 5 flow 3) —
@@ -3096,7 +3194,7 @@ export function MapWorkspacePage() {
     // Also block while the party marker is mid-walk along a route animation —
     // see useMapWorkspaceMode's 'travel' mode / hotspot_drag guard: travel
     // must never race with manually dragging a hotspot's position.
-    if (!workspaceMode.isAllowed('hotspot_drag')) return;
+    if (partyTravelAnim) return;
     e.stopPropagation();
     setDraggingId(h.id);
     setSelectedHotspotId(h.id);
@@ -4064,7 +4162,7 @@ export function MapWorkspacePage() {
     <div className="workspace">
       <div className="workspace-topbar">
         <div className="map-level-tabs">
-          {SCOPE_ORDER.map((s) => (
+          {availableScopes.map((s) => (
             <button key={s} className={s === scope ? 'active' : ''} onClick={() => setScope(s)}>
               {SCOPE_LABELS[s]}
             </button>
@@ -5281,6 +5379,24 @@ export function MapWorkspacePage() {
                 Объекты {store.placementLayerVisible ? '(вкл)' : '(выкл)'}
               </button>
             )}
+            {isDmMode && (
+              <>
+                <button
+                  className={mapRoutesVisible ? 'active' : ''}
+                  onClick={() => setMapRoutesVisible((value) => !value)}
+                  title="Показать/скрыть маршруты на карте мастера"
+                >
+                  Маршруты {mapRoutesVisible ? '(вкл)' : '(выкл)'}
+                </button>
+                <button
+                  className={mapFactionZonesVisible ? 'active' : ''}
+                  onClick={() => setMapFactionZonesVisible((value) => !value)}
+                  title="Показать/скрыть зоны влияния"
+                >
+                  Зоны {mapFactionZonesVisible ? '(вкл)' : '(выкл)'}
+                </button>
+              </>
+            )}
           </div>
 
           {isEditMode && (() => {
@@ -5373,6 +5489,7 @@ export function MapWorkspacePage() {
                   onClick={() => {
                     if (zoneDraft) {
                       setZoneDraft(null);
+                      setZoneAddPointMode(false);
                       return;
                     }
                     startNewZoneDraft();
@@ -5381,9 +5498,40 @@ export function MapWorkspacePage() {
                 >
                   Новая зона
                 </button>
+                <button
+                  className={mapFactionZonesVisible ? 'active' : ''}
+                  onClick={() => setMapFactionZonesVisible((visible) => !visible)}
+                  title="Показать или скрыть зоны влияния на карте"
+                >
+                  👁 Зоны
+                </button>
+                {activeArcId === 'arc-2' && (
+                  <button
+                    className={implicitNeutralVisible ? 'active' : ''}
+                    onClick={() => setImplicitNeutralVisible((visible) => !visible)}
+                    disabled={!mapFactionZonesVisible}
+                    title="Серая зона — всё пространство вне цветных зон"
+                  >
+                    Серая зона
+                  </button>
+                )}
+                <button
+                  className={factionZoneHitTesting ? 'active' : ''}
+                  onClick={() => setFactionZoneHitTesting((enabled) => !enabled)}
+                  title="Когда выключено, зоны не перехватывают клики и карту можно спокойно двигать"
+                >
+                  Правка зон
+                </button>
                 {editingZoneId && (
-                  <button className="active" onClick={() => setEditingZoneId(null)}>
-                    Завершить редактирование зоны
+                  <button
+                    className="active"
+                    onClick={() => {
+                      setEditingZoneId(null);
+                      setSelectedZoneVertexIndex(null);
+                      setZoneAddPointMode(false);
+                    }}
+                  >
+                    Готово с формой
                   </button>
                 )}
                 <button
@@ -6226,61 +6374,72 @@ export function MapWorkspacePage() {
           )}
 
           {isEditMode && zoneDraft && (
-            <div className="route-draft-form">
-              <strong>Новая зона фракции</strong>
-              <p className="muted">
-                Кликайте по карте, чтобы добавить точки полигона (минимум 3). Затем укажите название и сохраните.
-              </p>
-              <label>
-                Название
-                <input
-                  type="text"
-                  value={zoneDraft.name}
-                  placeholder="Например: Территория Чёрного Клинка"
-                  onChange={(e) => setZoneDraft({ ...zoneDraft, name: e.target.value })}
-                />
-              </label>
-              <label>
-                Тип зоны
-                <select
-                  value={zoneDraft.type}
-                  onChange={(e) => setZoneDraft({ ...zoneDraft, type: e.target.value as FactionZoneType })}
-                >
-                  {ZONE_TYPE_OPTIONS.map((t) => (
-                    <option key={t} value={t}>{ZONE_TYPE_LABELS[t]}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Статус
-                <select
-                  value={zoneDraft.status}
-                  onChange={(e) => setZoneDraft({ ...zoneDraft, status: e.target.value as FactionZoneStatus })}
-                >
-                  {ZONE_STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{ZONE_STATUS_LABELS[s]}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="reveal-toggle">
-                <input
-                  type="checkbox"
-                  checked={zoneDraft.visibleInPlayerView}
-                  onChange={(e) => setZoneDraft({ ...zoneDraft, visibleInPlayerView: e.target.checked })}
-                />
-                Видна игрокам
-              </label>
-              <p className="muted">Точек добавлено: {zoneDraft.points.length} (нужно минимум 3)</p>
+            <div className="zone-quick-panel">
+              <div className="zone-quick-header">
+                <strong>Новая зона</strong>
+                <span className="status-badge">{zoneDraft.points.length}/3+ точек</span>
+                <span className="muted">Клик по карте добавляет вершину</span>
+              </div>
+              <div className="zone-quick-grid">
+                <label className="zone-quick-field zone-quick-field--wide">
+                  <span>Название</span>
+                  <input
+                    type="text"
+                    value={zoneDraft.name}
+                    placeholder="Например: северный фронт"
+                    onChange={(e) => setZoneDraft({ ...zoneDraft, name: e.target.value })}
+                  />
+                </label>
+                <label className="zone-quick-field">
+                  <span>Тип</span>
+                  <select
+                    value={zoneDraft.type}
+                    onChange={(e) => setZoneDraft({ ...zoneDraft, type: e.target.value as FactionZoneType })}
+                  >
+                    {ZONE_TYPE_OPTIONS.map((t) => (
+                      <option key={t} value={t}>{ZONE_TYPE_LABELS[t]}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="zone-quick-field">
+                  <span>Статус</span>
+                  <select
+                    value={zoneDraft.status}
+                    onChange={(e) => setZoneDraft({ ...zoneDraft, status: e.target.value as FactionZoneStatus })}
+                  >
+                    {ZONE_STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>{ZONE_STATUS_LABELS[s]}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="zone-toggle-chip">
+                  <input
+                    type="checkbox"
+                    checked={zoneDraft.visibleInPlayerView}
+                    onChange={(e) => setZoneDraft({ ...zoneDraft, visibleInPlayerView: e.target.checked })}
+                  />
+                  Игрокам
+                </label>
+              </div>
               {zoneFormError && <p className="route-editor-error">{zoneFormError}</p>}
-              <div className="actions">
-                <button onClick={saveZoneDraft} disabled={zoneDraft.points.length < 3}>Сохранить зону</button>
+              <div className="actions zone-quick-actions">
+                <button
+                  className={zoneAddPointMode ? 'active' : ''}
+                  onClick={() => setZoneAddPointMode((value) => !value)}
+                >
+                  {zoneAddPointMode ? 'Точки: вкл' : '+ точки'}
+                </button>
+                <button onClick={saveZoneDraft} disabled={zoneDraft.points.length < 3}>Сохранить</button>
                 {zoneDraft.points.length > 0 && (
                   <button onClick={() => setZoneDraft({ ...zoneDraft, points: zoneDraft.points.slice(0, -1) })}>
-                    Удалить последнюю точку
+                    Минус точка
                   </button>
                 )}
-                <button onClick={() => { setZoneDraft(null); setZoneFormError(null); }}>Отмена</button>
+                <button onClick={() => { setZoneDraft(null); setZoneAddPointMode(false); setZoneFormError(null); }}>Отмена</button>
               </div>
+              <p className="zone-map-hint">
+                {zoneAddPointMode ? 'Клик ставит точку. Перетащите карту, чтобы сдвинуть обзор.' : 'Карта двигается перетаскиванием. Включите “+ точки”, чтобы продолжить контур.'}
+              </p>
             </div>
           )}
 
@@ -6756,56 +6915,47 @@ export function MapWorkspacePage() {
             );
           })()}
 
-          {/* Faction Zone side panel (Stage 4A) — Header/Summary/Linked
-              Content/Actions/DM-Notes structure, mirroring the existing
-              selected-route panel above. dmNotes is shown here ONLY because
-              this whole block is gated on isEditMode (DM-only); it is never
-              rendered in Player View/Observer (see playerSafeProjection.ts —
-              dmNotes is stripped before any player-facing output exists). */}
+          {/* Compact faction-zone controls. Keep the map large: common actions
+              stay in the strip, rare notes/links live behind details. */}
           {isEditMode && selectedZoneId && (() => {
             const z = store.factionZonesById[selectedZoneId];
             if (!z) return null;
+            const affectedRoutes = (z.blocksPartyMovement || z.increasesTravelRisk)
+              ? routes.filter((r) => {
+                const result = validateRouteAgainstZones(r, [z]);
+                return result.issues.some((iss) => iss.zoneId === z.id);
+              })
+              : [];
             return (
-              <div className="route-panel">
-                <div className="route-panel-header">
-                  <strong>Зона: {z.name}</strong>
+              <div className="zone-quick-panel zone-quick-panel--selected">
+                <div className="zone-quick-header">
+                  <strong>{z.name}</strong>
+                  <span className="status-badge">{ZONE_TYPE_LABELS[z.type]}</span>
+                  <span className="status-badge">{z.polygon.length} точек</span>
+                  {editingZoneId === z.id && <span className="status-badge status-badge--player-visible">Правка формы</span>}
                   <button onClick={() => { setSelectedZoneId(null); setSelectedZoneVertexIndex(null); }}>Закрыть</button>
                 </div>
-                <label>
-                  Название
-                  <input type="text" value={z.name} onChange={(e) => store.updateFactionZone(z.id, { name: e.target.value })} />
-                </label>
-                {/* TODO: factionId is raw text until a real Faction entity type exists */}
-                <label>
-                  ID фракции (свободный текст — карточек фракций в проекте пока нет)
-                  <input
-                    type="text"
-                    value={z.factionId ?? ''}
-                    onChange={(e) => store.updateFactionZone(z.id, { factionId: e.target.value || undefined })}
-                  />
-                </label>
-                <label>
-                  Тип
-                  <select value={z.type} onChange={(e) => store.updateFactionZone(z.id, { type: e.target.value as FactionZoneType })}>
-                    {ZONE_TYPE_OPTIONS.map((t) => (
-                      <option key={t} value={t}>{ZONE_TYPE_LABELS[t]}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Статус
+                <div className="zone-quick-grid">
+                  <label className="zone-quick-field zone-quick-field--wide">
+                    <span>Название</span>
+                    <input type="text" value={z.name} onChange={(e) => store.updateFactionZone(z.id, { name: e.target.value })} />
+                  </label>
+                  <label className="zone-quick-field">
+                    <span>Тип</span>
+                    <select value={z.type} onChange={(e) => store.updateFactionZone(z.id, { type: e.target.value as FactionZoneType })}>
+                      {ZONE_TYPE_OPTIONS.map((t) => (
+                        <option key={t} value={t}>{ZONE_TYPE_LABELS[t]}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="zone-quick-field">
+                    <span>Статус</span>
                   <select
                     value={z.status}
                     onChange={(e) => {
                       const oldStatus = z.status;
                       const nextStatus = e.target.value as FactionZoneStatus;
-                      // Status changes IMMEDIATELY — never blocked on a dialog.
                       store.updateFactionZone(z.id, { status: nextStatus });
-                      // Warfront Status flow (Stage 4B, no simulation): offer an
-                      // EXPLICIT, separate "создать событие" action below instead
-                      // of a silent window.confirm popup — the DM decides on their
-                      // own time whether this status change deserves a narrative
-                      // breadcrumb event.
                       if (oldStatus !== nextStatus) {
                         setPendingZoneStatusChange({ zoneId: z.id, oldStatus, newStatus: nextStatus });
                       }
@@ -6815,144 +6965,99 @@ export function MapWorkspacePage() {
                       <option key={s} value={s}>{ZONE_STATUS_LABELS[s]}</option>
                     ))}
                   </select>
-                </label>
+                  </label>
+                  <label className="zone-quick-field zone-quick-field--range">
+                    <span>Прозрачность {Math.round((z.opacity ?? 0.35) * 100)}%</span>
+                    <input
+                      type="range"
+                      min={5}
+                      max={90}
+                      value={Math.round((z.opacity ?? 0.35) * 100)}
+                      onChange={(e) => store.updateFactionZone(z.id, { opacity: Number(e.target.value) / 100 })}
+                    />
+                  </label>
+                  <label className="zone-quick-field zone-quick-field--color">
+                    <span>Цвет</span>
+                    <input
+                      type="color"
+                      value={z.color ?? '#d4af37'}
+                      onChange={(e) => store.updateFactionZone(z.id, { color: e.target.value })}
+                    />
+                  </label>
+                </div>
                 {pendingZoneStatusChange && pendingZoneStatusChange.zoneId === z.id && (
-                  <div className="route-editor-error" style={{ color: 'inherit' }}>
-                    <p className="muted">
-                      Статус изменён: {ZONE_STATUS_LABELS[pendingZoneStatusChange.oldStatus]} → {ZONE_STATUS_LABELS[pendingZoneStatusChange.newStatus]}
-                    </p>
-                    <div className="actions">
-                      <button
-                        onClick={() => {
-                          createFactionShiftEvent(z, pendingZoneStatusChange.oldStatus, pendingZoneStatusChange.newStatus);
-                          setPendingZoneStatusChange(null);
-                        }}
-                      >
-                        Создать событие изменения фронта
-                      </button>
-                      <button onClick={() => setPendingZoneStatusChange(null)}>Не нужно</button>
-                    </div>
+                  <div className="zone-status-change">
+                    <span>{ZONE_STATUS_LABELS[pendingZoneStatusChange.oldStatus]} → {ZONE_STATUS_LABELS[pendingZoneStatusChange.newStatus]}</span>
+                    <button
+                      onClick={() => {
+                        createFactionShiftEvent(z, pendingZoneStatusChange.oldStatus, pendingZoneStatusChange.newStatus);
+                        setPendingZoneStatusChange(null);
+                      }}
+                    >
+                      Записать событие
+                    </button>
+                    <button onClick={() => setPendingZoneStatusChange(null)}>Пропустить</button>
                   </div>
                 )}
-                <label className="reveal-toggle">
-                  <input
-                    type="checkbox"
-                    checked={z.visibleInPlayerView === true}
-                    onChange={(e) => store.updateFactionZone(z.id, { visibleInPlayerView: e.target.checked })}
-                  />
-                  Видна игрокам
-                </label>
-                {/* Restricted/Impassable Zones MVP — blocking flags. Plain
-                    checkboxes/number input on the same FactionZone model,
-                    not a separate panel; defaults were applied at creation
-                    time (ZONE_TYPE_BLOCKING_DEFAULTS) but the DM can always
-                    override per-zone. */}
-                <label className="reveal-toggle">
+                <div className="zone-toggle-row">
+                  <label className="zone-toggle-chip">
+                    <input
+                      type="checkbox"
+                      checked={z.visibleInPlayerView === true}
+                      onChange={(e) => store.updateFactionZone(z.id, { visibleInPlayerView: e.target.checked })}
+                    />
+                    Игрокам
+                  </label>
+                  <label className="zone-toggle-chip">
                   <input
                     type="checkbox"
                     checked={z.blocksPartyMovement === true}
                     onChange={(e) => store.updateFactionZone(z.id, { blocksPartyMovement: e.target.checked })}
                   />
-                  Блокирует движение партии
-                </label>
-                <label className="reveal-toggle">
-                  <input
-                    type="checkbox"
-                    checked={z.blocksNpcMovement === true}
-                    onChange={(e) => store.updateFactionZone(z.id, { blocksNpcMovement: e.target.checked })}
-                  />
-                  Блокирует движение NPC (на будущее — движения NPC ещё нет)
-                </label>
-                <label className="reveal-toggle">
+                    Блок партии
+                  </label>
+                  <label className="zone-toggle-chip">
+                    <input
+                      type="checkbox"
+                      checked={z.blocksNpcMovement === true}
+                      onChange={(e) => store.updateFactionZone(z.id, { blocksNpcMovement: e.target.checked })}
+                    />
+                    Блок NPC
+                  </label>
+                  <label className="zone-toggle-chip">
                   <input
                     type="checkbox"
                     checked={z.increasesTravelRisk === true}
                     onChange={(e) => store.updateFactionZone(z.id, { increasesTravelRisk: e.target.checked })}
                   />
-                  Повышает риск путешествия (предупреждение, не блокирует)
-                </label>
-                <label>
-                  Множитель времени в пути (1 = без изменений)
-                  <input
-                    type="number"
-                    min={0.1}
-                    step={0.1}
-                    value={z.travelCostMultiplier ?? 1}
-                    onChange={(e) => store.updateFactionZone(z.id, { travelCostMultiplier: Number(e.target.value) || 1 })}
-                  />
-                </label>
-                <label>
-                  Прозрачность ({Math.round((z.opacity ?? 0.35) * 100)}%)
-                  <input
-                    type="range"
-                    min={5}
-                    max={90}
-                    value={Math.round((z.opacity ?? 0.35) * 100)}
-                    onChange={(e) => store.updateFactionZone(z.id, { opacity: Number(e.target.value) / 100 })}
-                  />
-                </label>
-                <label>
-                  Цвет
-                  <input
-                    type="color"
-                    value={z.color ?? '#d4af37'}
-                    onChange={(e) => store.updateFactionZone(z.id, { color: e.target.value })}
-                  />
-                </label>
-                <label>
-                  Описание (для ДМ)
-                  <textarea
-                    value={z.description ?? ''}
-                    onChange={(e) => store.updateFactionZone(z.id, { description: e.target.value || undefined })}
-                  />
-                </label>
-                <label>
-                  Описание для игроков (необязательно)
-                  <textarea
-                    value={z.playerSafeDescription ?? ''}
-                    onChange={(e) => store.updateFactionZone(z.id, { playerSafeDescription: e.target.value || undefined })}
-                  />
-                </label>
-                <label>
-                  Заметки ДМ (никогда не видны игрокам)
-                  <textarea
-                    value={z.dmNotes ?? ''}
-                    onChange={(e) => store.updateFactionZone(z.id, { dmNotes: e.target.value || undefined })}
-                  />
-                </label>
-                <p className="muted">Точек в полигоне: {z.polygon.length} (минимум 3)</p>
-                <p className="muted">Связанных событий: {z.linkedEventIds?.length ?? 0}</p>
-                <p className="muted">Связанных локаций: {z.linkedLocationStateIds?.length ?? 0}</p>
-                <p className="muted">Связанных маршрутов: {z.linkedRouteIds?.length ?? 0}</p>
-                {/* Validation impact (Restricted/Impassable Zones MVP) — read-only
-                    summary of which routes on THIS map actually geometrically
-                    cross this zone right now (independent of linkedRouteIds,
-                    which is a manual DM link, not a geometric fact). */}
-                {(z.blocksPartyMovement || z.increasesTravelRisk) && (() => {
-                  const affected = routes.filter((r) => {
-                    const result = validateRouteAgainstZones(r, [z]);
-                    return result.issues.some((iss) => iss.zoneId === z.id);
-                  });
-                  return (
-                    <p className={affected.length > 0 ? 'route-editor-error' : 'muted'} style={{ color: affected.length > 0 ? undefined : undefined }}>
-                      Маршрутов, пересекающих эту зону: {affected.length}
-                      {affected.length > 0 ? ` (${affected.map((r) => r.label || 'без названия').join(', ')})` : ''}
-                    </p>
-                  );
-                })()}
-                {editingZoneId === z.id && (
-                  <p className="muted">
-                    Кликайте по карте, чтобы добавить вершины зоны. Перетащите вершину, чтобы изменить форму. Кликните по точке, чтобы выбрать её для удаления.
-                  </p>
-                )}
-                <div className="actions">
+                    Риск пути
+                  </label>
+                  <label className="zone-quick-field zone-quick-field--cost">
+                    <span>Путь x</span>
+                    <input
+                      type="number"
+                      min={0.1}
+                      step={0.1}
+                      value={z.travelCostMultiplier ?? 1}
+                      onChange={(e) => store.updateFactionZone(z.id, { travelCostMultiplier: Number(e.target.value) || 1 })}
+                    />
+                  </label>
+                  {affectedRoutes.length > 0 && <span className="route-editor-error zone-inline-warning">Маршрутов: {affectedRoutes.length}</span>}
+                </div>
+                <div className="actions zone-quick-actions">
                   {editingZoneId === z.id ? (
                     <>
-                      <button onClick={deleteSelectedZoneVertex} disabled={selectedZoneVertexIndex === null}>
-                        Удалить выбранную точку
+                      <button
+                        className={zoneAddPointMode ? 'active' : ''}
+                        onClick={() => setZoneAddPointMode((value) => !value)}
+                      >
+                        {zoneAddPointMode ? 'Добавление: вкл' : '+ точка'}
                       </button>
-                      <button onClick={() => { setEditingZoneId(null); setSelectedZoneVertexIndex(null); }}>
-                        Завершить редактирование полигона
+                      <button onClick={deleteSelectedZoneVertex} disabled={selectedZoneVertexIndex === null}>
+                        {selectedZoneVertexIndex === null ? 'Выберите точку' : `Удалить точку ${selectedZoneVertexIndex + 1}`}
+                      </button>
+                      <button onClick={() => { setEditingZoneId(null); setSelectedZoneVertexIndex(null); setZoneAddPointMode(false); }}>
+                        Готово
                       </button>
                     </>
                   ) : (
@@ -6961,11 +7066,71 @@ export function MapWorkspacePage() {
                         cancelAllEditTools();
                         setEditingZoneId(z.id);
                         setSelectedZoneId(z.id);
+                        setZoneAddPointMode(false);
                       }}
                     >
-                      Редактировать полигон
+                      Править форму
                     </button>
                   )}
+                  <button
+                    onClick={() => {
+                      if (!window.confirm(`Скрыть зону «${z.name}» (архивировать)?`)) return;
+                      store.archiveFactionZone(z.id);
+                      setSelectedZoneId(null);
+                      setEditingZoneId(null);
+                      setPendingZoneStatusChange(null);
+                    }}
+                  >
+                    Скрыть
+                  </button>
+                </div>
+                {editingZoneId === z.id && (
+                  <p className="zone-map-hint">
+                    {zoneAddPointMode
+                      ? 'Клик по карте вставляет точку в ближайший край. Перетаскивание карты работает как обычно.'
+                      : 'Перетаскивайте вершины. Delete/Backspace удаляет выбранную точку. Двойной клик по точке тоже удаляет.'}
+                  </p>
+                )}
+                <details className="zone-advanced">
+                  <summary>Больше настроек</summary>
+                  <div className="zone-advanced-grid">
+                    <label className="zone-quick-field">
+                      <span>ID фракции</span>
+                      <input
+                        type="text"
+                        value={z.factionId ?? ''}
+                        onChange={(e) => store.updateFactionZone(z.id, { factionId: e.target.value || undefined })}
+                      />
+                    </label>
+                    <label className="zone-quick-field">
+                      <span>Описание ДМ</span>
+                      <textarea
+                        value={z.description ?? ''}
+                        onChange={(e) => store.updateFactionZone(z.id, { description: e.target.value || undefined })}
+                      />
+                    </label>
+                    <label className="zone-quick-field">
+                      <span>Описание игрокам</span>
+                      <textarea
+                        value={z.playerSafeDescription ?? ''}
+                        onChange={(e) => store.updateFactionZone(z.id, { playerSafeDescription: e.target.value || undefined })}
+                      />
+                    </label>
+                    <label className="zone-quick-field">
+                      <span>Заметки ДМ</span>
+                      <textarea
+                        value={z.dmNotes ?? ''}
+                        onChange={(e) => store.updateFactionZone(z.id, { dmNotes: e.target.value || undefined })}
+                      />
+                    </label>
+                  </div>
+                  <div className="zone-linked-stats">
+                    <span>События: {z.linkedEventIds?.length ?? 0}</span>
+                    <span>Локации: {z.linkedLocationStateIds?.length ?? 0}</span>
+                    <span>Маршруты: {z.linkedRouteIds?.length ?? 0}</span>
+                    {affectedRoutes.length > 0 && <span>Пересекают: {affectedRoutes.map((r) => r.label || 'без названия').join(', ')}</span>}
+                  </div>
+                  <div className="actions">
                   <button
                     onClick={() => {
                       const now = new Date().toISOString();
@@ -7016,18 +7181,8 @@ export function MapWorkspacePage() {
                   >
                     + Триггер входа в зону
                   </button>
-                  <button
-                    onClick={() => {
-                      if (!window.confirm(`Скрыть зону «${z.name}» (архивировать)?`)) return;
-                      store.archiveFactionZone(z.id);
-                      setSelectedZoneId(null);
-                      setEditingZoneId(null);
-                      setPendingZoneStatusChange(null);
-                    }}
-                  >
-                    Архивировать зону (скрыть)
-                  </button>
-                </div>
+                  </div>
+                </details>
                 {zoneFormError && <p className="route-editor-error">{zoneFormError}</p>}
               </div>
             );
@@ -7610,7 +7765,7 @@ export function MapWorkspacePage() {
                   height: `${activeMapImageSize.height}px`,
                   transform: `translate(${fitOffsetX + view.x}px, ${fitOffsetY + view.y}px) scale(${baseFitScale * view.scale})`,
                   transformOrigin: '0 0',
-                  cursor: isEditMode ? (placingHotspot || manualPartyMoveArmed ? 'crosshair' : 'grab') : 'grab',
+                  cursor: isEditMode ? (placingHotspot || manualPartyMoveArmed || zoneAddPointMode ? 'crosshair' : 'grab') : 'grab',
                   backgroundImage: hasRealArt ? `url(${map.backgroundImageSrc})` : undefined,
                   backgroundSize: '100% 100%',
                 }}
@@ -7645,6 +7800,30 @@ export function MapWorkspacePage() {
                     pointerEvents: isEditMode ? 'visiblePainted' : 'none',
                   }}
                 >
+                  {isEditMode && zoneDraft && zoneDraft.points.length > 0 && (() => {
+                    const pixelPoints = zoneDraft.points
+                      .map((p) => `${p.x * activeMapImageSize.width},${p.y * activeMapImageSize.height}`)
+                      .join(' ');
+                    return (
+                      <g className="faction-zone-draft" style={{ pointerEvents: 'none' }}>
+                        {zoneDraft.points.length >= 3 ? (
+                          <polygon className="faction-zone-draft-fill" points={pixelPoints} />
+                        ) : null}
+                        {zoneDraft.points.length >= 2 ? (
+                          <polyline className="faction-zone-draft-line" points={pixelPoints} fill="none" />
+                        ) : null}
+                        {zoneDraft.points.map((p, i) => (
+                          <circle
+                            key={i}
+                            className="faction-zone-draft-point"
+                            cx={p.x * activeMapImageSize.width}
+                            cy={p.y * activeMapImageSize.height}
+                            r={8}
+                          />
+                        ))}
+                      </g>
+                    );
+                  })()}
                   {/* Faction Zones (Stage 4A) — rendered FIRST inside this SVG so they
                       paint below every route/hotspot/placement/party-marker layer that
                       follows. Hidden ('status'==='hidden') zones only render (faintly,
@@ -7652,6 +7831,15 @@ export function MapWorkspacePage() {
                       presets, which already excludes them via getPlayerSafeFactionZones
                       upstream (visibleFactionZones), so this `isPlayerView` check here is
                       belt-and-suspenders, not the only guard. */}
+                  {showImplicitNeutralZone && (
+                    <rect
+                      className="faction-zone-neutral-base"
+                      x={0}
+                      y={0}
+                      width={activeMapImageSize.width}
+                      height={activeMapImageSize.height}
+                    />
+                  )}
                   {visibleFactionZones.map((z) => {
                     if (z.polygon.length < 3) return null;
                     if (z.status === 'hidden' && isPlayerView) return null;
@@ -7666,6 +7854,7 @@ export function MapWorkspacePage() {
                       // color above (border emphasis, never overrides fill).
                       `faction-zone-type--${z.type}`,
                       isZoneSelected && 'faction-zone--selected',
+                      factionZoneHitTesting && 'faction-zone--interactive',
                     ]
                       .filter(Boolean)
                       .join(' ');
@@ -7677,12 +7866,19 @@ export function MapWorkspacePage() {
                           style={{
                             opacity: z.opacity ?? (z.status === 'hidden' ? 0.25 : 0.35),
                             fill: z.color ?? undefined,
-                            cursor: isEditMode ? 'pointer' : 'default',
-                            pointerEvents: isEditMode ? 'visiblePainted' : 'none',
+                            cursor: isEditMode && factionZoneHitTesting ? 'pointer' : 'default',
+                            pointerEvents: isEditMode && factionZoneHitTesting ? 'visiblePainted' : 'none',
                           }}
                           onClick={(e) => {
-                            if (!isEditMode) return;
+                            if (!isEditMode || !factionZoneHitTesting) return;
                             e.stopPropagation();
+                            if (editingZoneId === z.id && zoneAddPointMode && mapRef.current) {
+                              const rect = mapRef.current.getBoundingClientRect();
+                              const x = Math.min(1, Math.max(0, Math.round(((e.clientX - rect.left) / rect.width) * 1000) / 1000));
+                              const y = Math.min(1, Math.max(0, Math.round(((e.clientY - rect.top) / rect.height) * 1000) / 1000));
+                              store.updateFactionZone(z.id, { polygon: insertZonePointOnNearestEdge(z.polygon, { x, y }) });
+                              return;
+                            }
                             setSelectedZoneId(z.id);
                           }}
                         />
@@ -7693,9 +7889,19 @@ export function MapWorkspacePage() {
                               className={`faction-zone-vertex${selectedZoneVertexIndex === i ? ' faction-zone-vertex--selected' : ''}`}
                               cx={p.x * activeMapImageSize.width}
                               cy={p.y * activeMapImageSize.height}
-                              r={8}
+                              r={10}
                               style={{ cursor: 'grab', pointerEvents: 'visiblePainted' }}
                               onMouseDown={(e) => handleZoneVertexMouseDown(z.id, i, e)}
+                              onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedZoneVertexIndex(i);
+                                if (z.polygon.length <= 3) {
+                                  setZoneFormError('Нельзя удалить точку — у зоны должно остаться минимум 3 точки');
+                                  return;
+                                }
+                                store.updateFactionZone(z.id, { polygon: z.polygon.filter((_, index) => index !== i) });
+                                setSelectedZoneVertexIndex(null);
+                              }}
                             />
                           ))}
                       </g>
@@ -8964,7 +9170,7 @@ export function MapWorkspacePage() {
                 npcs={npcsForArc}
                 quests={questsForArc}
                 shops={(data?.shops ?? []).filter((s) => s.location === sourceLoc.id)}
-                enemies={(data?.enemies ?? []).filter((e) => e.locationIds?.includes(sourceLoc.id))}
+                enemies={data?.enemies ?? []}
                 images={data?.images ?? []}
                 battleMapLinks={battleMapLinksForSelectedLocation}
                 availableBattleMaps={data?.battleMaps ?? []}
@@ -9277,6 +9483,14 @@ export function MapWorkspacePage() {
             npcs={npcsForArc}
             quests={questsForArc}
             onStartBattle={startEmbeddedBattle}
+            onPlaceLocation={(locationId) => {
+              const target =
+                data.locationStates.find((ls) => ls.locationId === locationId && ls.timelineId === store.currentTimelineId) ??
+                data.locationStates.find((ls) => ls.locationId === locationId);
+              if (!target) return;
+              setPlacingExistingLocationId(target.id);
+              closeCompanion();
+            }}
           />
         )}
       </div>
@@ -10555,6 +10769,8 @@ function LibraryPanel({
   // hidden from the default Локации list so they stop cluttering city-map
   // placement browsing. Off by default; the DM can reveal them explicitly.
   const [showHierarchyLocations, setShowHierarchyLocations] = useState(false);
+  const [arcFilter, setArcFilter] = useState<'current' | 'all' | 'arc-1' | 'arc-2'>('current');
+  const [factionFilter, setFactionFilter] = useState('all');
 
   // Stage 6C.5 Phase 2E-Reset — the Library was one long mixed vertical
   // list (Локации/NPC/Таверны/Лавки/Квесты/Враги/Боевые сцены/Изображения
@@ -10571,6 +10787,36 @@ function LibraryPanel({
   const q = search.trim().toLowerCase();
   const matchesSearch = (...parts: (string | undefined)[]) =>
     !q || parts.some((p) => (p ?? '').toLowerCase().includes(q));
+  const currentArcId = locations.some((ls) => ls.timelineId === 'arc-2-war' || ls.timelineId?.includes('arc-2')) ? 'arc-2' : 'arc-1';
+  const normalizeFacet = (value?: string) => (value ?? '').trim();
+  const entityArcId = (item: unknown): string | undefined => {
+    const entity = item as { arcId?: string; timelineId?: string };
+    if (entity.arcId) return entity.arcId;
+    if (entity.timelineId?.includes('arc-2')) return 'arc-2';
+    if (entity.timelineId?.includes('arc-1')) return 'arc-1';
+    return undefined;
+  };
+  const matchesArcFilter = (item: unknown) => {
+    const arcId = entityArcId(item) ?? currentArcId;
+    if (arcFilter === 'all') return true;
+    if (arcFilter === 'current') return arcId === currentArcId;
+    return arcId === arcFilter;
+  };
+  const entityFactionIds = (item: unknown): string[] => {
+    const entity = item as {
+      faction?: string;
+      primaryFactionId?: string;
+      factionIds?: string[];
+      factions?: string[];
+    };
+    return [entity.faction, entity.primaryFactionId, ...(entity.factionIds ?? []), ...(entity.factions ?? [])]
+      .map(normalizeFacet)
+      .filter(Boolean);
+  };
+  const matchesFactionFilter = (item: unknown) => factionFilter === 'all' || entityFactionIds(item).includes(factionFilter);
+  const factionOptions = Array.from(
+    new Set([...locations, ...npcs, ...quests, ...enemies].flatMap((item) => entityFactionIds(item))),
+  ).sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
 
   function locationPlacement(ls: LocationState): LibraryPlacementFilter {
     if (hotspotsOnCurrentMap.some((h) => h.locationStateId === ls.id)) return 'placed_here';
@@ -10591,7 +10837,7 @@ function LibraryPanel({
     return HIERARCHY_LOCATION_TYPES.has(t);
   }
 
-  const searchedLocations = locations.filter((ls) => matchesSearch(ls.title, ls.publicDescription, ls.type));
+  const searchedLocations = locations.filter((ls) => matchesArcFilter(ls) && matchesFactionFilter(ls) && matchesSearch(ls.title, ls.publicDescription, ls.type));
   // Hierarchy/structural locations never mix into the normal placement
   // list, regardless of the toggle below — they're always rendered in
   // their own separate, clearly-labeled block instead.
@@ -10604,6 +10850,7 @@ function LibraryPanel({
     return filter === placement;
   });
   const filteredNpcs = npcs.filter((n) => {
+    if (!matchesArcFilter(n) || !matchesFactionFilter(n)) return false;
     if (!matchesSearch(n.name, n.role, n.faction)) return false;
     const isLinked = !!n.location;
     if (filter === 'all') return true;
@@ -10614,6 +10861,7 @@ function LibraryPanel({
   const filteredTaverns =
     filter === 'all' || filter === 'unplaced' || filter === 'placed_here'
       ? taverns.filter((t) => {
+          if (!matchesArcFilter(t) || !matchesFactionFilter(t)) return false;
           if (!matchesSearch(t.name, t.description)) return false;
           const sourceLs = locations.find((ls) => ls.sourceLibraryType === 'tavern' && ls.sourceLibraryId === t.id);
           const placed = !!sourceLs && hotspotPlacementState(sourceLs.id, hotspotsOnCurrentMap, allHotspots) === 'placed_current_map';
@@ -10625,6 +10873,7 @@ function LibraryPanel({
   const filteredShops =
     filter === 'all' || filter === 'unplaced' || filter === 'placed_here'
       ? shops.filter((s) => {
+          if (!matchesArcFilter(s) || !matchesFactionFilter(s)) return false;
           if (!matchesSearch(s.name, s.description)) return false;
           const sourceLs = locations.find((ls) => ls.sourceLibraryType === 'shop' && ls.sourceLibraryId === s.id);
           const placed = !!sourceLs && hotspotPlacementState(sourceLs.id, hotspotsOnCurrentMap, allHotspots) === 'placed_current_map';
@@ -10634,7 +10883,20 @@ function LibraryPanel({
         })
       : [];
   const filteredBattleMaps = battleMaps.filter((bm) =>
-    matchesSearch(bm.title, bm.normalizedName, bm.status, ...bm.variants.map((v) => v.fileName)),
+    matchesArcFilter(bm) && matchesFactionFilter(bm) && matchesSearch(bm.title, bm.normalizedName, bm.status, ...bm.variants.map((v) => v.fileName)),
+  );
+  const filteredQuests = quests.filter((quest) =>
+    matchesArcFilter(quest) &&
+    matchesFactionFilter(quest) &&
+    matchesSearch(quest.title, quest.goal, quest.description, ...(quest.tags ?? [])),
+  );
+  const filteredEnemies = enemies.filter((enemy) =>
+    matchesArcFilter(enemy) &&
+    matchesFactionFilter(enemy) &&
+    matchesSearch(enemy.name, enemy.role, enemy.faction, ...(enemy.tags ?? [])),
+  );
+  const filteredImages = images.filter((image) =>
+    matchesArcFilter(image) && matchesFactionFilter(image) && matchesSearch(image.title, image.type),
   );
 
   const shownLocations = showAllLocations ? filteredLocations : filteredLocations.slice(0, LIST_CAP);
@@ -10673,6 +10935,44 @@ function LibraryPanel({
           <option value="linked_only">Только связано (NPC)</option>
         </select>
       </div>
+      <div className="library-category-tabs library-filter-tabs" aria-label="Фильтр арки">
+        {[
+          ['current', 'Текущая арка'],
+          ['all', 'Все арки'],
+          ['arc-1', 'Арка 1'],
+          ['arc-2', 'Арка 2'],
+        ].map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={arcFilter === value ? 'library-category-tab active' : 'library-category-tab'}
+            onClick={() => setArcFilter(value as typeof arcFilter)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {!!factionOptions.length && (
+        <div className="library-category-tabs library-filter-tabs" aria-label="Фильтр фракции">
+          <button
+            type="button"
+            className={factionFilter === 'all' ? 'library-category-tab active' : 'library-category-tab'}
+            onClick={() => setFactionFilter('all')}
+          >
+            Все фракции
+          </button>
+          {factionOptions.map((faction) => (
+            <button
+              key={faction}
+              type="button"
+              className={factionFilter === faction ? 'library-category-tab active' : 'library-category-tab'}
+              onClick={() => setFactionFilter(faction)}
+            >
+              {faction}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="library-category-tabs" role="tablist">
         {(
@@ -10681,11 +10981,11 @@ function LibraryPanel({
             ['npc', `NPC (${filteredNpcs.length})`],
             ['taverns', `Таверны (${filteredTaverns.length})`],
             ['shops', `Лавки (${filteredShops.length})`],
-            ['quests', `Квесты (${quests.length})`],
-            ['enemies', `Враги (${enemies.length})`],
+            ['quests', `Квесты (${filteredQuests.length})`],
+            ['enemies', `Враги (${filteredEnemies.length})`],
             ['battleMaps', `Боевые карты (${filteredBattleMaps.length})`],
             ['battleEntries', `Боевые сцены (${battleEntries.length})`],
-            ['images', `Изображения (${images.length})`],
+            ['images', `Изображения (${filteredImages.length})`],
           ] as [LibraryCategory, string][]
         ).map(([cat, label]) => (
           <button
@@ -11019,7 +11319,7 @@ function LibraryPanel({
       {activeCategory === 'quests' && (
       <LibraryReadOnlySection
         title="Квесты"
-        items={quests}
+        items={filteredQuests}
         type="quest"
         images={images}
         search={search}
@@ -11041,7 +11341,7 @@ function LibraryPanel({
       {activeCategory === 'enemies' && (
       <LibraryReadOnlySection
         title="Враги"
-        items={enemies}
+        items={filteredEnemies}
         type="enemy"
         images={images}
         search={search}
@@ -11114,7 +11414,7 @@ function LibraryPanel({
       {activeCategory === 'images' && (
       <LibraryReadOnlySection
         title="Изображения"
-        items={images}
+        items={filteredImages}
         type="image"
         images={images}
         search={search}

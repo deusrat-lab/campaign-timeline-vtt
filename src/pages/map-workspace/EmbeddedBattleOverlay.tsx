@@ -298,6 +298,7 @@ export function EmbeddedBattleOverlay({
   const [showTerrain, setShowTerrain] = useState(true);
   const [terrainEditMode, setTerrainEditMode] = useState<TerrainEditMode>('off');
   const [panTool, setPanTool] = useState(false);
+  const [terrainPainting, setTerrainPainting] = useState(false);
   const [postMovePrompt, setPostMovePrompt] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
@@ -464,6 +465,16 @@ export function EmbeddedBattleOverlay({
   }
 
   function handleBoardPointerDown(e: React.PointerEvent<HTMLElement>) {
+    if (terrainEditMode !== 'off' && !isPlayerView) {
+      const cell = cellFromEvent(e);
+      if (cell) {
+        updateTerrainCell(cell);
+        setTerrainPainting(true);
+        e.currentTarget.setPointerCapture(e.pointerId);
+        e.preventDefault();
+        return;
+      }
+    }
     if (panTool || e.button === 1 || e.button === 2 || e.shiftKey || (e.currentTarget === e.target && !selectedPalette && terrainEditMode === 'off')) {
       setPanning({ x: e.clientX, y: e.clientY, sx: camera.x, sy: camera.y });
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -472,6 +483,9 @@ export function EmbeddedBattleOverlay({
 
   function updateTerrainCell(cell: BattleCell) {
     if (terrainEditMode === 'off' || isPlayerView) return false;
+    const existing = terrainCells.find((t) => t.row === cell.row && t.column === cell.column);
+    if (terrainEditMode === 'erase' && !existing) return true;
+    if (terrainEditMode !== 'erase' && existing?.type === terrainEditMode) return true;
     const next = terrainCells.filter((t) => !(t.row === cell.row && t.column === cell.column));
     if (terrainEditMode !== 'erase') next.push({ row: cell.row, column: cell.column, type: terrainEditMode });
     store.updateActiveBattle({ terrainCells: next });
@@ -648,9 +662,19 @@ export function EmbeddedBattleOverlay({
               setCamera((c) => ({ ...c, x: panning.sx + e.clientX - panning.x, y: panning.sy + e.clientY - panning.y }));
               return;
             }
+            if (terrainPainting) {
+              const cell = cellFromEvent(e);
+              setHoverCell(cell);
+              if (cell) updateTerrainCell(cell);
+              return;
+            }
             setHoverCell(cellFromEvent(e));
           }}
           onPointerUp={(e) => {
+            if (terrainPainting) {
+              setTerrainPainting(false);
+              return;
+            }
             if (panning) {
               setPanning(null);
               return;
@@ -669,7 +693,10 @@ export function EmbeddedBattleOverlay({
             }
             if (route?.status === 'valid' && selectedCanAct) moveSelectedTo(cell);
           }}
-          onPointerLeave={() => setHoverCell(null)}
+          onPointerLeave={() => {
+            setTerrainPainting(false);
+            setHoverCell(null);
+          }}
         >
           <div className="embedded-battle-scene" style={{ width: grid.width, height: grid.height, transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})` }}>
             {mapSrc ? <img className="embedded-battle-map-img" src={mapSrc} alt={battle.title} draggable={false} /> : <div className="embedded-battle-map-missing">Изображение карты не найдено</div>}

@@ -5,6 +5,54 @@ import { BattleMapThumbnail } from '../../pages/map-workspace/BattleMapThumbnail
 import { CompanionLinkRow } from './CompanionLinkRow';
 import { ImageLightbox } from './ImageLightbox';
 import { useCampaignStore } from '../../state/campaignStore';
+import { useCampaignData } from '../../state/campaignDataContext';
+
+function normalizeLinkText(value?: string): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/№/g, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+function splitLocationNameParts(location: DmLocation): string[] {
+  return [location.name, ...(location.aliases ?? [])]
+    .flatMap((name) => name.split(/[\/|]/g))
+    .map(normalizeLinkText)
+    .filter((part) => part.length >= 5);
+}
+
+function locationsLookLikeSamePlace(a: DmLocation, b: DmLocation): boolean {
+  const aParts = splitLocationNameParts(a);
+  const bParts = splitLocationNameParts(b);
+  return aParts.some((aPart) =>
+    bParts.some((bPart) => aPart === bPart || (aPart.length >= 10 && bPart.includes(aPart)) || (bPart.length >= 10 && aPart.includes(bPart))),
+  );
+}
+
+function locationTextHaystack(location: DmLocation): string {
+  return normalizeLinkText(
+    [
+      location.name,
+      location.description,
+      location.atmosphere,
+      location.lore,
+      location.playerView,
+      location.dmSecrets,
+      location.notes,
+      ...(location.tags ?? []),
+      ...(location.aliases ?? []),
+    ]
+      .filter(Boolean)
+      .join(' '),
+  );
+}
+
+function locationMentionsEntity(location: DmLocation, entityName?: string): boolean {
+  const needle = normalizeLinkText(entityName);
+  return needle.length >= 5 && locationTextHaystack(location).includes(needle);
+}
 
 /**
  * Ported field order/content from dm-companion's real
@@ -55,19 +103,20 @@ export function CompanionLocationCard({
   onOpenQuest,
   onOpenShop,
   onOpenEnemy,
+  onPlaceLocation,
 }: {
   loc: DmLocation;
   /** Needs enough fields to do the `npc.location === loc.id` reverse
    * lookup and to render a role + portrait per row, not just id/name. */
   npcs: { id: string; name: string; role?: string; location?: string; image?: string; visibleToPlayers?: boolean }[];
-  quests: { id: string; title: string; status?: string }[];
+  quests: { id: string; title: string; status?: string; goal?: string; image?: string; location?: string }[];
   /** Shops located here — `shop.location === loc.id`, same reverse lookup
    * as dm-companion's `shopsAtLocation`. Optional: callers without shop
    * data (e.g. minimal usages) simply omit the "Магазины здесь" section. */
-  shops?: { id: string; name: string }[];
+  shops?: { id: string; name: string; description?: string; image?: string }[];
   /** Enemies linked here — `enemy.locationIds.includes(loc.id)`, same
    * reverse lookup as dm-companion's `customEnemiesAtLocation`. */
-  enemies?: { id: string; name: string }[];
+  enemies?: { id: string; name: string; role?: string; cr?: string; image?: string; locationIds?: string[] }[];
   images?: DmImageItem[];
   battleMapLinks?: { locationStateId: string; battleMap?: BattleMapManifestEntry; confidence: string; manual?: boolean }[];
   availableBattleMaps?: BattleMapManifestEntry[];
@@ -78,8 +127,10 @@ export function CompanionLocationCard({
   onOpenQuest?: (id: string) => void;
   onOpenShop?: (id: string) => void;
   onOpenEnemy?: (id: string) => void;
+  onPlaceLocation?: (locationId: string) => void;
 }) {
   const store = useCampaignStore();
+  const { data } = useCampaignData();
   const revealButton = (visible: boolean, label: string, onToggle: () => void) => (
     <button
       type="button"
@@ -90,17 +141,85 @@ export function CompanionLocationCard({
       {visible ? '👁' : 'скрыто'} · {label}
     </button>
   );
-  // Union of the location's own explicit `npcs` array AND every NPC whose
-  // `npc.location` reverse-points at this location.
-  const npcIdSet = new Set<string>(loc.npcs);
-  for (const n of npcs) {
-    if (n.location === loc.id) npcIdSet.add(n.id);
+  const currentTimelineArcId = data?.timelines.find((timeline) => timeline.id === store.currentTimelineId)?.arcId;
+  const arc2Mode = currentTimelineArcId === 'arc-2';
+  const matchingArc1Locations =
+    arc2Mode && loc.arcId === 'arc-2'
+      ? data?.locations.filter((candidate) => (candidate.arcId ?? 'arc-1') !== 'arc-2' && locationsLookLikeSamePlace(candidate, loc)) ?? []
+      : [];
+  const arc2Supplements = arc2Mode
+    ? data?.locations.filter((candidate) => candidate.arcId === 'arc-2' && candidate.id !== loc.id && locationsLookLikeSamePlace(loc, candidate)) ?? []
+    : [];
+  const cardLocationSources = arc2Mode
+    ? Array.from(new Map([...matchingArc1Locations, loc, ...arc2Supplements].map((source) => [source.id, source])).values())
+    : [loc];
+  const baseLocationSources = cardLocationSources.filter((source) => (source.arcId ?? 'arc-1') !== 'arc-2');
+  const arc2LocationSources = cardLocationSources.filter((source) => source.arcId === 'arc-2');
+  const locationArcSections = [
+    baseLocationSources.length ? { key: 'arc-1', title: 'Арка 1', sources: baseLocationSources } : undefined,
+    arc2LocationSources.length ? { key: 'arc-2', title: 'Арка 2', sources: arc2LocationSources } : undefined,
+  ].filter((section): section is { key: string; title: string; sources: DmLocation[] } => !!section);
+  const imageSrc = (imageId?: string) => {
+    if (!imageId) return undefined;
+    if (imageId.startsWith('/') || imageId.startsWith('http') || imageId.startsWith('data:')) return imageId;
+    const image = (images ?? []).find((i) => i.id === imageId);
+    return image?.thumbnailSrc ?? image?.src;
+  };
+
+  function sourceIdSetFor(sources: DmLocation[]) {
+    return new Set(sources.map((source) => source.id));
   }
-  const npcEntries = Array.from(npcIdSet).map((id) => npcs.find((n) => n.id === id) ?? { id, name: id });
-  const questItems = loc.quests.map((id) => ({ id, label: quests.find((q) => q.id === id)?.title ?? id }));
-  const shopItems = (shops ?? []).map((s) => ({ id: s.id, label: s.name }));
-  const enemyItems = (enemies ?? []).map((e) => ({ id: e.id, label: e.name }));
-  const resolvedImages = (loc.images ?? [])
+
+  function buildNpcEntries(sources: DmLocation[]) {
+    const sourceIds = sourceIdSetFor(sources);
+    const npcIdSet = new Set<string>(sources.flatMap((source) => source.npcs ?? []));
+    for (const n of npcs) {
+      if (n.location && sourceIds.has(n.location)) npcIdSet.add(n.id);
+      if (!n.location && sources.some((source) => locationMentionsEntity(source, n.name))) npcIdSet.add(n.id);
+    }
+    return Array.from(npcIdSet).map((id) => npcs.find((n) => n.id === id) ?? { id, name: id });
+  }
+
+  function buildQuestItems(sources: DmLocation[]) {
+    const sourceIds = sourceIdSetFor(sources);
+    const questIdSet = new Set<string>(sources.flatMap((source) => source.quests ?? []));
+    for (const quest of quests) {
+      if (quest.location && sourceIds.has(quest.location)) questIdSet.add(quest.id);
+      if (!quest.location && sources.some((source) => locationMentionsEntity(source, quest.title))) questIdSet.add(quest.id);
+    }
+    return Array.from(questIdSet).map((id) => {
+      const quest = quests.find((q) => q.id === id);
+      return { id, label: quest?.title ?? id, subtitle: quest?.goal, imageSrc: imageSrc(quest?.image) };
+    });
+  }
+
+  function buildEnemyItems(sources: DmLocation[]) {
+    const sourceIds = sourceIdSetFor(sources);
+    return (enemies ?? [])
+      .filter((enemy) => {
+        const directLink = enemy.locationIds?.some((id) => sourceIds.has(id)) === true;
+        const mentionedInLocation = sources.some((source) => locationMentionsEntity(source, enemy.name));
+        return directLink || mentionedInLocation;
+      })
+      .map((e) => ({
+        id: e.id,
+        label: e.name,
+        subtitle: [e.role, e.cr ? `CR ${e.cr}` : undefined].filter(Boolean).join(' · '),
+        imageSrc: imageSrc(e.image),
+      }));
+  }
+
+  const npcSections = locationArcSections
+    .map((section) => ({ ...section, items: buildNpcEntries(section.sources) }))
+    .filter((section) => section.items.length);
+  const questSections = locationArcSections
+    .map((section) => ({ ...section, items: buildQuestItems(section.sources) }))
+    .filter((section) => section.items.length);
+  const enemySections = locationArcSections
+    .map((section) => ({ ...section, items: buildEnemyItems(section.sources) }))
+    .filter((section) => section.items.length);
+  const shopItems = (shops ?? []).map((s) => ({ id: s.id, label: s.name, subtitle: s.description, imageSrc: imageSrc(s.image) }));
+  const resolvedImages = cardLocationSources.flatMap((source) => source.images ?? [])
     .map((id) => (images ?? []).find((i) => i.id === id))
     .filter((i): i is DmImageItem => !!i);
   const hero = resolvedImages[0];
@@ -114,9 +233,40 @@ export function CompanionLocationCard({
       .replace(/№/g, ' ')
       .replace(/[^\p{L}\p{N}]+/gu, ' ')
       .trim();
+  const battleMapVisualKey = (bm?: BattleMapManifestEntry) => {
+    if (!bm) return '';
+    const variantUrl = bm.variants?.find((variant) => variant.url)?.url ?? bm.variants?.[0]?.url ?? '';
+    const assetName = variantUrl.split(/[?#]/)[0].split('/').filter(Boolean).pop();
+    if (assetName) return `asset:${assetName.toLowerCase()}`;
+    return `meta:${normalizeBattleMapSearch([bm.title, bm.normalizedName, bm.gridSizeLabel, bm.mapSize].filter(Boolean).join(' '))}`;
+  };
+  const battleMapLinkScore = (link: { confidence: string; manual?: boolean }) => {
+    if (link.manual) return 4;
+    if (link.confidence === 'exact') return 3;
+    if (link.confidence === 'likely') return 2;
+    return 1;
+  };
+  const uniqueBattleMapLinks = Array.from(
+    (battleMapLinks ?? []).reduce((map, link) => {
+      const bm = link.battleMap;
+      const key = bm ? battleMapVisualKey(bm) : `${link.locationStateId}-${link.confidence}`;
+      const existing = map.get(key);
+      if (!existing || battleMapLinkScore(link) > battleMapLinkScore(existing)) map.set(key, link);
+      return map;
+    }, new Map<string, { locationStateId: string; battleMap?: BattleMapManifestEntry; confidence: string; manual?: boolean }>()),
+  ).map(([, link]) => link);
   const linkedBattleMapIds = new Set((battleMapLinks ?? []).map((link) => link.battleMap?.id).filter(Boolean) as string[]);
-  const battleMapCandidates = (availableBattleMaps ?? [])
-    .filter((bm) => !linkedBattleMapIds.has(bm.id))
+  const linkedBattleMapVisualKeys = new Set(uniqueBattleMapLinks.map((link) => battleMapVisualKey(link.battleMap)).filter(Boolean));
+  const battleMapCandidates = Array.from(
+    (availableBattleMaps ?? [])
+      .filter((bm) => !linkedBattleMapIds.has(bm.id) && !linkedBattleMapVisualKeys.has(battleMapVisualKey(bm)))
+      .reduce((map, bm) => {
+        const key = battleMapVisualKey(bm) || bm.id;
+        if (!map.has(key)) map.set(key, bm);
+        return map;
+      }, new Map<string, BattleMapManifestEntry>())
+      .values(),
+  )
     .filter((bm) => {
       const q = normalizeBattleMapSearch(battleMapSearch);
       if (!q) return true;
@@ -141,6 +291,8 @@ export function CompanionLocationCard({
     })
     .slice(0, 80);
   const selectedBattleMapToAdd = battleMapCandidates.find((bm) => bm.id === battleMapToAdd) ?? battleMapCandidates[0];
+  const factionLabels = Array.from(new Set([...(loc.factionIds ?? []), loc.primaryFactionId].filter(Boolean) as string[]))
+    .map((id) => data?.factions.find((f) => f.id === id || f.name === id || f.shortName === id)?.shortName ?? data?.factions.find((f) => f.id === id || f.name === id || f.shortName === id)?.name ?? id);
   return (
     <div className="companion-source-card">
       <div className="companion-source-header">
@@ -158,13 +310,29 @@ export function CompanionLocationCard({
             ))}
           </div>
         )}
+        {!!factionLabels.length && (
+          <div className="companion-tag-row">
+            {factionLabels.map((label) => (
+              <span key={label} className="companion-tag-chip">{label}</span>
+            ))}
+          </div>
+        )}
+        {onPlaceLocation && (
+          <div className="actions">
+            <button type="button" className="btn-primary btn-compact" onClick={() => onPlaceLocation(loc.id)}>
+              Разместить на карте
+            </button>
+          </div>
+        )}
       </div>
       {hero ? (
         <button type="button" className="companion-source-hero-wrap" onClick={() => setLightboxOpen(true)}>
           <img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={loc.name} />
         </button>
       ) : (
-        <p className="muted companion-empty-state">Изображение не привязано.</p>
+        <div className="companion-source-hero-wrap companion-source-hero-wrap--empty" aria-label="Изображение не привязано">
+          <span className="companion-source-hero-placeholder">Нет изображения</span>
+        </div>
       )}
       {hero && revealButton(hero.safeForPlayers !== false, 'арт локации', () => store.patchImage(hero.id, { safeForPlayers: hero.safeForPlayers === false }))}
       {hero && lightboxOpen && <ImageLightbox image={hero} onClose={() => setLightboxOpen(false)} />}
@@ -185,6 +353,19 @@ export function CompanionLocationCard({
         <>
           <h4>Что видят игроки</h4>
           <p>{loc.playerView}</p>
+        </>
+      )}
+      {!!arc2Supplements.length && (
+        <>
+          <h4>Арка 2 / нововведения</h4>
+          {arc2Supplements.map((supplement) => (
+            <div key={supplement.id} className="companion-arc-section">
+              <strong>{supplement.name}</strong>
+              {supplement.description && <p>{supplement.description}</p>}
+              {supplement.lore && <p>{supplement.lore}</p>}
+              {supplement.playerView && <p className="muted">{supplement.playerView}</p>}
+            </div>
+          ))}
         </>
       )}
       {!!loc.rumors?.length && (
@@ -210,39 +391,46 @@ export function CompanionLocationCard({
         </>
       )}
       <h4>NPC здесь</h4>
-      {npcEntries.length ? (
-        <div className="companion-npc-row-list">
-          {npcEntries.map((n) => {
-            const portrait = n.image ? (images ?? []).find((i) => i.id === n.image) : undefined;
-            const content = (
-              <>
-                {portrait ? (
-                  <img className="companion-npc-row-portrait" src={portrait.thumbnailSrc ?? portrait.src} alt={n.name} />
-                ) : (
-                  <span className="companion-npc-row-portrait companion-npc-row-portrait-fallback" aria-hidden="true">
-                    ?
-                  </span>
-                )}
-                <span className="companion-npc-row-text">
-                  <strong>{n.name}</strong>
-                  {n.role ? <span className="muted"> · {n.role}</span> : null}
-                </span>
-              </>
-            );
-            return onOpenNpc ? (
-              <div key={n.id} className="entity-card-wrap">
-                <button type="button" className="companion-npc-row" onClick={() => onOpenNpc(n.id)}>
-                  {content}
-                </button>
-                {revealButton(n.visibleToPlayers === true, n.name, () => store.patchNpc(n.id, { visibleToPlayers: n.visibleToPlayers !== true }))}
+      {npcSections.length ? (
+        <>
+          {npcSections.map((section) => (
+            <div key={section.key} className="companion-arc-section">
+              {locationArcSections.length > 1 && <h5>{section.title}</h5>}
+              <div className="companion-npc-row-list">
+                {section.items.map((n) => {
+                  const portrait = n.image ? (images ?? []).find((i) => i.id === n.image) : undefined;
+                  const content = (
+                    <>
+                      {portrait ? (
+                        <img className="companion-npc-row-portrait" src={portrait.thumbnailSrc ?? portrait.src} alt={n.name} />
+                      ) : (
+                        <span className="companion-npc-row-portrait companion-npc-row-portrait-fallback" aria-hidden="true">
+                          ?
+                        </span>
+                      )}
+                      <span className="companion-npc-row-text">
+                        <strong>{n.name}</strong>
+                        {n.role ? <span className="muted"> · {n.role}</span> : null}
+                      </span>
+                    </>
+                  );
+                  return onOpenNpc ? (
+                    <div key={n.id} className="entity-card-wrap">
+                      <button type="button" className="companion-npc-row" onClick={() => onOpenNpc(n.id)}>
+                        {content}
+                      </button>
+                      {revealButton(n.visibleToPlayers === true, n.name, () => store.patchNpc(n.id, { visibleToPlayers: n.visibleToPlayers !== true }))}
+                    </div>
+                  ) : (
+                    <div key={n.id} className="companion-npc-row companion-npc-row-static">
+                      {content}
+                    </div>
+                  );
+                })}
               </div>
-            ) : (
-              <div key={n.id} className="companion-npc-row companion-npc-row-static">
-                {content}
-              </div>
-            );
-          })}
-        </div>
+            </div>
+          ))}
+        </>
       ) : (
         <p className="muted companion-empty-state">NPC не привязаны.</p>
       )}
@@ -252,31 +440,41 @@ export function CompanionLocationCard({
           {onOpenShop ? <CompanionLinkRow items={shopItems} onOpen={onOpenShop} /> : <p>{shopItems.map((i) => i.label).join(', ')}</p>}
         </>
       )}
-      {!!questItems.length && (
+      {!!questSections.length && (
         <>
           <h4>Квесты здесь</h4>
-          {onOpenQuest ? <CompanionLinkRow items={questItems} onOpen={onOpenQuest} /> : <p>{questItems.map((i) => i.label).join(', ')}</p>}
-          <div className="player-visibility-npc-list">
-            {questItems.map((item) => {
-              const quest = quests.find((q) => q.id === item.id);
-              if (!quest) return null;
-              const visible = quest.status !== 'hidden';
-              return revealButton(visible, quest.title, () => store.setQuestStatus(quest.id, visible ? 'hidden' : 'active'));
-            })}
-          </div>
+          {questSections.map((section) => (
+            <div key={section.key} className="companion-arc-section">
+              {locationArcSections.length > 1 && <h5>{section.title}</h5>}
+              {onOpenQuest ? <CompanionLinkRow items={section.items} onOpen={onOpenQuest} /> : <p>{section.items.map((i) => i.label).join(', ')}</p>}
+              <div className="player-visibility-npc-list">
+                {section.items.map((item) => {
+                  const quest = quests.find((q) => q.id === item.id);
+                  if (!quest) return null;
+                  const visible = quest.status !== 'hidden';
+                  return revealButton(visible, quest.title, () => store.setQuestStatus(quest.id, visible ? 'hidden' : 'active'));
+                })}
+              </div>
+            </div>
+          ))}
         </>
       )}
-      {!!enemyItems.length && (
+      {!!enemySections.length && (
         <>
           <h4>Связанные враги</h4>
-          {onOpenEnemy ? <CompanionLinkRow items={enemyItems} onOpen={onOpenEnemy} /> : <p>{enemyItems.map((i) => i.label).join(', ')}</p>}
+          {enemySections.map((section) => (
+            <div key={section.key} className="companion-arc-section">
+              {locationArcSections.length > 1 && <h5>{section.title}</h5>}
+              {onOpenEnemy ? <CompanionLinkRow items={section.items} onOpen={onOpenEnemy} /> : <p>{section.items.map((i) => i.label).join(', ')}</p>}
+            </div>
+          ))}
         </>
       )}
-      {!!battleMapLinks?.length && (
+      {!!uniqueBattleMapLinks.length && (
         <>
           <h4>Карты битв</h4>
           <div className="companion-battle-map-list">
-            {battleMapLinks.map((link) => {
+            {uniqueBattleMapLinks.map((link) => {
               const bm = link.battleMap;
               if (!bm) return null;
               const preview = bm.variants?.find((v) => v.url) ?? bm.variants?.[0];
@@ -309,7 +507,7 @@ export function CompanionLocationCard({
       )}
       {onLinkBattleMap && !!availableBattleMaps?.length && (
         <div className="companion-battle-map-add">
-          <h4>{battleMapLinks?.length ? 'Добавить карту боя' : 'Карты битв'}</h4>
+          <h4>{uniqueBattleMapLinks.length ? 'Добавить карту боя' : 'Карты битв'}</h4>
           <p className="muted">Привязка сохраняется к этой локации и сразу появляется в карточке.</p>
           <input
             type="search"

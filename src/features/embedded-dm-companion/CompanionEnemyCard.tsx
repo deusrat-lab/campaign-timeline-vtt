@@ -49,10 +49,14 @@ export function CompanionEnemyCard({
           {enemy.tags?.length ? ` · ${enemy.tags.join(', ')}` : ''}
         </span>
       </div>
-      {hero && (
+      {hero ? (
         <button type="button" className="companion-source-hero-wrap" onClick={() => setLightboxOpen(true)}>
           <img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={enemy.name} />
         </button>
+      ) : (
+        <div className="companion-source-hero-wrap companion-source-hero-wrap--empty" aria-label="Изображение не привязано">
+          <span className="companion-source-hero-placeholder">Нет изображения</span>
+        </div>
       )}
       {hero && lightboxOpen && (
         <ImageLightbox image={{ ...hero, title: hero.title ?? enemy.name }} onClose={() => setLightboxOpen(false)} />

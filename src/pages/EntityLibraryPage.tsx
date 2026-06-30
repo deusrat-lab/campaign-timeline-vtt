@@ -5,14 +5,15 @@ import type { CampaignData } from '../data/loadCampaignData';
 import { useCampaignData } from '../state/campaignDataContext';
 import { useCampaignStore } from '../state/campaignStore';
 import type { QuestStatus } from '../types';
-import type { DmCustomEnemy, DmNpc, DmPlayer, DmQuest } from '../types/dmCompanion';
+import type { DmCustomEnemy, DmFaction, DmLocation, DmNpc, DmPlayer, DmQuest } from '../types/dmCompanion';
 import { CompanionEnemyCard } from '../features/embedded-dm-companion/CompanionEnemyCard';
+import { CompanionLocationCard } from '../features/embedded-dm-companion/CompanionLocationCard';
 import { CompanionNpcCard } from '../features/embedded-dm-companion/CompanionNpcCard';
 import { CompanionQuestCard } from '../features/embedded-dm-companion/CompanionQuestCard';
 import { BATTLE_MAP_ASSET_ORIGIN } from '../config';
 import type { BattleMapManifestEntry } from '../data/battleMapManifest';
 
-export type EntityLibraryKind = 'npc' | 'quests' | 'enemies' | 'bestiary' | 'players' | 'battleMaps';
+export type EntityLibraryKind = 'npc' | 'quests' | 'enemies' | 'bestiary' | 'players' | 'battleMaps' | 'factions';
 type EntitySortKey = 'name_asc' | 'name_desc' | 'location' | 'status' | 'role';
 
 const QUEST_STATUS_LABELS: Record<QuestStatus, string> = {
@@ -76,6 +77,188 @@ function getEntityTitle(item: DmNpc | DmQuest | DmCustomEnemy | DmPlayer): strin
   return item.name;
 }
 
+type FactionTaggedEntity = {
+  faction?: string;
+  primaryFactionId?: string;
+  factionIds?: string[];
+};
+
+function getEntityFactionKeys(item: FactionTaggedEntity): string[] {
+  return Array.from(new Set([...(item.factionIds ?? []), item.primaryFactionId, item.faction].filter(Boolean) as string[]));
+}
+
+function getFactionLabel(data: CampaignData, key: string): string {
+  const faction = data.factions.find((f) => f.id === key || f.name === key || f.shortName === key);
+  return faction?.shortName ?? faction?.name ?? key;
+}
+
+function getFactionSummary(data: CampaignData, item: FactionTaggedEntity): string {
+  return getEntityFactionKeys(item).map((key) => getFactionLabel(data, key)).join(', ');
+}
+
+function matchesFaction(item: FactionTaggedEntity, filter: string): boolean {
+  return filter === 'all' || getEntityFactionKeys(item).includes(filter);
+}
+
+function buildFactionOptions<T extends FactionTaggedEntity>(
+  data: CampaignData,
+  items: T[],
+): { id: string; name: string }[] {
+  const ids = new Set<string>();
+  for (const item of items) {
+    for (const key of getEntityFactionKeys(item)) ids.add(key);
+  }
+  return Array.from(ids)
+    .map((id) => ({ id, name: getFactionLabel(data, id) }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+}
+
+function imageSrcFromId(data: CampaignData, imageId?: string): string | undefined {
+  if (!imageId) return undefined;
+  if (imageId.startsWith('/') || imageId.startsWith('http') || imageId.startsWith('data:')) return imageId;
+  const img = data.images.find((candidate) => candidate.id === imageId);
+  return img?.thumbnailSrc ?? img?.src;
+}
+
+function locationThumbnail(data: CampaignData, location: DmLocation): string | undefined {
+  return imageSrcFromId(data, location.images?.[0]);
+}
+
+function entityThumbnail(data: CampaignData, item: DmNpc | DmQuest | DmCustomEnemy | DmPlayer): string | undefined {
+  if ('characterName' in item) return imageSrcFromId(data, item.image) ?? item.image;
+  if ('image' in item) return imageSrcFromId(data, item.image) ?? item.image;
+  return undefined;
+}
+
+function entityInitials(title: string): string {
+  return title
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || '?';
+}
+
+function ImagePickerField({
+  value,
+  data,
+  onChange,
+}: {
+  value: string;
+  data: CampaignData;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label>
+      Изображение
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Нет изображения</option>
+        {data.images.map((image) => (
+          <option key={image.id} value={image.id}>{image.title}</option>
+        ))}
+      </select>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => {
+          const file = e.currentTarget.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === 'string') onChange(reader.result);
+          };
+          reader.readAsDataURL(file);
+          e.currentTarget.value = '';
+        }}
+      />
+    </label>
+  );
+}
+
+function isLocationPlaced(data: CampaignData, timelineId: string, locationId: string): boolean {
+  const stateIds = new Set(data.locationStates.filter((state) => state.timelineId === timelineId && state.locationId === locationId).map((state) => state.id));
+  return data.hotspots.some((hotspot) => stateIds.has(hotspot.locationStateId));
+}
+
+function entityPlacementLabel(
+  data: CampaignData,
+  timelineId: string,
+  kind: EntityLibraryKind | 'location',
+  item: DmNpc | DmQuest | DmCustomEnemy | DmPlayer | DmLocation,
+): string | null {
+  if (kind === 'players') return null;
+  if (kind === 'location') {
+    return isLocationPlaced(data, timelineId, (item as DmLocation).id) ? 'Размещено' : 'Не размещено';
+  }
+  const matchingLocationState = data.locationStates.find((state) => {
+    if (state.timelineId !== timelineId) return false;
+    if (kind === 'npc') return state.npcIds.includes(item.id) || (item as DmNpc).location === state.locationId;
+    if (kind === 'quests') return state.questIds.includes(item.id) || (item as DmQuest).location === state.locationId;
+    if (kind === 'enemies') return state.enemyIds.includes(item.id) || ((item as DmCustomEnemy).locationIds ?? []).includes(state.locationId);
+    return false;
+  });
+  if (!matchingLocationState) return 'Не размещено';
+  return data.hotspots.some((hotspot) => hotspot.locationStateId === matchingLocationState.id)
+    ? 'Размещено'
+    : 'Локация не на карте';
+}
+
+function normalizePlaceText(value?: string): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/№/g, 'no')
+    .replace(/[^a-zа-я0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function locationNameParts(location: DmLocation): string[] {
+  return [location.name, ...(location.aliases ?? [])]
+    .flatMap((value) => String(value ?? '').split(/[\/|]/g))
+    .map(normalizePlaceText)
+    .filter((value) => value.length >= 4);
+}
+
+function locationsAreSamePlace(a: DmLocation, b: DmLocation): boolean {
+  if (a.id === b.id) return true;
+  const aParts = locationNameParts(a);
+  const bParts = locationNameParts(b);
+  return aParts.some((aPart) => bParts.some((bPart) => aPart === bPart || aPart.includes(bPart) || bPart.includes(aPart)));
+}
+
+function canonicalArcLocation(location: DmLocation, locations: DmLocation[]): DmLocation {
+  if ((location.arcId ?? 'arc-1') !== 'arc-2') return location;
+  return locations.find((candidate) => (candidate.arcId ?? 'arc-1') === 'arc-1' && locationsAreSamePlace(candidate, location)) ?? location;
+}
+
+function FilterChips({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label?: string;
+  value: string;
+  options: { id: string; name: string; count?: number }[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="entity-filter-chips" aria-label={label}>
+      {options.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          className={value === option.id ? 'active' : ''}
+          onClick={() => onChange(option.id)}
+        >
+          {option.name}{typeof option.count === 'number' ? ` ${option.count}` : ''}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function sortEntities<T extends DmNpc | DmQuest | DmCustomEnemy | DmPlayer>(
   items: T[],
   sortKey: EntitySortKey,
@@ -111,8 +294,10 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [questStatusFilter, setQuestStatusFilter] = useState<QuestStatus | 'all'>('all');
+  const [questFactionFilter, setQuestFactionFilter] = useState('all');
   const [npcLocationFilter, setNpcLocationFilter] = useState('all');
   const [npcRoleFilter, setNpcRoleFilter] = useState('all');
+  const [npcFactionFilter, setNpcFactionFilter] = useState('all');
   const [enemyRoleFilter, setEnemyRoleFilter] = useState('all');
   const [enemyLocationFilter, setEnemyLocationFilter] = useState('all');
   const [enemyQuestFilter, setEnemyQuestFilter] = useState('all');
@@ -144,51 +329,63 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
     if (!data) return [];
 	    return Array.from(new Set(data.npcs.filter((n) => (n.arcId ?? 'arc-1') === arcId).map((n) => n.role).filter((role): role is string => Boolean(role)))).sort((a, b) => a.localeCompare(b, 'ru'));
   }, [arcId, data]);
+  const npcFactionOptions = useMemo(() => {
+    if (!data) return [];
+    return buildFactionOptions(data, data.npcs.filter((n) => (n.arcId ?? 'arc-1') === arcId));
+  }, [arcId, data]);
+  const questFactionOptions = useMemo(() => {
+    if (!data) return [];
+    return buildFactionOptions(data, data.quests.filter((quest) => (quest.arcId ?? 'arc-1') === arcId));
+  }, [arcId, data]);
   const enemyRoleOptions = useMemo(() => {
     if (!data) return [];
 	    return Array.from(new Set(data.enemies.filter((enemy) => (enemy.arcId ?? 'arc-1') === arcId).map((enemy) => enemy.role).filter((role): role is string => Boolean(role)))).sort((a, b) => a.localeCompare(b, 'ru'));
   }, [arcId, data]);
   const enemyLocationOptions = useMemo(() => {
     if (!data) return [];
-    const ids = new Set(data.enemies.flatMap((enemy) => enemy.locationIds ?? []));
+    const enemiesForArc = data.enemies.filter((enemy) => (enemy.arcId ?? 'arc-1') === arcId);
+    const ids = new Set(enemiesForArc.flatMap((enemy) => enemy.locationIds ?? []));
     return Array.from(ids)
       .map((id) => ({ id, name: data.locations.find((loc) => loc.id === id)?.name ?? id }))
       .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-  }, [data]);
+  }, [arcId, data]);
   const enemyQuestOptions = useMemo(() => {
     if (!data) return [];
-    const ids = new Set(data.enemies.flatMap((enemy) => enemy.questIds ?? []));
+    const enemiesForArc = data.enemies.filter((enemy) => (enemy.arcId ?? 'arc-1') === arcId);
+    const ids = new Set(enemiesForArc.flatMap((enemy) => enemy.questIds ?? []));
     return Array.from(ids)
       .map((id) => ({ id, title: data.quests.find((quest) => quest.id === id)?.title ?? id }))
       .sort((a, b) => a.title.localeCompare(b.title, 'ru'));
-  }, [data]);
+  }, [arcId, data]);
   const enemyFactionOptions = useMemo(() => {
     if (!data) return [];
-    return Array.from(new Set(data.enemies.map((enemy) => enemy.faction).filter((faction): faction is string => Boolean(faction)))).sort((a, b) => a.localeCompare(b, 'ru'));
-  }, [data]);
+    return buildFactionOptions(data, data.enemies.filter((enemy) => (enemy.arcId ?? 'arc-1') === arcId));
+  }, [arcId, data]);
   const enemyCrOptions = useMemo(() => {
     if (!data) return [];
-    return Array.from(new Set(data.enemies.map((enemy) => enemy.cr).filter((cr): cr is string => Boolean(cr)))).sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
-  }, [data]);
+    return Array.from(new Set(data.enemies.filter((enemy) => (enemy.arcId ?? 'arc-1') === arcId).map((enemy) => enemy.cr).filter((cr): cr is string => Boolean(cr)))).sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
+  }, [arcId, data]);
   const enemyTagOptions = useMemo(() => {
     if (!data) return [];
-    return Array.from(new Set(data.enemies.flatMap((enemy) => enemy.tags ?? []))).sort((a, b) => a.localeCompare(b, 'ru'));
-  }, [data]);
+    return Array.from(new Set(data.enemies.filter((enemy) => (enemy.arcId ?? 'arc-1') === arcId).flatMap((enemy) => enemy.tags ?? []))).sort((a, b) => a.localeCompare(b, 'ru'));
+  }, [arcId, data]);
 
   const items = useMemo(() => {
     if (!data) return [];
     if (kind === 'npc') {
       return sortEntities(data.npcs
         .filter((n) => (n.arcId ?? 'arc-1') === arcId)
+        .filter((n) => matchesFaction(n, npcFactionFilter))
         .filter((n) => npcLocationFilter === 'all' || n.location === npcLocationFilter)
         .filter((n) => npcRoleFilter === 'all' || n.role === npcRoleFilter)
-        .filter((n) => !q || [n.name, n.role, n.race, n.faction, n.location].some((v) => (v ?? '').toLowerCase().includes(q))), sortKey, data, store);
+        .filter((n) => !q || [n.name, n.role, n.race, n.faction, getFactionSummary(data, n), n.location].some((v) => (v ?? '').toLowerCase().includes(q))), sortKey, data, store);
     }
     if (kind === 'quests') {
       return sortEntities(data.quests
         .filter((quest) => (quest.arcId ?? 'arc-1') === arcId)
+        .filter((quest) => matchesFaction(quest, questFactionFilter))
         .filter((quest) => questStatusFilter === 'all' || effectiveQuestStatus(quest.id, quest.status, store.progress) === questStatusFilter)
-        .filter((quest) => !q || [quest.title, quest.goal, quest.description, quest.location].some((v) => (v ?? '').toLowerCase().includes(q))), sortKey, data, store);
+        .filter((quest) => !q || [quest.title, quest.goal, quest.description, getFactionSummary(data, quest), quest.location].some((v) => (v ?? '').toLowerCase().includes(q))), sortKey, data, store);
     }
     if (kind === 'players') {
       return sortEntities(data.players
@@ -198,16 +395,25 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
       .filter((enemy) => enemyRoleFilter === 'all' || enemy.role === enemyRoleFilter)
       .filter((enemy) => enemyLocationFilter === 'all' || (enemy.locationIds ?? []).includes(enemyLocationFilter))
       .filter((enemy) => enemyQuestFilter === 'all' || (enemy.questIds ?? []).includes(enemyQuestFilter))
-      .filter((enemy) => enemyFactionFilter === 'all' || enemy.faction === enemyFactionFilter)
+      .filter((enemy) => matchesFaction(enemy, enemyFactionFilter))
       .filter((enemy) => enemyCrFilter === 'all' || enemy.cr === enemyCrFilter)
       .filter((enemy) => enemyTagFilter === 'all' || (enemy.tags ?? []).includes(enemyTagFilter))
-      .filter((enemy) => !q || [enemy.name, enemy.role, enemy.faction, enemy.cr, enemy.baseMonsterName, ...(enemy.tags ?? [])].some((v) => (v ?? '').toLowerCase().includes(q))), sortKey, data, store);
-  }, [arcId, data, enemyCrFilter, enemyFactionFilter, enemyLocationFilter, enemyQuestFilter, enemyRoleFilter, enemyTagFilter, kind, npcLocationFilter, npcRoleFilter, q, questStatusFilter, sortKey, store]);
+      .filter((enemy) => !q || [enemy.name, enemy.role, enemy.faction, getFactionSummary(data, enemy), enemy.cr, enemy.baseMonsterName, ...(enemy.tags ?? [])].some((v) => (v ?? '').toLowerCase().includes(q))), sortKey, data, store);
+  }, [arcId, data, enemyCrFilter, enemyFactionFilter, enemyLocationFilter, enemyQuestFilter, enemyRoleFilter, enemyTagFilter, kind, npcFactionFilter, npcLocationFilter, npcRoleFilter, q, questFactionFilter, questStatusFilter, sortKey, store]);
+
+  useEffect(() => {
+    if (selectedId && !items.some((item) => item.id === selectedId)) {
+      setSelectedId(null);
+      setEditing(false);
+      setInlineEnemyEditId(null);
+    }
+  }, [items, selectedId]);
 
   if (loading) return <p className="page">Загрузка…</p>;
   if (error || !data) return <p className="page">Ошибка загрузки: {error}</p>;
   if (kind === 'bestiary') return <BestiaryEntityLibraryPage arcId={arcId} timelineTitle={timeline?.title ?? ''} />;
   if (kind === 'battleMaps') return <BattleMapsEntityLibraryPage data={data} arcId={arcId} />;
+  if (kind === 'factions') return <FactionEntityLibraryPage data={data} arcId={arcId} timelineTitle={timeline?.title ?? ''} />;
 
   const selected = (selectedId ? items.find((item) => item.id === selectedId) : items[0]) ?? null;
   const title = kind === 'npc' ? 'NPC' : kind === 'quests' ? 'Квесты' : kind === 'players' ? 'Игроки' : 'Мои враги';
@@ -280,20 +486,43 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
             onChange={(e) => setSearch(e.target.value)}
           />
           {kind === 'quests' && (
-            <select
-              className="entity-library-filter"
+            <FilterChips
+              label="Статусы квестов"
               value={questStatusFilter}
-              onChange={(e) => {
-                setQuestStatusFilter(e.target.value as QuestStatus | 'all');
+              options={[
+                { id: 'all', name: 'Все статусы' },
+                ...(Object.keys(QUEST_STATUS_LABELS) as QuestStatus[]).map((status) => ({ id: status, name: QUEST_STATUS_LABELS[status] })),
+              ]}
+              onChange={(value) => {
+                setQuestStatusFilter(value as QuestStatus | 'all');
                 setSelectedId(null);
                 setEditing(false);
               }}
-            >
-              <option value="all">Все статусы</option>
-              {(Object.keys(QUEST_STATUS_LABELS) as QuestStatus[]).map((status) => (
-                <option key={status} value={status}>{QUEST_STATUS_LABELS[status]}</option>
-              ))}
-            </select>
+            />
+          )}
+          {kind === 'quests' && (
+            <FilterChips
+              label="Стороны квестов"
+              value={questFactionFilter}
+              options={[{ id: 'all', name: 'Все стороны' }, ...questFactionOptions]}
+              onChange={(value) => {
+                setQuestFactionFilter(value);
+                setSelectedId(null);
+                setEditing(false);
+              }}
+            />
+          )}
+          {kind === 'npc' && (
+            <FilterChips
+              label="Стороны NPC"
+              value={npcFactionFilter}
+              options={[{ id: 'all', name: 'Все стороны' }, ...npcFactionOptions]}
+              onChange={(value) => {
+                setNpcFactionFilter(value);
+                setSelectedId(null);
+                setEditing(false);
+              }}
+            />
           )}
           {kind === 'npc' && (
             <select
@@ -339,7 +568,7 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
               </select>
               <select className="entity-library-filter" value={enemyFactionFilter} onChange={(e) => { setEnemyFactionFilter(e.target.value); setSelectedId(null); setEditing(false); }}>
                 <option value="all">Фракция: все</option>
-                {enemyFactionOptions.map((faction) => <option key={faction} value={faction}>{faction}</option>)}
+                {enemyFactionOptions.map((faction) => <option key={faction.id} value={faction.id}>{faction.name}</option>)}
               </select>
               <select className="entity-library-filter" value={enemyCrFilter} onChange={(e) => { setEnemyCrFilter(e.target.value); setSelectedId(null); setEditing(false); }}>
                 <option value="all">CR: все</option>
@@ -374,14 +603,17 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
           <ul>
             {items.map((item) => {
               const active = item.id === selected?.id;
+              const title = kind === 'quests' ? (item as DmQuest).title : kind === 'players' ? (item as DmPlayer).characterName : (item as DmNpc | DmCustomEnemy).name;
+              const thumb = entityThumbnail(data, item as DmNpc | DmQuest | DmCustomEnemy | DmPlayer);
               const subtitle =
                 kind === 'npc'
-                  ? [(item as DmNpc).role, data.locations.find((l) => l.id === (item as DmNpc).location)?.name ?? (item as DmNpc).location].filter(Boolean).join(' · ')
+                  ? [getFactionSummary(data, item as DmNpc), (item as DmNpc).role, data.locations.find((l) => l.id === (item as DmNpc).location)?.name ?? (item as DmNpc).location].filter(Boolean).join(' · ')
                   : kind === 'quests'
-                    ? QUEST_STATUS_LABELS[effectiveQuestStatus(item.id, (item as DmQuest).status, store.progress)]
+                    ? [QUEST_STATUS_LABELS[effectiveQuestStatus(item.id, (item as DmQuest).status, store.progress)], getFactionSummary(data, item as DmQuest)].filter(Boolean).join(' · ')
                       : kind === 'players'
                         ? [(item as DmPlayer).playerName, (item as DmPlayer).race, (item as DmPlayer).class, (item as DmPlayer).level ? `ур. ${(item as DmPlayer).level}` : undefined].filter(Boolean).join(' · ')
                       : [(item as DmCustomEnemy).role, (item as DmCustomEnemy).cr ? `CR ${(item as DmCustomEnemy).cr}` : undefined].filter(Boolean).join(' · ');
+              const placement = entityPlacementLabel(data, store.currentTimelineId, kind, item as DmNpc | DmQuest | DmCustomEnemy | DmPlayer);
               return (
                 <li key={item.id}>
                   <button
@@ -392,8 +624,16 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
 	                      setInlineEnemyEditId(null);
 	                    }}
                   >
-                    <strong>{kind === 'quests' ? (item as DmQuest).title : kind === 'players' ? (item as DmPlayer).characterName : (item as DmNpc | DmCustomEnemy).name}</strong>
-                    {subtitle && <span>{subtitle}</span>}
+                    {thumb ? (
+                      <img className="entity-library-row-thumb" src={thumb} alt="" loading="lazy" />
+                    ) : (
+                      <span className="entity-library-row-thumb entity-library-row-thumb-fallback">{entityInitials(title)}</span>
+                    )}
+                    <span className="entity-library-row-main">
+                      <strong>{title}</strong>
+                      {subtitle && <span>{subtitle}</span>}
+                      {placement && <small className={placement === 'Размещено' ? 'placement-badge placement-badge--placed' : 'placement-badge'}>{placement}</small>}
+                    </span>
                   </button>
                 </li>
               );
@@ -407,11 +647,9 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
           ) : (
             <>
               <div className="entity-library-actions">
-                {kind !== 'players' && (
-                  <button className="btn-primary" onClick={() => setEditing((v) => !v)}>
-                    {editing ? 'Закрыть редактор' : 'Редактировать'}
-                  </button>
-                )}
+                <button className="btn-primary" onClick={() => setEditing((v) => !v)}>
+                  {editing ? 'Закрыть редактор' : 'Редактировать'}
+                </button>
                 {kind !== 'players' && (
                   <button onClick={() => openMapLibrary(selected as DmNpc | DmQuest | DmCustomEnemy)}>
                     {kind === 'quests' ? 'Разместить цель на карте' : 'Разместить на карте'}
@@ -481,6 +719,234 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
 function battleMapPreview(map: BattleMapManifestEntry): string | undefined {
   const variant = map.variants.find((v) => v.url);
   return variant?.url ? `${BATTLE_MAP_ASSET_ORIGIN}${variant.url}` : undefined;
+}
+
+function entityMatchesFaction(item: FactionTaggedEntity, faction: DmFaction): boolean {
+  return getEntityFactionKeys(item).some((key) => key === faction.id || key === faction.name || key === faction.shortName);
+}
+
+type FactionPreviewTarget =
+  | { type: 'npc'; id: string }
+  | { type: 'quest'; id: string }
+  | { type: 'location'; id: string }
+  | { type: 'enemy'; id: string };
+
+function FactionLinkedCard({
+  title,
+  subtitle,
+  imageSrc,
+  placement,
+  onClick,
+}: {
+  title: string;
+  subtitle?: string;
+  imageSrc?: string;
+  placement?: string | null;
+  onClick: () => void;
+}) {
+  return (
+    <button type="button" className="faction-linked-card" onClick={onClick}>
+      {imageSrc ? (
+        <img className="faction-linked-card-thumb" src={imageSrc} alt="" />
+      ) : (
+        <span className="faction-linked-card-thumb faction-linked-card-thumb--empty" aria-hidden="true">
+          ?
+        </span>
+      )}
+      <span className="faction-linked-card-main">
+        <strong>{title}</strong>
+        {subtitle && <span>{subtitle}</span>}
+        {placement && <small className={placement === 'Размещено' ? 'placement-badge placement-badge--placed' : 'placement-badge'}>{placement}</small>}
+      </span>
+    </button>
+  );
+}
+
+function FactionEntityLibraryPage({ data, arcId, timelineTitle }: { data: CampaignData; arcId: string; timelineTitle: string }) {
+  const navigate = useNavigate();
+  const store = useCampaignStore();
+  const [selectedFactionId, setSelectedFactionId] = useState<string | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<FactionPreviewTarget | null>(null);
+
+  const arcNpcs = data.npcs.filter((npc) => (npc.arcId ?? 'arc-1') === arcId);
+  const arcQuests = data.quests.filter((quest) => (quest.arcId ?? 'arc-1') === arcId);
+  const arcLocations = data.locations.filter((location) => (location.arcId ?? 'arc-1') === arcId);
+  const arcEnemies = data.enemies.filter((enemy) => (enemy.arcId ?? 'arc-1') === arcId);
+  const arcLocationRows = useMemo(() => {
+    const rows = new Map<string, { location: DmLocation; sources: DmLocation[] }>();
+    const candidates = arcId === 'arc-2'
+      ? data.locations.filter((location) => (location.arcId ?? 'arc-1') === 'arc-1' || location.arcId === 'arc-2')
+      : arcLocations;
+    candidates.forEach((location) => {
+      const canonical = arcId === 'arc-2' ? canonicalArcLocation(location, data.locations) : location;
+      const existing = rows.get(canonical.id);
+      if (existing) {
+        existing.sources.push(location);
+      } else {
+        rows.set(canonical.id, { location: canonical, sources: [location] });
+      }
+    });
+    return Array.from(rows.values());
+  }, [arcId, arcLocations, data.locations]);
+  const factionRows = useMemo(() => data.factions
+    .map((faction) => {
+      const npcCount = arcNpcs.filter((npc) => entityMatchesFaction(npc, faction)).length;
+      const questCount = arcQuests.filter((quest) => entityMatchesFaction(quest, faction)).length;
+      const locationCount = arcLocationRows.filter((row) => row.sources.some((location) => entityMatchesFaction(location, faction))).length;
+      const enemyCount = arcEnemies.filter((enemy) => entityMatchesFaction(enemy, faction)).length;
+      return { faction, npcCount, questCount, locationCount, enemyCount, total: npcCount + questCount + locationCount + enemyCount };
+    })
+    .filter((row) => row.total > 0)
+    .sort((a, b) => (b.faction.arcId === arcId ? 1 : 0) - (a.faction.arcId === arcId ? 1 : 0) || b.total - a.total || a.faction.name.localeCompare(b.faction.name, 'ru')), [arcEnemies, arcId, arcLocationRows, arcNpcs, arcQuests, data.factions]);
+  useEffect(() => {
+    if (selectedFactionId && !factionRows.some((row) => row.faction.id === selectedFactionId)) {
+      setSelectedFactionId(null);
+    }
+  }, [factionRows, selectedFactionId]);
+  const selected = factionRows.find((row) => row.faction.id === selectedFactionId)?.faction ?? factionRows[0]?.faction ?? null;
+  const linkedNpcs = selected ? arcNpcs.filter((npc) => entityMatchesFaction(npc, selected)).slice(0, 8) : [];
+  const linkedQuests = selected ? arcQuests.filter((quest) => entityMatchesFaction(quest, selected)).slice(0, 8) : [];
+  const linkedLocations = selected
+    ? arcLocationRows.filter((row) => row.sources.some((location) => entityMatchesFaction(location, selected))).map((row) => row.location).slice(0, 8)
+    : [];
+  const linkedEnemies = selected ? arcEnemies.filter((enemy) => entityMatchesFaction(enemy, selected)).slice(0, 8) : [];
+  const selectedStats = selected ? factionRows.find((row) => row.faction.id === selected.id) : null;
+  const previewNpc = previewTarget?.type === 'npc' ? data.npcs.find((npc) => npc.id === previewTarget.id) : undefined;
+  const previewQuest = previewTarget?.type === 'quest' ? data.quests.find((quest) => quest.id === previewTarget.id) : undefined;
+  const previewLocation = previewTarget?.type === 'location' ? data.locations.find((location) => location.id === previewTarget.id) : undefined;
+  const previewEnemy = previewTarget?.type === 'enemy' ? data.enemies.find((enemy) => enemy.id === previewTarget.id) : undefined;
+  const previewTitle = previewNpc?.name ?? previewQuest?.title ?? previewLocation?.name ?? previewEnemy?.name ?? 'Карточка';
+  const previewBody = previewNpc ? (
+    <CompanionNpcCard
+      npc={previewNpc}
+      locationName={data.locations.find((location) => location.id === previewNpc.location)?.name}
+      shop={data.shops.find((shop) => shop.ownerNpcId === previewNpc.id)}
+      quests={data.quests}
+      images={data.images}
+      onOpenQuest={(id) => setPreviewTarget({ type: 'quest', id })}
+      onOpenShop={() => undefined}
+    />
+  ) : previewQuest ? (
+    <CompanionQuestCard
+      quest={previewQuest}
+      npcs={data.npcs}
+      enemies={data.enemies}
+      images={data.images}
+      locationName={data.locations.find((location) => location.id === previewQuest.location)?.name}
+      onOpenNpc={(id) => setPreviewTarget({ type: 'npc', id })}
+      onOpenLocation={(id) => setPreviewTarget({ type: 'location', id })}
+      onOpenEnemy={(id) => setPreviewTarget({ type: 'enemy', id })}
+    />
+  ) : previewLocation ? (
+    <CompanionLocationCard
+      loc={previewLocation}
+      npcs={data.npcs}
+      quests={data.quests}
+      shops={data.shops.filter((shop) => shop.location === previewLocation.id)}
+      enemies={data.enemies.filter((enemy) => enemy.locationIds?.includes(previewLocation.id))}
+      images={data.images}
+      onOpenNpc={(id) => setPreviewTarget({ type: 'npc', id })}
+      onOpenQuest={(id) => setPreviewTarget({ type: 'quest', id })}
+      onOpenShop={() => undefined}
+      onOpenEnemy={(id) => setPreviewTarget({ type: 'enemy', id })}
+    />
+  ) : previewEnemy ? (
+    <CompanionEnemyCard
+      enemy={previewEnemy}
+      locations={data.locations}
+      quests={data.quests}
+      images={data.images}
+      onOpenLocation={(id) => setPreviewTarget({ type: 'location', id })}
+      onOpenQuest={(id) => setPreviewTarget({ type: 'quest', id })}
+    />
+  ) : null;
+
+  return (
+    <div className="page entity-library-page entity-library-page--wide">
+      <header className="entity-library-header">
+        <div>
+          <h1>Стороны конфликта — {timelineTitle}</h1>
+          <p className="muted">Фракции арки, связанные NPC, квесты, локации и враги в одном месте.</p>
+        </div>
+      </header>
+      <div className="faction-overview-grid">
+        {factionRows.map(({ faction, total }) => (
+          <button
+            key={faction.id}
+            className={selected?.id === faction.id ? 'faction-overview-card active' : 'faction-overview-card'}
+            style={{ borderColor: selected?.id === faction.id ? faction.color : undefined }}
+            onClick={() => setSelectedFactionId(faction.id)}
+          >
+            <span className="faction-overview-icon">{faction.icon ?? '⚔'}</span>
+            <strong style={{ color: faction.color ?? undefined }}>{faction.name}</strong>
+            <span>{total} объектов</span>
+          </button>
+        ))}
+      </div>
+
+      {selected && (
+        <section className="entity-library-detail faction-detail-panel">
+          <div className="faction-detail-heading">
+            <div>
+              <h2><span>{selected.icon ?? '⚔'}</span> {selected.name}</h2>
+              <p className="muted">{selected.description ?? selected.subtype ?? 'Фракция кампании'}</p>
+            </div>
+            <div className="faction-stat-strip">
+              <span><strong>{selectedStats?.npcCount ?? 0}</strong> NPC</span>
+              <span><strong>{selectedStats?.questCount ?? 0}</strong> квестов</span>
+              <span><strong>{selectedStats?.locationCount ?? 0}</strong> локаций</span>
+              <span><strong>{selectedStats?.enemyCount ?? 0}</strong> врагов</span>
+            </div>
+          </div>
+
+          <div className="faction-linked-grid">
+            <section>
+              <h3>Ключевые NPC</h3>
+              {linkedNpcs.map((npc) => (
+                <FactionLinkedCard key={npc.id} title={npc.name} subtitle={npc.role} imageSrc={entityThumbnail(data, npc)} placement={entityPlacementLabel(data, store.currentTimelineId, 'npc', npc)} onClick={() => setPreviewTarget({ type: 'npc', id: npc.id })} />
+              ))}
+              <button onClick={() => navigate('/npc')}>Все NPC</button>
+            </section>
+            <section>
+              <h3>Квесты</h3>
+              {linkedQuests.map((quest) => (
+                <FactionLinkedCard key={quest.id} title={quest.title} subtitle={quest.goal} imageSrc={entityThumbnail(data, quest)} placement={entityPlacementLabel(data, store.currentTimelineId, 'quests', quest)} onClick={() => setPreviewTarget({ type: 'quest', id: quest.id })} />
+              ))}
+              <button onClick={() => navigate('/quests')}>Все квесты</button>
+            </section>
+            <section>
+              <h3>Локации</h3>
+              {linkedLocations.map((location) => (
+                <FactionLinkedCard key={location.id} title={location.name} subtitle={location.type} imageSrc={locationThumbnail(data, location)} placement={entityPlacementLabel(data, store.currentTimelineId, 'location', location)} onClick={() => setPreviewTarget({ type: 'location', id: location.id })} />
+              ))}
+            </section>
+            <section>
+              <h3>Враги</h3>
+              {linkedEnemies.map((enemy) => (
+                <FactionLinkedCard key={enemy.id} title={enemy.name} subtitle={[enemy.role, enemy.cr ? `CR ${enemy.cr}` : undefined].filter(Boolean).join(' · ')} imageSrc={entityThumbnail(data, enemy)} placement={entityPlacementLabel(data, store.currentTimelineId, 'enemies', enemy)} onClick={() => setPreviewTarget({ type: 'enemy', id: enemy.id })} />
+              ))}
+              <button onClick={() => navigate('/enemies')}>Все враги</button>
+            </section>
+          </div>
+        </section>
+      )}
+      {previewTarget && (
+        <div className="entity-card-modal-backdrop" onClick={() => setPreviewTarget(null)}>
+          <div className="entity-card-modal" onClick={(event) => event.stopPropagation()}>
+            <header className="entity-card-modal-header">
+              <h2>{previewTitle}</h2>
+              <button type="button" className="btn-ghost" onClick={() => setPreviewTarget(null)}>
+                Закрыть ✕
+              </button>
+            </header>
+            <div className="entity-card-modal-body">
+              {previewBody ?? <p className="muted">Карточка не найдена.</p>}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function normalizeBestiaryText(value?: string | number): string {
@@ -842,11 +1308,12 @@ export function EntityEditor({
 }) {
   if (kind === 'npc') return <NpcEditor npc={entity as DmNpc} data={data} onDone={onDone} />;
   if (kind === 'quests') return <QuestEditor quest={entity as DmQuest} data={data} onDone={onDone} />;
-  if (kind === 'players') return <PlayerCard player={entity as DmPlayer} data={data} />;
+  if (kind === 'players') return <PlayerEditor player={entity as DmPlayer} data={data} onDone={onDone} />;
   return <EnemyEditor enemy={entity as DmCustomEnemy} data={data} onDone={onDone} />;
 }
 
 function PlayerCard({ player, data }: { player: DmPlayer; data: CampaignData }) {
+  const playerImage = imageSrcFromId(data, player.image) ?? player.image;
   const relatedNpcs = (player.relatedNpcs ?? [])
     .map((id) => data.npcs.find((npc) => npc.id === id))
     .filter((npc): npc is DmNpc => Boolean(npc));
@@ -861,7 +1328,11 @@ function PlayerCard({ player, data }: { player: DmPlayer; data: CampaignData }) 
           {[player.playerName, player.race, player.class, player.level ? `ур. ${player.level}` : undefined].filter(Boolean).join(' · ') || 'Игрок'}
         </span>
       </div>
-      {player.image && <img className="companion-source-hero" src={player.image} alt={player.characterName} />}
+      {playerImage ? (
+        <img className="companion-source-hero" src={playerImage} alt={player.characterName} />
+      ) : (
+        <div className="companion-source-hero companion-source-hero--placeholder">Нет изображения</div>
+      )}
       {player.tags?.length ? <p className="muted">{player.tags.join(', ')}</p> : null}
       {player.description && <p>{player.description}</p>}
       {player.backstory && (
@@ -932,6 +1403,92 @@ function PlayerCard({ player, data }: { player: DmPlayer; data: CampaignData }) 
   );
 }
 
+function PlayerEditor({ player, data, onDone }: { player: DmPlayer; data: CampaignData; onDone: () => void }) {
+  const store = useCampaignStore();
+  const [draft, setDraft] = useState({
+    characterName: player.characterName ?? '',
+    playerName: player.playerName ?? '',
+    race: player.race ?? '',
+    class: player.class ?? '',
+    level: player.level ?? '',
+    image: player.image ?? '',
+    description: player.description ?? '',
+    backstory: player.backstory ?? '',
+    personality: player.personality ?? '',
+    ideals: player.ideals ?? '',
+    bonds: player.bonds ?? '',
+    flaws: player.flaws ?? '',
+    dmNotes: player.dmNotes ?? '',
+    dmSecrets: player.dmSecrets ?? '',
+    tags: (player.tags ?? []).join(', '),
+    reputationText: (player.reputation ?? []).map((rep) => `${rep.faction}: ${rep.value}`).join('\n'),
+  });
+
+  function parseReputation(): DmPlayer['reputation'] {
+    const entries: DmPlayer['reputation'] = [];
+    draft.reputationText
+      .split('\n')
+      .forEach((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        const separatorIndex = trimmed.lastIndexOf(':');
+        const faction = separatorIndex >= 0 ? trimmed.slice(0, separatorIndex).trim() : trimmed;
+        const value = separatorIndex >= 0 ? Number(trimmed.slice(separatorIndex + 1).trim()) : 0;
+        entries.push({
+          id: player.reputation?.[index]?.id ?? `rep-${player.id}-${index}`,
+          arcId: player.reputation?.[index]?.arcId,
+          faction,
+          value: Number.isFinite(value) ? value : 0,
+          history: player.reputation?.[index]?.history ?? [],
+        });
+      });
+    return entries;
+  }
+
+  return (
+    <form className="entity-inline-editor" onSubmit={(e) => {
+      e.preventDefault();
+      store.patchPlayer(player.id, {
+        characterName: draft.characterName.trim(),
+        playerName: draft.playerName.trim(),
+        race: draft.race.trim(),
+        class: draft.class.trim(),
+        level: draft.level.trim(),
+        image: draft.image,
+        description: draft.description.trim(),
+        backstory: draft.backstory.trim(),
+        personality: draft.personality.trim(),
+        ideals: draft.ideals.trim(),
+        bonds: draft.bonds.trim(),
+        flaws: draft.flaws.trim(),
+        dmNotes: draft.dmNotes.trim(),
+        dmSecrets: draft.dmSecrets.trim(),
+        tags: draft.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+        reputation: parseReputation(),
+      });
+      onDone();
+    }}>
+      <label>Имя персонажа<input value={draft.characterName} onChange={(e) => setDraft({ ...draft, characterName: e.target.value })} /></label>
+      <label>Игрок<input value={draft.playerName} onChange={(e) => setDraft({ ...draft, playerName: e.target.value })} /></label>
+      <label>Раса<input value={draft.race} onChange={(e) => setDraft({ ...draft, race: e.target.value })} /></label>
+      <label>Класс<input value={draft.class} onChange={(e) => setDraft({ ...draft, class: e.target.value })} /></label>
+      <label>Уровень<input value={draft.level} onChange={(e) => setDraft({ ...draft, level: e.target.value })} /></label>
+      <ImagePickerField value={draft.image} data={data} onChange={(image) => setDraft({ ...draft, image })} />
+      <label>Описание<textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} /></label>
+      <label>Предыстория<textarea value={draft.backstory} onChange={(e) => setDraft({ ...draft, backstory: e.target.value })} /></label>
+      <label>Характер<textarea value={draft.personality} onChange={(e) => setDraft({ ...draft, personality: e.target.value })} /></label>
+      <label>Идеалы<textarea value={draft.ideals} onChange={(e) => setDraft({ ...draft, ideals: e.target.value })} /></label>
+      <label>Привязанности<textarea value={draft.bonds} onChange={(e) => setDraft({ ...draft, bonds: e.target.value })} /></label>
+      <label>Слабости<textarea value={draft.flaws} onChange={(e) => setDraft({ ...draft, flaws: e.target.value })} /></label>
+      <label>Теги<input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} /></label>
+      <label>Репутация<textarea value={draft.reputationText} onChange={(e) => setDraft({ ...draft, reputationText: e.target.value })} placeholder="Фракция: 0" /></label>
+      <label>Заметки ДМ<textarea value={draft.dmNotes} onChange={(e) => setDraft({ ...draft, dmNotes: e.target.value })} /></label>
+      <label>Секреты ДМ<textarea value={draft.dmSecrets} onChange={(e) => setDraft({ ...draft, dmSecrets: e.target.value })} /></label>
+      <EditorActions disabled={!draft.characterName.trim()} onCancel={onDone} onReset={() => store.resetOverride('player', player.id)} />
+    </form>
+  );
+}
+
 function NpcEditor({ npc, data, onDone }: { npc: DmNpc; data: CampaignData; onDone: () => void }) {
   const store = useCampaignStore();
   const [draft, setDraft] = useState({
@@ -944,6 +1501,7 @@ function NpcEditor({ npc, data, onDone }: { npc: DmNpc; data: CampaignData; onDo
     knowledge: npc.knowledge ?? '',
     secrets: npc.secrets ?? '',
     notes: npc.notes ?? npc.dmNotes ?? '',
+    image: npc.image ?? '',
     visibleToPlayers: npc.visibleToPlayers === true,
   });
 
@@ -960,6 +1518,7 @@ function NpcEditor({ npc, data, onDone }: { npc: DmNpc; data: CampaignData; onDo
         knowledge: draft.knowledge.trim() || undefined,
         secrets: draft.secrets.trim() || undefined,
         notes: draft.notes.trim() || undefined,
+        image: draft.image || undefined,
         visibleToPlayers: draft.visibleToPlayers,
       });
       onDone();
@@ -971,6 +1530,7 @@ function NpcEditor({ npc, data, onDone }: { npc: DmNpc; data: CampaignData; onDo
         <option value="">Не задана</option>
         {data.locations.map((loc) => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
       </select></label>
+      <ImagePickerField value={draft.image} data={data} onChange={(image) => setDraft({ ...draft, image })} />
       <label>Характер<textarea value={draft.personality} onChange={(e) => setDraft({ ...draft, personality: e.target.value })} /></label>
       <label>Цели<textarea value={draft.goals} onChange={(e) => setDraft({ ...draft, goals: e.target.value })} /></label>
       <label>Что знает<textarea value={draft.knowledge} onChange={(e) => setDraft({ ...draft, knowledge: e.target.value })} /></label>
@@ -995,6 +1555,7 @@ function QuestEditor({ quest, data, onDone }: { quest: DmQuest; data: CampaignDa
     proof: quest.proof ?? '',
     consequences: quest.consequences ?? '',
 	    notes: quest.notes ?? '',
+	    image: quest.image ?? '',
 	    enemies: quest.enemies ?? [],
       enemySearch: '',
 	  });
@@ -1027,6 +1588,7 @@ function QuestEditor({ quest, data, onDone }: { quest: DmQuest; data: CampaignDa
         proof: draft.proof.trim() || undefined,
 	        consequences: draft.consequences.trim() || undefined,
 	        notes: draft.notes.trim() || undefined,
+	        image: draft.image || undefined,
 	        enemies: draft.enemies,
 	      });
 	      const selectedEnemyIds = new Set(draft.enemies);
@@ -1055,6 +1617,7 @@ function QuestEditor({ quest, data, onDone }: { quest: DmQuest; data: CampaignDa
         <option value="">Не задан</option>
         {data.npcs.map((npc) => <option key={npc.id} value={npc.id}>{npc.name}</option>)}
       </select></label>
+      <ImagePickerField value={draft.image} data={data} onChange={(image) => setDraft({ ...draft, image })} />
       <label>Цель<textarea value={draft.goal} onChange={(e) => setDraft({ ...draft, goal: e.target.value })} /></label>
       <label>Описание<textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} /></label>
       <label>Награда<textarea value={draft.reward} onChange={(e) => setDraft({ ...draft, reward: e.target.value })} /></label>
@@ -1100,6 +1663,7 @@ function EnemyEditor({ enemy, data, onDone }: { enemy: DmCustomEnemy; data: Camp
     hp: enemy.hp?.toString() ?? '',
     lore: enemy.lore ?? '',
     tactics: enemy.tactics ?? '',
+	    image: enemy.image ?? '',
 	    dmNotes: enemy.dmNotes ?? '',
 	    questIds: enemy.questIds ?? [],
 	    questSearch: '',
@@ -1130,6 +1694,7 @@ function EnemyEditor({ enemy, data, onDone }: { enemy: DmCustomEnemy; data: Camp
         hp: draft.hp.trim() ? Number(draft.hp) : undefined,
 	        lore: draft.lore.trim() || undefined,
 	        tactics: draft.tactics.trim() || undefined,
+	        image: draft.image || undefined,
 	        dmNotes: draft.dmNotes.trim() || undefined,
 	        questIds: draft.questIds,
 	      });
@@ -1152,6 +1717,7 @@ function EnemyEditor({ enemy, data, onDone }: { enemy: DmCustomEnemy; data: Camp
       <label>CR<input value={draft.cr} onChange={(e) => setDraft({ ...draft, cr: e.target.value })} /></label>
       <label>AC<input type="number" value={draft.ac} onChange={(e) => setDraft({ ...draft, ac: e.target.value })} /></label>
       <label>HP<input type="number" value={draft.hp} onChange={(e) => setDraft({ ...draft, hp: e.target.value })} /></label>
+      <ImagePickerField value={draft.image} data={data} onChange={(image) => setDraft({ ...draft, image })} />
       <label>Лор<textarea value={draft.lore} onChange={(e) => setDraft({ ...draft, lore: e.target.value })} /></label>
 	      <label>Тактика<textarea value={draft.tactics} onChange={(e) => setDraft({ ...draft, tactics: e.target.value })} /></label>
 	      <section className="entity-link-editor">

@@ -5,6 +5,7 @@ import { resolveEntityPreviewImage } from '../../pages/map-workspace/libraryCard
 import { CompanionLinkRow } from './CompanionLinkRow';
 import { CompanionEnemyCard } from './CompanionEnemyCard';
 import { ImageLightbox } from './ImageLightbox';
+import { useCampaignData } from '../../state/campaignDataContext';
 
 const QUEST_STATUS_LABELS: Record<QuestStatus, string> = {
   active: 'Активен',
@@ -31,7 +32,7 @@ export function CompanionQuestCard({
   onRemoveEnemy,
 }: {
   quest: DmQuest;
-  npcs: { id: string; name: string }[];
+  npcs: { id: string; name: string; role?: string; image?: string }[];
   enemies: DmCustomEnemy[];
   images: DmImageItem[];
   locationName?: string;
@@ -41,13 +42,21 @@ export function CompanionQuestCard({
   onEditEnemy?: (id: string) => void;
   onRemoveEnemy?: (id: string) => void;
 }) {
+  const { data } = useCampaignData();
   const hero = resolveEntityPreviewImage('quest', quest, images);
   const giver = quest.giver ? npcs.find((n) => n.id === quest.giver) : undefined;
   const enemyCards = (quest.enemies ?? []).map((id) => enemies.find((e) => e.id === id)).filter((e): e is DmCustomEnemy => Boolean(e));
   const missingEnemyItems = (quest.enemies ?? [])
     .filter((id) => !enemyCards.some((enemy) => enemy.id === id))
     .map((id) => ({ id, label: id }));
+  const solutions = Array.isArray(quest.solutions)
+    ? quest.solutions
+    : quest.solutions
+      ? [quest.solutions]
+      : [];
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const factionLabels = Array.from(new Set([...(quest.factionIds ?? []), quest.primaryFactionId].filter(Boolean) as string[]))
+    .map((id) => data?.factions.find((f) => f.id === id || f.name === id || f.shortName === id)?.shortName ?? data?.factions.find((f) => f.id === id || f.name === id || f.shortName === id)?.name ?? id);
 
   return (
     <div className="companion-source-card">
@@ -57,11 +66,23 @@ export function CompanionQuestCard({
           {QUEST_STATUS_LABELS[quest.status]}
           {quest.tags?.length ? ` · ${quest.tags.join(', ')}` : ''}
         </span>
+        {!!factionLabels.length && (
+          <div className="companion-tag-row">
+            {factionLabels.map((label) => (
+              <span key={label} className="companion-tag-chip">{label}</span>
+            ))}
+          </div>
+        )}
       </div>
       {hero && (
         <button type="button" className="companion-source-hero-wrap" onClick={() => setLightboxOpen(true)}>
           <img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={quest.title} />
         </button>
+      )}
+      {!hero && (
+        <div className="companion-source-hero-wrap companion-source-hero-wrap--empty" aria-label="Изображение не привязано">
+          <span className="companion-source-hero-placeholder">Нет изображения</span>
+        </div>
       )}
       {hero && lightboxOpen && (
         <ImageLightbox image={{ ...hero, title: hero.title ?? quest.title }} onClose={() => setLightboxOpen(false)} />
@@ -79,7 +100,21 @@ export function CompanionQuestCard({
       {giver && (
         <>
           <h4>Квестодатель</h4>
-          {onOpenNpc ? <CompanionLinkRow items={[{ id: giver.id, label: giver.name }]} onOpen={onOpenNpc} /> : <p>{giver.name}</p>}
+          {onOpenNpc ? (
+            <CompanionLinkRow
+              items={[{
+                id: giver.id,
+                label: giver.name,
+                subtitle: giver.role,
+                imageSrc: giver.image
+                  ? (giver.image.startsWith('/') || giver.image.startsWith('http')
+                    ? giver.image
+                    : images.find((image) => image.id === giver.image)?.thumbnailSrc ?? images.find((image) => image.id === giver.image)?.src)
+                  : undefined,
+              }]}
+              onOpen={onOpenNpc}
+            />
+          ) : <p>{giver.name}</p>}
         </>
       )}
       {quest.goal && (
@@ -135,11 +170,11 @@ export function CompanionQuestCard({
           <p>{quest.proof}</p>
         </>
       )}
-      {!!quest.solutions?.length && (
+      {!!solutions.length && (
         <>
           <h4>Варианты решения</h4>
           <ul>
-            {quest.solutions.map((s, i) => (
+            {solutions.map((s, i) => (
               <li key={i}>{s}</li>
             ))}
           </ul>

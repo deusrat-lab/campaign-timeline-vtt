@@ -4,7 +4,7 @@ import { loadCampaignData } from '../data/loadCampaignData';
 import type { CampaignData } from '../data/loadCampaignData';
 import { useCampaignStore } from './campaignStore';
 import { applyOverlayToList } from './overlay';
-import type { BattleMapLocationLink } from '../types';
+import type { BattleMapLocationLink, LocationState, MapHotspot, WorldMapState } from '../types';
 
 /**
  * Merges re-derived battle-map<->location links with the DM override layer:
@@ -37,6 +37,45 @@ function mergeBattleMapLocationLinks(
   }
 
   return merged;
+}
+
+function mirrorArc1RegionHotspotsForArc2(
+  hotspots: MapHotspot[],
+  locationStates: LocationState[],
+): MapHotspot[] {
+  const existingIds = new Set(hotspots.map((h) => h.id));
+  const locationStateIds = new Set(locationStates.map((ls) => ls.id));
+  const mirrored: MapHotspot[] = [];
+  for (const h of hotspots) {
+    if (h.mapId !== 'map-region' || h.timelineId !== 'arc-1-peace') continue;
+    if (!h.locationStateId.endsWith('__arc-1-peace')) continue;
+    const arc2LocationStateId = h.locationStateId.replace('__arc-1-peace', '__arc-2-war');
+    if (!locationStateIds.has(arc2LocationStateId)) continue;
+    const id = `arc2-region-copy:${h.id}`;
+    if (existingIds.has(id)) continue;
+    existingIds.add(id);
+    mirrored.push({
+      ...h,
+      id,
+      mapId: 'map-region-arc2-war',
+      timelineId: 'arc-2-war',
+      locationStateId: arc2LocationStateId,
+      needsCoordinateReview: false,
+    });
+  }
+  return mirrored.length ? [...hotspots, ...mirrored] : hotspots;
+}
+
+function attachHotspotsToMapStates(mapStates: WorldMapState[], hotspots: MapHotspot[]): WorldMapState[] {
+  return mapStates.map((ms) => {
+    const ids = hotspots
+      .filter((h) => h.mapId === ms.mapId && h.timelineId === ms.timelineId)
+      .map((h) => h.id);
+    const merged = Array.from(new Set([...ms.hotspotIds, ...ids]));
+    return merged.length === ms.hotspotIds.length && merged.every((id, index) => id === ms.hotspotIds[index])
+      ? ms
+      : { ...ms, hotspotIds: merged };
+  });
 }
 
 interface CampaignDataState {
@@ -75,21 +114,33 @@ export function useCampaignData(): CampaignDataState {
 
   const merged = useMemo<CampaignData | null>(() => {
     if (!base.data) return null;
-    return {
-      ...base.data,
-      timelines: applyOverlayToList(base.data.timelines, overlay.timelinePatches, overlay.newTimelines),
-      worldMaps: applyOverlayToList(base.data.worldMaps, overlay.worldMapPatches, overlay.newWorldMaps),
-      worldMapStates: applyOverlayToList(
+    const locationStates = applyOverlayToList(
+      base.data.locationStates,
+      overlay.locationStatePatches,
+      overlay.newLocationStates,
+    );
+    const projectedHotspots = mirrorArc1RegionHotspotsForArc2(
+      applyOverlayToList(base.data.hotspots, overlay.hotspotPatches, overlay.newHotspots),
+      locationStates,
+    );
+    // Arc 2 region points can be mirrored from Arc 1 after the first overlay
+    // merge, so their own patches must be applied once more after projection.
+    const hotspots = applyOverlayToList(projectedHotspots, overlay.hotspotPatches, []);
+    const worldMapStates = attachHotspotsToMapStates(
+      applyOverlayToList(
         base.data.worldMapStates,
         overlay.worldMapStatePatches,
         overlay.newWorldMapStates,
       ),
-      locationStates: applyOverlayToList(
-        base.data.locationStates,
-        overlay.locationStatePatches,
-        overlay.newLocationStates,
-      ),
-      hotspots: applyOverlayToList(base.data.hotspots, overlay.hotspotPatches, overlay.newHotspots),
+      hotspots,
+    );
+    return {
+      ...base.data,
+      timelines: applyOverlayToList(base.data.timelines, overlay.timelinePatches, overlay.newTimelines),
+      worldMaps: applyOverlayToList(base.data.worldMaps, overlay.worldMapPatches, overlay.newWorldMaps),
+      worldMapStates,
+      locationStates,
+      hotspots,
       routes: applyOverlayToList(base.data.routes, overlay.routePatches, overlay.newRoutes),
       travelEvents: applyOverlayToList(base.data.travelEvents, overlay.travelEventPatches, overlay.newTravelEvents),
       placements: applyOverlayToList(base.data.placements, overlay.placementPatches, overlay.newPlacements),
@@ -103,6 +154,7 @@ export function useCampaignData(): CampaignDataState {
       images: applyOverlayToList(base.data.images, overlay.imagePatches, overlay.newImages),
       quests: applyOverlayToList(base.data.quests, overlay.questPatches, []),
       enemies: applyOverlayToList(base.data.enemies, overlay.enemyPatches, overlay.newEnemies),
+      players: applyOverlayToList(base.data.players, overlay.playerPatches, []),
       locations: applyOverlayToList(base.data.locations, overlay.locationPatches, []),
       battleMapLocationLinks: mergeBattleMapLocationLinks(
         base.data.battleMapLocationLinks,

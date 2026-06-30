@@ -33,8 +33,8 @@ export function CompanionTavernCard({
   onOpenLocation,
 }: {
   tavern: DmTavern;
-  npcs: { id: string; name: string; visibleToPlayers?: boolean }[];
-  quests: { id: string; title: string }[];
+  npcs: { id: string; name: string; role?: string; image?: string; visibleToPlayers?: boolean }[];
+  quests: { id: string; title: string; goal?: string; image?: string }[];
   images: DmImageItem[];
   /** Bug-fix pass: dm-companion's real TavernDetailPage shows "Локация"
    * (`tavern.location`) right after Атмосфера — this card had the doc
@@ -45,6 +45,10 @@ export function CompanionTavernCard({
   onOpenLocation?: () => void;
 }) {
   const store = useCampaignStore();
+  const imageSrc = (imageId?: string) => {
+    const image = imageId ? images.find((item) => item.id === imageId) : undefined;
+    return image?.thumbnailSrc ?? image?.src;
+  };
   const revealButton = (visible: boolean, label: string, onToggle: () => void) => (
     <button
       type="button"
@@ -56,9 +60,18 @@ export function CompanionTavernCard({
     </button>
   );
   const owner = tavern.ownerNpcId ? npcs.find((n) => n.id === tavern.ownerNpcId) : undefined;
-  const staffItems = (tavern.staff ?? []).map((id) => ({ id, label: npcs.find((n) => n.id === id)?.name ?? id }));
-  const relatedNpcItems = (tavern.relatedNpcs ?? []).map((id) => ({ id, label: npcs.find((n) => n.id === id)?.name ?? id }));
-  const relatedQuestItems = (tavern.relatedQuests ?? []).map((id) => ({ id, label: quests.find((q) => q.id === id)?.title ?? id }));
+  const staffItems = (tavern.staff ?? []).map((id) => {
+    const npc = npcs.find((n) => n.id === id);
+    return { id, label: npc?.name ?? id, subtitle: npc?.role, imageSrc: imageSrc(npc?.image) };
+  });
+  const relatedNpcItems = (tavern.relatedNpcs ?? []).map((id) => {
+    const npc = npcs.find((n) => n.id === id);
+    return { id, label: npc?.name ?? id, subtitle: npc?.role, imageSrc: imageSrc(npc?.image) };
+  });
+  const relatedQuestItems = (tavern.relatedQuests ?? []).map((id) => {
+    const quest = quests.find((q) => q.id === id);
+    return { id, label: quest?.title ?? id, subtitle: quest?.goal, imageSrc: imageSrc(quest?.image) };
+  });
   const hero = resolveEntityPreviewImage('tavern', tavern, images);
   const heroSourceImage = hero ? images.find((img) => img.src === hero.src || img.thumbnailSrc === hero.thumbnailSrc) : undefined;
   const galleryImages = (tavern.relatedImages ?? [])
@@ -101,6 +114,11 @@ export function CompanionTavernCard({
       {hero && lightboxOpen && (
         <ImageLightbox image={{ ...hero, title: hero.title ?? tavern.name }} onClose={() => setLightboxOpen(false)} />
       )}
+      {!hero && (
+        <div className="companion-source-hero-wrap companion-source-hero-wrap--empty">
+          <span className="companion-source-hero-placeholder">Нет изображения</span>
+        </div>
+      )}
       <p>{tavern.description}</p>
       {tavern.atmosphere && (
         <>
@@ -112,9 +130,7 @@ export function CompanionTavernCard({
         <>
           <h4>Локация</h4>
           {onOpenLocation ? (
-            <button type="button" className="companion-link-chip" onClick={onOpenLocation}>
-              {locationName}
-            </button>
+            <CompanionLinkRow items={[{ id: 'location', label: locationName }]} onOpen={() => onOpenLocation()} />
           ) : (
             <p>{locationName}</p>
           )}
@@ -125,7 +141,7 @@ export function CompanionTavernCard({
           <h4>Владелец</h4>
           {owner && onOpenNpc ? (
             <>
-              <CompanionLinkRow items={[{ id: owner.id, label: owner.name }]} onOpen={onOpenNpc} />
+              <CompanionLinkRow items={[{ id: owner.id, label: owner.name, subtitle: owner.role, imageSrc: imageSrc(owner.image) }]} onOpen={onOpenNpc} />
               {revealButton(owner.visibleToPlayers === true, owner.name, () => store.patchNpc(owner.id, { visibleToPlayers: owner.visibleToPlayers !== true }))}
             </>
           ) : (

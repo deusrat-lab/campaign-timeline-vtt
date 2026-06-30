@@ -11,14 +11,24 @@ export function CompanionLinkRow({
   items,
   onOpen,
 }: {
-  items: { id: string; label: string }[];
+  items: { id: string; label: string; subtitle?: string; imageSrc?: string }[];
   onOpen: (id: string) => void;
 }) {
   return (
     <div className="companion-link-row">
       {items.map((item) => (
-        <button key={item.id} type="button" className="companion-link-chip" onClick={() => onOpen(item.id)}>
-          {item.label}
+        <button key={item.id} type="button" className="companion-link-card" onClick={() => onOpen(item.id)}>
+          {item.imageSrc ? (
+            <img className="companion-link-card-thumb" src={item.imageSrc} alt="" />
+          ) : (
+            <span className="companion-link-card-thumb companion-link-card-thumb--empty" aria-hidden="true">
+              ?
+            </span>
+          )}
+          <span className="companion-link-card-main">
+            <strong>{item.label}</strong>
+            {item.subtitle ? <small>{item.subtitle}</small> : null}
+          </span>
         </button>
       ))}
     </div>

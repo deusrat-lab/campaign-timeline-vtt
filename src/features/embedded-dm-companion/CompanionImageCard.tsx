@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { DmImageItem } from '../../types/dmCompanion';
 import { ImageLightbox } from './ImageLightbox';
+import { CompanionLinkRow } from './CompanionLinkRow';
 
 /**
  * NEW component, not a port — dm-companion has no `ImageDetailPage.tsx`;
@@ -17,19 +18,21 @@ export function CompanionImageCard({
   locationName,
   npcName,
   enemyName,
-  questNames,
+  questItems,
   onOpenLocation,
   onOpenNpc,
   onOpenEnemy,
+  onOpenQuest,
 }: {
   image: DmImageItem;
   locationName?: string;
   npcName?: string;
   enemyName?: string;
-  questNames?: string[];
+  questItems?: { id: string; label: string; subtitle?: string; imageSrc?: string }[];
   onOpenLocation?: () => void;
   onOpenNpc?: () => void;
   onOpenEnemy?: () => void;
+  onOpenQuest?: (id: string) => void;
 }) {
   return (
     <div className="companion-source-card">
@@ -48,9 +51,7 @@ export function CompanionImageCard({
         <>
           <h4>Локация</h4>
           {onOpenLocation ? (
-            <button type="button" className="companion-link-chip" onClick={onOpenLocation}>
-              {locationName}
-            </button>
+            <CompanionLinkRow items={[{ id: 'location', label: locationName }]} onOpen={() => onOpenLocation()} />
           ) : (
             <p>{locationName}</p>
           )}
@@ -60,9 +61,7 @@ export function CompanionImageCard({
         <>
           <h4>NPC</h4>
           {onOpenNpc ? (
-            <button type="button" className="companion-link-chip" onClick={onOpenNpc}>
-              {npcName}
-            </button>
+            <CompanionLinkRow items={[{ id: 'npc', label: npcName }]} onOpen={() => onOpenNpc()} />
           ) : (
             <p>{npcName}</p>
           )}
@@ -72,18 +71,16 @@ export function CompanionImageCard({
         <>
           <h4>Враг</h4>
           {onOpenEnemy ? (
-            <button type="button" className="companion-link-chip" onClick={onOpenEnemy}>
-              {enemyName}
-            </button>
+            <CompanionLinkRow items={[{ id: 'enemy', label: enemyName }]} onOpen={() => onOpenEnemy()} />
           ) : (
             <p>{enemyName}</p>
           )}
         </>
       )}
-      {!!questNames?.length && (
+      {!!questItems?.length && (
         <>
           <h4>Связанные квесты</h4>
-          <p>{questNames.join(', ')}</p>
+          {onOpenQuest ? <CompanionLinkRow items={questItems} onOpen={onOpenQuest} /> : <p>{questItems.map((item) => item.label).join(', ')}</p>}
         </>
       )}
     </div>
