@@ -31,7 +31,7 @@ import type {
   PartyRouteProgress,
   ActiveBattleState,
 } from '../types';
-import type { DmTavern, DmShop, DmImageItem, DmLocation, DmQuest, DmCustomEnemy, DmPlayer } from '../types/dmCompanion';
+import type { DmTavern, DmShop, DmImageItem, DmLocation, DmQuest, DmCustomEnemy, DmPlayer, DmEconomyReferenceItem } from '../types/dmCompanion';
 
 export const DELETED = '__deleted__' as const;
 
@@ -66,6 +66,7 @@ export interface CampaignOverlay {
   questPatches: Record<string, Patch<DmQuest>>;
   enemyPatches: Record<string, Patch<DmCustomEnemy>>;
   playerPatches: Record<string, Patch<DmPlayer>>;
+  economyReferencePatches: Record<string, Patch<DmEconomyReferenceItem>>;
   /** Hotfix — DM edits to a dm-companion-seeded *source* Location (the
    * embedded-companion content card, e.g. "Cardlarein Road"). Distinct from
    * locationStatePatches, which patches the per-timeline map projection
@@ -197,6 +198,7 @@ export const EMPTY_OVERLAY: CampaignOverlay = {
   questPatches: {},
   enemyPatches: {},
   playerPatches: {},
+  economyReferencePatches: {},
   locationPatches: {},
   newTimelines: [],
   newWorldMaps: [],

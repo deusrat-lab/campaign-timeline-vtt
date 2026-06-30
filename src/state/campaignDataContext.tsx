@@ -155,6 +155,7 @@ export function useCampaignData(): CampaignDataState {
       quests: applyOverlayToList(base.data.quests, overlay.questPatches, []),
       enemies: applyOverlayToList(base.data.enemies, overlay.enemyPatches, overlay.newEnemies),
       players: applyOverlayToList(base.data.players, overlay.playerPatches, []),
+      economyReference: applyOverlayToList(base.data.economyReference, overlay.economyReferencePatches, []),
       locations: applyOverlayToList(base.data.locations, overlay.locationPatches, []),
       battleMapLocationLinks: mergeBattleMapLocationLinks(
         base.data.battleMapLocationLinks,

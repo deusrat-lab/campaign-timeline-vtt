@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useCampaignData } from '../state/campaignDataContext';
+import { useCampaignStore } from '../state/campaignStore';
 import type { DmEconomyReferenceItem } from '../types/dmCompanion';
 import { formatGpTotal, parseAnyPrice, toGp } from '../features/embedded-dm-companion/currency';
 
@@ -44,11 +45,13 @@ function priceLabel(entry: DmEconomyReferenceItem): string {
 
 export function EconomyPage() {
   const { data, loading, error } = useCampaignData();
+  const store = useCampaignStore();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [availability, setAvailability] = useState('all');
   const [sort, setSort] = useState<SortMode>('default');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const [conditionId, setConditionId] = useState(SELL_CONDITIONS[0].id);
   const [sold, setSold] = useState<SoldItem[]>([]);
 
@@ -158,16 +161,36 @@ export function EconomyPage() {
                 <h3>{selected.name}</h3>
                 <span className="muted">{selected.category}</span>
               </div>
-              <p className="economy-price">{priceLabel(selected)}</p>
-              <div className="economy-tags">
-                {selected.quality && <span className="companion-tag-chip">{selected.quality}</span>}
-                {selected.availability && <span className="companion-tag-chip">{selected.availability}</span>}
-                {selected.source && <span className="companion-tag-chip">{selected.source}</span>}
-              </div>
-              {selected.notes && <p>{selected.notes}</p>}
-              <button className="btn-primary" disabled={!parseAnyPrice(selected.price, selected.currency)} onClick={() => addSold(selected)}>
-                Добавить в продажу добычи
-              </button>
+              {editing ? (
+                <EconomyItemEditor
+                  item={selected}
+                  onSave={(patch) => {
+                    store.patchEconomyReference(selected.id, patch);
+                    setEditing(false);
+                  }}
+                  onCancel={() => setEditing(false)}
+                  onReset={() => {
+                    store.resetOverride('economyReference', selected.id);
+                    setEditing(false);
+                  }}
+                />
+              ) : (
+                <>
+                  <p className="economy-price">{priceLabel(selected)}</p>
+                  <div className="economy-tags">
+                    {selected.quality && <span className="companion-tag-chip">{selected.quality}</span>}
+                    {selected.availability && <span className="companion-tag-chip">{selected.availability}</span>}
+                    {selected.source && <span className="companion-tag-chip">{selected.source}</span>}
+                  </div>
+                  {selected.notes && <p>{selected.notes}</p>}
+                  <div className="entity-library-actions">
+                    <button className="btn-primary" disabled={!parseAnyPrice(selected.price, selected.currency)} onClick={() => addSold(selected)}>
+                      Добавить в продажу добычи
+                    </button>
+                    <button onClick={() => setEditing(true)}>Редактировать</button>
+                  </div>
+                </>
+              )}
             </article>
           ) : (
             <p className="muted">Ничего не найдено.</p>
@@ -230,5 +253,62 @@ export function EconomyPage() {
         </section>
       </div>
     </div>
+  );
+}
+
+function EconomyItemEditor({
+  item,
+  onSave,
+  onCancel,
+  onReset,
+}: {
+  item: DmEconomyReferenceItem;
+  onSave: (patch: Partial<DmEconomyReferenceItem>) => void;
+  onCancel: () => void;
+  onReset: () => void;
+}) {
+  const [draft, setDraft] = useState({
+    name: item.name ?? '',
+    category: item.category ?? '',
+    price: String(item.price ?? ''),
+    currency: item.currency ?? 'gp',
+    availability: item.availability ?? '',
+    quality: item.quality ?? '',
+    source: item.source ?? '',
+    notes: item.notes ?? '',
+  });
+
+  return (
+    <form
+      className="entity-inline-editor"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const priceNumber = Number(draft.price.replace(',', '.'));
+        onSave({
+          name: draft.name.trim(),
+          category: draft.category.trim(),
+          price: Number.isFinite(priceNumber) && draft.price.trim() === String(priceNumber) ? priceNumber : draft.price.trim(),
+          currency: draft.currency.trim(),
+          availability: draft.availability.trim() || undefined,
+          quality: draft.quality.trim() || undefined,
+          source: draft.source.trim() || undefined,
+          notes: draft.notes.trim() || undefined,
+        });
+      }}
+    >
+      <label>Название<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
+      <label>Категория<input value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} /></label>
+      <label>Цена<input value={draft.price} onChange={(e) => setDraft({ ...draft, price: e.target.value })} /></label>
+      <label>Валюта<input value={draft.currency} onChange={(e) => setDraft({ ...draft, currency: e.target.value })} /></label>
+      <label>Доступность<input value={draft.availability} onChange={(e) => setDraft({ ...draft, availability: e.target.value })} /></label>
+      <label>Качество<input value={draft.quality} onChange={(e) => setDraft({ ...draft, quality: e.target.value })} /></label>
+      <label>Источник<input value={draft.source} onChange={(e) => setDraft({ ...draft, source: e.target.value })} /></label>
+      <label>Заметки<textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} /></label>
+      <div className="entity-editor-actions">
+        <button className="btn-primary" disabled={!draft.name.trim() || !draft.category.trim() || !draft.price.trim()}>Сохранить</button>
+        <button type="button" onClick={onCancel}>Отмена</button>
+        <button type="button" onClick={onReset}>Сбросить правки</button>
+      </div>
+    </form>
   );
 }

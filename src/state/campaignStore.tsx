@@ -31,7 +31,7 @@ import type {
 import { TIMELINES } from '../data/loadCampaignData';
 import { ARC2_FACTION_ZONES_BY_ID, LEGACY_ARC2_SEEDED_FACTION_ZONE_IDS } from '../data/arc2FactionZones';
 import projectOverlaySnapshot from '../data/campaignOverlaySnapshot.json';
-import type { DmTavern, DmShop, DmImageItem, DmLocation, DmQuest, DmCustomEnemy, DmPlayer } from '../types/dmCompanion';
+import type { DmTavern, DmShop, DmImageItem, DmLocation, DmQuest, DmCustomEnemy, DmPlayer, DmEconomyReferenceItem } from '../types/dmCompanion';
 import { DELETED, EMPTY_OVERLAY, DEFAULT_CALENDAR } from './overlay';
 import type { CampaignOverlay, Patch } from './overlay';
 
@@ -232,6 +232,7 @@ type EntityKind =
   | 'quest'
   | 'enemy'
   | 'player'
+  | 'economyReference'
   | 'location';
 
 type Action =
@@ -336,6 +337,8 @@ function patchesKey(kind: EntityKind): keyof CampaignOverlay {
       return 'enemyPatches';
     case 'player':
       return 'playerPatches';
+    case 'economyReference':
+      return 'economyReferencePatches';
     case 'location':
       return 'locationPatches';
   }
@@ -873,6 +876,7 @@ interface CampaignStoreValue extends CampaignOverlay {
   patchQuest: (id: string, patch: Patch<DmQuest>) => void;
   patchEnemy: (id: string, patch: Patch<DmCustomEnemy>) => void;
   patchPlayer: (id: string, patch: Patch<DmPlayer>) => void;
+  patchEconomyReference: (id: string, patch: Patch<DmEconomyReferenceItem>) => void;
   /** Hotfix — edits a dm-companion-seeded source Location's own content
    * fields (description/playerView/dmSecrets/notes/image), distinct from
    * patchLocationState above. */
@@ -883,7 +887,7 @@ interface CampaignStoreValue extends CampaignOverlay {
   /** Stage 6C.4D — removes the local override for one entity, restoring seed
    * defaults. Never deletes the source entity, a placement marker, or a
    * relationship link. */
-  resetOverride: (kind: 'npc' | 'tavern' | 'shop' | 'image' | 'quest' | 'enemy' | 'player' | 'locationState' | 'location', id: string) => void;
+  resetOverride: (kind: 'npc' | 'tavern' | 'shop' | 'image' | 'quest' | 'enemy' | 'player' | 'economyReference' | 'locationState' | 'location', id: string) => void;
   deleteLocationState: (id: string) => void;
   deleteHotspot: (id: string) => void;
   deleteRoute: (id: string) => void;
@@ -1045,6 +1049,7 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       patchQuest: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'quest', id, patch: patch as Patch<unknown> }),
       patchEnemy: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'enemy', id, patch: patch as Patch<unknown> }),
       patchPlayer: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'player', id, patch: patch as Patch<unknown> }),
+      patchEconomyReference: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'economyReference', id, patch: patch as Patch<unknown> }),
       patchLocation: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'location', id, patch: patch as Patch<unknown> }),
       addImage: (image) => dispatch({ type: 'ADD_IMAGE', image }),
       resetOverride: (kind, id) => dispatch({ type: 'RESET_PATCH', kind, id }),
