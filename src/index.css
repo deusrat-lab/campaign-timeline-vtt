@@ -1333,6 +1333,113 @@ a:hover {
   grid-column: 1 / -1;
 }
 
+.entity-editor-linkset {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  max-height: 280px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 8px;
+}
+
+.entity-editor-linkset legend {
+  padding: 0 6px;
+  color: var(--text-muted);
+}
+
+.entity-inline-editor .entity-editor-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  font-size: 0.85rem;
+}
+
+.entity-inline-editor .entity-editor-check input {
+  width: auto;
+}
+
+.economy-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.economy-sidebar,
+.economy-detail {
+  display: grid;
+  gap: 12px;
+}
+
+.economy-sidebar {
+  position: sticky;
+  top: 84px;
+}
+
+.economy-sidebar input,
+.economy-sidebar select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-panel);
+  color: var(--color-text-primary);
+}
+
+.economy-results {
+  display: grid;
+  gap: 8px;
+  max-height: calc(100vh - 360px);
+  min-height: 260px;
+  overflow: auto;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.economy-price {
+  margin: 6px 0 10px;
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.economy-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.economy-sold-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 80px 100px auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.economy-sold-row span {
+  display: grid;
+  gap: 2px;
+}
+
+.economy-sold-row small {
+  color: var(--text-muted);
+}
+
+.economy-sold-row input {
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-panel);
+  color: var(--color-text-primary);
+}
+
 .entity-link-editor,
 .entity-nested-editor {
   grid-column: 1 / -1;
@@ -1981,9 +2088,29 @@ a:hover {
     grid-template-columns: 1fr;
   }
 
+  .economy-layout {
+    grid-template-columns: 1fr;
+  }
+
   .entity-library-list {
     position: static;
     max-height: none;
+  }
+
+  .economy-sidebar {
+    position: static;
+  }
+
+  .economy-results {
+    max-height: none;
+  }
+
+  .economy-sold-row {
+    grid-template-columns: 1fr 72px 92px;
+  }
+
+  .economy-sold-row button {
+    grid-column: 1 / -1;
   }
 
   .entity-inline-editor {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { effectiveQuestStatus } from '../data/selectors';
 import type { CampaignData } from '../data/loadCampaignData';
 import { useCampaignData } from '../state/campaignDataContext';
@@ -292,6 +292,7 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
   const { data, loading, error } = useCampaignData();
   const store = useCampaignStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [search, setSearch] = useState('');
   const [questStatusFilter, setQuestStatusFilter] = useState<QuestStatus | 'all'>('all');
   const [questFactionFilter, setQuestFactionFilter] = useState('all');
@@ -400,6 +401,16 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
       .filter((enemy) => enemyTagFilter === 'all' || (enemy.tags ?? []).includes(enemyTagFilter))
       .filter((enemy) => !q || [enemy.name, enemy.role, enemy.faction, getFactionSummary(data, enemy), enemy.cr, enemy.baseMonsterName, ...(enemy.tags ?? [])].some((v) => (v ?? '').toLowerCase().includes(q))), sortKey, data, store);
   }, [arcId, data, enemyCrFilter, enemyFactionFilter, enemyLocationFilter, enemyQuestFilter, enemyRoleFilter, enemyTagFilter, kind, npcFactionFilter, npcLocationFilter, npcRoleFilter, q, questFactionFilter, questStatusFilter, sortKey, store]);
+
+  useEffect(() => {
+    const idFromUrl = new URLSearchParams(location.search).get('selected');
+    if (!idFromUrl || idFromUrl === selectedId) return;
+    if (items.some((item) => item.id === idFromUrl)) {
+      setSelectedId(idFromUrl);
+      setEditing(false);
+      setInlineEnemyEditId(null);
+    }
+  }, [items, location.search, selectedId]);
 
   useEffect(() => {
     if (selectedId && !items.some((item) => item.id === selectedId)) {
@@ -1368,13 +1379,25 @@ function PlayerCard({ player, data }: { player: DmPlayer; data: CampaignData }) 
       {relatedNpcs.length > 0 && (
         <>
           <h4>Связанные NPC</h4>
-          <p>{relatedNpcs.map((npc) => npc.name).join(', ')}</p>
+          <div className="economy-tags">
+            {relatedNpcs.map((npc) => (
+              <Link key={npc.id} className="companion-tag-chip" to={`/npc?selected=${encodeURIComponent(npc.id)}`}>
+                {npc.name}
+              </Link>
+            ))}
+          </div>
         </>
       )}
       {relatedQuests.length > 0 && (
         <>
           <h4>Связанные квесты</h4>
-          <p>{relatedQuests.map((quest) => quest.title).join(', ')}</p>
+          <div className="economy-tags">
+            {relatedQuests.map((quest) => (
+              <Link key={quest.id} className="companion-tag-chip" to={`/quests?selected=${encodeURIComponent(quest.id)}`}>
+                {quest.title}
+              </Link>
+            ))}
+          </div>
         </>
       )}
       {player.reputation?.length > 0 && (
@@ -1421,8 +1444,40 @@ function PlayerEditor({ player, data, onDone }: { player: DmPlayer; data: Campai
     dmNotes: player.dmNotes ?? '',
     dmSecrets: player.dmSecrets ?? '',
     tags: (player.tags ?? []).join(', '),
+    relatedNpcs: player.relatedNpcs ?? [],
+    relatedQuests: player.relatedQuests ?? [],
+    journalText: (player.journal ?? []).map((entry) => `${entry.date}: ${entry.text}`).join('\n'),
     reputationText: (player.reputation ?? []).map((rep) => `${rep.faction}: ${rep.value}`).join('\n'),
   });
+
+  function toggleDraftList(key: 'relatedNpcs' | 'relatedQuests', id: string) {
+    setDraft((current) => {
+      const list = current[key];
+      return {
+        ...current,
+        [key]: list.includes(id) ? list.filter((itemId) => itemId !== id) : [...list, id],
+      };
+    });
+  }
+
+  function parseJournal(): DmPlayer['journal'] {
+    return draft.journalText
+      .split('\n')
+      .map((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed) return null;
+        const separatorIndex = trimmed.indexOf(':');
+        const date = separatorIndex >= 0 ? trimmed.slice(0, separatorIndex).trim() : '';
+        const text = separatorIndex >= 0 ? trimmed.slice(separatorIndex + 1).trim() : trimmed;
+        if (!text) return null;
+        return {
+          id: player.journal?.[index]?.id ?? `journal-${player.id}-${index}`,
+          date,
+          text,
+        };
+      })
+      .filter((entry): entry is DmPlayer['journal'][number] => Boolean(entry));
+  }
 
   function parseReputation(): DmPlayer['reputation'] {
     const entries: DmPlayer['reputation'] = [];
@@ -1463,7 +1518,10 @@ function PlayerEditor({ player, data, onDone }: { player: DmPlayer; data: Campai
         flaws: draft.flaws.trim(),
         dmNotes: draft.dmNotes.trim(),
         dmSecrets: draft.dmSecrets.trim(),
+        journal: parseJournal(),
         tags: draft.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+        relatedNpcs: draft.relatedNpcs,
+        relatedQuests: draft.relatedQuests,
         reputation: parseReputation(),
       });
       onDone();
@@ -1481,6 +1539,41 @@ function PlayerEditor({ player, data, onDone }: { player: DmPlayer; data: Campai
       <label>Привязанности<textarea value={draft.bonds} onChange={(e) => setDraft({ ...draft, bonds: e.target.value })} /></label>
       <label>Слабости<textarea value={draft.flaws} onChange={(e) => setDraft({ ...draft, flaws: e.target.value })} /></label>
       <label>Теги<input value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} /></label>
+      <fieldset className="entity-editor-linkset">
+        <legend>Связанные NPC</legend>
+        {data.npcs.length === 0 ? (
+          <p className="muted">NPC не найдены.</p>
+        ) : (
+          data.npcs.map((npc) => (
+            <label key={npc.id} className="entity-editor-check">
+              <input
+                type="checkbox"
+                checked={draft.relatedNpcs.includes(npc.id)}
+                onChange={() => toggleDraftList('relatedNpcs', npc.id)}
+              />
+              <span>{npc.name}</span>
+            </label>
+          ))
+        )}
+      </fieldset>
+      <fieldset className="entity-editor-linkset">
+        <legend>Связанные квесты</legend>
+        {data.quests.length === 0 ? (
+          <p className="muted">Квесты не найдены.</p>
+        ) : (
+          data.quests.map((quest) => (
+            <label key={quest.id} className="entity-editor-check">
+              <input
+                type="checkbox"
+                checked={draft.relatedQuests.includes(quest.id)}
+                onChange={() => toggleDraftList('relatedQuests', quest.id)}
+              />
+              <span>{quest.title}</span>
+            </label>
+          ))
+        )}
+      </fieldset>
+      <label>Журнал<textarea value={draft.journalText} onChange={(e) => setDraft({ ...draft, journalText: e.target.value })} placeholder="Дата: запись" /></label>
       <label>Репутация<textarea value={draft.reputationText} onChange={(e) => setDraft({ ...draft, reputationText: e.target.value })} placeholder="Фракция: 0" /></label>
       <label>Заметки ДМ<textarea value={draft.dmNotes} onChange={(e) => setDraft({ ...draft, dmNotes: e.target.value })} /></label>
       <label>Секреты ДМ<textarea value={draft.dmSecrets} onChange={(e) => setDraft({ ...draft, dmSecrets: e.target.value })} /></label>
