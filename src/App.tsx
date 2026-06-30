@@ -6,6 +6,7 @@ import { MapWorkspacePage } from './pages/MapWorkspacePage';
 import { HomePage } from './pages/HomePage';
 import { EntityLibraryPage } from './pages/EntityLibraryPage';
 import { EconomyPage } from './pages/EconomyPage';
+import { ServicesPage } from './pages/ServicesPage';
 import { CampaignDataProvider } from './state/campaignDataContext';
 import { CampaignStoreProvider, useCampaignStore } from './state/campaignStore';
 
@@ -59,6 +60,9 @@ function AppShell() {
             <Route path="/bestiary" element={<EntityLibraryPage kind="bestiary" />} />
             <Route path="/players" element={<EntityLibraryPage kind="players" />} />
             <Route path="/economy" element={<EconomyPage />} />
+            <Route path="/services" element={<ServicesPage />} />
+            <Route path="/shops" element={<ServicesPage initialKind="shop" />} />
+            <Route path="/taverns" element={<ServicesPage initialKind="tavern" />} />
             <Route path="/battle-maps" element={<EntityLibraryPage kind="battleMaps" />} />
             <Route path="/factions" element={<EntityLibraryPage kind="factions" />} />
             {/* New-location creation + the prefill/needs-review report still live here

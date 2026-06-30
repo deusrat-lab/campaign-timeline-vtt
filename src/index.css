@@ -151,6 +151,10 @@ a:hover {
   flex-direction: column;
 }
 
+.app-shell:has(.nav-rail) .app-shell-main {
+  max-width: calc(100vw - 80px);
+}
+
 /* ---------- left vertical nav rail ---------- */
 .nav-rail {
   width: 80px;
@@ -962,7 +966,8 @@ a:hover {
 }
 
 .entity-library-page {
-  width: min(1840px, calc(100vw - 1rem));
+  width: min(1840px, 100%);
+  box-sizing: border-box;
   margin: 0 auto;
   padding: 1rem 1.25rem;
 }
@@ -987,7 +992,7 @@ a:hover {
 }
 
 .entity-library-page--wide {
-  width: min(1880px, calc(100vw - 1rem));
+  width: min(1880px, 100%);
 }
 
 .entity-library-page--wide .entity-library-layout {
@@ -996,6 +1001,7 @@ a:hover {
 
 .entity-library-list,
 .entity-library-detail {
+  min-width: 0;
   border: 1px solid var(--border);
   background: var(--bg-card);
   border-radius: 8px;
@@ -1368,6 +1374,13 @@ a:hover {
   grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
   gap: 20px;
   align-items: start;
+}
+
+.economy-page,
+.services-page {
+  max-width: 1600px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .economy-sidebar,

@@ -16,6 +16,7 @@ const RAIL_ITEMS: RailItem[] = [
   { key: 'enemies', label: 'Враги', icon: '☠', to: '/enemies' },
   { key: 'players', label: 'Игроки', icon: '🎭', to: '/players' },
   { key: 'economy', label: 'Экономика', icon: '💰', to: '/economy' },
+  { key: 'services', label: 'Торговля', icon: '🛒', to: '/services' },
   { key: 'battle-maps', label: 'Карты боя', icon: '▦', to: '/battle-maps' },
   { key: 'bestiary', label: 'Бестиарий', icon: '📖', to: '/bestiary' },
   { key: 'factions', label: 'Фракции', icon: '⚔', to: '/factions' },
@@ -38,6 +39,7 @@ export function NavRail() {
           !!item.to &&
           (location.pathname + location.search === item.to ||
             location.pathname === item.to ||
+            (item.to === '/services' && (location.pathname === '/shops' || location.pathname === '/taverns')) ||
             (item.to === '/map' && location.pathname === '/'));
         if (item.to) {
           return (
