@@ -575,8 +575,8 @@ a:hover {
 }
 
 .workspace-side-panel {
-  width: 400px;
-  max-width: 42vw;
+  width: clamp(440px, 34vw, 560px);
+  max-width: 48vw;
   background: var(--bg-card);
   border-left: 1px solid var(--border-soft);
   overflow-y: auto;
@@ -587,7 +587,7 @@ a:hover {
 }
 
 /* Stage 6C.4: every direct child must be allowed to shrink/wrap inside the
-   400px/42vw panel — without min-width:0 a flex/grid child's intrinsic
+   clamped workspace panel — without min-width:0 a flex/grid child's intrinsic
    content width (long titles, button rows, image captions) pushes the
    panel itself into horizontal overflow instead of wrapping. */
 .workspace-side-panel * {
@@ -4236,7 +4236,7 @@ textarea:focus {
   background: var(--bg-card-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg, 10px);
-  width: min(900px, 94vw);
+  width: min(1120px, 94vw);
   max-height: 88vh;
   display: flex;
   flex-direction: column;
@@ -4394,7 +4394,7 @@ textarea:focus {
   background: var(--bg-card-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg, 10px);
-  width: min(960px, 94vw);
+  width: min(1120px, 94vw);
   max-height: 88vh;
   display: flex;
   flex-direction: column;

@@ -1665,14 +1665,30 @@ function EnemyEditor({ enemy, data, onDone }: { enemy: DmCustomEnemy; data: Camp
     tactics: enemy.tactics ?? '',
 	    image: enemy.image ?? '',
 	    dmNotes: enemy.dmNotes ?? '',
+	    locationIds: enemy.locationIds ?? [],
 	    questIds: enemy.questIds ?? [],
+	    locationSearch: '',
 	    questSearch: '',
 	  });
+  const locationSearch = draft.locationSearch.trim().toLowerCase();
+  const locationOptions = data.locations
+    .filter((location) => !location.arcId || location.arcId === (enemy.arcId ?? 'arc-1'))
+    .filter((location) => !locationSearch || [location.name, location.type, location.region, ...(location.tags ?? [])].some((v) => (v ?? '').toLowerCase().includes(locationSearch)))
+    .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
   const questSearch = draft.questSearch.trim().toLowerCase();
   const questOptions = data.quests
     .filter((quest) => (quest.arcId ?? enemy.arcId ?? 'arc-1') === (enemy.arcId ?? 'arc-1'))
     .filter((quest) => !questSearch || [quest.title, quest.goal, quest.description].some((v) => (v ?? '').toLowerCase().includes(questSearch)))
     .sort((a, b) => a.title.localeCompare(b.title, 'ru'));
+
+  function toggleLocation(locationId: string) {
+    setDraft((current) => {
+      const selected = current.locationIds.includes(locationId)
+        ? current.locationIds.filter((id) => id !== locationId)
+        : [...current.locationIds, locationId];
+      return { ...current, locationIds: selected };
+    });
+  }
 
   function toggleQuest(questId: string) {
     setDraft((current) => {
@@ -1696,8 +1712,20 @@ function EnemyEditor({ enemy, data, onDone }: { enemy: DmCustomEnemy; data: Camp
 	        tactics: draft.tactics.trim() || undefined,
 	        image: draft.image || undefined,
 	        dmNotes: draft.dmNotes.trim() || undefined,
+	        locationIds: draft.locationIds,
 	        questIds: draft.questIds,
 	      });
+	      const selectedLocationIds = new Set(draft.locationIds);
+	      for (const locationState of data.locationStates) {
+	        const shouldHaveEnemy = selectedLocationIds.has(locationState.locationId) || selectedLocationIds.has(locationState.id);
+	        const hadEnemy = locationState.enemyIds.includes(enemy.id);
+	        if (hadEnemy === shouldHaveEnemy) continue;
+	        store.patchLocationState(locationState.id, {
+	          enemyIds: shouldHaveEnemy
+	            ? [...locationState.enemyIds, enemy.id]
+	            : locationState.enemyIds.filter((id) => id !== enemy.id),
+	        });
+	      }
 	      const selectedQuestIds = new Set(draft.questIds);
 	      for (const quest of data.quests) {
 	        const hadEnemy = (quest.enemies ?? []).includes(enemy.id);
@@ -1720,6 +1748,29 @@ function EnemyEditor({ enemy, data, onDone }: { enemy: DmCustomEnemy; data: Camp
       <ImagePickerField value={draft.image} data={data} onChange={(image) => setDraft({ ...draft, image })} />
       <label>Лор<textarea value={draft.lore} onChange={(e) => setDraft({ ...draft, lore: e.target.value })} /></label>
 	      <label>Тактика<textarea value={draft.tactics} onChange={(e) => setDraft({ ...draft, tactics: e.target.value })} /></label>
+	      <section className="entity-link-editor">
+	        <h3>Связанные локации</h3>
+	        <input
+	          value={draft.locationSearch}
+	          onChange={(e) => setDraft({ ...draft, locationSearch: e.target.value })}
+	          placeholder="Найти локацию..."
+	        />
+	        <div className="entity-link-list">
+	          {locationOptions.map((location) => (
+	            <label key={location.id} className="entity-link-row">
+	              <input
+	                type="checkbox"
+	                checked={draft.locationIds.includes(location.id)}
+	                onChange={() => toggleLocation(location.id)}
+	              />
+	              <span>
+	                <strong>{location.name}</strong>
+	                <small>{[location.type, location.region].filter(Boolean).join(' · ')}</small>
+	              </span>
+	            </label>
+	          ))}
+	        </div>
+	      </section>
 	      <section className="entity-link-editor">
 	        <h3>Связанные квесты</h3>
 	        <input

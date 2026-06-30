@@ -439,7 +439,7 @@ function useActiveMapImageSize(map: WorldMap | undefined): { width: number; heig
   // console.warn into it breaks the React Compiler's memoization
   // assumptions, see react-hooks/preserve-manual-memoization).
   useEffect(() => {
-    if (!hasRealMetadata && import.meta.env.DEV) {
+    if (map && !hasRealMetadata && import.meta.env.DEV) {
       console.warn(
         `[MapWorkspacePage] WorldMap "${map?.id ?? '(none)'}" has no originalImageWidth/originalImageHeight — ` +
           `falling back to ${FALLBACK_MAP_IMAGE_WIDTH}x${FALLBACK_MAP_IMAGE_HEIGHT}. Coordinates placed now may be ` +
@@ -1400,6 +1400,34 @@ export function MapWorkspacePage() {
   const enemiesForArc = data.enemies.filter((en) => !en.arcId || en.arcId === activeArcId);
   const imagesForArc = data.images.filter((im) => !im.arcId || im.arcId === activeArcId);
   const battleMapsForArc = data.battleMaps;
+  const enemyMatchesLocationState = (enemy: DmCustomEnemy, ls: LocationState) =>
+    ls.enemyIds.includes(enemy.id) || (enemy.locationIds ?? []).includes(ls.locationId) || (enemy.locationIds ?? []).includes(ls.id);
+  const enemyIdsForLocationState = (ls: LocationState) =>
+    data.enemies.filter((enemy) => enemyMatchesLocationState(enemy, ls)).map((enemy) => enemy.id);
+  const setEnemyLocationLink = (enemyId: string, ls: LocationState, linked: boolean) => {
+    const enemy = data.enemies.find((candidate) => candidate.id === enemyId);
+    if (!enemy) return;
+    const nextLocationIds = new Set(enemy.locationIds ?? []);
+    if (linked) {
+      nextLocationIds.add(ls.locationId);
+    } else {
+      nextLocationIds.delete(ls.locationId);
+      nextLocationIds.delete(ls.id);
+    }
+    const next = Array.from(nextLocationIds);
+    const current = enemy.locationIds ?? [];
+    if (next.length === current.length && next.every((id) => current.includes(id))) return;
+    store.patchEnemy(enemy.id, { locationIds: next });
+  };
+  const patchLocationLinks = (ls: LocationState, patch: Partial<LocationState>) => {
+    if (patch.enemyIds) {
+      for (const enemyId of patch.enemyIds) setEnemyLocationLink(enemyId, ls, true);
+      for (const enemyId of enemyIdsForLocationState(ls)) {
+        if (!patch.enemyIds.includes(enemyId)) setEnemyLocationLink(enemyId, ls, false);
+      }
+    }
+    store.patchLocationState(ls.id, patch);
+  };
   function startEmbeddedBattle(battleMapId: string, locationStateId?: string) {
     if (!data) return;
     const bm = data.battleMaps.find((b) => b.id === battleMapId);
@@ -2772,6 +2800,10 @@ export function MapWorkspacePage() {
     const ls = data.locationStates.find((l) => l.id === locationStateId);
     if (!ls) return false;
     const field = type === 'npc' ? 'npcIds' : type === 'quest' ? 'questIds' : type === 'enemy' ? 'enemyIds' : 'imageIds';
+    if (type === 'enemy') {
+      const enemy = data.enemies.find((candidate) => candidate.id === sourceId);
+      return enemy ? enemyMatchesLocationState(enemy, ls) : ls.enemyIds.includes(sourceId);
+    }
     return ls[field].includes(sourceId);
   }
 
@@ -2784,6 +2816,14 @@ export function MapWorkspacePage() {
     const ls = data.locationStates.find((l) => l.id === locationStateId);
     if (!ls) return;
     const field = type === 'npc' ? 'npcIds' : type === 'quest' ? 'questIds' : type === 'enemy' ? 'enemyIds' : 'imageIds';
+    if (type === 'enemy') {
+      if (!ls.enemyIds.includes(sourceId)) {
+        patchLocationLinks(ls, { enemyIds: [...ls.enemyIds, sourceId] });
+      } else {
+        setEnemyLocationLink(sourceId, ls, true);
+      }
+      return;
+    }
     if (ls[field].includes(sourceId)) return; // already linked — avoid duplicate ids
     store.patchLocationState(locationStateId, { [field]: [...ls[field], sourceId] });
   }
@@ -7550,7 +7590,7 @@ export function MapWorkspacePage() {
                       onClick={() => {
                         if (!selectedLs) return;
                         if (selectedLs[linkField].includes(m.entityId)) return;
-                        store.patchLocationState(selectedLs.id, { [linkField]: [...selectedLs[linkField], m.entityId] });
+                        patchLocationLinks(selectedLs, { [linkField]: [...selectedLs[linkField], m.entityId] } as Partial<LocationState>);
                       }}
                       disabled={!selectedLs || isLinkedToSelectedLs}
                       title={selectedLs ? undefined : 'Сначала выберите локацию на карте'}
@@ -7560,9 +7600,9 @@ export function MapWorkspacePage() {
                     {selectedLs && isLinkedToSelectedLs && (
                       <button
                         onClick={() =>
-                          store.patchLocationState(selectedLs.id, {
+                          patchLocationLinks(selectedLs, {
                             [linkField]: selectedLs[linkField].filter((id) => id !== m.entityId),
-                          })
+                          } as Partial<LocationState>)
                         }
                       >
                         Снять связь с выбранной локацией
@@ -8531,7 +8571,7 @@ export function MapWorkspacePage() {
                 </button>
                 {!isPlayerView && (
                   <button className="link-count-chip" onClick={() => { setObjectWindowSection('links'); setObjectWindowOpen(true); }}>
-                    Враги: {selectedLs.enemyIds.length}
+                    Враги: {enemyIdsForLocationState(selectedLs).length}
                   </button>
                 )}
                 <button className="link-count-chip" onClick={() => { setObjectWindowSection('links'); setObjectWindowOpen(true); }}>
@@ -8918,7 +8958,7 @@ export function MapWorkspacePage() {
                 if (!selectedLs) return;
                 const current = selectedLs[field];
                 if (current.includes(id)) return;
-                store.patchLocationState(selectedLs.id, { [field]: [...current, id] } as Partial<LocationState>);
+                patchLocationLinks(selectedLs, { [field]: [...current, id] } as Partial<LocationState>);
               }}
             />
           )}
@@ -9347,7 +9387,7 @@ export function MapWorkspacePage() {
                 setLocationLinksDraft({
                   npcIds: selectedLs.npcIds,
                   questIds: selectedLs.questIds,
-                  enemyIds: selectedLs.enemyIds,
+                  enemyIds: enemyIdsForLocationState(selectedLs),
                   imageIds: selectedLs.imageIds,
                   battleMapIds: selectedLs.battleMapId ? [selectedLs.battleMapId] : [],
                 })
@@ -9362,7 +9402,7 @@ export function MapWorkspacePage() {
               }
               onSave={() => {
                 if (!locationLinksDraft) return;
-                store.patchLocationState(selectedLs.id, {
+                patchLocationLinks(selectedLs, {
                   npcIds: locationLinksDraft.npcIds,
                   questIds: locationLinksDraft.questIds,
                   enemyIds: locationLinksDraft.enemyIds,
@@ -10150,7 +10190,7 @@ function EntityCardsPanel({
 }: {
   npcs: { id: string; name: string; role?: string; tags?: string[] }[];
   quests: { id: string; title: string; goal?: string; status: string }[];
-  enemies: { id: string; name: string; role?: string }[];
+  enemies: { id: string; name: string; role?: string; locationIds?: string[] }[];
   images: { id: string; title: string; type?: string }[];
   battleMaps: { id: string; title: string }[];
   placementsForMap: MapObjectPlacement[];
@@ -10160,6 +10200,8 @@ function EntityCardsPanel({
 }) {
   const [tab, setTab] = useState<EntityTabKind>('npc');
   const isPlaced = (id: string) => placementsForMap.some((p) => p.entityId === id);
+  const isEnemyLinkedToSelected = (enemy: { id: string; locationIds?: string[] }) =>
+    !!selectedLs && (selectedLs.enemyIds.includes(enemy.id) || (enemy.locationIds ?? []).includes(selectedLs.locationId) || (enemy.locationIds ?? []).includes(selectedLs.id));
 
   function renderRows() {
     if (tab === 'npc') {
@@ -10203,7 +10245,7 @@ function EntityCardsPanel({
           {en.role && <span className="entity-card-sub"> · {en.role}</span>}
           {isPlaced(en.id) && <span className="status-badge"> размещён на карте</span>}
           <div className="actions">
-            {selectedLs && !selectedLs.enemyIds.includes(en.id) && (
+            {selectedLs && !isEnemyLinkedToSelected(en) && (
               <button onClick={() => onLinkToLocation('enemyIds', en.id)}>Связать с локацией</button>
             )}
             <button onClick={() => onStartPlacement('enemy', en.id, en.name)}>Разместить на карте</button>
@@ -12123,7 +12165,9 @@ function LocationSidePanel({
     ? getPlayerSafeNpcs(npcsRaw).filter((n) => isLinkedEntityPlacementVisible(data.placements, 'npc', n.id))
     : npcsRaw;
   const quests = data.quests.filter((q) => ls.questIds.includes(q.id));
-  const enemies = data.enemies.filter((e) => ls.enemyIds.includes(e.id));
+  const enemies = data.enemies.filter(
+    (e) => ls.enemyIds.includes(e.id) || (e.locationIds ?? []).includes(ls.locationId) || (e.locationIds ?? []).includes(ls.id),
+  );
   const imagesForLocation = data.images.filter((i) => ls.imageIds.includes(i.id));
   const images = isPlayerView
     ? getPlayerSafeImages(imagesForLocation).filter((i) => isLinkedEntityPlacementVisible(data.placements, 'image', i.id))

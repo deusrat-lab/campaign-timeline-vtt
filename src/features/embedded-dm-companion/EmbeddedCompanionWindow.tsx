@@ -183,13 +183,21 @@ export function EmbeddedCompanionWindow({
       confidence: link.confidence,
       manual: link.manual,
     }));
+    const locationStateEnemyIds = new Set(locationStatesHere.flatMap((ls) => ls.enemyIds));
+    const enemiesHere = loc
+      ? data.enemies.map((enemy) =>
+          locationStateEnemyIds.has(enemy.id) && !(enemy.locationIds ?? []).includes(loc.id)
+            ? { ...enemy, locationIds: [...(enemy.locationIds ?? []), loc.id] }
+            : enemy,
+        )
+      : data.enemies;
     body = loc ? (
       <CompanionLocationCard
         loc={loc}
         npcs={data.npcs}
         quests={data.quests}
         shops={shopsHere}
-        enemies={data.enemies}
+        enemies={enemiesHere}
         images={data.images}
         battleMapLinks={battleMapLinksHere}
         availableBattleMaps={data.battleMaps}
