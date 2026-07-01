@@ -1,5 +1,4 @@
 import { Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
 import { NavBar } from './components/NavBar';
 import { NavRail } from './components/NavRail';
 import { MapWorkspacePage } from './pages/MapWorkspacePage';
@@ -9,8 +8,10 @@ import { EconomyPage } from './pages/EconomyPage';
 import { ServicesPage } from './pages/ServicesPage';
 import { ImagesPage } from './pages/ImagesPage';
 import { SearchPage } from './pages/SearchPage';
+import { PlayerVisibilityPage } from './pages/PlayerVisibilityPage';
+import { ObserverViewPage } from './pages/ObserverViewPage';
 import { CampaignDataProvider } from './state/campaignDataContext';
-import { CampaignStoreProvider, useCampaignStore } from './state/campaignStore';
+import { CampaignStoreProvider } from './state/campaignStore';
 
 /** Legacy /location/:id deep links now resolve inside the Map Workspace instead of a standalone page. */
 function LocationRedirect() {
@@ -18,31 +19,14 @@ function LocationRedirect() {
   return <Navigate to={`/map?selected=${encodeURIComponent(id ?? '')}`} replace />;
 }
 
-function PlayerWorkspaceRoute() {
-  const store = useCampaignStore();
-  useEffect(() => {
-    store.setMode('player-view');
-    // mode is intentionally local to this tab; campaignStore does not persist it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  return <MapWorkspacePage />;
-}
-
-/** /observer now opens the same usable workspace in Player View. */
 function AppShell() {
   const location = useLocation();
   if (location.pathname === '/observer') {
     return (
       <div className="app-shell app-shell--observer-player">
-        <NavRail />
-        <div className="app-shell-main">
-          <NavBar />
-          <main>
-            <Routes>
-              <Route path="/observer" element={<PlayerWorkspaceRoute />} />
-            </Routes>
-          </main>
-        </div>
+        <Routes>
+          <Route path="/observer" element={<ObserverViewPage />} />
+        </Routes>
       </div>
     );
   }
@@ -56,6 +40,7 @@ function AppShell() {
             <Route path="/" element={<MapWorkspacePage />} />
             <Route path="/map" element={<MapWorkspacePage />} />
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/visibility" element={<PlayerVisibilityPage />} />
             <Route path="/location/:id" element={<LocationRedirect />} />
             <Route path="/quests" element={<EntityLibraryPage kind="quests" />} />
             <Route path="/npc" element={<EntityLibraryPage kind="npc" />} />

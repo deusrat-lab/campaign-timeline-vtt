@@ -73,8 +73,13 @@ export function getPlayerSafeHotspots(data: CampaignData, progress: CampaignProg
   });
 }
 
-export function getPlayerSafeRoutes(_routes: MapRoute[]): MapRoute[] {
-  return [];
+export function getPlayerSafeRoutes(routes: MapRoute[]): MapRoute[] {
+  return routes
+    .filter((route) => route.visibleInPlayerView === true && route.status !== 'hidden' && route.status !== 'blocked')
+    .map((route) => {
+      const { notes: _notes, linkedQuestIds: _linkedQuestIds, linkedLocationIds: _linkedLocationIds, linkedFactionIds: _linkedFactionIds, linkedEventIds: _linkedEventIds, ...rest } = route;
+      return { ...rest } as MapRoute;
+    });
 }
 
 /**

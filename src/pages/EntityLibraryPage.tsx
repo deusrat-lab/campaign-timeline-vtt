@@ -1224,7 +1224,10 @@ function BattleMapsEntityLibraryPage({ data, arcId }: { data: CampaignData; arcI
       </header>
 
       <div className="battle-map-link-panel">
-        <strong>Пакетная привязка к локациям</strong>
+        <div className="battle-map-panel-header">
+          <strong>Пакетная привязка к локациям</strong>
+          <span>{selectedLocationIds.size} локаций · {selectedMapIds.size} карт выбрано</span>
+        </div>
         <input placeholder="Найти локацию..." value={locationSearch} onChange={(e) => setLocationSearch(e.target.value)} />
         <div className="battle-map-location-checklist">
           {visibleLocations.slice(0, 120).map((loc) => (
@@ -1243,9 +1246,13 @@ function BattleMapsEntityLibraryPage({ data, arcId }: { data: CampaignData; arcI
             </label>
           ))}
         </div>
-        <button className="btn-primary" disabled={!selectedLocationIds.size || !selectedMapIds.size} onClick={bindSelected}>
-          Привязать выбранные карты ({selectedMapIds.size}) к локациям ({selectedLocationIds.size})
-        </button>
+        <div className="entity-library-actions">
+          <button className="btn-primary" disabled={!selectedLocationIds.size || !selectedMapIds.size} onClick={bindSelected}>
+            Привязать выбранные карты ({selectedMapIds.size}) к локациям ({selectedLocationIds.size})
+          </button>
+          <button disabled={!selectedLocationIds.size} onClick={() => setSelectedLocationIds(new Set())}>Снять локации</button>
+          <button disabled={!selectedMapIds.size} onClick={() => setSelectedMapIds(new Set())}>Снять карты</button>
+        </div>
       </div>
 
       <div className="battle-map-filter-panel">
@@ -1269,10 +1276,13 @@ function BattleMapsEntityLibraryPage({ data, arcId }: { data: CampaignData; arcI
             {statuses.map((status) => <option key={status} value={status}>{status}</option>)}
           </select></label>
         </div>
+        <div className="entity-library-count">{filteredMaps.length} / {maps.length} карт</div>
       </div>
 
       <section className="battle-map-page-grid">
-        {filteredMaps.map((map) => {
+        {filteredMaps.length === 0 ? (
+          <div className="search-empty">По этим фильтрам карт боя не найдено.</div>
+        ) : filteredMaps.map((map) => {
           const preview = battleMapPreview(map);
           return (
             <article key={map.id} className={selectedMapIds.has(map.id) ? 'battle-map-page-card active' : 'battle-map-page-card'}>

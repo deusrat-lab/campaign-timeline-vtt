@@ -16,6 +16,7 @@ const RAIL_ITEMS: RailItem[] = [
   { key: 'npc', label: 'NPC', icon: '🧑', to: '/npc' },
   { key: 'enemies', label: 'Враги', icon: '☠', to: '/enemies' },
   { key: 'players', label: 'Игроки', icon: '🎭', to: '/players' },
+  { key: 'visibility', label: 'Показ', icon: '👁', to: '/visibility' },
   { key: 'economy', label: 'Экономика', icon: '💰', to: '/economy' },
   { key: 'services', label: 'Торговля', icon: '🛒', to: '/services' },
   { key: 'images', label: 'Картинки', icon: '🖼', to: '/images' },

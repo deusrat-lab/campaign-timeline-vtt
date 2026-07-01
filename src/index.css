@@ -144,6 +144,10 @@ a:hover {
   min-height: 100vh;
 }
 
+.app-shell--observer-player {
+  display: block;
+}
+
 .app-shell-main {
   flex: 1;
   min-width: 0;
@@ -1662,6 +1666,101 @@ a:hover {
   font-size: 0.68rem;
 }
 
+.player-visibility-page {
+  width: min(1700px, 100%);
+  box-sizing: border-box;
+}
+
+.visibility-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.visibility-summary article {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: var(--bg-card);
+}
+
+.visibility-summary strong {
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.visibility-summary span {
+  color: var(--fg-dim);
+  font-size: 0.82rem;
+}
+
+.visibility-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.visibility-panel {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  padding: 12px;
+}
+
+.visibility-panel h2 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.visibility-panel ul {
+  display: grid;
+  gap: 7px;
+  max-height: 420px;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.visibility-panel li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: 7px;
+  background: var(--bg-card-raised);
+}
+
+.visibility-panel li > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.visibility-panel strong,
+.visibility-panel small {
+  overflow-wrap: anywhere;
+}
+
+.visibility-panel small {
+  color: var(--fg-dim);
+}
+
+.visibility-panel a {
+  color: var(--gold-soft);
+  font-size: 0.78rem;
+}
+
 .entity-link-editor,
 .entity-nested-editor {
   grid-column: 1 / -1;
@@ -1755,6 +1854,19 @@ a:hover {
   border: 1px solid rgba(212, 175, 55, 0.35);
   border-radius: 7px;
   background: rgba(42, 34, 18, 0.34);
+}
+
+.battle-map-panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.battle-map-panel-header span {
+  color: var(--fg-dim);
+  font-size: 0.82rem;
 }
 
 .battle-map-location-checklist {
@@ -2357,6 +2469,22 @@ a:hover {
   .search-result-fallback {
     width: 58px;
     height: 58px;
+  }
+
+  .visibility-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .visibility-panel li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .battle-map-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .battle-map-page-grid {
+    grid-template-columns: 1fr;
   }
 
   .entity-inline-editor {
