@@ -98,6 +98,12 @@ export function CompanionNpcCard({
           {onOpenShop ? <CompanionLinkRow items={[{ id: shop.id, label: shop.name }]} onOpen={onOpenShop} /> : <p>{shop.name}</p>}
         </>
       )}
+      {npc.publicDescription && (
+        <>
+          <h4>Описание для игроков</h4>
+          <p>{npc.publicDescription}</p>
+        </>
+      )}
       {npc.personality && (
         <>
           <h4>Характер</h4>

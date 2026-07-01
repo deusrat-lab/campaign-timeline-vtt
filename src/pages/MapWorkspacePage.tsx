@@ -95,6 +95,7 @@ import { EmbeddedCompanionWindow } from '../features/embedded-dm-companion/Embed
 import { CompanionTavernCard } from '../features/embedded-dm-companion/CompanionTavernCard';
 import { CompanionShopCard } from '../features/embedded-dm-companion/CompanionShopCard';
 import { CompanionLocationCard } from '../features/embedded-dm-companion/CompanionLocationCard';
+import { CompanionNpcCard } from '../features/embedded-dm-companion/CompanionNpcCard';
 import type { BattleMapManifestEntry } from '../data/battleMapManifest';
 import {
   resolveEntityPreviewImage,
@@ -9581,6 +9582,7 @@ function PlayerSafeCompanionWindow({
   onClose: () => void;
   onOpen: (entity: EmbeddedCompanionEntity) => void;
 }) {
+  const store = useCampaignStore();
   let title = 'Карточка';
   let body: ReactElement = <p className="muted">Эта карточка пока не открыта игрокам.</p>;
   const openQuest = (id: string) => onOpen({ type: 'quest', id });
@@ -9590,30 +9592,24 @@ function PlayerSafeCompanionWindow({
   if (entity.type === 'npc') {
     const npc = data.npcs.find((n) => n.id === entity.id && n.visibleToPlayers === true);
     title = npc?.name ?? 'NPC';
-    const hero = npc?.image ? data.images.find((i) => i.id === npc.image && i.safeForPlayers !== false) : undefined;
     if (npc) {
+      const safeImages = data.images.filter((image) => image.safeForPlayers !== false);
+      const safeQuests = data.quests.filter((quest) => quest.status !== 'hidden');
+      const safeNpc: DmNpc = {
+        ...npc,
+        secrets: undefined,
+        notes: undefined,
+        dmNotes: undefined,
+        relatedQuests: (npc.relatedQuests ?? []).filter((questId) => safeQuests.some((quest) => quest.id === questId)),
+      };
       body = (
-        <div className="companion-source-card">
-          {hero && <img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={npc.name} />}
-          {npc.race && <><h4>Раса</h4><p>{npc.race}</p></>}
-          {npc.role && <><h4>Роль</h4><p>{npc.role}</p></>}
-          {npc.publicDescription && <p>{npc.publicDescription}</p>}
-          {npc.personality && <><h4>Характер</h4><p>{npc.personality}</p></>}
-          {npc.speechStyle && <><h4>Манера речи</h4><p>{npc.speechStyle}</p></>}
-          {npc.goals && <><h4>Цели</h4><p>{npc.goals}</p></>}
-          {npc.knowledge && <><h4>Знания</h4><p>{npc.knowledge}</p></>}
-          {(npc.relatedQuests ?? []).length > 0 && (
-            <>
-              <h4>Связанные квесты</h4>
-              <div className="entity-card-grid">
-                {(npc.relatedQuests ?? [])
-                  .map((id) => data.quests.find((q) => q.id === id && q.status !== 'hidden'))
-                  .filter((q): q is DmQuest => !!q)
-                  .map((q) => <button key={q.id} className="entity-card" onClick={() => openQuest(q.id)}>{q.title}</button>)}
-              </div>
-            </>
-          )}
-        </div>
+        <CompanionNpcCard
+          npc={safeNpc}
+          locationName={data.locations.find((loc) => loc.id === npc.location)?.name}
+          quests={safeQuests}
+          images={safeImages}
+          onOpenQuest={openQuest}
+        />
       );
     }
   } else if (entity.type === 'quest') {
@@ -9650,22 +9646,40 @@ function PlayerSafeCompanionWindow({
       );
     }
   } else if (entity.type === 'location') {
-    const loc = data.locations.find((l) => l.id === entity.id);
-    title = loc?.name ?? 'Локация';
-    const hero = loc?.images?.map((id) => data.images.find((i) => i.id === id && i.safeForPlayers !== false)).find(Boolean);
-    if (loc) {
+    const locationState =
+      data.locationStates.find((ls) => ls.id === entity.id) ??
+      data.locationStates.find((ls) => ls.locationId === entity.id && ls.timelineId === store.currentTimelineId);
+    const loc = data.locations.find((l) => l.id === (locationState?.locationId ?? entity.id));
+    const canShowLocationState = locationState ? isLocationVisibleToPlayers(locationState, store.progress) : true;
+    title = locationState?.title ?? loc?.name ?? 'Локация';
+    const imageIds = locationState?.imageIds.length ? locationState.imageIds : loc?.images ?? [];
+    const hero = imageIds.map((id) => data.images.find((i) => i.id === id && i.safeForPlayers !== false)).find(Boolean);
+    const npcIds = locationState?.npcIds.length ? locationState.npcIds : loc?.npcs ?? [];
+    const questIds = locationState?.questIds.length ? locationState.questIds : loc?.quests ?? [];
+    if (loc && canShowLocationState) {
       body = (
         <div className="companion-source-card">
-          {hero && <button className="companion-source-hero-wrap" onClick={() => openImage(hero.id)}><img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={loc.name} /></button>}
-          <p>{loc.playerView || loc.description}</p>
-          {(loc.npcs ?? []).length > 0 && (
+          {hero && <button className="companion-source-hero-wrap" onClick={() => openImage(hero.id)}><img className="companion-source-hero" src={hero.thumbnailSrc ?? hero.src} alt={title} /></button>}
+          <p>{locationState?.playerSafeDescription || loc.playerView || locationState?.publicDescription || loc.description}</p>
+          {npcIds.length > 0 && (
             <>
               <h4>NPC здесь</h4>
               <div className="entity-card-grid">
-                {(loc.npcs ?? [])
+                {npcIds
                   .map((id) => data.npcs.find((n) => n.id === id && n.visibleToPlayers === true))
                   .filter((n): n is (typeof data.npcs)[number] => !!n)
                   .map((n) => <button key={n.id} className="entity-card" onClick={() => openNpc(n.id)}>{n.name}</button>)}
+              </div>
+            </>
+          )}
+          {questIds.length > 0 && (
+            <>
+              <h4>Квесты</h4>
+              <div className="entity-card-grid">
+                {questIds
+                  .map((id) => data.quests.find((q) => q.id === id && q.status !== 'hidden'))
+                  .filter((q): q is DmQuest => !!q)
+                  .map((q) => <button key={q.id} className="entity-card" onClick={() => openQuest(q.id)}>{q.title}</button>)}
               </div>
             </>
           )}
