@@ -1377,10 +1377,103 @@ a:hover {
 }
 
 .economy-page,
-.services-page {
+.services-page,
+.images-page {
   max-width: 1600px;
   width: 100%;
   box-sizing: border-box;
+}
+
+.image-workspace {
+  display: grid;
+  grid-template-columns: minmax(360px, 480px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.image-gallery-panel,
+.image-detail-panel {
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.image-gallery-panel {
+  position: sticky;
+  top: 84px;
+  max-height: calc(100vh - 96px);
+  overflow: auto;
+}
+
+.image-gallery-panel input[type='search'] {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+  gap: 10px;
+}
+
+.image-tile {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  text-align: left;
+  padding: 8px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-card-raised);
+}
+
+.image-tile.active {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.22);
+}
+
+.image-tile img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--bg-deep);
+}
+
+.image-tile-title {
+  min-width: 0;
+  color: var(--fg);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.image-tile-badge {
+  justify-self: start;
+  border: 1px solid rgba(79, 157, 91, 0.45);
+  border-radius: 999px;
+  padding: 1px 7px;
+  color: #58d77b;
+  font-size: 0.68rem;
+}
+
+.image-tile-badge--dm {
+  border-color: rgba(212, 175, 55, 0.45);
+  color: var(--gold-soft);
+}
+
+.image-upload-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.image-upload-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .economy-sidebar,
@@ -2105,17 +2198,27 @@ a:hover {
     grid-template-columns: 1fr;
   }
 
+  .image-workspace {
+    grid-template-columns: 1fr;
+  }
+
   .entity-library-list {
     position: static;
     max-height: none;
   }
 
-  .economy-sidebar {
+  .economy-sidebar,
+  .image-gallery-panel {
     position: static;
   }
 
-  .economy-results {
+  .economy-results,
+  .image-gallery-panel {
     max-height: none;
+  }
+
+  .image-grid {
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
   }
 
   .economy-sold-row {
