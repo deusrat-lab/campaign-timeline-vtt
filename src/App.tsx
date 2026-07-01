@@ -8,6 +8,7 @@ import { EntityLibraryPage } from './pages/EntityLibraryPage';
 import { EconomyPage } from './pages/EconomyPage';
 import { ServicesPage } from './pages/ServicesPage';
 import { ImagesPage } from './pages/ImagesPage';
+import { SearchPage } from './pages/SearchPage';
 import { CampaignDataProvider } from './state/campaignDataContext';
 import { CampaignStoreProvider, useCampaignStore } from './state/campaignStore';
 
@@ -54,6 +55,7 @@ function AppShell() {
           <Routes>
             <Route path="/" element={<MapWorkspacePage />} />
             <Route path="/map" element={<MapWorkspacePage />} />
+            <Route path="/search" element={<SearchPage />} />
             <Route path="/location/:id" element={<LocationRedirect />} />
             <Route path="/quests" element={<EntityLibraryPage kind="quests" />} />
             <Route path="/npc" element={<EntityLibraryPage kind="npc" />} />

@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useCampaignData } from '../state/campaignDataContext';
 import { useCampaignStore } from '../state/campaignStore';
 import type { DmEconomyReferenceItem } from '../types/dmCompanion';
@@ -46,6 +47,7 @@ function priceLabel(entry: DmEconomyReferenceItem): string {
 export function EconomyPage() {
   const { data, loading, error } = useCampaignData();
   const store = useCampaignStore();
+  const location = useLocation();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [availability, setAvailability] = useState('all');
@@ -80,6 +82,11 @@ export function EconomyPage() {
   const selected = filtered.find((entry) => entry.id === selectedId) ?? filtered[0] ?? null;
   const condition = SELL_CONDITIONS.find((item) => item.id === conditionId) ?? SELL_CONDITIONS[0];
   const sellTotal = sold.reduce((sum, item) => sum + item.qty * item.unitSellGp, 0);
+
+  useEffect(() => {
+    const id = new URLSearchParams(location.search).get('selected');
+    if (id) setSelectedId(id);
+  }, [location.search]);
 
   function addSold(entry: DmEconomyReferenceItem) {
     const parsed = parseAnyPrice(entry.price, entry.currency);

@@ -10,6 +10,7 @@ interface RailItem {
 
 const RAIL_ITEMS: RailItem[] = [
   { key: 'map', label: 'Карта', icon: '🗺', to: '/map' },
+  { key: 'search', label: 'Поиск', icon: '🔎', to: '/search' },
   { key: 'timeline', label: 'Таймлайн', icon: '⏳' },
   { key: 'quests', label: 'Квесты', icon: '📜', to: '/quests' },
   { key: 'npc', label: 'NPC', icon: '🧑', to: '/npc' },
