@@ -23,6 +23,20 @@ const QUEST_STATUS_LABELS: Record<QuestStatus, string> = {
   hidden: 'Скрыт',
 };
 
+function safeText(value: unknown): string {
+  return typeof value === 'string' ? value : value === undefined || value === null ? '' : String(value);
+}
+
+function safeQuestStatus(value: unknown): QuestStatus {
+  return value === 'active' || value === 'completed' || value === 'failed' || value === 'hidden'
+    ? value
+    : 'hidden';
+}
+
+function effectiveSafeQuestStatus(quest: Pick<DmQuest, 'id' | 'status'>, store: ReturnType<typeof useCampaignStore>): QuestStatus {
+  return effectiveQuestStatus(quest.id, safeQuestStatus(quest.status), store.progress);
+}
+
 interface BestiaryMonsterAction {
   name: string;
   description?: string;
@@ -72,9 +86,9 @@ interface BestiaryMonster {
 }
 
 function getEntityTitle(item: DmNpc | DmQuest | DmCustomEnemy | DmPlayer): string {
-  if ('title' in item) return item.title;
-  if ('characterName' in item) return item.characterName;
-  return item.name;
+  if ('title' in item) return safeText(item.title) || item.id;
+  if ('characterName' in item) return safeText(item.characterName) || item.id;
+  return safeText(item.name) || item.id;
 }
 
 type FactionTaggedEntity = {
@@ -270,18 +284,18 @@ function sortEntities<T extends DmNpc | DmQuest | DmCustomEnemy | DmPlayer>(
     if (sortKey === 'location') {
       const aLocId = 'location' in a ? a.location : undefined;
       const bLocId = 'location' in b ? b.location : undefined;
-      const aLoc = data.locations.find((loc) => loc.id === aLocId)?.name ?? aLocId ?? '';
-      const bLoc = data.locations.find((loc) => loc.id === bLocId)?.name ?? bLocId ?? '';
+      const aLoc = data.locations.find((loc) => loc.id === aLocId)?.name ?? safeText(aLocId);
+      const bLoc = data.locations.find((loc) => loc.id === bLocId)?.name ?? safeText(bLocId);
       return aLoc.localeCompare(bLoc, 'ru') || getEntityTitle(a).localeCompare(getEntityTitle(b), 'ru');
     }
     if (sortKey === 'status') {
-      const aStatus = 'status' in a ? effectiveQuestStatus(a.id, a.status, store.progress) : '';
-      const bStatus = 'status' in b ? effectiveQuestStatus(b.id, b.status, store.progress) : '';
+      const aStatus = 'status' in a ? effectiveSafeQuestStatus(a, store) : '';
+      const bStatus = 'status' in b ? effectiveSafeQuestStatus(b, store) : '';
       return aStatus.localeCompare(bStatus, 'ru') || getEntityTitle(a).localeCompare(getEntityTitle(b), 'ru');
     }
     if (sortKey === 'role') {
-      const aRole = 'role' in a ? a.role ?? '' : '';
-      const bRole = 'role' in b ? b.role ?? '' : '';
+      const aRole = 'role' in a ? safeText(a.role) : '';
+      const bRole = 'role' in b ? safeText(b.role) : '';
       return aRole.localeCompare(bRole, 'ru') || getEntityTitle(a).localeCompare(getEntityTitle(b), 'ru');
     }
     return getEntityTitle(a).localeCompare(getEntityTitle(b), 'ru');
@@ -356,7 +370,7 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
     const ids = new Set(enemiesForArc.flatMap((enemy) => enemy.questIds ?? []));
     return Array.from(ids)
       .map((id) => ({ id, title: data.quests.find((quest) => quest.id === id)?.title ?? id }))
-      .sort((a, b) => a.title.localeCompare(b.title, 'ru'));
+      .sort((a, b) => safeText(a.title).localeCompare(safeText(b.title), 'ru'));
   }, [arcId, data]);
   const enemyFactionOptions = useMemo(() => {
     if (!data) return [];
@@ -379,18 +393,19 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
         .filter((n) => matchesFaction(n, npcFactionFilter))
         .filter((n) => npcLocationFilter === 'all' || n.location === npcLocationFilter)
         .filter((n) => npcRoleFilter === 'all' || n.role === npcRoleFilter)
-        .filter((n) => !q || [n.name, n.role, n.race, n.faction, getFactionSummary(data, n), n.location].some((v) => (v ?? '').toLowerCase().includes(q))), sortKey, data, store);
+        .filter((n) => !q || [n.name, n.role, n.race, n.faction, getFactionSummary(data, n), n.location].some((v) => safeText(v).toLowerCase().includes(q))), sortKey, data, store);
     }
     if (kind === 'quests') {
       return sortEntities(data.quests
         .filter((quest) => (quest.arcId ?? 'arc-1') === arcId)
         .filter((quest) => matchesFaction(quest, questFactionFilter))
-        .filter((quest) => questStatusFilter === 'all' || effectiveQuestStatus(quest.id, quest.status, store.progress) === questStatusFilter)
-        .filter((quest) => !q || [quest.title, quest.goal, quest.description, getFactionSummary(data, quest), quest.location].some((v) => (v ?? '').toLowerCase().includes(q))), sortKey, data, store);
+        .filter((quest) => questStatusFilter === 'all' || effectiveSafeQuestStatus(quest, store) === questStatusFilter)
+        .filter((quest) => !q || [quest.title, quest.goal, quest.description, quest.reward, quest.proof, quest.consequences, quest.notes, getFactionSummary(data, quest), quest.location]
+          .some((v) => safeText(v).toLowerCase().includes(q))), sortKey, data, store);
     }
     if (kind === 'players') {
       return sortEntities(data.players
-        .filter((player) => !q || [player.characterName, player.playerName, player.race, player.class, player.description, player.dmNotes].some((v) => (v ?? '').toLowerCase().includes(q))), sortKey, data, store);
+        .filter((player) => !q || [player.characterName, player.playerName, player.race, player.class, player.description, player.dmNotes].some((v) => safeText(v).toLowerCase().includes(q))), sortKey, data, store);
     }
     return sortEntities(data.enemies.filter((enemy) => (enemy.arcId ?? 'arc-1') === arcId)
       .filter((enemy) => enemyRoleFilter === 'all' || enemy.role === enemyRoleFilter)
@@ -399,7 +414,7 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
       .filter((enemy) => matchesFaction(enemy, enemyFactionFilter))
       .filter((enemy) => enemyCrFilter === 'all' || enemy.cr === enemyCrFilter)
       .filter((enemy) => enemyTagFilter === 'all' || (enemy.tags ?? []).includes(enemyTagFilter))
-      .filter((enemy) => !q || [enemy.name, enemy.role, enemy.faction, getFactionSummary(data, enemy), enemy.cr, enemy.baseMonsterName, ...(enemy.tags ?? [])].some((v) => (v ?? '').toLowerCase().includes(q))), sortKey, data, store);
+      .filter((enemy) => !q || [enemy.name, enemy.role, enemy.faction, getFactionSummary(data, enemy), enemy.cr, enemy.baseMonsterName, ...(enemy.tags ?? [])].some((v) => safeText(v).toLowerCase().includes(q))), sortKey, data, store);
   }, [arcId, data, enemyCrFilter, enemyFactionFilter, enemyLocationFilter, enemyQuestFilter, enemyRoleFilter, enemyTagFilter, kind, npcFactionFilter, npcLocationFilter, npcRoleFilter, q, questFactionFilter, questStatusFilter, sortKey, store]);
 
   useEffect(() => {
@@ -575,7 +590,7 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
               </select>
               <select className="entity-library-filter" value={enemyQuestFilter} onChange={(e) => { setEnemyQuestFilter(e.target.value); setSelectedId(null); setEditing(false); }}>
                 <option value="all">Квест: все</option>
-                {enemyQuestOptions.map((quest) => <option key={quest.id} value={quest.id}>{quest.title}</option>)}
+                {enemyQuestOptions.map((quest) => <option key={quest.id} value={quest.id}>{safeText(quest.title) || quest.id}</option>)}
               </select>
               <select className="entity-library-filter" value={enemyFactionFilter} onChange={(e) => { setEnemyFactionFilter(e.target.value); setSelectedId(null); setEditing(false); }}>
                 <option value="all">Фракция: все</option>
@@ -614,13 +629,13 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
           <ul>
             {items.map((item) => {
               const active = item.id === selected?.id;
-              const title = kind === 'quests' ? (item as DmQuest).title : kind === 'players' ? (item as DmPlayer).characterName : (item as DmNpc | DmCustomEnemy).name;
+              const title = getEntityTitle(item as DmNpc | DmQuest | DmCustomEnemy | DmPlayer);
               const thumb = entityThumbnail(data, item as DmNpc | DmQuest | DmCustomEnemy | DmPlayer);
               const subtitle =
                 kind === 'npc'
                   ? [getFactionSummary(data, item as DmNpc), (item as DmNpc).role, data.locations.find((l) => l.id === (item as DmNpc).location)?.name ?? (item as DmNpc).location].filter(Boolean).join(' · ')
                   : kind === 'quests'
-                    ? [QUEST_STATUS_LABELS[effectiveQuestStatus(item.id, (item as DmQuest).status, store.progress)], getFactionSummary(data, item as DmQuest)].filter(Boolean).join(' · ')
+                    ? [QUEST_STATUS_LABELS[effectiveSafeQuestStatus(item as DmQuest, store)], getFactionSummary(data, item as DmQuest)].filter(Boolean).join(' · ')
                       : kind === 'players'
                         ? [(item as DmPlayer).playerName, (item as DmPlayer).race, (item as DmPlayer).class, (item as DmPlayer).level ? `ур. ${(item as DmPlayer).level}` : undefined].filter(Boolean).join(' · ')
                       : [(item as DmCustomEnemy).role, (item as DmCustomEnemy).cr ? `CR ${(item as DmCustomEnemy).cr}` : undefined].filter(Boolean).join(' · ');
@@ -682,34 +697,42 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
                   quests={data.quests}
                   images={data.images}
                 />
-	              ) : kind === 'quests' ? (
-	                <>
-	                  <CompanionQuestCard
-	                    quest={selected as DmQuest}
-	                    npcs={data.npcs}
-	                    enemies={data.enemies}
-	                    images={data.images}
-	                    locationName={data.locations.find((l) => l.id === (selected as DmQuest).location)?.name}
-	                    onEditEnemy={(enemyId) => setInlineEnemyEditId(enemyId)}
-	                    onRemoveEnemy={(enemyId) => {
-	                      const quest = selected as DmQuest;
-	                      store.patchQuest(quest.id, { enemies: (quest.enemies ?? []).filter((id) => id !== enemyId) });
-	                      const enemy = data.enemies.find((e) => e.id === enemyId);
-	                      if (enemy) store.patchEnemy(enemy.id, { questIds: (enemy.questIds ?? []).filter((id) => id !== quest.id) });
-	                    }}
-	                  />
-	                  {inlineEnemyEditId && (() => {
-	                    const enemy = data.enemies.find((e) => e.id === inlineEnemyEditId);
-	                    if (!enemy) return null;
-	                    return (
-	                      <div className="entity-nested-editor">
-	                        <h3>Редактировать врага в этом квесте</h3>
-	                        <EnemyEditor enemy={enemy} data={data} onDone={() => setInlineEnemyEditId(null)} />
-	                      </div>
-	                    );
-	                  })()}
-	                </>
-		              ) : kind === 'players' ? (
+              ) : kind === 'quests' ? (
+                <>
+                  <CompanionQuestCard
+                    quest={selected as DmQuest}
+                    npcs={data.npcs}
+                    enemies={data.enemies}
+                    images={data.images}
+                    locationName={data.locations.find((l) => l.id === (selected as DmQuest).location)?.name}
+                    onOpenNpc={(id) => navigate(`/npc?selected=${encodeURIComponent(id)}`)}
+                    onOpenLocation={(id) => {
+                      const state =
+                        data.locationStates.find((ls) => ls.locationId === id && ls.timelineId === store.currentTimelineId) ??
+                        data.locationStates.find((ls) => ls.locationId === id);
+                      navigate(state ? `/map?selected=${encodeURIComponent(state.id)}` : '/map');
+                    }}
+                    onOpenEnemy={(id) => navigate(`/enemies?selected=${encodeURIComponent(id)}`)}
+                    onEditEnemy={(enemyId) => setInlineEnemyEditId(enemyId)}
+                    onRemoveEnemy={(enemyId) => {
+                      const quest = selected as DmQuest;
+                      store.patchQuest(quest.id, { enemies: (quest.enemies ?? []).filter((id) => id !== enemyId) });
+                      const enemy = data.enemies.find((e) => e.id === enemyId);
+                      if (enemy) store.patchEnemy(enemy.id, { questIds: (enemy.questIds ?? []).filter((id) => id !== quest.id) });
+                    }}
+                  />
+                  {inlineEnemyEditId && (() => {
+                    const enemy = data.enemies.find((e) => e.id === inlineEnemyEditId);
+                    if (!enemy) return null;
+                    return (
+                      <div className="entity-nested-editor">
+                        <h3>Редактировать врага в этом квесте</h3>
+                        <EnemyEditor enemy={enemy} data={data} onDone={() => setInlineEnemyEditId(null)} />
+                      </div>
+                    );
+                  })()}
+                </>
+              ) : kind === 'players' ? (
                 <PlayerCard player={selected as DmPlayer} data={data} />
               ) : (
                 <CompanionEnemyCard
@@ -921,7 +944,7 @@ function FactionEntityLibraryPage({ data, arcId, timelineTitle }: { data: Campai
             <section>
               <h3>Квесты</h3>
               {linkedQuests.map((quest) => (
-                <FactionLinkedCard key={quest.id} title={quest.title} subtitle={quest.goal} imageSrc={entityThumbnail(data, quest)} placement={entityPlacementLabel(data, store.currentTimelineId, 'quests', quest)} onClick={() => setPreviewTarget({ type: 'quest', id: quest.id })} />
+                <FactionLinkedCard key={quest.id} title={getEntityTitle(quest)} subtitle={quest.goal} imageSrc={entityThumbnail(data, quest)} placement={entityPlacementLabel(data, store.currentTimelineId, 'quests', quest)} onClick={() => setPreviewTarget({ type: 'quest', id: quest.id })} />
               ))}
               <button onClick={() => navigate('/quests')}>Все квесты</button>
             </section>
@@ -1404,7 +1427,7 @@ function PlayerCard({ player, data }: { player: DmPlayer; data: CampaignData }) 
           <div className="economy-tags">
             {relatedQuests.map((quest) => (
               <Link key={quest.id} className="companion-tag-chip" to={`/quests?selected=${encodeURIComponent(quest.id)}`}>
-                {quest.title}
+                {getEntityTitle(quest)}
               </Link>
             ))}
           </div>
@@ -1578,7 +1601,7 @@ function PlayerEditor({ player, data, onDone }: { player: DmPlayer; data: Campai
                 checked={draft.relatedQuests.includes(quest.id)}
                 onChange={() => toggleDraftList('relatedQuests', quest.id)}
               />
-              <span>{quest.title}</span>
+              <span>{getEntityTitle(quest)}</span>
             </label>
           ))
         )}
@@ -1648,8 +1671,8 @@ function NpcEditor({ npc, data, onDone }: { npc: DmNpc; data: CampaignData; onDo
 function QuestEditor({ quest, data, onDone }: { quest: DmQuest; data: CampaignData; onDone: () => void }) {
   const store = useCampaignStore();
   const [draft, setDraft] = useState({
-    title: quest.title,
-    status: effectiveQuestStatus(quest.id, quest.status, store.progress),
+    title: getEntityTitle(quest),
+    status: effectiveSafeQuestStatus(quest, store),
     location: quest.location ?? '',
     giver: quest.giver ?? '',
     goal: quest.goal ?? '',
@@ -1665,8 +1688,8 @@ function QuestEditor({ quest, data, onDone }: { quest: DmQuest; data: CampaignDa
   const enemySearch = draft.enemySearch.trim().toLowerCase();
   const enemyOptions = data.enemies
     .filter((enemy) => (enemy.arcId ?? quest.arcId ?? 'arc-1') === (quest.arcId ?? 'arc-1'))
-    .filter((enemy) => !enemySearch || [enemy.name, enemy.role, enemy.faction, enemy.cr].some((v) => (v ?? '').toLowerCase().includes(enemySearch)))
-    .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    .filter((enemy) => !enemySearch || [enemy.name, enemy.role, enemy.faction, enemy.cr].some((v) => safeText(v).toLowerCase().includes(enemySearch)))
+    .sort((a, b) => getEntityTitle(a).localeCompare(getEntityTitle(b), 'ru'));
 
   function toggleEnemy(enemyId: string) {
     setDraft((current) => {
@@ -1689,23 +1712,23 @@ function QuestEditor({ quest, data, onDone }: { quest: DmQuest; data: CampaignDa
         description: draft.description.trim() || undefined,
         reward: draft.reward.trim() || undefined,
         proof: draft.proof.trim() || undefined,
-	        consequences: draft.consequences.trim() || undefined,
-	        notes: draft.notes.trim() || undefined,
-	        image: draft.image || undefined,
-	        enemies: draft.enemies,
-	      });
-	      const selectedEnemyIds = new Set(draft.enemies);
-	      for (const enemy of data.enemies) {
-	        const hadQuest = (enemy.questIds ?? []).includes(quest.id);
-	        const shouldHaveQuest = selectedEnemyIds.has(enemy.id);
-	        if (hadQuest === shouldHaveQuest) continue;
-	        store.patchEnemy(enemy.id, {
-	          questIds: shouldHaveQuest
-	            ? [...(enemy.questIds ?? []), quest.id]
-	            : (enemy.questIds ?? []).filter((id) => id !== quest.id),
-	        });
-	      }
-	      store.setQuestStatus(quest.id, draft.status);
+        consequences: draft.consequences.trim() || undefined,
+        notes: draft.notes.trim() || undefined,
+        image: draft.image || undefined,
+        enemies: draft.enemies,
+      });
+      const selectedEnemyIds = new Set(draft.enemies);
+      for (const enemy of data.enemies) {
+        const hadQuest = (enemy.questIds ?? []).includes(quest.id);
+        const shouldHaveQuest = selectedEnemyIds.has(enemy.id);
+        if (hadQuest === shouldHaveQuest) continue;
+        store.patchEnemy(enemy.id, {
+          questIds: shouldHaveQuest
+            ? [...(enemy.questIds ?? []), quest.id]
+            : (enemy.questIds ?? []).filter((id) => id !== quest.id),
+        });
+      }
+      store.setQuestStatus(quest.id, draft.status);
       onDone();
     }}>
       <label>Название<input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></label>
@@ -1776,13 +1799,13 @@ function EnemyEditor({ enemy, data, onDone }: { enemy: DmCustomEnemy; data: Camp
   const locationSearch = draft.locationSearch.trim().toLowerCase();
   const locationOptions = data.locations
     .filter((location) => !location.arcId || location.arcId === (enemy.arcId ?? 'arc-1'))
-    .filter((location) => !locationSearch || [location.name, location.type, location.region, ...(location.tags ?? [])].some((v) => (v ?? '').toLowerCase().includes(locationSearch)))
-    .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    .filter((location) => !locationSearch || [location.name, location.type, location.region, ...(location.tags ?? [])].some((v) => safeText(v).toLowerCase().includes(locationSearch)))
+    .sort((a, b) => safeText(a.name).localeCompare(safeText(b.name), 'ru'));
   const questSearch = draft.questSearch.trim().toLowerCase();
   const questOptions = data.quests
     .filter((quest) => (quest.arcId ?? enemy.arcId ?? 'arc-1') === (enemy.arcId ?? 'arc-1'))
-    .filter((quest) => !questSearch || [quest.title, quest.goal, quest.description].some((v) => (v ?? '').toLowerCase().includes(questSearch)))
-    .sort((a, b) => a.title.localeCompare(b.title, 'ru'));
+    .filter((quest) => !questSearch || [quest.title, quest.goal, quest.description].some((v) => safeText(v).toLowerCase().includes(questSearch)))
+    .sort((a, b) => getEntityTitle(a).localeCompare(getEntityTitle(b), 'ru'));
 
   function toggleLocation(locationId: string) {
     setDraft((current) => {
@@ -1889,10 +1912,10 @@ function EnemyEditor({ enemy, data, onDone }: { enemy: DmCustomEnemy; data: Camp
 	                checked={draft.questIds.includes(quest.id)}
 	                onChange={() => toggleQuest(quest.id)}
 	              />
-	              <span>
-	                <strong>{quest.title}</strong>
-	                <small>{QUEST_STATUS_LABELS[effectiveQuestStatus(quest.id, quest.status, store.progress)]}</small>
-	              </span>
+              <span>
+                <strong>{getEntityTitle(quest)}</strong>
+                <small>{QUEST_STATUS_LABELS[effectiveSafeQuestStatus(quest, store)]}</small>
+              </span>
 	            </label>
 	          ))}
 	        </div>
