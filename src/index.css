@@ -144,10 +144,6 @@ a:hover {
   min-height: 100vh;
 }
 
-.app-shell--observer-player {
-  display: block;
-}
-
 .app-shell-main {
   flex: 1;
   min-width: 0;
