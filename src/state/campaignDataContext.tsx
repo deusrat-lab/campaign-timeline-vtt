@@ -5,6 +5,7 @@ import type { CampaignData } from '../data/loadCampaignData';
 import { useCampaignStore } from './campaignStore';
 import { applyOverlayToList } from './overlay';
 import type { BattleMapLocationLink, LocationState, MapHotspot, WorldMapState } from '../types';
+import type { DmNpc } from '../types/dmCompanion';
 
 /**
  * Merges re-derived battle-map<->location links with the DM override layer:
@@ -78,6 +79,17 @@ function attachHotspotsToMapStates(mapStates: WorldMapState[], hotspots: MapHots
   });
 }
 
+function sanitizeArc2VelKarNpcLinks(locationStates: LocationState[], npcs: DmNpc[]): LocationState[] {
+  const npcById = new Map(npcs.map((npc) => [npc.id, npc]));
+  return locationStates.map((state) => {
+    if (state.locationId !== 'arc2:location:kal:vel-kar-forward-camp' || state.timelineId !== 'arc-2-war') {
+      return state;
+    }
+    const npcIds = state.npcIds.filter((npcId) => npcById.get(npcId)?.primaryFactionId !== 'faction-auroleon');
+    return npcIds.length === state.npcIds.length ? state : { ...state, npcIds };
+  });
+}
+
 interface CampaignDataState {
   data: CampaignData | null;
   loading: boolean;
@@ -114,10 +126,14 @@ export function useCampaignData(): CampaignDataState {
 
   const merged = useMemo<CampaignData | null>(() => {
     if (!base.data) return null;
-    const locationStates = applyOverlayToList(
-      base.data.locationStates,
-      overlay.locationStatePatches,
-      overlay.newLocationStates,
+    const npcs = applyOverlayToList(
+      base.data.npcs.map((npc) => ({ ...npc, visibleToPlayers: false })),
+      overlay.npcPatches,
+      overlay.newNpcs,
+    );
+    const locationStates = sanitizeArc2VelKarNpcLinks(
+      applyOverlayToList(base.data.locationStates, overlay.locationStatePatches, overlay.newLocationStates),
+      npcs,
     );
     const projectedHotspots = mirrorArc1RegionHotspotsForArc2(
       applyOverlayToList(base.data.hotspots, overlay.hotspotPatches, overlay.newHotspots),
@@ -144,11 +160,7 @@ export function useCampaignData(): CampaignDataState {
       routes: applyOverlayToList(base.data.routes, overlay.routePatches, overlay.newRoutes),
       travelEvents: applyOverlayToList(base.data.travelEvents, overlay.travelEventPatches, overlay.newTravelEvents),
       placements: applyOverlayToList(base.data.placements, overlay.placementPatches, overlay.newPlacements),
-      npcs: applyOverlayToList(
-        base.data.npcs.map((npc) => ({ ...npc, visibleToPlayers: false })),
-        overlay.npcPatches,
-        overlay.newNpcs,
-      ),
+      npcs,
       taverns: applyOverlayToList(base.data.taverns, overlay.tavernPatches, []),
       shops: applyOverlayToList(base.data.shops, overlay.shopPatches, []),
       images: applyOverlayToList(base.data.images, overlay.imagePatches, overlay.newImages),

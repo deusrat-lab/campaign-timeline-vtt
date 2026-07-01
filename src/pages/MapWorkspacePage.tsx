@@ -9532,6 +9532,23 @@ export function MapWorkspacePage() {
               setPlacingExistingLocationId(target.id);
               closeCompanion();
             }}
+            onPlaceOnMap={(entity, title) => {
+              if (entity.type === 'location') {
+                const target =
+                  data.locationStates.find((ls) => ls.locationId === entity.id && ls.timelineId === store.currentTimelineId) ??
+                  data.locationStates.find((ls) => ls.locationId === entity.id);
+                if (target) setPlacingExistingLocationId(target.id);
+              } else if (entity.type === 'tavern' || entity.type === 'shop') {
+                setPlacingLibraryEntity({ type: entity.type, sourceId: entity.id, title });
+              } else if (entity.type === 'npc') {
+                setPlacingNpcEntityId(entity.id);
+              } else if (entity.type === 'quest' || entity.type === 'enemy' || entity.type === 'image') {
+                setPlacingContentEntity({ type: entity.type, sourceId: entity.id });
+              } else if (entity.type === 'battleEntry') {
+                setPlacingBattleEntryId(entity.id);
+              }
+              closeCompanion();
+            }}
           />
         )}
       </div>

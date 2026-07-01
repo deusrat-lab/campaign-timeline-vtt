@@ -116,6 +116,7 @@ export function EmbeddedCompanionWindow({
   quests: _quests,
   onStartBattle,
   onPlaceLocation,
+  onPlaceOnMap,
 }: {
   entity: EmbeddedCompanionEntity;
   hasBack: boolean;
@@ -127,6 +128,7 @@ export function EmbeddedCompanionWindow({
   quests: { id: string; title: string }[];
   onStartBattle?: (battleMapId: string, locationStateId?: string) => void;
   onPlaceLocation?: (locationId: string) => void;
+  onPlaceOnMap?: (entity: EmbeddedCompanionEntity, title: string) => void;
 }) {
   const store = useCampaignStore();
   const [inlineEditing, setInlineEditing] = useState(false);
@@ -362,6 +364,9 @@ export function EmbeddedCompanionWindow({
     entity.type === 'battleEntry'
       ? undefined
       : data.placements.find((p) => p.entityKind === entity.type && p.entityId === entity.id && p.status !== 'archived');
+  const battleEntryHasMapPosition =
+    battleEntryForVisibility?.position || battleEntryForVisibility?.sourceLocationStateId;
+  const mapPlacementActionLabel = placement || battleEntryHasMapPosition ? 'Переместить на карте' : 'Разместить на карте';
 
   // Bug-fix pass — bottom "Редактировать" action bar, matching dm-companion's
   // real detail-page btn-row. Editing toggles the existing inline-edit
@@ -472,6 +477,11 @@ export function EmbeddedCompanionWindow({
                 )}
               </p>
               <div className="actions">
+                {onPlaceOnMap && (
+                  <button onClick={() => onPlaceOnMap(entity, title)}>
+                    {mapPlacementActionLabel}
+                  </button>
+                )}
                 {battleEntryForVisibility.visibleInPlayerView === true ? (
                   <button onClick={() => store.updateBattleEntry(battleEntryForVisibility!.id, { visibleInPlayerView: false })}>
                     Скрыть от игроков
@@ -494,6 +504,11 @@ export function EmbeddedCompanionWindow({
                     {getVisibilityLabel(getPlacementVisibilityState(placement))}
                   </p>
                   <div className="actions">
+                    {onPlaceOnMap && (
+                      <button onClick={() => onPlaceOnMap(entity, title)}>
+                        {mapPlacementActionLabel}
+                      </button>
+                    )}
                     {placement.status !== 'hidden' ? (
                       <button onClick={() => store.patchPlacement(placement.id, { status: 'hidden' })}>
                         Скрыть маркер (ДМ)
@@ -515,7 +530,16 @@ export function EmbeddedCompanionWindow({
                   </div>
                 </div>
               ) : (
-                <p className="muted">Эта карточка пока не размещена маркером на текущей карте.</p>
+                <div className="companion-map-actions-body">
+                  <p className="muted">Эта карточка пока не размещена маркером на текущей карте.</p>
+                  {onPlaceOnMap && (
+                    <div className="actions">
+                      <button onClick={() => onPlaceOnMap(entity, title)}>
+                        {mapPlacementActionLabel}
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </details>
           )}
