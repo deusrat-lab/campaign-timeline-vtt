@@ -49,6 +49,7 @@ export interface LibraryCardImage {
  * image, or undefined if absent/unresolvable. Never throws on missing data. */
 function imageById(images: DmImageItem[], id: string | undefined): LibraryCardImage | undefined {
   if (!id) return undefined;
+  if (id.startsWith('/') || id.startsWith('http') || id.startsWith('data:')) return { src: id };
   const img = images.find((i) => i.id === id);
   if (!img) return undefined;
   return { src: img.src, thumbnailSrc: img.thumbnailSrc, title: img.title };

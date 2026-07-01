@@ -382,7 +382,14 @@ export function BattleEntryPanel({
         )}
         {entry.status !== 'active' && <button onClick={() => store.markBattleEntryActive(entry.id)}>Начать бой</button>}
         {entry.status !== 'completed' && (
-          <button onClick={() => store.markBattleEntryCompleted(entry.id)}>Отметить завершённой</button>
+          <button
+            onClick={() => {
+              store.markBattleEntryCompleted(entry.id);
+              store.endActiveBattle();
+            }}
+          >
+            Отметить завершённой
+          </button>
         )}
         <button onClick={onCreateEvent}>Создать событие</button>
         <button onClick={onOpenConsequences}>Последствия боя…</button>

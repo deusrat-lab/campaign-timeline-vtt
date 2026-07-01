@@ -2348,6 +2348,24 @@ a:hover {
   margin-bottom: 0.45rem;
 }
 
+.battle-enemy-filter-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+}
+
+.battle-enemy-filter-grid select,
+.battle-enemy-filter-grid button {
+  width: 100%;
+  min-width: 0;
+  font-size: 0.78rem;
+}
+
+.battle-palette-count {
+  margin: 0.4rem 0 0;
+  font-size: 0.76rem;
+}
+
 .battle-enemy-palette-list {
   display: grid;
   gap: 0.4rem;

@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BATTLE_MAP_ASSET_ORIGIN } from '../../config';
 import { useCampaignStore } from '../../state/campaignStore';
 import type { ActiveBattleCombatant, ActiveBattleState } from '../../types';
 import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
-import type { DmCustomEnemy, DmImageItem, DmPlayer } from '../../types/dmCompanion';
+import type { DmCustomEnemy, DmFaction, DmImageItem, DmLocation, DmPlayer, DmQuest } from '../../types/dmCompanion';
 
 type BattleTokenDefinition = {
   id: string;
@@ -275,6 +275,9 @@ export function EmbeddedBattleOverlay({
   enemies,
   players,
   images,
+  locations = [],
+  quests = [],
+  factions = [],
   isPlayerView,
 }: {
   battle: ActiveBattleState;
@@ -282,15 +285,28 @@ export function EmbeddedBattleOverlay({
   enemies: DmCustomEnemy[];
   players: DmPlayer[];
   images: DmImageItem[];
+  locations?: DmLocation[];
+  quests?: DmQuest[];
+  factions?: DmFaction[];
   isPlayerView: boolean;
 }) {
   const store = useCampaignStore();
   const boardRef = useRef<HTMLDivElement | null>(null);
+  const selectedPaletteRef = useRef<PaletteItem | null>(null);
+  const terrainEditModeRef = useRef<TerrainEditMode>('off');
+  const panToolRef = useRef(false);
+  const isPlayerViewRef = useRef(isPlayerView);
   const [tokenDefs, setTokenDefs] = useState<BattleTokenDefinition[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>(battle.currentTurnCombatantId);
   const [selectedPalette, setSelectedPalette] = useState<PaletteItem | null>(null);
   const [enemySearch, setEnemySearch] = useState('');
   const [enemyFilter, setEnemyFilter] = useState('all');
+  const [enemyRoleFilter, setEnemyRoleFilter] = useState('all');
+  const [enemyLocationFilter, setEnemyLocationFilter] = useState('all');
+  const [enemyQuestFilter, setEnemyQuestFilter] = useState('all');
+  const [enemyFactionFilter, setEnemyFactionFilter] = useState('all');
+  const [enemyCrFilter, setEnemyCrFilter] = useState('all');
+  const [enemyTagFilter, setEnemyTagFilter] = useState('all');
   const [hoverCell, setHoverCell] = useState<BattleCell | null>(null);
   const [camera, setCamera] = useState({ scale: 1, x: 0, y: 0 });
   const [panning, setPanning] = useState<{ x: number; y: number; sx: number; sy: number } | null>(null);
@@ -355,6 +371,25 @@ export function EmbeddedBattleOverlay({
   }, [currentId]);
 
   const enemyGroups = Array.from(new Set(enemies.flatMap((e) => [e.faction, ...(e.tags ?? [])]).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, 'ru'));
+  const enemyRoleOptions = Array.from(new Set(enemies.map((enemy) => enemy.role).filter((role): role is string => Boolean(role)))).sort((a, b) => a.localeCompare(b, 'ru'));
+  const enemyLocationOptions = Array.from(new Set(enemies.flatMap((enemy) => enemy.locationIds ?? [])))
+    .map((id) => ({ id, name: locations.find((loc) => loc.id === id)?.name ?? id }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  const enemyQuestOptions = Array.from(new Set(enemies.flatMap((enemy) => enemy.questIds ?? [])))
+    .map((id) => ({ id, title: quests.find((quest) => quest.id === id)?.title ?? id }))
+    .sort((a, b) => a.title.localeCompare(b.title, 'ru'));
+  const enemyFactionOptions = Array.from(
+    new Set(enemies.flatMap((enemy) => [enemy.primaryFactionId, ...(enemy.factionIds ?? []), enemy.faction]).filter(Boolean) as string[]),
+  )
+    .map((id) => {
+      const faction = factions.find((f) => f.id === id || f.name === id || f.shortName === id);
+      return { id, name: faction?.name ?? faction?.shortName ?? id };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  const enemyCrOptions = Array.from(new Set(enemies.map((enemy) => enemy.cr).filter((cr): cr is string => Boolean(cr)))).sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
+  const enemyTagOptions = Array.from(new Set(enemies.flatMap((enemy) => enemy.tags ?? []))).sort((a, b) => a.localeCompare(b, 'ru'));
+  const matchesEnemyFaction = (enemy: DmCustomEnemy, value: string) =>
+    value === 'all' || enemy.primaryFactionId === value || enemy.factionIds?.includes(value) || enemy.faction === value;
   const matchingTokenForEnemy = (enemy: DmCustomEnemy) => {
     const byName = tokenDefs.find((t) => t.name.toLowerCase() === enemy.name.toLowerCase());
     const byBase = enemy.baseMonsterName ? tokenDefs.find((t) => t.name.toLowerCase() === enemy.baseMonsterName!.toLowerCase()) : undefined;
@@ -390,6 +425,12 @@ export function EmbeddedBattleOverlay({
       const q = enemySearch.trim().toLowerCase();
       if (q && ![enemy.name, enemy.role, enemy.faction, enemy.baseMonsterName, ...(enemy.tags ?? [])].filter(Boolean).join(' ').toLowerCase().includes(q)) return false;
       if (enemyFilter !== 'all' && enemy.faction !== enemyFilter && !enemy.tags?.includes(enemyFilter)) return false;
+      if (enemyRoleFilter !== 'all' && enemy.role !== enemyRoleFilter) return false;
+      if (enemyLocationFilter !== 'all' && !(enemy.locationIds ?? []).includes(enemyLocationFilter)) return false;
+      if (enemyQuestFilter !== 'all' && !(enemy.questIds ?? []).includes(enemyQuestFilter)) return false;
+      if (!matchesEnemyFaction(enemy, enemyFactionFilter)) return false;
+      if (enemyCrFilter !== 'all' && enemy.cr !== enemyCrFilter) return false;
+      if (enemyTagFilter !== 'all' && !enemy.tags?.includes(enemyTagFilter)) return false;
       return true;
     })
     .map((enemy) => {
@@ -407,13 +448,17 @@ export function EmbeddedBattleOverlay({
       } satisfies PaletteItem;
     });
 
-  function imagePointFromEvent(e: React.PointerEvent<HTMLElement>) {
+  const imagePointFromClient = useCallback((clientX: number, clientY: number) => {
     const rect = boardRef.current?.getBoundingClientRect();
     if (!rect) return null;
     return {
-      x: (e.clientX - rect.left - camera.x) / camera.scale,
-      y: (e.clientY - rect.top - camera.y) / camera.scale,
+      x: (clientX - rect.left - camera.x) / camera.scale,
+      y: (clientY - rect.top - camera.y) / camera.scale,
     };
+  }, [camera.scale, camera.x, camera.y]);
+
+  function imagePointFromEvent(e: React.PointerEvent<HTMLElement>) {
+    return imagePointFromClient(e.clientX, e.clientY);
   }
 
   function cellFromEvent(e: React.PointerEvent<HTMLElement>) {
@@ -421,7 +466,12 @@ export function EmbeddedBattleOverlay({
     return point ? cellFromImagePoint(grid, point.x, point.y) : null;
   }
 
-  function placePaletteItem(item: PaletteItem, cell: BattleCell) {
+  function cellFromClick(e: React.MouseEvent<HTMLElement>) {
+    const point = imagePointFromClient(e.clientX, e.clientY);
+    return point ? cellFromImagePoint(grid, point.x, point.y) : null;
+  }
+
+  const placePaletteItem = useCallback((item: PaletteItem, cell: BattleCell) => {
     if (terrainAt(terrainCells, cell)?.type === 'blocked' || tokenAt(battle.combatants, cell)) return;
     const player = item.kind === 'player' ? players.find((p) => p.id === item.sourceId) : undefined;
     const enemy = item.kind === 'enemy' ? enemies.find((e) => e.id === item.sourceId) : undefined;
@@ -436,11 +486,14 @@ export function EmbeddedBattleOverlay({
     combatant.currentHp = item.hp;
     combatant.armorClass = item.ac;
     combatant.tokenDefinitionId = item.tokenDefinitionId;
-    store.addActiveBattleCombatant(combatant);
+    store.updateActiveBattle({
+      combatants: [...battle.combatants, combatant],
+      currentTurnCombatantId: battle.currentTurnCombatantId ?? combatant.id,
+    });
     setSelectedId(combatant.id);
     setSelectedPalette(null);
     setHoverCell(null);
-  }
+  }, [battle.combatants, battle.currentTurnCombatantId, enemies, players, store, terrainCells]);
 
   function nextTurn() {
     if (!ordered.length) return;
@@ -465,6 +518,15 @@ export function EmbeddedBattleOverlay({
   }
 
   function handleBoardPointerDown(e: React.PointerEvent<HTMLElement>) {
+    if (!isPlayerView && selectedPalette && terrainEditMode === 'off' && !panTool) {
+      const cell = cellFromEvent(e);
+      if (cell) {
+        placePaletteItem(selectedPalette, cell);
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      return;
+    }
     if (terrainEditMode !== 'off' && !isPlayerView) {
       const cell = cellFromEvent(e);
       if (cell) {
@@ -543,6 +605,30 @@ export function EmbeddedBattleOverlay({
   const visibleCombatants = isPlayerView ? battle.combatants : battle.combatants;
   const selectedRouteFeet = route ? route.feet : 0;
 
+  useEffect(() => {
+    selectedPaletteRef.current = selectedPalette;
+    terrainEditModeRef.current = terrainEditMode;
+    panToolRef.current = panTool;
+    isPlayerViewRef.current = isPlayerView;
+  }, [isPlayerView, panTool, selectedPalette, terrainEditMode]);
+
+  useEffect(() => {
+    const board = boardRef.current;
+    if (!board) return;
+    const onBoardClick = (event: MouseEvent) => {
+      const item = selectedPaletteRef.current;
+      if (isPlayerViewRef.current || !item || terrainEditModeRef.current !== 'off' || panToolRef.current) return;
+      const point = imagePointFromClient(event.clientX, event.clientY);
+      const cell = point ? cellFromImagePoint(grid, point.x, point.y) : null;
+      if (!cell) return;
+      event.preventDefault();
+      event.stopPropagation();
+      placePaletteItem(item, cell);
+    };
+    board.addEventListener('click', onBoardClick, true);
+    return () => board.removeEventListener('click', onBoardClick, true);
+  }, [grid, imagePointFromClient, placePaletteItem]);
+
   return (
     <div className="embedded-battle-backdrop">
       <div className="embedded-battle-window embedded-battle-window--vtt" role="dialog" aria-label="Карта битвы">
@@ -607,10 +693,52 @@ export function EmbeddedBattleOverlay({
               </div>
               <h4>Враги</h4>
               <input className="battle-palette-search" placeholder="Поиск врага, тег, фракция..." value={enemySearch} onChange={(e) => setEnemySearch(e.target.value)} />
-              <select value={enemyFilter} onChange={(e) => setEnemyFilter(e.target.value)}>
-                <option value="all">Все группы</option>
-                {enemyGroups.map((g) => <option key={g} value={g}>{g}</option>)}
-              </select>
+              <div className="battle-enemy-filter-grid">
+                <select value={enemyLocationFilter} onChange={(e) => setEnemyLocationFilter(e.target.value)}>
+                  <option value="all">Локация: все</option>
+                  {enemyLocationOptions.map((loc) => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
+                </select>
+                <select value={enemyQuestFilter} onChange={(e) => setEnemyQuestFilter(e.target.value)}>
+                  <option value="all">Квест: все</option>
+                  {enemyQuestOptions.map((quest) => <option key={quest.id} value={quest.id}>{quest.title}</option>)}
+                </select>
+                <select value={enemyFactionFilter} onChange={(e) => setEnemyFactionFilter(e.target.value)}>
+                  <option value="all">Сторона: все</option>
+                  {enemyFactionOptions.map((faction) => <option key={faction.id} value={faction.id}>{faction.name}</option>)}
+                </select>
+                <select value={enemyCrFilter} onChange={(e) => setEnemyCrFilter(e.target.value)}>
+                  <option value="all">CR: все</option>
+                  {enemyCrOptions.map((cr) => <option key={cr} value={cr}>{cr}</option>)}
+                </select>
+                <select value={enemyTagFilter} onChange={(e) => setEnemyTagFilter(e.target.value)}>
+                  <option value="all">Тег: все</option>
+                  {enemyTagOptions.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
+                </select>
+                <select value={enemyRoleFilter} onChange={(e) => setEnemyRoleFilter(e.target.value)}>
+                  <option value="all">Роль: все</option>
+                  {enemyRoleOptions.map((role) => <option key={role} value={role}>{role}</option>)}
+                </select>
+                <select value={enemyFilter} onChange={(e) => setEnemyFilter(e.target.value)}>
+                  <option value="all">Группа: все</option>
+                  {enemyGroups.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEnemySearch('');
+                    setEnemyFilter('all');
+                    setEnemyRoleFilter('all');
+                    setEnemyLocationFilter('all');
+                    setEnemyQuestFilter('all');
+                    setEnemyFactionFilter('all');
+                    setEnemyCrFilter('all');
+                    setEnemyTagFilter('all');
+                  }}
+                >
+                  Сброс
+                </button>
+              </div>
+              <p className="muted battle-palette-count">Показано: {enemyPalette.length} / {enemies.length}</p>
               <div className="battle-enemy-palette-list">
                 {enemyPalette.slice(0, 80).map((item) => (
                   <button key={item.sourceId} className={`battle-palette-card${selectedPalette?.sourceId === item.sourceId ? ' active' : ''}`} onClick={() => { setSelectedPalette(item); setSelectedId(undefined); setHoverCell(null); }}>
@@ -656,6 +784,11 @@ export function EmbeddedBattleOverlay({
             setCamera((c) => ({ ...c, scale: Math.max(0.25, Math.min(4, c.scale * factor)) }));
           }}
           onPointerDown={handleBoardPointerDown}
+          onClick={(e) => {
+            if (isPlayerView || !selectedPalette || terrainEditMode !== 'off' || panTool) return;
+            const cell = cellFromClick(e);
+            if (cell) placePaletteItem(selectedPalette, cell);
+          }}
           onContextMenu={(e) => e.preventDefault()}
           onPointerMove={(e) => {
             if (panning) {

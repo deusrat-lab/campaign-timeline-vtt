@@ -38,10 +38,11 @@ export function CompanionNpcCard({
     const image = images.find((i) => i.id === imageId);
     return image?.thumbnailSrc ?? image?.src;
   };
-  const questItems = (npc.relatedQuests ?? []).map((id) => {
+  const questItems: { id: string; label: string; subtitle?: string; imageSrc?: string }[] = [];
+  for (const id of npc.relatedQuests ?? []) {
     const quest = quests.find((q) => q.id === id);
-    return { id, label: quest?.title ?? id, subtitle: quest?.goal, imageSrc: imageSrc(quest?.image) };
-  });
+    if (quest) questItems.push({ id, label: quest.title, subtitle: quest.goal, imageSrc: imageSrc(quest.image) });
+  }
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const factionLabels = Array.from(new Set([...(npc.factionIds ?? []), npc.primaryFactionId, npc.faction].filter(Boolean) as string[]))
     .map((id) => data?.factions.find((f) => f.id === id || f.name === id || f.shortName === id)?.shortName ?? data?.factions.find((f) => f.id === id || f.name === id || f.shortName === id)?.name ?? id);

@@ -9560,6 +9560,9 @@ export function MapWorkspacePage() {
           enemies={enemiesForArc}
           players={data.players}
           images={data.images}
+          locations={data.locations}
+          quests={data.quests}
+          factions={data.factions}
           isPlayerView={isPlayerView}
         />
       )}
