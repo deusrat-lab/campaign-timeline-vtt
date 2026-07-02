@@ -107,14 +107,17 @@ function appendContextParams(base: string, context: BattleMapLaunchContext): str
 /**
  * Returns the URL to open for this BattleEntry, or null if no battle map is
  * configured at all (caller should show "Боевая карта не настроена" and not
- * attempt to open anything).
+ * attempt to open anything). This now also covers the case where
+ * BATTLE_MAP_VTT_BASE_URL itself is unset (no external Battle Map VTT app
+ * configured for this deployment, see config.ts) — previously that fell
+ * through to a `localhost:4174` link that would 404 on any non-dev machine.
  *
  * Priority:
  * 1. `entry.battleMapUrl` — build that URL with safely-encoded query params appended.
  * 2. `entry.battleMapId` — reproduce the existing legacy behavior:
  *    `overrides.battleMapVttUrlOverrides[battleMapId] || BATTLE_MAP_VTT_BASE_URL`,
  *    with the same context params appended.
- * 3. Neither present — return null.
+ * 3. Neither present, or no base URL resolves — return null.
  */
 export function buildBattleMapLaunchUrl(
   entry: BattleEntry,
@@ -126,6 +129,7 @@ export function buildBattleMapLaunchUrl(
   }
   if (entry.battleMapId) {
     const base = overrides.battleMapVttUrlOverrides?.[entry.battleMapId] || BATTLE_MAP_VTT_BASE_URL;
+    if (!base) return null;
     return appendContextParams(base, { ...context, battleMapId: entry.battleMapId });
   }
   return null;

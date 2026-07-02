@@ -10,6 +10,7 @@ import { CompanionEnemyCard } from '../features/embedded-dm-companion/CompanionE
 import { CompanionLocationCard } from '../features/embedded-dm-companion/CompanionLocationCard';
 import { CompanionNpcCard } from '../features/embedded-dm-companion/CompanionNpcCard';
 import { CompanionQuestCard } from '../features/embedded-dm-companion/CompanionQuestCard';
+import { CompanionShopCard } from '../features/embedded-dm-companion/CompanionShopCard';
 import { BATTLE_MAP_ASSET_ORIGIN } from '../config';
 import type { BattleMapManifestEntry } from '../data/battleMapManifest';
 
@@ -153,6 +154,48 @@ function entityInitials(title: string): string {
     .join('') || '?';
 }
 
+/**
+ * A file picked here ends up as a data: URL inside the entity's overlay patch,
+ * which is persisted to localStorage as one big JSON string on EVERY overlay
+ * mutation. An uncompressed upload (a 2 MB PNG becomes ~2.8 MB of base64) once
+ * bloated the overlay to ~3 MB and froze the whole app: each save serialized
+ * megabytes synchronously, and the cross-tab storage sync re-parsed and
+ * re-wrote them in every other open tab. So uploads are downscaled to a card
+ * portrait size and re-encoded as JPEG before they ever reach the overlay.
+ */
+const UPLOAD_MAX_DIMENSION = 768;
+const UPLOAD_JPEG_QUALITY = 0.82;
+
+async function compressImageFile(file: File): Promise<string> {
+  const originalDataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => (typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('not a string')));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('image decode failed'));
+      el.src = originalDataUrl;
+    });
+    const scale = Math.min(1, UPLOAD_MAX_DIMENSION / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return originalDataUrl;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const compressed = canvas.toDataURL('image/jpeg', UPLOAD_JPEG_QUALITY);
+    // toDataURL can silently fall back to a tiny blank PNG on canvas errors;
+    // only prefer the compressed variant when it is a real win.
+    return compressed.length > 100 && compressed.length < originalDataUrl.length ? compressed : originalDataUrl;
+  } catch {
+    return originalDataUrl;
+  }
+}
+
 function ImagePickerField({
   value,
   data,
@@ -177,11 +220,7 @@ function ImagePickerField({
         onChange={(e) => {
           const file = e.currentTarget.files?.[0];
           if (!file) return;
-          const reader = new FileReader();
-          reader.onload = () => {
-            if (typeof reader.result === 'string') onChange(reader.result);
-          };
-          reader.readAsDataURL(file);
+          void compressImageFile(file).then(onChange);
           e.currentTarget.value = '';
         }}
       />
@@ -302,11 +341,107 @@ function sortEntities<T extends DmNpc | DmQuest | DmCustomEnemy | DmPlayer>(
   });
 }
 
+type LinkPreviewTarget = { type: 'npc' | 'quest' | 'location' | 'enemy' | 'shop'; id: string };
+
+/**
+ * Shared "open as a card, not a page navigation" behavior for every linked
+ * entity chip rendered inside a Companion card (NPC/quest/location/enemy/
+ * shop). Card links must stay a card — clicking a linked location on an NPC
+ * card should open the location's card in a modal, not route away to the
+ * map (which also loses the DM's current list/filter state).
+ */
+function useEntityLinkPreview(data: CampaignData | null | undefined) {
+  const [target, setTarget] = useState<LinkPreviewTarget | null>(null);
+  const open = (next: LinkPreviewTarget) => setTarget(next);
+  const close = () => setTarget(null);
+
+  if (!data) return { open, modal: null };
+
+  const npc = target?.type === 'npc' ? data.npcs.find((n) => n.id === target.id) : undefined;
+  const quest = target?.type === 'quest' ? data.quests.find((q) => q.id === target.id) : undefined;
+  const location = target?.type === 'location' ? data.locations.find((l) => l.id === target.id) : undefined;
+  const enemy = target?.type === 'enemy' ? data.enemies.find((e) => e.id === target.id) : undefined;
+  const shop = target?.type === 'shop' ? data.shops.find((s) => s.id === target.id) : undefined;
+  const title = npc?.name ?? quest?.title ?? location?.name ?? enemy?.name ?? shop?.name ?? 'Карточка';
+
+  const body = npc ? (
+    <CompanionNpcCard
+      npc={npc}
+      locationName={data.locations.find((loc) => loc.id === npc.location)?.name}
+      shop={data.shops.find((s) => s.ownerNpcId === npc.id)}
+      quests={data.quests}
+      images={data.images}
+      onOpenQuest={(id) => open({ type: 'quest', id })}
+      onOpenShop={(id) => open({ type: 'shop', id })}
+      onOpenLocation={(id) => open({ type: 'location', id })}
+    />
+  ) : quest ? (
+    <CompanionQuestCard
+      quest={quest}
+      npcs={data.npcs}
+      enemies={data.enemies}
+      images={data.images}
+      locationName={data.locations.find((loc) => loc.id === quest.location)?.name}
+      onOpenNpc={(id) => open({ type: 'npc', id })}
+      onOpenLocation={(id) => open({ type: 'location', id })}
+      onOpenEnemy={(id) => open({ type: 'enemy', id })}
+    />
+  ) : location ? (
+    <CompanionLocationCard
+      loc={location}
+      npcs={data.npcs}
+      quests={data.quests}
+      shops={data.shops.filter((s) => s.location === location.id)}
+      enemies={data.enemies.filter((e) => e.locationIds?.includes(location.id))}
+      images={data.images}
+      onOpenNpc={(id) => open({ type: 'npc', id })}
+      onOpenQuest={(id) => open({ type: 'quest', id })}
+      onOpenShop={(id) => open({ type: 'shop', id })}
+      onOpenEnemy={(id) => open({ type: 'enemy', id })}
+    />
+  ) : enemy ? (
+    <CompanionEnemyCard
+      enemy={enemy}
+      locations={data.locations}
+      quests={data.quests}
+      images={data.images}
+      onOpenLocation={(id) => open({ type: 'location', id })}
+      onOpenQuest={(id) => open({ type: 'quest', id })}
+    />
+  ) : shop ? (
+    <CompanionShopCard
+      shop={shop}
+      npcs={data.npcs}
+      images={data.images}
+      locationName={data.locations.find((loc) => loc.id === shop.location)?.name}
+      onOpenNpc={(id) => open({ type: 'npc', id })}
+      onOpenLocation={() => open({ type: 'location', id: shop.location })}
+    />
+  ) : null;
+
+  const modal = target && (
+    <div className="entity-card-modal-backdrop" onClick={close}>
+      <div className="entity-card-modal" onClick={(event) => event.stopPropagation()}>
+        <header className="entity-card-modal-header">
+          <h2>{title}</h2>
+          <button type="button" className="btn-ghost" onClick={close}>
+            Закрыть ✕
+          </button>
+        </header>
+        <div className="entity-card-modal-body">{body ?? <p className="muted">Карточка не найдена.</p>}</div>
+      </div>
+    </div>
+  );
+
+  return { open, modal };
+}
+
 export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
   const { data, loading, error } = useCampaignData();
   const store = useCampaignStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const linkPreview = useEntityLinkPreview(data);
   const [search, setSearch] = useState('');
   const [questStatusFilter, setQuestStatusFilter] = useState<QuestStatus | 'all'>('all');
   const [questFactionFilter, setQuestFactionFilter] = useState('all');
@@ -696,6 +831,9 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
                   shop={data.shops.find((s) => s.ownerNpcId === selected.id)}
                   quests={data.quests}
                   images={data.images}
+                  onOpenQuest={(id) => linkPreview.open({ type: 'quest', id })}
+                  onOpenShop={(id) => linkPreview.open({ type: 'shop', id })}
+                  onOpenLocation={(id) => linkPreview.open({ type: 'location', id })}
                 />
               ) : kind === 'quests' ? (
                 <>
@@ -705,14 +843,9 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
                     enemies={data.enemies}
                     images={data.images}
                     locationName={data.locations.find((l) => l.id === (selected as DmQuest).location)?.name}
-                    onOpenNpc={(id) => navigate(`/npc?selected=${encodeURIComponent(id)}`)}
-                    onOpenLocation={(id) => {
-                      const state =
-                        data.locationStates.find((ls) => ls.locationId === id && ls.timelineId === store.currentTimelineId) ??
-                        data.locationStates.find((ls) => ls.locationId === id);
-                      navigate(state ? `/map?selected=${encodeURIComponent(state.id)}` : '/map');
-                    }}
-                    onOpenEnemy={(id) => navigate(`/enemies?selected=${encodeURIComponent(id)}`)}
+                    onOpenNpc={(id) => linkPreview.open({ type: 'npc', id })}
+                    onOpenLocation={(id) => linkPreview.open({ type: 'location', id })}
+                    onOpenEnemy={(id) => linkPreview.open({ type: 'enemy', id })}
                     onEditEnemy={(enemyId) => setInlineEnemyEditId(enemyId)}
                     onRemoveEnemy={(enemyId) => {
                       const quest = selected as DmQuest;
@@ -740,12 +873,15 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
                   locations={data.locations}
                   quests={data.quests}
                   images={data.images}
+                  onOpenLocation={(id) => linkPreview.open({ type: 'location', id })}
+                  onOpenQuest={(id) => linkPreview.open({ type: 'quest', id })}
                 />
               )}
             </>
           )}
         </section>
       </div>
+      {linkPreview.modal}
     </div>
   );
 }
@@ -758,12 +894,6 @@ function battleMapPreview(map: BattleMapManifestEntry): string | undefined {
 function entityMatchesFaction(item: FactionTaggedEntity, faction: DmFaction): boolean {
   return getEntityFactionKeys(item).some((key) => key === faction.id || key === faction.name || key === faction.shortName);
 }
-
-type FactionPreviewTarget =
-  | { type: 'npc'; id: string }
-  | { type: 'quest'; id: string }
-  | { type: 'location'; id: string }
-  | { type: 'enemy'; id: string };
 
 function FactionLinkedCard({
   title,
@@ -800,7 +930,7 @@ function FactionEntityLibraryPage({ data, arcId, timelineTitle }: { data: Campai
   const navigate = useNavigate();
   const store = useCampaignStore();
   const [selectedFactionId, setSelectedFactionId] = useState<string | null>(null);
-  const [previewTarget, setPreviewTarget] = useState<FactionPreviewTarget | null>(null);
+  const linkPreview = useEntityLinkPreview(data);
 
   const arcNpcs = data.npcs.filter((npc) => (npc.arcId ?? 'arc-1') === arcId);
   const arcQuests = data.quests.filter((quest) => (quest.arcId ?? 'arc-1') === arcId);
@@ -845,55 +975,6 @@ function FactionEntityLibraryPage({ data, arcId, timelineTitle }: { data: Campai
     : [];
   const linkedEnemies = selected ? arcEnemies.filter((enemy) => entityMatchesFaction(enemy, selected)).slice(0, 8) : [];
   const selectedStats = selected ? factionRows.find((row) => row.faction.id === selected.id) : null;
-  const previewNpc = previewTarget?.type === 'npc' ? data.npcs.find((npc) => npc.id === previewTarget.id) : undefined;
-  const previewQuest = previewTarget?.type === 'quest' ? data.quests.find((quest) => quest.id === previewTarget.id) : undefined;
-  const previewLocation = previewTarget?.type === 'location' ? data.locations.find((location) => location.id === previewTarget.id) : undefined;
-  const previewEnemy = previewTarget?.type === 'enemy' ? data.enemies.find((enemy) => enemy.id === previewTarget.id) : undefined;
-  const previewTitle = previewNpc?.name ?? previewQuest?.title ?? previewLocation?.name ?? previewEnemy?.name ?? 'Карточка';
-  const previewBody = previewNpc ? (
-    <CompanionNpcCard
-      npc={previewNpc}
-      locationName={data.locations.find((location) => location.id === previewNpc.location)?.name}
-      shop={data.shops.find((shop) => shop.ownerNpcId === previewNpc.id)}
-      quests={data.quests}
-      images={data.images}
-      onOpenQuest={(id) => setPreviewTarget({ type: 'quest', id })}
-      onOpenShop={() => undefined}
-    />
-  ) : previewQuest ? (
-    <CompanionQuestCard
-      quest={previewQuest}
-      npcs={data.npcs}
-      enemies={data.enemies}
-      images={data.images}
-      locationName={data.locations.find((location) => location.id === previewQuest.location)?.name}
-      onOpenNpc={(id) => setPreviewTarget({ type: 'npc', id })}
-      onOpenLocation={(id) => setPreviewTarget({ type: 'location', id })}
-      onOpenEnemy={(id) => setPreviewTarget({ type: 'enemy', id })}
-    />
-  ) : previewLocation ? (
-    <CompanionLocationCard
-      loc={previewLocation}
-      npcs={data.npcs}
-      quests={data.quests}
-      shops={data.shops.filter((shop) => shop.location === previewLocation.id)}
-      enemies={data.enemies.filter((enemy) => enemy.locationIds?.includes(previewLocation.id))}
-      images={data.images}
-      onOpenNpc={(id) => setPreviewTarget({ type: 'npc', id })}
-      onOpenQuest={(id) => setPreviewTarget({ type: 'quest', id })}
-      onOpenShop={() => undefined}
-      onOpenEnemy={(id) => setPreviewTarget({ type: 'enemy', id })}
-    />
-  ) : previewEnemy ? (
-    <CompanionEnemyCard
-      enemy={previewEnemy}
-      locations={data.locations}
-      quests={data.quests}
-      images={data.images}
-      onOpenLocation={(id) => setPreviewTarget({ type: 'location', id })}
-      onOpenQuest={(id) => setPreviewTarget({ type: 'quest', id })}
-    />
-  ) : null;
 
   return (
     <div className="page entity-library-page entity-library-page--wide">
@@ -937,48 +1018,34 @@ function FactionEntityLibraryPage({ data, arcId, timelineTitle }: { data: Campai
             <section>
               <h3>Ключевые NPC</h3>
               {linkedNpcs.map((npc) => (
-                <FactionLinkedCard key={npc.id} title={npc.name} subtitle={npc.role} imageSrc={entityThumbnail(data, npc)} placement={entityPlacementLabel(data, store.currentTimelineId, 'npc', npc)} onClick={() => setPreviewTarget({ type: 'npc', id: npc.id })} />
+                <FactionLinkedCard key={npc.id} title={npc.name} subtitle={npc.role} imageSrc={entityThumbnail(data, npc)} placement={entityPlacementLabel(data, store.currentTimelineId, 'npc', npc)} onClick={() => linkPreview.open({ type: 'npc', id: npc.id })} />
               ))}
               <button onClick={() => navigate('/npc')}>Все NPC</button>
             </section>
             <section>
               <h3>Квесты</h3>
               {linkedQuests.map((quest) => (
-                <FactionLinkedCard key={quest.id} title={getEntityTitle(quest)} subtitle={quest.goal} imageSrc={entityThumbnail(data, quest)} placement={entityPlacementLabel(data, store.currentTimelineId, 'quests', quest)} onClick={() => setPreviewTarget({ type: 'quest', id: quest.id })} />
+                <FactionLinkedCard key={quest.id} title={getEntityTitle(quest)} subtitle={quest.goal} imageSrc={entityThumbnail(data, quest)} placement={entityPlacementLabel(data, store.currentTimelineId, 'quests', quest)} onClick={() => linkPreview.open({ type: 'quest', id: quest.id })} />
               ))}
               <button onClick={() => navigate('/quests')}>Все квесты</button>
             </section>
             <section>
               <h3>Локации</h3>
               {linkedLocations.map((location) => (
-                <FactionLinkedCard key={location.id} title={location.name} subtitle={location.type} imageSrc={locationThumbnail(data, location)} placement={entityPlacementLabel(data, store.currentTimelineId, 'location', location)} onClick={() => setPreviewTarget({ type: 'location', id: location.id })} />
+                <FactionLinkedCard key={location.id} title={location.name} subtitle={location.type} imageSrc={locationThumbnail(data, location)} placement={entityPlacementLabel(data, store.currentTimelineId, 'location', location)} onClick={() => linkPreview.open({ type: 'location', id: location.id })} />
               ))}
             </section>
             <section>
               <h3>Враги</h3>
               {linkedEnemies.map((enemy) => (
-                <FactionLinkedCard key={enemy.id} title={enemy.name} subtitle={[enemy.role, enemy.cr ? `CR ${enemy.cr}` : undefined].filter(Boolean).join(' · ')} imageSrc={entityThumbnail(data, enemy)} placement={entityPlacementLabel(data, store.currentTimelineId, 'enemies', enemy)} onClick={() => setPreviewTarget({ type: 'enemy', id: enemy.id })} />
+                <FactionLinkedCard key={enemy.id} title={enemy.name} subtitle={[enemy.role, enemy.cr ? `CR ${enemy.cr}` : undefined].filter(Boolean).join(' · ')} imageSrc={entityThumbnail(data, enemy)} placement={entityPlacementLabel(data, store.currentTimelineId, 'enemies', enemy)} onClick={() => linkPreview.open({ type: 'enemy', id: enemy.id })} />
               ))}
               <button onClick={() => navigate('/enemies')}>Все враги</button>
             </section>
           </div>
         </section>
       )}
-      {previewTarget && (
-        <div className="entity-card-modal-backdrop" onClick={() => setPreviewTarget(null)}>
-          <div className="entity-card-modal" onClick={(event) => event.stopPropagation()}>
-            <header className="entity-card-modal-header">
-              <h2>{previewTitle}</h2>
-              <button type="button" className="btn-ghost" onClick={() => setPreviewTarget(null)}>
-                Закрыть ✕
-              </button>
-            </header>
-            <div className="entity-card-modal-body">
-              {previewBody ?? <p className="muted">Карточка не найдена.</p>}
-            </div>
-          </div>
-        </div>
-      )}
+      {linkPreview.modal}
     </div>
   );
 }

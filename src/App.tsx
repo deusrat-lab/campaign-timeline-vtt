@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, type ReactElement } from 'react';
 import { NavBar } from './components/NavBar';
 import { NavRail } from './components/NavRail';
 import { MapWorkspacePage } from './pages/MapWorkspacePage';
@@ -17,6 +17,31 @@ import { CampaignStoreProvider, useCampaignStore } from './state/campaignStore';
 function LocationRedirect() {
   const { id } = useParams<{ id: string }>();
   return <Navigate to={`/map?selected=${encodeURIComponent(id ?? '')}`} replace />;
+}
+
+/**
+ * Every route wrapped in this guard is a DM editing/reference surface
+ * (EntityLibraryPage, EconomyPage, ImagesPage, PlayerVisibilityPage, the
+ * admin report) that renders full campaign data — secrets, DM notes, hidden
+ * quests/enemies — with no awareness of Player View itself. Before this
+ * guard, the ONLY thing keeping a player off these pages was NavRail simply
+ * not drawing a link to them (NavRail returns null entirely in player-view,
+ * see components/NavRail.tsx) — a UI convenience, not an access boundary.
+ * SearchPage could already navigate a player straight into `/npc?selected=…`
+ * via a result link (closed alongside this guard, see SearchPage.tsx), and
+ * any direct URL/bookmark/shared link always could. This makes the boundary
+ * real: Player View only ever gets `/map`, `/search` (which itself degrades
+ * to location-only results there), `/observer`, and the legacy location
+ * redirect — every other route bounces to `/map`.
+ *
+ * This is also the enforcement point the eventual server-side DM/player
+ * login is meant to plug into: once there's a real player token, the same
+ * redirect condition becomes "no DM session" instead of a local mode flag.
+ */
+function DmOnlyRoute({ children }: { children: ReactElement }) {
+  const store = useCampaignStore();
+  if (store.mode === 'player-view') return <Navigate to="/map" replace />;
+  return children;
 }
 
 function PlayerWorkspaceRoute() {
@@ -57,23 +82,23 @@ function AppShell() {
             <Route path="/" element={<MapWorkspacePage />} />
             <Route path="/map" element={<MapWorkspacePage />} />
             <Route path="/search" element={<SearchPage />} />
-            <Route path="/visibility" element={<PlayerVisibilityPage />} />
             <Route path="/location/:id" element={<LocationRedirect />} />
-            <Route path="/quests" element={<EntityLibraryPage kind="quests" />} />
-            <Route path="/npc" element={<EntityLibraryPage kind="npc" />} />
-            <Route path="/enemies" element={<EntityLibraryPage kind="enemies" />} />
-            <Route path="/bestiary" element={<EntityLibraryPage kind="bestiary" />} />
-            <Route path="/players" element={<EntityLibraryPage kind="players" />} />
-            <Route path="/economy" element={<EconomyPage />} />
-            <Route path="/services" element={<ServicesPage />} />
-            <Route path="/shops" element={<ServicesPage initialKind="shop" />} />
-            <Route path="/taverns" element={<ServicesPage initialKind="tavern" />} />
-            <Route path="/images" element={<ImagesPage />} />
-            <Route path="/battle-maps" element={<EntityLibraryPage kind="battleMaps" />} />
-            <Route path="/factions" element={<EntityLibraryPage kind="factions" />} />
+            <Route path="/visibility" element={<DmOnlyRoute><PlayerVisibilityPage /></DmOnlyRoute>} />
+            <Route path="/quests" element={<DmOnlyRoute><EntityLibraryPage kind="quests" /></DmOnlyRoute>} />
+            <Route path="/npc" element={<DmOnlyRoute><EntityLibraryPage kind="npc" /></DmOnlyRoute>} />
+            <Route path="/enemies" element={<DmOnlyRoute><EntityLibraryPage kind="enemies" /></DmOnlyRoute>} />
+            <Route path="/bestiary" element={<DmOnlyRoute><EntityLibraryPage kind="bestiary" /></DmOnlyRoute>} />
+            <Route path="/players" element={<DmOnlyRoute><EntityLibraryPage kind="players" /></DmOnlyRoute>} />
+            <Route path="/economy" element={<DmOnlyRoute><EconomyPage /></DmOnlyRoute>} />
+            <Route path="/services" element={<DmOnlyRoute><ServicesPage /></DmOnlyRoute>} />
+            <Route path="/shops" element={<DmOnlyRoute><ServicesPage initialKind="shop" /></DmOnlyRoute>} />
+            <Route path="/taverns" element={<DmOnlyRoute><ServicesPage initialKind="tavern" /></DmOnlyRoute>} />
+            <Route path="/images" element={<DmOnlyRoute><ImagesPage /></DmOnlyRoute>} />
+            <Route path="/battle-maps" element={<DmOnlyRoute><EntityLibraryPage kind="battleMaps" /></DmOnlyRoute>} />
+            <Route path="/factions" element={<DmOnlyRoute><EntityLibraryPage kind="factions" /></DmOnlyRoute>} />
             {/* New-location creation + the prefill/needs-review report still live here
                until they're migrated into the Map Workspace side panel. */}
-            <Route path="/admin" element={<HomePage />} />
+            <Route path="/admin" element={<DmOnlyRoute><HomePage /></DmOnlyRoute>} />
           </Routes>
         </main>
       </div>

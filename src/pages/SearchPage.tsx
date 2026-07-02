@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useCampaignData } from '../state/campaignDataContext';
 import { useCampaignStore } from '../state/campaignStore';
 import type { CampaignData } from '../data/loadCampaignData';
+import { isLocationVisibleToPlayers } from '../data/selectors';
+import type { CampaignProgress } from '../types';
 
 type SearchKind =
   | 'location'
@@ -83,24 +85,53 @@ function locationName(data: CampaignData, id?: string): string {
   return data.locations.find((location) => location.id === id)?.name ?? id ?? '';
 }
 
-function buildResults(data: CampaignData, timelineId: string): SearchResult[] {
+/**
+ * Player View must never surface DM-only reasoning through Search — this was
+ * a real leak: the DM-facing branch below concatenates dmNotes and dmSecrets
+ * straight into a location's `body` (searchable AND rendered inline), and
+ * until now nothing in SearchPage checked the app's mode before rendering
+ * it. `isPlayerView=true` restricts location results to the same safe-field
+ * allowlist PlayerSafeCompanionWindow (MapWorkspacePage.tsx) already uses,
+ * and drops any location it would itself refuse to show
+ * (visibleToPlayers===false, status==='hidden', !isLocationVisibleToPlayers).
+ * Every other kind (npc, quest, enemy, player, shop, tavern, economy, image,
+ * faction, battleMap) is dropped entirely in Player View — see the comment
+ * further down, at the point results stop, for why.
+ */
+function buildResults(data: CampaignData, timelineId: string, progress: CampaignProgress, isPlayerView: boolean): SearchResult[] {
   const currentLocationStates = data.locationStates.filter((state) => state.timelineId === timelineId);
   const results: SearchResult[] = [];
 
   for (const state of currentLocationStates) {
     const location = data.locations.find((item) => item.id === state.locationId);
+    const dmOnly = state.status === 'hidden' || state.visibleToPlayers === false || !isLocationVisibleToPlayers(state, progress);
+    if (isPlayerView && dmOnly) continue;
     results.push({
       id: state.id,
       kind: 'location',
       title: state.title,
       subtitle: compact([state.type ?? location?.type, location?.region, state.status]),
-      body: compact([state.publicDescription, state.playerSafeDescription, state.dmNotes, location?.description, location?.dmSecrets]),
+      body: isPlayerView
+        ? compact([state.playerSafeDescription, location?.playerView, state.publicDescription])
+        : compact([state.publicDescription, state.playerSafeDescription, state.dmNotes, location?.description, location?.dmSecrets]),
       tags: [...(state.tags ?? []), ...(location?.tags ?? [])],
       to: `/map?selected=${encodeURIComponent(state.id)}`,
       imageUrl: imageById(data, state.imageIds[0] ?? location?.images?.[0]),
-      dmOnly: state.status === 'hidden' || state.visibleToPlayers === false,
+      dmOnly,
     });
   }
+
+  // Every other kind below (npc, quest, enemy, player, shop, tavern,
+  // economy, image, faction, battleMap) links to an EntityLibraryPage /
+  // EconomyPage / ImagesPage route — the DM's editor UI. Those routes are
+  // gated DM-only at the router level (see App.tsx's DmOnlyRoute), so a
+  // Player View result linking there would be a dead end at best and, for
+  // npc/quest specifically, dmNotes/secrets text baked into `body` at worst.
+  // Players already have a working, actually-safe way to open an NPC/quest
+  // card — clicking its marker/link on the map — so Player View search is
+  // scoped to what it can safely resolve: locations already visible on the
+  // map.
+  if (isPlayerView) return results;
 
   for (const npc of data.npcs) {
     results.push({
@@ -268,7 +299,11 @@ export function SearchPage() {
   const [query, setQuery] = useState('');
   const [activeKinds, setActiveKinds] = useState<SearchKind[]>([]);
 
-  const allResults = useMemo(() => (data ? buildResults(data, store.currentTimelineId) : []), [data, store.currentTimelineId]);
+  const isPlayerView = store.mode === 'player-view';
+  const allResults = useMemo(
+    () => (data ? buildResults(data, store.currentTimelineId, store.progress, isPlayerView) : []),
+    [data, store.currentTimelineId, store.progress, isPlayerView],
+  );
   const results = useMemo(() => {
     const q = query.trim();
     if (!q) return [];
@@ -290,7 +325,11 @@ export function SearchPage() {
       <header className="entity-library-header">
         <div>
           <h1>Поиск</h1>
-          <p className="muted">Быстрый переход к карточкам, товарам, изображениям, фракциям и локациям текущей арки.</p>
+          <p className="muted">
+            {isPlayerView
+              ? 'Поиск по открытым игрокам локациям.'
+              : 'Быстрый переход к карточкам, товарам, изображениям, фракциям и локациям текущей арки.'}
+          </p>
         </div>
       </header>
 
@@ -299,16 +338,21 @@ export function SearchPage() {
           autoFocus
           type="search"
           value={query}
-          placeholder="Имя, место, товар, враг, заметка..."
+          placeholder={isPlayerView ? 'Название локации...' : 'Имя, место, товар, враг, заметка...'}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <div className="entity-filter-chips">
-          {KIND_ORDER.map((kind) => (
-            <button key={kind} type="button" className={activeKinds.includes(kind) ? 'active' : ''} onClick={() => toggleKind(kind)}>
-              {KIND_LABELS[kind]}
-            </button>
-          ))}
-        </div>
+        {/* Player View only ever produces 'location' results (see buildResults),
+            so the kind-filter row would just be 10 buttons that always empty
+            the list — hide it rather than let a player filter down to zero. */}
+        {!isPlayerView && (
+          <div className="entity-filter-chips">
+            {KIND_ORDER.map((kind) => (
+              <button key={kind} type="button" className={activeKinds.includes(kind) ? 'active' : ''} onClick={() => toggleKind(kind)}>
+                {KIND_LABELS[kind]}
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       {!query.trim() ? (

@@ -19,6 +19,7 @@ export function CompanionNpcCard({
   images,
   onOpenQuest,
   onOpenShop,
+  onOpenLocation,
 }: {
   npc: DmNpc;
   locationName?: string;
@@ -27,6 +28,7 @@ export function CompanionNpcCard({
   images: DmImageItem[];
   onOpenQuest?: (id: string) => void;
   onOpenShop?: (id: string) => void;
+  onOpenLocation?: (id: string) => void;
 }) {
   const { data } = useCampaignData();
   const heroImg = images.find((i) => i.id === npc.image);
@@ -90,7 +92,11 @@ export function CompanionNpcCard({
       {locationName && (
         <>
           <h4>Локация</h4>
-          <p>{locationName}</p>
+          {onOpenLocation && npc.location ? (
+            <CompanionLinkRow items={[{ id: npc.location, label: locationName }]} onOpen={onOpenLocation} />
+          ) : (
+            <p>{locationName}</p>
+          )}
         </>
       )}
       {shop && (

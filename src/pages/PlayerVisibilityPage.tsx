@@ -4,6 +4,34 @@ import { useCampaignStore } from '../state/campaignStore';
 import { getPlayerSafeBattleEntries, getPlayerSafeHotspots, getPlayerSafeImages, getPlayerSafeNpcs, getPlayerSafePlacements, getPlayerSafeRoutes } from '../data/playerSafeProjection';
 import type { CampaignData } from '../data/loadCampaignData';
 import type { BattleEntry, LocationState, MapRoute } from '../types';
+import type { DmNpc } from '../types/dmCompanion';
+
+/**
+ * Same fix as MapWorkspacePage's revealNpcAndItsImage/revealLocationAndItsImages
+ * (see that file's comment for the full story): an image's own
+ * `safeForPlayers` flag is independent of the NPC's/location's
+ * `visibleToPlayers`, so a DM revealing an NPC/location here previously left
+ * its already-attached portrait/art silently hidden. This is the DM's
+ * dedicated "what's visible to players" audit page, so the gap was
+ * especially easy to hit here — fix it here too, not just on the map.
+ */
+function revealNpcAndItsImage(store: ReturnType<typeof useCampaignStore>, data: CampaignData, npc: DmNpc) {
+  store.patchNpc(npc.id, { visibleToPlayers: true });
+  const image = npc.image ? data.images.find((img) => img.id === npc.image) : undefined;
+  if (image && image.safeForPlayers === false) {
+    store.patchImage(image.id, { safeForPlayers: true });
+  }
+}
+
+function revealLocationAndItsImages(store: ReturnType<typeof useCampaignStore>, data: CampaignData, state: LocationState) {
+  store.patchLocationState(state.id, { visibleToPlayers: true });
+  for (const imageId of state.imageIds) {
+    const image = data.images.find((img) => img.id === imageId);
+    if (image && image.safeForPlayers === false) {
+      store.patchImage(image.id, { safeForPlayers: true });
+    }
+  }
+}
 
 function locationLink(state: LocationState): string {
   return `/map?selected=${encodeURIComponent(state.id)}`;
@@ -88,7 +116,13 @@ export function PlayerVisibilityPage() {
                     <small>{state.type ?? locationTitle(data, state.locationId)} · {state.status}</small>
                   </span>
                   <Link to={locationLink(state)}>карта</Link>
-                  <button onClick={() => store.patchLocationState(state.id, { visibleToPlayers: !visible })}>
+                  <button
+                    onClick={() =>
+                      visible
+                        ? store.patchLocationState(state.id, { visibleToPlayers: false })
+                        : revealLocationAndItsImages(store, data, state)
+                    }
+                  >
                     {visible ? 'Скрыть' : 'Показать'}
                   </button>
                 </li>
@@ -129,7 +163,11 @@ export function PlayerVisibilityPage() {
                     <small>{npc.role} · {locationTitle(data, npc.location)}</small>
                   </span>
                   <Link to={`/npc?selected=${encodeURIComponent(npc.id)}`}>карточка</Link>
-                  <button onClick={() => store.patchNpc(npc.id, { visibleToPlayers: !visible })}>
+                  <button
+                    onClick={() =>
+                      visible ? store.patchNpc(npc.id, { visibleToPlayers: false }) : revealNpcAndItsImage(store, data, npc)
+                    }
+                  >
                     {visible ? 'Скрыть' : 'Показать'}
                   </button>
                 </li>

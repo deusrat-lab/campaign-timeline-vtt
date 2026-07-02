@@ -261,7 +261,16 @@ export function EmbeddedCompanionWindow({
     const loc = npc ? data.locations.find((l) => l.id === npc.location) : undefined;
     const shop = npc ? data.shops.find((s) => s.ownerNpcId === npc.id) : undefined;
     body = npc ? (
-      <CompanionNpcCard npc={npc} locationName={loc?.name} shop={shop} quests={data.quests} images={data.images} onOpenQuest={openQuest} onOpenShop={openShop} />
+      <CompanionNpcCard
+        npc={npc}
+        locationName={loc?.name}
+        shop={shop}
+        quests={data.quests}
+        images={data.images}
+        onOpenQuest={openQuest}
+        onOpenShop={openShop}
+        onOpenLocation={loc ? () => openLocation(loc.id) : undefined}
+      />
     ) : (
       <p className="muted">NPC не найден.</p>
     );

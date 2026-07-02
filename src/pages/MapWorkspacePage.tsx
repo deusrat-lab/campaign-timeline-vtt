@@ -506,6 +506,45 @@ function isMarketLikeLocation(ls: LocationState): boolean {
   return MARKET_TYPE_KEYWORDS.some((kw) => haystack.includes(kw));
 }
 
+/**
+ * A real bug report: DM marks an NPC/location visible to players, but its
+ * own portrait/art stayed invisible — `image.safeForPlayers` is a SEPARATE
+ * flag from the NPC's/location's own `visibleToPlayers`, so toggling one
+ * never touched the other. 225 of 420 images in this campaign default to
+ * `safeForPlayers: false` (bulk-imported that way), so this silent mismatch
+ * was common, not an edge case — a player clicking an NPC the DM just
+ * revealed would see "Нет изображения" even though a portrait exists and is
+ * already attached.
+ *
+ * Fix: revealing an NPC/location to players also reveals ONLY the image(s)
+ * already deliberately attached to that exact entity (the NPC's own
+ * `.image`, or the location state's own curated `.imageIds`) — never
+ * anything merely tagged/related elsewhere. Hiding never cascades the other
+ * way (an image the DM wants to keep visible in a gallery isn't re-hidden
+ * just because one NPC using it gets hidden again).
+ *
+ * Module-scope (not a closure inside MapWorkspacePage) because
+ * LocationSidePanel below is a separate component with its own
+ * store/data — both call these with their own local values.
+ */
+function revealNpcAndItsImage(store: ReturnType<typeof useCampaignStore>, data: CampaignData | null, npc: DmNpc) {
+  store.patchNpc(npc.id, { visibleToPlayers: true });
+  const image = npc.image ? data?.images.find((img) => img.id === npc.image) : undefined;
+  if (image && image.safeForPlayers === false) {
+    store.patchImage(image.id, { safeForPlayers: true });
+  }
+}
+
+function revealLocationAndItsImages(store: ReturnType<typeof useCampaignStore>, data: CampaignData | null, ls: LocationState) {
+  store.patchLocationState(ls.id, { visibleToPlayers: true });
+  for (const imageId of ls.imageIds) {
+    const image = data?.images.find((img) => img.id === imageId);
+    if (image && image.safeForPlayers === false) {
+      store.patchImage(image.id, { safeForPlayers: true });
+    }
+  }
+}
+
 export function MapWorkspacePage() {
   const { data, loading, error } = useCampaignData();
   const store = useCampaignStore();
@@ -952,6 +991,11 @@ export function MapWorkspacePage() {
   // Tracks which camera key `view` currently represents, so we only swap the
   // camera when the user actually switches arc/level/map — never on every render.
   const activeCameraKeyRef = useRef<string | null>(null);
+  // One-shot guards for the URL-param driven effects below (?battleMap= and
+  // ?placeKind=/?placeId=) — see the comments on those effects for why a ref
+  // is required and not just the param going null.
+  const handledBattleMapParamRef = useRef<string | null>(null);
+  const handledPlaceParamRef = useRef<string | null>(null);
 
   // Measured size of the outer (overflow:hidden) map viewport, used to compute
   // the "fit to screen" base scale for the inner transformed image layer.
@@ -1022,7 +1066,18 @@ export function MapWorkspacePage() {
   // hook call must run unconditionally).
   useEffect(() => {
     if (!mapViewportEl) return;
-    const update = () => setViewportSize({ width: mapViewportEl.clientWidth, height: mapViewportEl.clientHeight });
+    // Bail out when the measured size hasn't actually changed — committing an
+    // identical {width,height} object still triggers a re-render, and if
+    // anything downstream of viewportSize affects this element's own layout
+    // (e.g. content that occasionally overflows enough to toggle a
+    // scrollbar), that re-render can cause the observer to fire again with
+    // the size flipping back, forming a self-sustaining ResizeObserver
+    // feedback loop that never settles (seen live as a recurring "Maximum
+    // update depth exceeded" every few seconds, indefinitely).
+    const update = () => {
+      const next = { width: mapViewportEl.clientWidth, height: mapViewportEl.clientHeight };
+      setViewportSize((prev) => (prev.width === next.width && prev.height === next.height ? prev : next));
+    };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(mapViewportEl);
@@ -1030,11 +1085,19 @@ export function MapWorkspacePage() {
   }, [mapViewportEl]);
 
   // Keep the URL's ?selected= param in sync without triggering navigation away from the map.
+  // Functional updater, NOT `new URLSearchParams(searchParams)`: this effect's
+  // closure can hold a STALE searchParams snapshot (react-router applies
+  // setSearchParams inside a low-priority transition, so several effects can
+  // run against the pre-navigation params). Rebuilding the whole URL from a
+  // stale snapshot silently resurrected params another effect had just
+  // deleted — e.g. ?battleMap=, re-triggering the battle-start effect.
   useEffect(() => {
-    const next = new URLSearchParams(searchParams);
-    if (selectedLocationStateId) next.set('selected', selectedLocationStateId);
-    else next.delete('selected');
-    setSearchParams(next, { replace: true });
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (selectedLocationStateId) next.set('selected', selectedLocationStateId);
+      else next.delete('selected');
+      return next;
+    }, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLocationStateId]);
 
@@ -1046,7 +1109,19 @@ export function MapWorkspacePage() {
   }, [requestedLibraryCategory]);
 
   useEffect(() => {
-    if (!data || !requestedPlaceKind || !requestedPlaceId || store.mode === 'player-view') return;
+    if (!requestedPlaceKind || !requestedPlaceId) {
+      handledPlaceParamRef.current = null;
+      return;
+    }
+    if (!data || store.mode === 'player-view') return;
+    // One-shot guard (see handledBattleMapParamRef below for the full story):
+    // `data` changes identity on every store mutation, and the URL cleanup
+    // lands inside a react-router transition that store churn can keep
+    // interrupting — without the ref this effect would re-arm placement over
+    // and over off the still-present params.
+    const key = `${requestedPlaceKind}:${requestedPlaceId}`;
+    if (handledPlaceParamRef.current === key) return;
+    handledPlaceParamRef.current = key;
     if (store.mode !== 'dm-edit') store.setMode('dm-edit');
     cancelAllEditTools();
     if (requestedPlaceKind === 'npc' && data.npcs.some((n) => n.id === requestedPlaceId)) {
@@ -1059,21 +1134,80 @@ export function MapWorkspacePage() {
       setPlacingContentEntity({ type: requestedPlaceKind as 'quest' | 'enemy' | 'image', sourceId: requestedPlaceId });
     }
     setLibraryDrawerOpen(false);
-    const next = new URLSearchParams(searchParams);
-    next.delete('placeKind');
-    next.delete('placeId');
-    setSearchParams(next, { replace: true });
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('placeKind');
+      next.delete('placeId');
+      return next;
+    }, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, requestedPlaceKind, requestedPlaceId]);
 
+  // One-shot guard for the ?battleMap= auto-start. Without it this effect
+  // looped forever when a battle was opened from the Library
+  // (/map?battleMap=...): startEmbeddedBattle mutates the store, `data` is
+  // memoized over the whole overlay so it gets a new identity on EVERY store
+  // mutation, and the setSearchParams cleanup is applied by react-router
+  // inside a low-priority transition that each new store update interrupts —
+  // so requestedBattleMapId never went null and every re-run started a brand
+  // new empty battle (~every 50ms). Symptoms in the wild: tokens placed on
+  // the board vanished instantly (the fresh battle overwrote them), the
+  // battle window looked like it kept "reopening", localStorage was spammed
+  // with battle-<timestamp> writes, and React eventually threw "Maximum
+  // update depth exceeded". The ref makes the start strictly once per
+  // requested id; it resets when the param finally leaves the URL so a later
+  // launch of the same map works again.
   useEffect(() => {
-    if (!data || !requestedBattleMapId || store.mode === 'player-view') return;
-    startEmbeddedBattle(requestedBattleMapId, selectedLocationStateId ?? undefined);
-    const next = new URLSearchParams(searchParams);
-    next.delete('battleMap');
-    setSearchParams(next, { replace: true });
+    if (!requestedBattleMapId) {
+      handledBattleMapParamRef.current = null;
+      return;
+    }
+    if (!data || store.mode === 'player-view') return;
+    if (handledBattleMapParamRef.current === requestedBattleMapId) return;
+    handledBattleMapParamRef.current = requestedBattleMapId;
+    // If a battle for this exact map is already running (typical case: the
+    // page was reloaded while ?battleMap= was still in the URL), KEEP it —
+    // restarting would wipe every token the DM already placed. The param is
+    // purely "make sure this map's battle is open", not "reset the battle";
+    // an explicit reset is always available via Закончить бой + relaunch.
+    if (store.activeBattle?.battleMapId !== requestedBattleMapId) {
+      startEmbeddedBattle(requestedBattleMapId, selectedLocationStateId ?? undefined);
+    }
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('battleMap');
+      return next;
+    }, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, requestedBattleMapId, selectedLocationStateId]);
+
+  // Retry-cleanup for the one-shot params above. The delete issued right
+  // after handling can silently lose to a concurrent setSearchParams from
+  // another effect: react-router applies updates inside low-priority
+  // transitions, so a competing write (e.g. the ?selected= sync) can be based
+  // on a pre-delete snapshot and resurrect the param (observed live as
+  // "replace /map" immediately followed by "replace /map?battleMap=..."). A
+  // lingering ?battleMap= is not cosmetic — a later reload would re-trigger
+  // the auto-start for it. This effect keys on searchParams itself, so any
+  // resurrection re-runs it and the delete eventually lands on the settled
+  // router state; it only touches params whose handled-ref matches, so it can
+  // never suppress a genuinely new request.
+  useEffect(() => {
+    const staleBattleParam = !!requestedBattleMapId && handledBattleMapParamRef.current === requestedBattleMapId;
+    const placeKey = requestedPlaceKind && requestedPlaceId ? `${requestedPlaceKind}:${requestedPlaceId}` : null;
+    const stalePlaceParams = !!placeKey && handledPlaceParamRef.current === placeKey;
+    if (!staleBattleParam && !stalePlaceParams) return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (staleBattleParam) next.delete('battleMap');
+      if (stalePlaceParams) {
+        next.delete('placeKind');
+        next.delete('placeId');
+      }
+      return next;
+    }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, requestedBattleMapId, requestedPlaceKind, requestedPlaceId]);
 
   useEffect(() => {
     if (!data || !selectedLocationStateId) return;
@@ -7622,114 +7756,127 @@ export function MapWorkspacePage() {
                     </button>
                   </div>
                 )}
-                <p className="muted">Тип: {MOVABLE_ENTITY_TYPE_LABELS[m.entityType]}</p>
-                <p className="muted">ID сущности: {m.entityId}</p>
-                <p className="muted">Состояние: {MOVEMENT_STATE_LABELS[m.movementState]}</p>
-                <p className="muted">
-                  Позиция: {m.currentPosition ? `${m.currentPosition.x.toFixed(2)}, ${m.currentPosition.y.toFixed(2)}` : '— не задана —'}
-                </p>
-                <p className="muted">Локация: {locLabel ?? '— не задана —'}</p>
-                <p className="muted">Маршрут: {routeLabel ?? '— не задан —'}</p>
-                <p className="muted">
-                  Видна игрокам: {m.visibleInPlayerView ? 'да' : 'нет'} (сейчас игрокам всё равно не показывается ни одна
-                  подвижная сущность — см. getPlayerSafeMovableEntities)
-                </p>
-                <p className="muted">Обновлено: {new Date(m.updatedAt).toLocaleString('ru-RU')}</p>
+                {/* Quest/enemy/image markers are static one-off pins — a DM
+                    placing "this quest happens here" never wants patrol
+                    machinery. Before this, EVERY marker (including these)
+                    showed the full movement/route toolkit built for NPCs,
+                    which was confusing clutter unrelated to what a quest pin
+                    actually needs (see task: "должна быть обычная
+                    карточка"). NPCs and any not-yet-resolved marker type
+                    (enemy_group/caravan/army/custom) keep the full toolkit —
+                    those genuinely can move/patrol. */}
+                {!(resolvedQuest || resolvedEnemy || resolvedImage) && (
+                  <>
+                    <p className="muted">Тип: {MOVABLE_ENTITY_TYPE_LABELS[m.entityType]}</p>
+                    <p className="muted">ID сущности: {m.entityId}</p>
+                    <p className="muted">Состояние: {MOVEMENT_STATE_LABELS[m.movementState]}</p>
+                    <p className="muted">
+                      Позиция: {m.currentPosition ? `${m.currentPosition.x.toFixed(2)}, ${m.currentPosition.y.toFixed(2)}` : '— не задана —'}
+                    </p>
+                    <p className="muted">Локация: {locLabel ?? '— не задана —'}</p>
+                    <p className="muted">Маршрут: {routeLabel ?? '— не задан —'}</p>
+                    <p className="muted">
+                      Видна игрокам: {m.visibleInPlayerView ? 'да' : 'нет'} (сейчас игрокам всё равно не показывается ни одна
+                      подвижная сущность — см. getPlayerSafeMovableEntities)
+                    </p>
+                    <p className="muted">Обновлено: {new Date(m.updatedAt).toLocaleString('ru-RU')}</p>
 
-                <label>
-                  Состояние движения
-                  <select
-                    value={m.movementState}
-                    onChange={(e) => store.updateMovableEntity(m.id, { movementState: e.target.value as MovementState })}
-                  >
-                    {MOVEMENT_STATE_OPTIONS.map((s) => (
-                      <option key={s} value={s}>{MOVEMENT_STATE_LABELS[s]}</option>
-                    ))}
-                  </select>
-                </label>
+                    <label>
+                      Состояние движения
+                      <select
+                        value={m.movementState}
+                        onChange={(e) => store.updateMovableEntity(m.id, { movementState: e.target.value as MovementState })}
+                      >
+                        {MOVEMENT_STATE_OPTIONS.map((s) => (
+                          <option key={s} value={s}>{MOVEMENT_STATE_LABELS[s]}</option>
+                        ))}
+                      </select>
+                    </label>
 
-                <div className="actions">
-                  <button
-                    onClick={() => {
-                      // Arming manual move is itself a "next click does X"
-                      // tool, same family as quick pin/placement/route/area
-                      // edit — cancel any other armed tool first so two
-                      // single-click actions never race for the same click.
-                      // cancelAllEditTools() does not touch
-                      // selectedMovableEntityId, so this panel stays open.
-                      cancelAllEditTools();
-                      setManualMoveArmedForEntityId(m.id);
-                    }}
-                    disabled={manualMoveArmedForEntityId === m.id}
-                  >
-                    {manualMoveArmedForEntityId === m.id ? 'Кликните по карте…' : 'Переместить вручную'}
-                  </button>
-                  {manualMoveArmedForEntityId === m.id && (
-                    <button onClick={() => setManualMoveArmedForEntityId(null)}>Отменить перемещение</button>
-                  )}
-                  {partyMarkerPoint && (
-                    <button onClick={() => applyPartyPositionToMovableEntity(m.id)}>
-                      Использовать позицию партии
-                    </button>
-                  )}
-                </div>
+                    <div className="actions">
+                      <button
+                        onClick={() => {
+                          // Arming manual move is itself a "next click does X"
+                          // tool, same family as quick pin/placement/route/area
+                          // edit — cancel any other armed tool first so two
+                          // single-click actions never race for the same click.
+                          // cancelAllEditTools() does not touch
+                          // selectedMovableEntityId, so this panel stays open.
+                          cancelAllEditTools();
+                          setManualMoveArmedForEntityId(m.id);
+                        }}
+                        disabled={manualMoveArmedForEntityId === m.id}
+                      >
+                        {manualMoveArmedForEntityId === m.id ? 'Кликните по карте…' : 'Переместить вручную'}
+                      </button>
+                      {manualMoveArmedForEntityId === m.id && (
+                        <button onClick={() => setManualMoveArmedForEntityId(null)}>Отменить перемещение</button>
+                      )}
+                      {partyMarkerPoint && (
+                        <button onClick={() => applyPartyPositionToMovableEntity(m.id)}>
+                          Использовать позицию партии
+                        </button>
+                      )}
+                    </div>
 
-                <label>
-                  Привязать к маршруту
-                  <select
-                    value={m.currentRouteId ?? ''}
-                    onChange={(e) => {
-                      const routeId = e.target.value || undefined;
-                      store.updateMovableEntity(m.id, {
-                        currentRouteId: routeId,
-                        movementState: routeId ? 'travelling' : m.movementState,
-                      });
-                    }}
-                  >
-                    <option value="">— маршрут не выбран —</option>
-                    {routes.map((r) => (
-                      <option key={r.id} value={r.id}>{r.label ?? r.id}</option>
-                    ))}
-                  </select>
-                </label>
-                <div className="actions">
-                  <button
-                    onClick={() => {
-                      if (!selectedRouteId) return;
-                      store.updateMovableEntity(m.id, { currentRouteId: selectedRouteId, movementState: 'travelling' });
-                    }}
-                    disabled={!selectedRouteId}
-                    title={selectedRouteId ? undefined : 'Сначала выберите маршрут на карте'}
-                  >
-                    Привязать к выбранному маршруту
-                  </button>
-                  <button onClick={() => store.updateMovableEntity(m.id, { currentRouteId: undefined })} disabled={!m.currentRouteId}>
-                    Снять маршрут
-                  </button>
-                </div>
+                    <label>
+                      Привязать к маршруту
+                      <select
+                        value={m.currentRouteId ?? ''}
+                        onChange={(e) => {
+                          const routeId = e.target.value || undefined;
+                          store.updateMovableEntity(m.id, {
+                            currentRouteId: routeId,
+                            movementState: routeId ? 'travelling' : m.movementState,
+                          });
+                        }}
+                      >
+                        <option value="">— маршрут не выбран —</option>
+                        {routes.map((r) => (
+                          <option key={r.id} value={r.id}>{r.label ?? r.id}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="actions">
+                      <button
+                        onClick={() => {
+                          if (!selectedRouteId) return;
+                          store.updateMovableEntity(m.id, { currentRouteId: selectedRouteId, movementState: 'travelling' });
+                        }}
+                        disabled={!selectedRouteId}
+                        title={selectedRouteId ? undefined : 'Сначала выберите маршрут на карте'}
+                      >
+                        Привязать к выбранному маршруту
+                      </button>
+                      <button onClick={() => store.updateMovableEntity(m.id, { currentRouteId: undefined })} disabled={!m.currentRouteId}>
+                        Снять маршрут
+                      </button>
+                    </div>
 
-                <div className="actions">
-                  <button
-                    onClick={() => {
-                      if (!selectedLocationStateId) return;
-                      store.updateMovableEntity(m.id, { currentLocationStateId: selectedLocationStateId });
-                    }}
-                    disabled={!selectedLocationStateId}
-                    title={selectedLocationStateId ? undefined : 'Сначала выберите локацию на карте'}
-                  >
-                    {/* Stage 6C.4B: pre-existing button, label widened — this
-                        sets the LINK ONLY (currentLocationStateId); it never
-                        moves currentPosition, so a marker stays exactly where
-                        it is on the map while gaining a location link. */}
-                    Связать с выбранной локацией
-                  </button>
-                  <button
-                    onClick={() => store.updateMovableEntity(m.id, { currentLocationStateId: undefined })}
-                    disabled={!m.currentLocationStateId}
-                  >
-                    Снять привязку к локации
-                  </button>
-                </div>
+                    <div className="actions">
+                      <button
+                        onClick={() => {
+                          if (!selectedLocationStateId) return;
+                          store.updateMovableEntity(m.id, { currentLocationStateId: selectedLocationStateId });
+                        }}
+                        disabled={!selectedLocationStateId}
+                        title={selectedLocationStateId ? undefined : 'Сначала выберите локацию на карте'}
+                      >
+                        {/* Stage 6C.4B: pre-existing button, label widened — this
+                            sets the LINK ONLY (currentLocationStateId); it never
+                            moves currentPosition, so a marker stays exactly where
+                            it is on the map while gaining a location link. */}
+                        Связать с выбранной локацией
+                      </button>
+                      <button
+                        onClick={() => store.updateMovableEntity(m.id, { currentLocationStateId: undefined })}
+                        disabled={!m.currentLocationStateId}
+                      >
+                        Снять привязку к локации
+                      </button>
+                    </div>
+                  </>
+                )}
 
                 <div className="actions">
                   <button
@@ -8493,8 +8640,32 @@ export function MapWorkspacePage() {
               into the large object window below. General, non-object tools
               (Маршруты/Объекты/Не размещено) are still here but collapsed
               under "Ещё инструменты" instead of competing as top-level tabs. */}
-          {selectedLs && selectedVisible && !routeWorkspaceActive && (
+          {selectedLs && selectedVisible && !routeWorkspaceActive && (() => {
+            // Stage: the compact overview panel used to show title/badges/
+            // description/counts and NO image at all — a player clicking a
+            // location marker (or the DM checking what a player would see)
+            // got a wall of text with zero visual confirmation, even when
+            // the location has images explicitly marked visible to players.
+            // Resolve the same "first player-safe image" this panel's own
+            // "Изображения:" count chip below already filters by
+            // (image.safeForPlayers !== false in Player View), so the
+            // thumbnail and the count never disagree.
+            const heroImageId = selectedLs.imageIds.find(
+              (id) => !isPlayerView || data.images.find((img) => img.id === id)?.safeForPlayers !== false,
+            );
+            const heroImage = heroImageId ? data.images.find((img) => img.id === heroImageId) : undefined;
+            return (
             <div className="object-overview">
+              {heroImage && (
+                <button
+                  type="button"
+                  className="object-overview-hero"
+                  onClick={() => { setObjectWindowSection('overview'); setObjectWindowOpen(true); }}
+                  title="Открыть карточку"
+                >
+                  <img src={heroImage.thumbnailSrc ?? heroImage.src} alt={selectedLs.title} />
+                </button>
+              )}
               <div className="object-overview-header">
                 <div>
                   <h3>{selectedLs.title}</h3>
@@ -8540,7 +8711,9 @@ export function MapWorkspacePage() {
                   <button
                     className="btn-secondary btn-compact"
                     onClick={() =>
-                      store.patchLocationState(selectedLs.id, { visibleToPlayers: selectedLs.visibleToPlayers === false })
+                      selectedLs.visibleToPlayers === false
+                        ? revealLocationAndItsImages(store, data, selectedLs)
+                        : store.patchLocationState(selectedLs.id, { visibleToPlayers: false })
                     }
                   >
                     {selectedLs.visibleToPlayers === false ? 'Показать игрокам' : 'Скрыть от игроков'}
@@ -8593,7 +8766,9 @@ export function MapWorkspacePage() {
                   <button
                     className="btn-secondary btn-compact"
                     onClick={() =>
-                      store.patchLocationState(selectedLs.id, { visibleToPlayers: selectedLs.visibleToPlayers === false })
+                      selectedLs.visibleToPlayers === false
+                        ? revealLocationAndItsImages(store, data, selectedLs)
+                        : store.patchLocationState(selectedLs.id, { visibleToPlayers: false })
                     }
                   >
                     {selectedLs.visibleToPlayers === false ? 'Показать локацию' : 'Скрыть локацию'}
@@ -8608,7 +8783,7 @@ export function MapWorkspacePage() {
                           <button
                             key={npc.id}
                             className={visible ? 'player-visibility-chip player-visibility-chip--visible' : 'player-visibility-chip'}
-                            onClick={() => store.patchNpc(npc.id, { visibleToPlayers: !visible })}
+                            onClick={() => (visible ? store.patchNpc(npc.id, { visibleToPlayers: false }) : revealNpcAndItsImage(store, data, npc))}
                             title={visible ? 'Скрыть NPC от игроков' : 'Показать NPC игрокам'}
                           >
                             {visible ? 'виден' : 'скрыт'} · {npc.name}
@@ -8740,7 +8915,8 @@ export function MapWorkspacePage() {
                 </div>
               )}
             </div>
-          )}
+            );
+          })()}
           {isEditMode && !selectedLs && !routeWorkspaceActive && (
             <>
               <p className="side-panel-empty">Выберите точку на карте или откройте библиотеку.</p>
@@ -9557,7 +9733,12 @@ export function MapWorkspacePage() {
         <EmbeddedBattleOverlay
           battle={store.activeBattle}
           battleMap={data.battleMaps.find((bm) => bm.id === store.activeBattle?.battleMapId)}
-          enemies={enemiesForArc}
+          // Full enemy list, NOT enemiesForArc: a battle's map can belong to a
+          // different arc than the currently selected one (e.g. running the
+          // Arc 1 "Лагерь Разбойников" story fight while the app is switched
+          // to Арка 2), and arc-scoping here silently hid every story enemy
+          // of the battle's own arc. The overlay has its own Арка filter.
+          enemies={data.enemies}
           players={data.players}
           images={data.images}
           locations={data.locations}
@@ -9608,6 +9789,7 @@ function PlayerSafeCompanionWindow({
   const openQuest = (id: string) => onOpen({ type: 'quest', id });
   const openNpc = (id: string) => onOpen({ type: 'npc', id });
   const openImage = (id: string) => onOpen({ type: 'image', id });
+  const openLocation = (id: string) => onOpen({ type: 'location', id });
 
   if (entity.type === 'npc') {
     const npc = data.npcs.find((n) => n.id === entity.id && n.visibleToPlayers === true);
@@ -9629,6 +9811,7 @@ function PlayerSafeCompanionWindow({
           quests={safeQuests}
           images={safeImages}
           onOpenQuest={openQuest}
+          onOpenLocation={npc.location ? openLocation : undefined}
         />
       );
     }
@@ -12505,7 +12688,7 @@ function LocationSidePanel({
             return (
               <p>
                 <strong>Владелец:</strong> {ownerNpc.name}
-                {!isPlayerView && visibilityChip(visible, 'владелец', () => store.patchNpc(ownerNpc.id, { visibleToPlayers: !visible }))}
+                {!isPlayerView && visibilityChip(visible, 'владелец', () => (visible ? store.patchNpc(ownerNpc.id, { visibleToPlayers: false }) : revealNpcAndItsImage(store, data, ownerNpc)))}
               </p>
             );
           })()}
@@ -12524,7 +12707,7 @@ function LocationSidePanel({
                     return isPlayerView ? (
                       <span key={npc.id} className="status-badge">{npc.name}</span>
                     ) : (
-                      visibilityChip(visible, npc.name, () => store.patchNpc(npc.id, { visibleToPlayers: !visible }))
+                      visibilityChip(visible, npc.name, () => (visible ? store.patchNpc(npc.id, { visibleToPlayers: false }) : revealNpcAndItsImage(store, data, npc)))
                     );
                   })}
                 </div>
@@ -12564,7 +12747,7 @@ function LocationSidePanel({
             return (
               <p>
                 <strong>Владелец:</strong> {ownerNpc.name}
-                {!isPlayerView && visibilityChip(visible, 'владелец', () => store.patchNpc(ownerNpc.id, { visibleToPlayers: !visible }))}
+                {!isPlayerView && visibilityChip(visible, 'владелец', () => (visible ? store.patchNpc(ownerNpc.id, { visibleToPlayers: false }) : revealNpcAndItsImage(store, data, ownerNpc)))}
               </p>
             );
           })()}

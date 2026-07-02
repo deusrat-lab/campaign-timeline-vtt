@@ -34,9 +34,43 @@ import projectOverlaySnapshot from '../data/campaignOverlaySnapshot.json';
 import type { DmTavern, DmShop, DmImageItem, DmLocation, DmQuest, DmCustomEnemy, DmPlayer, DmEconomyReferenceItem } from '../types/dmCompanion';
 import { DELETED, EMPTY_OVERLAY, DEFAULT_CALENDAR } from './overlay';
 import type { CampaignOverlay, Patch } from './overlay';
+import { createHttpOverlayAdapter, createLocalStorageOverlayAdapter, readLegacyOverlayRaw } from './persistence/overlayStorage';
+import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
+import { API_BASE_URL } from '../config';
 
 const STORAGE_KEY = 'campaign-timeline-vtt:overlay:v2';
 const OLD_STORAGE_KEY = 'campaign-timeline-vtt:state:v1';
+// Every localStorage read/write for the overlay goes through this adapter —
+// see src/state/persistence/overlayStorage.ts for why (swapping in a
+// server-backed adapter later is then a one-line change here). Picks the
+// HTTP adapter only when this deployment is actually configured for a
+// backend (VITE_API_BASE_URL set, see .env.example) AND this browser
+// already has a token (captured from a `?token=` link, see authToken.ts) —
+// with neither set, behavior is byte-for-byte identical to before this
+// adapter existed: plain localStorage, no network calls at all.
+//
+// captureTokenFromUrl() is called AGAIN here (main.tsx also calls it) — not
+// redundant, it's the actual fix for a real bug this exact end-to-end test
+// caught: ES module top-level code runs in import order, and an imported
+// module's top-level statements ALWAYS run before the importing module's
+// own top-level code, regardless of where the import appears textually. So
+// main.tsx's call landed AFTER this file's own top-level adapter selection
+// had already run (main.tsx imports App.tsx imports ... imports this file),
+// meaning a token freshly captured from `?token=...` was never seen on that
+// same page load — first visit silently fell back to localStorage-only, and
+// only a manual reload (now finding the token main.tsx had stored a moment
+// too late) would pick up the HTTP adapter. captureTokenFromUrl() is
+// idempotent (a no-op once the URL's `?token=` is already stripped), so
+// calling it here too costs nothing and removes the ordering dependency
+// entirely.
+captureTokenFromUrl();
+const overlayStorage = (() => {
+  const token = API_BASE_URL ? getStoredToken() : null;
+  if (API_BASE_URL && token) {
+    return createHttpOverlayAdapter({ baseUrl: API_BASE_URL, token, cacheKey: STORAGE_KEY });
+  }
+  return createLocalStorageOverlayAdapter(STORAGE_KEY);
+})();
 
 // Bumped because the old auto-generated default route polylines were deleted
 // entirely in favor of a fully manual route builder. Any locally-stored route
@@ -190,12 +224,12 @@ function loadProjectSnapshot(): CampaignOverlay {
 
 function loadPersisted(): CampaignOverlay {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = overlayStorage.load();
     if (raw) {
       return normalizeOverlay(JSON.parse(raw) as Partial<CampaignOverlay>);
     }
     // Migrate the old v1 single-state shape if present, then drop it.
-    const oldRaw = localStorage.getItem(OLD_STORAGE_KEY);
+    const oldRaw = readLegacyOverlayRaw(OLD_STORAGE_KEY);
     if (oldRaw) {
       const old = JSON.parse(oldRaw);
       const migrated: CampaignOverlay = {
@@ -964,20 +998,37 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
   // "Saved" flash before the DM has touched anything.
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const isFirstSave = useRef(true);
-  const stateRef = useRef(state);
-
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+  // The last overlay JSON this tab either wrote to localStorage or imported
+  // FROM localStorage via a cross-tab storage event. Used to break the
+  // cross-tab feedback cycle: previously the dedupe compared the incoming
+  // value against JSON.stringify(state) — but state includes `mode` while
+  // the persisted value doesn't, so the comparison NEVER matched, every
+  // storage event triggered a redundant IMPORT_OVERLAY, and that import's
+  // own save effect wrote the (multi-megabyte) overlay right back. With two
+  // tabs open every save in one tab caused a full parse+import+re-write in
+  // the other; a tab holding stale state could even resurrect an already
+  // ended battle (activeBattle) by writing its old overlay back over the
+  // new one. Tracking the exact last-synced string kills both problems.
+  const lastSyncedJsonRef = useRef<string | null>(null);
+  // Set when the current state came from a cross-tab import — the very next
+  // save effect run must NOT write back, the value is already in storage.
+  const skipNextSaveRef = useRef(false);
 
   useEffect(() => {
     if (isFirstSave.current) {
       isFirstSave.current = false;
       return;
     }
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
     try {
       const { mode: _mode, ...persistedState } = state;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedState));
+      const json = JSON.stringify(persistedState);
+      if (json === lastSyncedJsonRef.current) return;
+      overlayStorage.save(json);
+      lastSyncedJsonRef.current = json;
       setSaveStatus('saved');
     } catch {
       setSaveStatus('error');
@@ -985,18 +1036,18 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
   }, [state]);
 
   useEffect(() => {
-    function onStorage(e: StorageEvent) {
-      if (e.key !== STORAGE_KEY || !e.newValue) return;
+    return overlayStorage.subscribe((newJson) => {
+      if (newJson === lastSyncedJsonRef.current) return;
       try {
-        if (e.newValue === JSON.stringify(stateRef.current)) return;
-        dispatch({ type: 'IMPORT_OVERLAY', overlay: JSON.parse(e.newValue) as CampaignOverlay });
+        const overlay = JSON.parse(newJson) as CampaignOverlay;
+        lastSyncedJsonRef.current = newJson;
+        skipNextSaveRef.current = true;
+        dispatch({ type: 'IMPORT_OVERLAY', overlay });
       } catch {
         // Ignore malformed external writes; the current tab keeps its last
         // valid in-memory overlay and the next valid save can resync it.
       }
-    }
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    });
   }, []);
 
   useEffect(() => {

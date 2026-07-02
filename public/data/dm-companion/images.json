@@ -4806,5 +4806,593 @@
       "greyholm-region",
       "location-art"
     ]
+  },
+  {
+    "id": "img-arc2-npc-torgrim-kamennyj-predel",
+    "title": "Торгрим Каменный Предел — портрет",
+    "src": "/images/uploads/arc2-npcs/torgrim-kamennyj-predel.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:torgrim-kamennyj-predel",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-roen-zubr",
+    "title": "Роэн Зубр — портрет",
+    "src": "/images/uploads/arc2-npcs/roen-zubr.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:roen-zubr",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-marek-dejn",
+    "title": "Марек Дейн — портрет",
+    "src": "/images/uploads/arc2-npcs/marek-dejn.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:marek-dejn",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-ilina-voss",
+    "title": "Илина Восс — портрет",
+    "src": "/images/uploads/arc2-npcs/ilina-voss.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:ilina-voss",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-varden-koul",
+    "title": "Варден Коул — портрет",
+    "src": "/images/uploads/arc2-npcs/varden-koul.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:varden-kol",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-sella-mir",
+    "title": "Селла Мир — портрет",
+    "src": "/images/uploads/arc2-npcs/sella-mir.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:sella-mir",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-nirs-chernilnik",
+    "title": "Нирс «Чернильник» — портрет",
+    "src": "/images/uploads/arc2-npcs/nirs-chernilnik.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:nirs-chernilnik",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-erd-vejn",
+    "title": "Эрд Вейн — портрет",
+    "src": "/images/uploads/arc2-npcs/erd-vejn.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:erd-vejn",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-mira-dobraya-tyotka",
+    "title": "Мира «Добрая Тётка» — портрет",
+    "src": "/images/uploads/arc2-npcs/mira-dobraya-tyotka.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:mira-dobraja-tyotka",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-taren-list",
+    "title": "Тарен Лист — портрет",
+    "src": "/images/uploads/arc2-npcs/taren-list.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:taren-list",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-shana-tyoplyj-hleb",
+    "title": "Шана Тёплый Хлеб — портрет",
+    "src": "/images/uploads/arc2-npcs/shana-tyoplyj-hleb.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:shana-tyoplyj-khleb",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-oldrik-mednyj-palec",
+    "title": "Олдрик Медный Палец — портрет",
+    "src": "/images/uploads/arc2-npcs/oldrik-mednyj-palec.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:oldrik-mednyj-palec",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-hadar",
+    "title": "Хадар — портрет",
+    "src": "/images/uploads/arc2-npcs/hadar.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:khadar",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-mejna",
+    "title": "Мейна — портрет",
+    "src": "/images/uploads/arc2-npcs/mejna.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:mejna",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-lira-myagkij-svet",
+    "title": "Лира Мягкий Свет — портрет",
+    "src": "/images/uploads/arc2-npcs/lira-myagkij-svet.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:k:npc:lira-mjagkij-svet",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-tomas-ejr",
+    "title": "Томас Эйр — портрет",
+    "src": "/images/uploads/arc2-npcs/tomas-ejr.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:a:npc:tomas-ejr",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-prefekt-ilaris-dorn",
+    "title": "Префект Иларис Дорн — портрет",
+    "src": "/images/uploads/arc2-npcs/prefekt-ilaris-dorn.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:a:npc:prefekt-dorn",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-rejna-kort",
+    "title": "Рейна Корт — портрет",
+    "src": "/images/uploads/arc2-npcs/rejna-kort.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:a:npc:rejna-kort",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-brinna-torval",
+    "title": "Бринна Торваль — портрет",
+    "src": "/images/uploads/arc2-npcs/brinna-torval.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:a:npc:brinna-torval",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-elias-marr",
+    "title": "Элиас Марр — портрет",
+    "src": "/images/uploads/arc2-npcs/elias-marr.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:a:npc:elias-marr",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-kargan-voss",
+    "title": "Карган Восс — портрет",
+    "src": "/images/uploads/arc2-npcs/kargan-voss.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:a:npc:kargan-voss",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-lajra-tenn",
+    "title": "Лайра Тенн — портрет",
+    "src": "/images/uploads/arc2-npcs/lajra-tenn.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:a:npc:lajra-tenn",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-nelli-tress",
+    "title": "Нелли Тресс — портрет",
+    "src": "/images/uploads/arc2-npcs/nelli-tress.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:a:npc:nelli-tress",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-orren-bell",
+    "title": "Оррен Белл — портрет",
+    "src": "/images/uploads/arc2-npcs/orren-bell.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:a:npc:orren-bell",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-soren-kel",
+    "title": "Сорен Кель — портрет",
+    "src": "/images/uploads/arc2-npcs/soren-kel.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:a:npc:soren-kel",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-marissa-fenn",
+    "title": "Марисса Фенн — портрет",
+    "src": "/images/uploads/arc2-npcs/marissa-fenn.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:a:npc:marissa-fenn",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-rekk-mednaya-metka",
+    "title": "Рекк Медная Метка — портрет",
+    "src": "/images/uploads/arc2-npcs/rekk-mednaya-metka.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:a:npc:rekk-mednaja-metka",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-kesh-arven",
+    "title": "Кеш Арвен — портрет",
+    "src": "/images/uploads/arc2-npcs/kesh-arven.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:a:npc:kesh-arven",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-tessa-rejn",
+    "title": "Тесса Рейн — портрет",
+    "src": "/images/uploads/arc2-npcs/tessa-rejn.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:n:npc:tessa-rejn",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-renar-blekmark",
+    "title": "Ренар Блекмарк — портрет",
+    "src": "/images/uploads/arc2-npcs/renar-blekmark.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:n:npc:renar-blekmark",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-sajla-sem-uzlov",
+    "title": "Сайла Семь Узлов — портрет",
+    "src": "/images/uploads/arc2-npcs/sajla-sem-uzlov.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:n:npc:sajla-sem-uzlov",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-urrik-tri-zamka",
+    "title": "Уррик Три Замка — портрет",
+    "src": "/images/uploads/arc2-npcs/urrik-tri-zamka.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:n:npc:urrik-tri-zamka",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-essa-bez-kolokolchika",
+    "title": "Эсса Без Колокольчика — портрет",
+    "src": "/images/uploads/arc2-npcs/essa-bez-kolokolchika.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:n:npc:essa-bez-kolokol",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-bald-krivoe-koleso",
+    "title": "Бальд Кривое Колесо — портрет",
+    "src": "/images/uploads/arc2-npcs/bald-krivoe-koleso.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:n:npc:bald-krivoe-koleso",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-nalla-mednaya-nit",
+    "title": "Налла Медная Нить — портрет",
+    "src": "/images/uploads/arc2-npcs/nalla-mednaya-nit.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:n:npc:nalla-mednaja-nit",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-kord-ven",
+    "title": "Корд Вен — портрет",
+    "src": "/images/uploads/arc2-npcs/kord-ven.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:n:npc:kord-ven",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-provost-sera-val",
+    "title": "Провост Сера Валь — портрет",
+    "src": "/images/uploads/arc2-npcs/provost-sera-val.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:auroleon:npc:sera-val",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-voennyj-obvinitel-ort-melnik",
+    "title": "Военный обвинитель Орт Мельник — портрет",
+    "src": "/images/uploads/arc2-npcs/voennyj-obvinitel-ort-melnik.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:auroleon:npc:ort-melnik",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-sudya-mejra-ollen",
+    "title": "Судья Мейра Оллен — портрет",
+    "src": "/images/uploads/arc2-npcs/sudya-mejra-ollen.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:auroleon:npc:meyra-ollen",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-registrator-piven-shest-perev",
+    "title": "Регистратор Пивен Шесть Перьев — портрет",
+    "src": "/images/uploads/arc2-npcs/registrator-piven-shest-perev.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:auroleon:npc:piven-shest-peryev",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-komissar-devra-klin",
+    "title": "Комиссар Девра Клин — портрет",
+    "src": "/images/uploads/arc2-npcs/komissar-devra-klin.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:auroleon:npc:devra-klin",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-ulda-varr",
+    "title": "Улда Варр — портрет",
+    "src": "/images/uploads/arc2-npcs/ulda-varr.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:auroleon:npc:ulda-varr",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-senna-ir",
+    "title": "Сенна Ир — портрет",
+    "src": "/images/uploads/arc2-npcs/senna-ir.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:auroleon:npc:senna-ir",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-sapyor-tarrek-mednyj-shov",
+    "title": "Сапёр Таррек Медный Шов — портрет",
+    "src": "/images/uploads/arc2-npcs/sapyor-tarrek-mednyj-shov.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:auroleon:npc:tarrek-mednyj-shov",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-majla-veresk",
+    "title": "Майла Вереск — портрет",
+    "src": "/images/uploads/arc2-npcs/majla-veresk.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:auroleon:npc:majla-veresk",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-fen-dalnyaya-liniya",
+    "title": "Фен Дальняя Линия — портрет",
+    "src": "/images/uploads/arc2-npcs/fen-dalnyaya-liniya.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:auroleon:npc:fen-dalnyaya-liniya",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-odrin-rovnoe-koleso",
+    "title": "Одрин Ровное Колесо — портрет",
+    "src": "/images/uploads/arc2-npcs/odrin-rovnoe-koleso.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:auroleon:npc:odrin-rovnoe-koleso",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-sael-rovnoe-koleso",
+    "title": "Саэль Ровное Колесо — портрет",
+    "src": "/images/uploads/arc2-npcs/sael-rovnoe-koleso.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:auroleon:npc:sael-rovnoe-koleso",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
+  },
+  {
+    "id": "img-arc2-npc-serzhant-hara-ness",
+    "title": "Сержант Хара Несс — портрет",
+    "src": "/images/uploads/arc2-npcs/serzhant-hara-ness.png",
+    "type": "npc",
+    "safeForPlayers": true,
+    "relatedEntity": "arc2:auroleon:npc:hara-ness",
+    "tags": [
+      "arc2-npc-portrait"
+    ],
+    "arcId": "arc-2"
   }
 ]

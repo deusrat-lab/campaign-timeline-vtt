@@ -292,14 +292,23 @@ export function EmbeddedBattleOverlay({
 }) {
   const store = useCampaignStore();
   const boardRef = useRef<HTMLDivElement | null>(null);
-  const selectedPaletteRef = useRef<PaletteItem | null>(null);
-  const terrainEditModeRef = useRef<TerrainEditMode>('off');
-  const panToolRef = useRef(false);
-  const isPlayerViewRef = useRef(isPlayerView);
+  // State-based callback ref (not a plain useRef + useEffect(..., [])) — the
+  // board can mount with zero measured size before layout settles (e.g. the
+  // very first paint of this overlay), which used to make fitCamera() lock
+  // in a bogus near-zero scale forever since its effect only re-ran when
+  // battleMap?.id/grid.width/grid.height changed, never when the element's
+  // actual measured size changed. Same fix shape as MapWorkspacePage's own
+  // viewportSize/mapViewportEl (see the comment there) — track the DOM node
+  // in state and re-fit via ResizeObserver whenever it actually resizes.
+  const [boardEl, setBoardEl] = useState<HTMLDivElement | null>(null);
   const [tokenDefs, setTokenDefs] = useState<BattleTokenDefinition[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>(battle.currentTurnCombatantId);
   const [selectedPalette, setSelectedPalette] = useState<PaletteItem | null>(null);
   const [enemySearch, setEnemySearch] = useState('');
+  // Defaults to the battle map's own arc — a story fight should open with its
+  // own story enemies in front (enemies without arcId are always included).
+  // «Арка: все» is one click away for cross-arc picks.
+  const [enemyArcFilter, setEnemyArcFilter] = useState<string>(battleMap?.arcId ?? 'all');
   const [enemyFilter, setEnemyFilter] = useState('all');
   const [enemyRoleFilter, setEnemyRoleFilter] = useState('all');
   const [enemyLocationFilter, setEnemyLocationFilter] = useState('all');
@@ -316,6 +325,14 @@ export function EmbeddedBattleOverlay({
   const [panTool, setPanTool] = useState(false);
   const [terrainPainting, setTerrainPainting] = useState(false);
   const [postMovePrompt, setPostMovePrompt] = useState<{ id: string; name: string } | null>(null);
+  const [blockedHint, setBlockedHint] = useState<string | null>(null);
+  const blockedHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showBlockedHint = useCallback((message: string) => {
+    setBlockedHint(message);
+    if (blockedHintTimerRef.current) clearTimeout(blockedHintTimerRef.current);
+    blockedHintTimerRef.current = setTimeout(() => setBlockedHint(null), 2000);
+  }, []);
 
   useEffect(() => {
     fetch('/data/battle-map-vtt/tokens.json')
@@ -351,17 +368,27 @@ export function EmbeddedBattleOverlay({
     if (!rect || !grid.width || !grid.height) return;
     const padding = 24;
     const scale = Math.max(0.2, Math.min(2.5, Math.min((rect.width - padding * 2) / grid.width, (rect.height - padding * 2) / grid.height)));
-    setCamera({
+    const next = {
       scale,
       x: (rect.width - grid.width * scale) / 2,
       y: (rect.height - grid.height * scale) / 2,
-    });
+    };
+    // Bail out on a no-op update — the ResizeObserver below re-invokes this on
+    // every observed resize, and committing an identical camera object each
+    // time is a needless render at best and, if anything downstream reacts to
+    // camera and nudges this element's own size, a self-sustaining feedback
+    // loop at worst.
+    setCamera((prev) => (prev.scale === next.scale && prev.x === next.x && prev.y === next.y ? prev : next));
   }
 
   useEffect(() => {
+    if (!boardEl) return;
     fitCamera();
+    const observer = new ResizeObserver(() => fitCamera());
+    observer.observe(boardEl);
+    return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [battleMap?.id, grid.width, grid.height]);
+  }, [boardEl, battleMap?.id, grid.width, grid.height]);
 
   useEffect(() => {
     if (!currentId) return;
@@ -370,7 +397,27 @@ export function EmbeddedBattleOverlay({
     setPostMovePrompt(null);
   }, [currentId]);
 
-  const enemyGroups = Array.from(new Set(enemies.flatMap((e) => [e.faction, ...(e.tags ?? [])]).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, 'ru'));
+  // "Группа" is the catch-all grouping filter: the free-text faction string,
+  // every tag, AND the resolved names of linked faction entities. The last
+  // part matters for Arc 2 enemies — they carry factionIds but an empty
+  // faction string, so without resolving ids to names whole groups were
+  // simply absent from this dropdown.
+  const factionNameById = (id: string) => {
+    const faction = factions.find((f) => f.id === id || f.name === id || f.shortName === id);
+    return faction?.name ?? faction?.shortName ?? id;
+  };
+  const enemyGroups = Array.from(
+    new Set(
+      enemies
+        .flatMap((e) => [
+          e.faction,
+          ...(e.tags ?? []),
+          ...[e.primaryFactionId, ...(e.factionIds ?? [])].filter(Boolean).map((id) => factionNameById(id as string)),
+        ])
+        .filter(Boolean) as string[],
+    ),
+  ).sort((a, b) => a.localeCompare(b, 'ru'));
+  const enemyArcOptions = Array.from(new Set(enemies.map((enemy) => enemy.arcId).filter((arc): arc is string => Boolean(arc)))).sort((a, b) => a.localeCompare(b, 'ru'));
   const enemyRoleOptions = Array.from(new Set(enemies.map((enemy) => enemy.role).filter((role): role is string => Boolean(role)))).sort((a, b) => a.localeCompare(b, 'ru'));
   const enemyLocationOptions = Array.from(new Set(enemies.flatMap((enemy) => enemy.locationIds ?? [])))
     .map((id) => ({ id, name: locations.find((loc) => loc.id === id)?.name ?? id }))
@@ -423,8 +470,16 @@ export function EmbeddedBattleOverlay({
   const enemyPalette: PaletteItem[] = enemies
     .filter((enemy) => {
       const q = enemySearch.trim().toLowerCase();
+      // Arc-less enemies are shared across arcs, so they pass every arc filter
+      // (same rule as MapWorkspacePage's own enemiesForArc scoping).
+      if (enemyArcFilter !== 'all' && enemy.arcId && enemy.arcId !== enemyArcFilter) return false;
       if (q && ![enemy.name, enemy.role, enemy.faction, enemy.baseMonsterName, ...(enemy.tags ?? [])].filter(Boolean).join(' ').toLowerCase().includes(q)) return false;
-      if (enemyFilter !== 'all' && enemy.faction !== enemyFilter && !enemy.tags?.includes(enemyFilter)) return false;
+      if (
+        enemyFilter !== 'all' &&
+        enemy.faction !== enemyFilter &&
+        !enemy.tags?.includes(enemyFilter) &&
+        ![enemy.primaryFactionId, ...(enemy.factionIds ?? [])].filter(Boolean).some((id) => factionNameById(id as string) === enemyFilter)
+      ) return false;
       if (enemyRoleFilter !== 'all' && enemy.role !== enemyRoleFilter) return false;
       if (enemyLocationFilter !== 'all' && !(enemy.locationIds ?? []).includes(enemyLocationFilter)) return false;
       if (enemyQuestFilter !== 'all' && !(enemy.questIds ?? []).includes(enemyQuestFilter)) return false;
@@ -448,6 +503,11 @@ export function EmbeddedBattleOverlay({
       } satisfies PaletteItem;
     });
 
+  const boardRefCallback = useCallback((node: HTMLDivElement | null) => {
+    boardRef.current = node;
+    setBoardEl(node);
+  }, []);
+
   const imagePointFromClient = useCallback((clientX: number, clientY: number) => {
     const rect = boardRef.current?.getBoundingClientRect();
     if (!rect) return null;
@@ -466,13 +526,15 @@ export function EmbeddedBattleOverlay({
     return point ? cellFromImagePoint(grid, point.x, point.y) : null;
   }
 
-  function cellFromClick(e: React.MouseEvent<HTMLElement>) {
-    const point = imagePointFromClient(e.clientX, e.clientY);
-    return point ? cellFromImagePoint(grid, point.x, point.y) : null;
-  }
-
   const placePaletteItem = useCallback((item: PaletteItem, cell: BattleCell) => {
-    if (terrainAt(terrainCells, cell)?.type === 'blocked' || tokenAt(battle.combatants, cell)) return;
+    if (terrainAt(terrainCells, cell)?.type === 'blocked') {
+      showBlockedHint('Клетка занята стеной — уберите террейн или выберите другую клетку');
+      return;
+    }
+    if (tokenAt(battle.combatants, cell)) {
+      showBlockedHint('В этой клетке уже стоит токен');
+      return;
+    }
     const player = item.kind === 'player' ? players.find((p) => p.id === item.sourceId) : undefined;
     const enemy = item.kind === 'enemy' ? enemies.find((e) => e.id === item.sourceId) : undefined;
     const combatant = player
@@ -493,7 +555,7 @@ export function EmbeddedBattleOverlay({
     setSelectedId(combatant.id);
     setSelectedPalette(null);
     setHoverCell(null);
-  }, [battle.combatants, battle.currentTurnCombatantId, enemies, players, store, terrainCells]);
+  }, [battle.combatants, battle.currentTurnCombatantId, enemies, players, showBlockedHint, store, terrainCells]);
 
   function nextTurn() {
     if (!ordered.length) return;
@@ -518,13 +580,16 @@ export function EmbeddedBattleOverlay({
   }
 
   function handleBoardPointerDown(e: React.PointerEvent<HTMLElement>) {
+    // Placement itself happens on pointerUp (see onPointerUp below) — a single
+    // source of truth instead of also placing here, in the JSX onClick, and in
+    // a separate capture-phase click listener. Under a real click those three
+    // used to fire back-to-back off stale `battle.combatants`/`selectedPalette`
+    // closures (React hasn't flushed the previous placement's state update
+    // yet), so a fast click could silently overwrite its own just-placed
+    // token with nothing, or drop the placement entirely. Still swallow the
+    // pointerdown here so it doesn't fall through to the panning branch below.
     if (!isPlayerView && selectedPalette && terrainEditMode === 'off' && !panTool) {
-      const cell = cellFromEvent(e);
-      if (cell) {
-        placePaletteItem(selectedPalette, cell);
-        e.preventDefault();
-        e.stopPropagation();
-      }
+      e.preventDefault();
       return;
     }
     if (terrainEditMode !== 'off' && !isPlayerView) {
@@ -605,29 +670,6 @@ export function EmbeddedBattleOverlay({
   const visibleCombatants = isPlayerView ? battle.combatants : battle.combatants;
   const selectedRouteFeet = route ? route.feet : 0;
 
-  useEffect(() => {
-    selectedPaletteRef.current = selectedPalette;
-    terrainEditModeRef.current = terrainEditMode;
-    panToolRef.current = panTool;
-    isPlayerViewRef.current = isPlayerView;
-  }, [isPlayerView, panTool, selectedPalette, terrainEditMode]);
-
-  useEffect(() => {
-    const board = boardRef.current;
-    if (!board) return;
-    const onBoardClick = (event: MouseEvent) => {
-      const item = selectedPaletteRef.current;
-      if (isPlayerViewRef.current || !item || terrainEditModeRef.current !== 'off' || panToolRef.current) return;
-      const point = imagePointFromClient(event.clientX, event.clientY);
-      const cell = point ? cellFromImagePoint(grid, point.x, point.y) : null;
-      if (!cell) return;
-      event.preventDefault();
-      event.stopPropagation();
-      placePaletteItem(item, cell);
-    };
-    board.addEventListener('click', onBoardClick, true);
-    return () => board.removeEventListener('click', onBoardClick, true);
-  }, [grid, imagePointFromClient, placePaletteItem]);
 
   return (
     <div className="embedded-battle-backdrop">
@@ -694,6 +736,10 @@ export function EmbeddedBattleOverlay({
               <h4>Враги</h4>
               <input className="battle-palette-search" placeholder="Поиск врага, тег, фракция..." value={enemySearch} onChange={(e) => setEnemySearch(e.target.value)} />
               <div className="battle-enemy-filter-grid">
+                <select value={enemyArcFilter} onChange={(e) => setEnemyArcFilter(e.target.value)}>
+                  <option value="all">Арка: все</option>
+                  {enemyArcOptions.map((arc) => <option key={arc} value={arc}>{arc === 'arc-1' ? 'Арка 1' : arc === 'arc-2' ? 'Арка 2' : arc}</option>)}
+                </select>
                 <select value={enemyLocationFilter} onChange={(e) => setEnemyLocationFilter(e.target.value)}>
                   <option value="all">Локация: все</option>
                   {enemyLocationOptions.map((loc) => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
@@ -726,6 +772,7 @@ export function EmbeddedBattleOverlay({
                   type="button"
                   onClick={() => {
                     setEnemySearch('');
+                    setEnemyArcFilter('all');
                     setEnemyFilter('all');
                     setEnemyRoleFilter('all');
                     setEnemyLocationFilter('all');
@@ -776,7 +823,7 @@ export function EmbeddedBattleOverlay({
         </aside>
 
         <main
-          ref={boardRef}
+          ref={boardRefCallback}
           className={`embedded-battle-board embedded-battle-board--vtt embedded-battle-board--${battle.variantType}`}
           onWheel={(e) => {
             e.preventDefault();
@@ -784,11 +831,6 @@ export function EmbeddedBattleOverlay({
             setCamera((c) => ({ ...c, scale: Math.max(0.25, Math.min(4, c.scale * factor)) }));
           }}
           onPointerDown={handleBoardPointerDown}
-          onClick={(e) => {
-            if (isPlayerView || !selectedPalette || terrainEditMode !== 'off' || panTool) return;
-            const cell = cellFromClick(e);
-            if (cell) placePaletteItem(selectedPalette, cell);
-          }}
           onContextMenu={(e) => e.preventDefault()}
           onPointerMove={(e) => {
             if (panning) {
@@ -879,6 +921,7 @@ export function EmbeddedBattleOverlay({
             })}
           </div>
           {route && <div className={`battle-route-hud battle-route-hud--${route.status}`}>{route.status === 'valid' ? `Маршрут: ${selectedRouteFeet} фт` : route.status === 'too-far' ? `Недостаточно движения: ${selectedRouteFeet} фт` : 'Маршрут недоступен'}</div>}
+          {blockedHint && <div className="battle-route-hud battle-route-hud--blocked">{blockedHint}</div>}
           {postMovePrompt && postMovePrompt.id === selected?.id && (
             <div className="battle-next-turn-popover">
               <strong>{postMovePrompt.name} сделал ход</strong>

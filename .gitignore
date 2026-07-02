@@ -12,6 +12,20 @@ dist
 dist-ssr
 *.local
 
+# Local env overrides (server URLs, future backend tokens). .env.example is
+# the only env file meant to be committed.
+.env
+.env.*
+!.env.example
+
+# Leftover local archive (667MB, way over GitHub's 100MB/file hard limit —
+# not project source, never needed for build or deploy).
+battle-map-vtt*.zip
+
+# Raw localStorage overlay dumps (campaign secrets/spoilers) made as safety
+# backups during local sessions — not needed to build or deploy the app.
+backups/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

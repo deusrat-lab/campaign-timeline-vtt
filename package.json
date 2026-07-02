@@ -14,7 +14,8 @@
     "lint:runtime": "npm run lint:hooks && npm run typecheck && npm run build",
     "audit:data": "node scripts/audit-campaign-data.mjs",
     "snapshot:promote": "node scripts/promote-overlay-snapshot.mjs",
-    "preview": "vite preview --host 0.0.0.0 --port 5175 --open"
+    "preview": "vite preview --host 0.0.0.0 --port 5175 --open",
+    "start": "vite preview --host 0.0.0.0 --port ${PORT:-4173}"
   },
   "dependencies": {
     "react": "^19.2.6",

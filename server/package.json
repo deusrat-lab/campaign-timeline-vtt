@@ -1,0 +1,17 @@
+{
+  "name": "campaign-timeline-vtt-server",
+  "version": "0.1.0",
+  "description": "Self-hosted sync backend for campaign-timeline-vtt (see ../docs/SERVER_ROADMAP.md). One overlay blob, two static tokens, no accounts, no paid services.",
+  "type": "module",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "express": "^5.2.1",
+    "ws": "^8.21.0"
+  }
+}
