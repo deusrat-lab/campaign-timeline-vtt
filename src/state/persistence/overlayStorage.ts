@@ -113,7 +113,9 @@ export function readLegacyOverlayRaw(storageKey: string): string | null {
  */
 export function createHttpOverlayAdapter(options: {
   baseUrl: string;
-  token: string;
+  /** DM write token, or null for a read-only (player) session. Reads and the
+   * WebSocket work without it; only save()'s PUT needs it. */
+  token: string | null;
   cacheKey: string;
 }): OverlayStorageAdapter {
   const { baseUrl, token, cacheKey } = options;
@@ -121,7 +123,6 @@ export function createHttpOverlayAdapter(options: {
   // made it (see server/src/index.js's broadcast()) — random per page load
   // is fine, it only needs to be unique for the lifetime of one connection.
   const clientId = Math.random().toString(36).slice(2);
-  const authHeaders = { Authorization: `Bearer ${token}` };
 
   function loadLocalCache(): string | null {
     return localStorage.getItem(cacheKey);
@@ -143,9 +144,14 @@ export function createHttpOverlayAdapter(options: {
       // is synchronous (matching the localStorage adapter it's standing in
       // for).
       saveLocalCache(json);
+      // No token → read-only (player) session: never PUT. A player's UI is
+      // read-only anyway, but state can still churn locally (view mode,
+      // selection), and firing tokenless PUTs would just 403-spam the server
+      // and could clobber the DM's overlay with a player's local view state.
+      if (!token) return;
       fetch(`${baseUrl}/api/overlay?clientId=${encodeURIComponent(clientId)}`, {
         method: 'PUT',
-        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ overlay: JSON.parse(json) }),
       }).catch((err) => {
         console.error('[overlayStorage] failed to sync overlay to server:', err);
@@ -155,9 +161,10 @@ export function createHttpOverlayAdapter(options: {
       let cancelled = false;
 
       // One-shot reconciliation on mount: pick up whatever the server had
-      // that this browser's local cache doesn't (e.g. a DM's other device
-      // saved something while this tab was closed).
-      fetch(`${baseUrl}/api/overlay`, { headers: authHeaders })
+      // that this browser's local cache doesn't. For a player this is THE
+      // load — it replaces the empty baked-in snapshot with the DM's live
+      // overlay. Public read, no auth header needed.
+      fetch(`${baseUrl}/api/overlay`)
         .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`GET /api/overlay ${res.status}`))))
         .then((body: { overlay: unknown }) => {
           if (cancelled || !body.overlay) return;
@@ -170,7 +177,8 @@ export function createHttpOverlayAdapter(options: {
           console.error('[overlayStorage] failed to fetch overlay from server:', err);
         });
 
-      const wsUrl = `${baseUrl.replace(/^http/, 'ws')}/ws?token=${encodeURIComponent(token)}&clientId=${encodeURIComponent(clientId)}`;
+      const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+      const wsUrl = `${baseUrl.replace(/^http/, 'ws')}/ws?clientId=${encodeURIComponent(clientId)}${tokenParam}`;
       const ws = new WebSocket(wsUrl);
       ws.addEventListener('message', (event) => {
         if (cancelled) return;

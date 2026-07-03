@@ -2,7 +2,7 @@ import express from 'express';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { loadOverlay, saveOverlay } from './db.js';
-import { assertTokensConfigured, requireAuth, requireDm, roleForToken } from './auth.js';
+import { assertTokensConfigured, requireDm, roleForToken } from './auth.js';
 
 assertTokensConfigured();
 
@@ -34,12 +34,22 @@ app.use((req, res, next) => {
 // deliberately unauthenticated, returns nothing about campaign data.
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-app.get('/api/overlay', requireAuth, (_req, res) => {
+// PUBLIC read, on purpose. Players open a plain link the DM shares (e.g.
+// .../observer) with no token — a fresh incognito session has no stored
+// token, so if reading required auth the player would silently fall back to
+// the empty baked-in snapshot and see none of the DM's edits (this was the
+// real "no sync / half the locations missing / battle map never appears"
+// bug). The client still runs its player-safe projection so the UI hides
+// DM-only fields; the trade-off is that the raw overlay (incl. dmNotes) is
+// readable by anyone with the URL, which is acceptable for a home campaign
+// and deliberately deprioritized (see docs/SERVER_ROADMAP.md, Phase 4).
+// WRITES still require the DM token (requireDm below).
+app.get('/api/overlay', (_req, res) => {
   const json = loadOverlay();
   res.json({ overlay: json ? JSON.parse(json) : null });
 });
 
-app.put('/api/overlay', requireAuth, requireDm, (req, res) => {
+app.put('/api/overlay', requireDm, (req, res) => {
   const { overlay } = req.body;
   if (!overlay || typeof overlay !== 'object') {
     res.status(400).json({ error: 'Body must be { overlay: <object> }' });
@@ -71,18 +81,14 @@ function broadcast(json, originClientId) {
 
 wss.on('connection', (ws, req) => {
   const url = new URL(req.url, 'http://localhost');
-  const token = url.searchParams.get('token');
-  const role = roleForToken(token);
-  if (!role) {
-    ws.close(4401, 'Invalid or missing token');
-    return;
-  }
+  // Tokenless connections are allowed and are the normal case for players
+  // (their shared link carries no token). The socket is receive-only from
+  // every client's perspective — it only pushes OTHER clients' saves to this
+  // one — so an unauthenticated listener can do nothing but receive the same
+  // public overlay it could already GET. All writes still go through the
+  // DM-token-gated PUT /api/overlay.
   ws.clientId = url.searchParams.get('clientId') || undefined;
-  ws.role = role;
-  // Receive-only from the client's perspective, on purpose: all writes go
-  // through PUT /api/overlay (one write path, easy to reason about); this
-  // socket exists solely to push OTHER clients' saves to this one. See
-  // SERVER_ROADMAP.md's API surface section.
+  ws.role = roleForToken(url.searchParams.get('token'));
 });
 
 httpServer.listen(PORT, () => {

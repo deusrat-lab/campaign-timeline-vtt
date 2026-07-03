@@ -10,7 +10,7 @@ import {
   getLocationState,
   isLocationVisibleToPlayers,
 } from '../data/selectors';
-import { getPlayerSafeHotspots, getPlayerSafeRoutes, getPlayerSafePlacements, getPlayerSafeImages } from '../data/playerSafeProjection';
+import { getPlayerSafeHotspots, getPlayerSafeRoutes, getPlayerSafePlacements } from '../data/playerSafeProjection';
 import { getLocationVisibilityState, getVisibilityLabel, isLinkedEntityPlacementVisible } from '../data/visibility';
 import { useMapWorkspaceMode } from './map-workspace/useMapWorkspaceMode';
 import { postObserverFocus } from './map-workspace/observerBroadcast';
@@ -8646,13 +8646,14 @@ export function MapWorkspacePage() {
             // location marker (or the DM checking what a player would see)
             // got a wall of text with zero visual confirmation, even when
             // the location has images explicitly marked visible to players.
-            // Resolve the same "first player-safe image" this panel's own
-            // "Изображения:" count chip below already filters by
-            // (image.safeForPlayers !== false in Player View), so the
-            // thumbnail and the count never disagree.
-            const heroImageId = selectedLs.imageIds.find(
-              (id) => !isPlayerView || data.images.find((img) => img.id === id)?.safeForPlayers !== false,
-            );
+            // Per the DM's rule "location open → its art is always open to
+            // players": this panel only renders for a location the player is
+            // allowed to see (selectedVisible), so its own curated art is
+            // shown regardless of each image's individual safeForPlayers flag.
+            // selectedLs.imageIds now also includes art added via a location
+            // edit (see the union in campaignDataContext.tsx), so nothing is
+            // silently missing. Count chip below uses the same rule.
+            const heroImageId = selectedLs.imageIds[0];
             const heroImage = heroImageId ? data.images.find((img) => img.id === heroImageId) : undefined;
             return (
             <div className="object-overview">
@@ -8749,10 +8750,11 @@ export function MapWorkspacePage() {
                   </button>
                 )}
                 <button className="link-count-chip" onClick={() => { setObjectWindowSection('links'); setObjectWindowOpen(true); }}>
-                  Изображения:{' '}
-                  {isPlayerView
-                    ? selectedLs.imageIds.filter((id) => data.images.find((img) => img.id === id)?.safeForPlayers !== false).length
-                    : selectedLs.imageIds.length}
+                  {/* "Location open → its art is always open to players": the
+                      panel only renders for a player-visible location, so its
+                      curated art counts in full, no per-image safeForPlayers
+                      filter. */}
+                  Изображения: {selectedLs.imageIds.length}
                 </button>
               </div>
               {isDmMode && (
@@ -9855,8 +9857,13 @@ function PlayerSafeCompanionWindow({
     const loc = data.locations.find((l) => l.id === (locationState?.locationId ?? entity.id));
     const canShowLocationState = locationState ? isLocationVisibleToPlayers(locationState, store.progress) : true;
     title = locationState?.title ?? loc?.name ?? 'Локация';
+    // "Location open → its art is always open to players": this card only
+    // renders for a player-visible location (canShowLocationState below), so
+    // its curated art is resolved regardless of each image's safeForPlayers
+    // flag. imageIds already covers art added via a location edit (union in
+    // campaignDataContext.tsx); the loc.images fallback stays for safety.
     const imageIds = locationState?.imageIds.length ? locationState.imageIds : loc?.images ?? [];
-    const hero = imageIds.map((id) => data.images.find((i) => i.id === id && i.safeForPlayers !== false)).find(Boolean);
+    const hero = imageIds.map((id) => data.images.find((i) => i.id === id)).find(Boolean);
     const npcIds = locationState?.npcIds.length ? locationState.npcIds : loc?.npcs ?? [];
     const questIds = locationState?.questIds.length ? locationState.questIds : loc?.quests ?? [];
     if (loc && canShowLocationState) {
@@ -12386,8 +12393,15 @@ function LocationSidePanel({
     (e) => ls.enemyIds.includes(e.id) || (e.locationIds ?? []).includes(ls.locationId) || (e.locationIds ?? []).includes(ls.id),
   );
   const imagesForLocation = data.images.filter((i) => ls.imageIds.includes(i.id));
+  // "Location open → its art is always open to players": this panel only ever
+  // renders for a location the player is allowed to see, so its own curated
+  // art (ls.imageIds, which now also covers art added via a location edit —
+  // see the union in campaignDataContext.tsx) is shown regardless of each
+  // image's individual safeForPlayers flag. The placement-visibility check is
+  // kept — that is a separate, explicit "hide this marker on the map" gesture,
+  // not the image's player-safety flag.
   const images = isPlayerView
-    ? getPlayerSafeImages(imagesForLocation).filter((i) => isLinkedEntityPlacementVisible(data.placements, 'image', i.id))
+    ? imagesForLocation.filter((i) => isLinkedEntityPlacementVisible(data.placements, 'image', i.id))
     : imagesForLocation;
   const headerImage = images[0];
   const children = data.locationStates.filter((s) => ls.childLocationStateIds.includes(s.id));

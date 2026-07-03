@@ -131,8 +131,31 @@ export function useCampaignData(): CampaignDataState {
       overlay.npcPatches,
       overlay.newNpcs,
     );
+    // Resolve the base-location list (with DM edits) FIRST, so the
+    // locationState build below can back-fill from it. `locationState.imageIds`
+    // is derived once, at load time, from the SEED location.images (see
+    // buildLocationStates in loadCampaignData.ts) — it is NOT re-derived when a
+    // DM later edits a location and the edit lands in `overlay.locationPatches`
+    // as `location.images`. That left a stale, empty `imageIds` on locations
+    // whose art was added via a location edit (e.g. "Магическая коллегия",
+    // whose art `tg-img-11` lives in the patched `location.images` but never
+    // reached `locationState.imageIds`). Every consumer that reads
+    // `ls.imageIds` directly (the "Изображения: N" count, LocationSidePanel's
+    // header image shown to players) then saw nothing, so a revealed location's
+    // art was invisible to players even though the DM could see it. Union the
+    // two here, once, so all of those read sites are correct without each
+    // needing its own fallback.
+    const locations = applyOverlayToList(base.data.locations, overlay.locationPatches, []);
+    const locationImagesByLocationId = new Map(locations.map((loc) => [loc.id, loc.images ?? []]));
+    const locationStatesWithImages = applyOverlayToList(base.data.locationStates, overlay.locationStatePatches, overlay.newLocationStates).map((ls) => {
+      const fromBaseLocation = locationImagesByLocationId.get(ls.locationId) ?? [];
+      if (fromBaseLocation.length === 0) return ls;
+      const merged = [...ls.imageIds];
+      for (const id of fromBaseLocation) if (!merged.includes(id)) merged.push(id);
+      return merged.length === ls.imageIds.length ? ls : { ...ls, imageIds: merged };
+    });
     const locationStates = sanitizeArc2VelKarNpcLinks(
-      applyOverlayToList(base.data.locationStates, overlay.locationStatePatches, overlay.newLocationStates),
+      locationStatesWithImages,
       npcs,
     );
     const projectedHotspots = mirrorArc1RegionHotspotsForArc2(
@@ -163,12 +186,26 @@ export function useCampaignData(): CampaignDataState {
       npcs,
       taverns: applyOverlayToList(base.data.taverns, overlay.tavernPatches, []),
       shops: applyOverlayToList(base.data.shops, overlay.shopPatches, []),
-      images: applyOverlayToList(base.data.images, overlay.imagePatches, overlay.newImages),
+      // Default ALL images to player-visible (per the DM's request: "по
+      // умолчанию сделай все картинки... открытыми для игроков"). The seed
+      // data was bulk-imported with `safeForPlayers: false` on ~225 of 420
+      // images — not a deliberate per-image DM choice — which hid location
+      // and NPC art from players everywhere. Forcing the base default to
+      // true neutralizes that bulk flag while still letting an explicit DM
+      // hide win: `overlay.imagePatches` is applied AFTER this map, so a
+      // `patchImage(id, { safeForPlayers: false })` the DM makes later still
+      // takes effect. Every `safeForPlayers !== false` player-side check
+      // then just works, no per-call-site change needed.
+      images: applyOverlayToList(
+        base.data.images.map((image) => ({ ...image, safeForPlayers: true })),
+        overlay.imagePatches,
+        overlay.newImages,
+      ),
       quests: applyOverlayToList(base.data.quests, overlay.questPatches, []),
       enemies: applyOverlayToList(base.data.enemies, overlay.enemyPatches, overlay.newEnemies),
       players: applyOverlayToList(base.data.players, overlay.playerPatches, []),
       economyReference: applyOverlayToList(base.data.economyReference, overlay.economyReferencePatches, []),
-      locations: applyOverlayToList(base.data.locations, overlay.locationPatches, []),
+      locations,
       battleMapLocationLinks: mergeBattleMapLocationLinks(
         base.data.battleMapLocationLinks,
         overlay.battleMapLocationLinkOverrides,

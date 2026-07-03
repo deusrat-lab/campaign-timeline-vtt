@@ -1,17 +1,18 @@
-// Two static bearer tokens, no accounts — see SERVER_ROADMAP.md's "Auth: two
-// static tokens, not accounts" section for why. Mirrors the client's own
-// AppMode split (dm-view/dm-edit vs player-view): DM_TOKEN can read+write,
-// PLAYER_TOKEN can only read. Startup fails loudly if either is missing —
-// silently running with no auth would be worse than refusing to start.
+// One static DM bearer token gates WRITES; reads are public (see index.js's
+// GET /api/overlay comment for why — players use a tokenless link). The
+// PLAYER_TOKEN is still accepted where a role is computed, for compatibility
+// with links that carry it, but nothing requires it anymore. Startup fails
+// loudly only if the DM token is missing — without it, no one could ever
+// write, which would silently break the DM.
 
 const DM_TOKEN = process.env.DM_TOKEN;
 const PLAYER_TOKEN = process.env.PLAYER_TOKEN;
 
 export function assertTokensConfigured() {
-  if (!DM_TOKEN || !PLAYER_TOKEN) {
+  if (!DM_TOKEN) {
     throw new Error(
-      'DM_TOKEN and PLAYER_TOKEN must both be set (see server/.env.example). Generate two long random ' +
-        'strings, e.g. `node -e "console.log(crypto.randomUUID())"`, and never commit them.',
+      'DM_TOKEN must be set (see server/.env.example). Generate a long random string, ' +
+        'e.g. `node -e "console.log(crypto.randomUUID())"`, and never commit it.',
     );
   }
 }
@@ -20,28 +21,17 @@ export function assertTokensConfigured() {
 export function roleForToken(token) {
   if (!token) return null;
   if (token === DM_TOKEN) return 'dm';
-  if (token === PLAYER_TOKEN) return 'player';
+  if (PLAYER_TOKEN && token === PLAYER_TOKEN) return 'player';
   return null;
 }
 
-/** Express middleware — reads `Authorization: Bearer <token>`, sets
- * `req.role`, and rejects with 401 if the token doesn't match either one. */
-export function requireAuth(req, res, next) {
+/** Express middleware — reject anything that isn't the DM token. Reads the
+ * `Authorization: Bearer <token>` header itself (no separate auth middleware
+ * runs first anymore, since reads are public). Used only on write routes. */
+export function requireDm(req, res, next) {
   const header = req.get('authorization') || '';
   const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
-  const role = roleForToken(token);
-  if (!role) {
-    res.status(401).json({ error: 'Invalid or missing token' });
-    return;
-  }
-  req.role = role;
-  next();
-}
-
-/** Express middleware — call AFTER requireAuth. Rejects player-role
- * requests, for routes only the DM may use (writes). */
-export function requireDm(req, res, next) {
-  if (req.role !== 'dm') {
+  if (roleForToken(token) !== 'dm') {
     res.status(403).json({ error: 'DM token required' });
     return;
   }

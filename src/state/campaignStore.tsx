@@ -65,9 +65,17 @@ const OLD_STORAGE_KEY = 'campaign-timeline-vtt:state:v1';
 // entirely.
 captureTokenFromUrl();
 const overlayStorage = (() => {
-  const token = API_BASE_URL ? getStoredToken() : null;
-  if (API_BASE_URL && token) {
-    return createHttpOverlayAdapter({ baseUrl: API_BASE_URL, token, cacheKey: STORAGE_KEY });
+  // Use the server-backed adapter whenever this deployment is configured for
+  // a backend (VITE_API_BASE_URL set) — NOT only when a token is present.
+  // Players open a tokenless link the DM shares (e.g. .../observer); reads
+  // are public, so a tokenless client still syncs the live overlay from the
+  // server and stays in sync via WebSocket. Requiring a token here was the
+  // real cause of "no sync / half the locations missing / battle map never
+  // appears for players": a fresh incognito player session has no token, so
+  // it fell back to the empty baked-in snapshot and never talked to the
+  // server at all. The token, when present, only unlocks WRITES (DM).
+  if (API_BASE_URL) {
+    return createHttpOverlayAdapter({ baseUrl: API_BASE_URL, token: getStoredToken(), cacheKey: STORAGE_KEY });
   }
   return createLocalStorageOverlayAdapter(STORAGE_KEY);
 })();
