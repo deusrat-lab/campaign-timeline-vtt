@@ -1,9 +1,69 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCampaignStore } from '../state/campaignStore';
 import { useCampaignData } from '../state/campaignDataContext';
 import { getLocationState } from '../data/selectors';
+import { API_BASE_URL } from '../config';
+import { getStoredToken, setStoredToken } from '../state/persistence/authToken';
 import type { AppMode } from '../types';
+
+/** DM-facing sync-connection indicator. The critical, repeatedly-hit failure
+ * mode: a DM opens the plain app URL (or a fresh browser/device) without ever
+ * capturing the `?token=...` DM code, so the HTTP adapter has no token, every
+ * save() skips its PUT, and NOTHING the DM does (opening a battle map,
+ * revealing a location, adding art) ever reaches the server — players see a
+ * frozen campaign while the DM sees their own local edits and assumes all is
+ * well. This asks the server (`/api/whoami`) what the stored token actually
+ * grants and surfaces it, with a one-click way to paste the DM code in place.
+ * Only rendered when a server backend is configured (API_BASE_URL set); the
+ * pure-local build has nothing to sync and shows nothing. */
+function DmSyncIndicator() {
+  const [role, setRole] = useState<'dm' | 'player' | null | 'loading'>('loading');
+
+  useEffect(() => {
+    let cancelled = false;
+    const token = getStoredToken();
+    fetch(`${API_BASE_URL}/api/whoami`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
+      .then((r) => (r.ok ? r.json() : { role: null }))
+      .then((body: { role: 'dm' | 'player' | null }) => {
+        if (!cancelled) setRole(body.role ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setRole(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function enterCode() {
+    const entered = window.prompt(
+      'Вставьте DM-код для синхронизации с сервером (игроки увидят ваши правки).\n' +
+        'Это тот же код, что в ссылке ?token=… которую вам выдали.',
+    );
+    if (entered == null) return;
+    const stored = setStoredToken(entered);
+    if (!stored) return;
+    // Adapters read the token once at module init, so a reload is the simplest
+    // correct way to re-create the HTTP adapter WITH the new token.
+    window.location.reload();
+  }
+
+  if (role === 'loading') return null;
+  if (role === 'dm') {
+    return <span className="sync-indicator sync-indicator--ok" title="Правки ДМ сохраняются на сервер и видны игрокам">🟢 Синхронизация</span>;
+  }
+  return (
+    <button
+      type="button"
+      className="sync-indicator sync-indicator--off"
+      onClick={enterCode}
+      title="Ваши правки НЕ доходят до игроков — нет DM-кода. Нажмите, чтобы ввести."
+    >
+      🔴 Нет синхронизации — ввести DM-код
+    </button>
+  );
+}
 
 /** Opens the Observer view in a new tab, correctly resolving the app's base
  * path (Vite `base` config) instead of assuming it's deployed at root. A bare
@@ -148,6 +208,7 @@ export function NavBar() {
           )}
         </div>
         <div className="navbar-right">
+          {store.mode !== 'player-view' && !observerLocked && API_BASE_URL && <DmSyncIndicator />}
           {store.mode === 'dm-edit' && store.saveStatus !== 'idle' && (
             <span className={`save-status save-status-${store.saveStatus}`}>
               {store.saveStatus === 'saved' ? 'Сохранено' : 'Ошибка сохранения'}

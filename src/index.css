@@ -5630,6 +5630,34 @@ textarea:focus {
   border: 1px solid var(--border);
 }
 
+/* DM sync-connection indicator (NavBar). Green = writes reach the server /
+   players; red button = no DM token stored, click to paste it. */
+.sync-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.sync-indicator--ok {
+  color: #7fd18c;
+  background: rgba(64, 160, 88, 0.14);
+  border-color: rgba(64, 160, 88, 0.35);
+}
+.sync-indicator--off {
+  color: #f0a0a0;
+  background: rgba(180, 60, 60, 0.16);
+  border-color: rgba(180, 60, 60, 0.4);
+  cursor: pointer;
+}
+.sync-indicator--off:hover {
+  background: rgba(180, 60, 60, 0.26);
+}
+
 /* ---------- mobile: map workspace (DM + player/observer) ----------
    The map workspace (.workspace-body) is a fixed two-column flex row: map
    area (flex:1) beside a clamp(440px, …) side panel. Below ~820px that min

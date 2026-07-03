@@ -147,11 +147,51 @@ export function useCampaignData(): CampaignDataState {
     // needing its own fallback.
     const locations = applyOverlayToList(base.data.locations, overlay.locationPatches, []);
     const locationImagesByLocationId = new Map(locations.map((loc) => [loc.id, loc.images ?? []]));
+    // Taverns/shops carry their own art (a tavern's `imageOverrideId`, or an
+    // image whose `relatedEntity`/`linkedLocationIds`/`relatedImages` points at
+    // it) that lives OUTSIDE `locationState.imageIds`. A tavern placed on the
+    // map materializes as a LocationState tagged `sourceLibraryType:'tavern'`,
+    // and the DM's card resolves that art via `resolveEntityPreviewImage`, but
+    // every player-facing read (the "Изображения: N" count, the hero image in
+    // LocationSidePanel, the PlayerSafeCompanionWindow) reads `ls.imageIds`
+    // directly — which was empty for such places. Result: a revealed tavern
+    // (e.g. «Синяя Форель») showed "Изображения: 0" and no picture to players,
+    // while a tavern whose art happened to already be in imageIds («Золотой
+    // Колокол») showed fine. Resolve the source entity's art image id here and
+    // union it into imageIds so all those sites just work.
+    const tavernsForArt = applyOverlayToList(base.data.taverns, overlay.tavernPatches, []);
+    const shopsForArt = applyOverlayToList(base.data.shops, overlay.shopPatches, []);
+    const baseImages = base.data.images;
+    const tavernById = new Map(tavernsForArt.map((t) => [t.id, t]));
+    const shopById = new Map(shopsForArt.map((s) => [s.id, s]));
+    function sourceEntityArtImageId(ls: LocationState): string | undefined {
+      if (ls.sourceLibraryType === 'tavern' && ls.sourceLibraryId) {
+        const t = tavernById.get(ls.sourceLibraryId);
+        if (!t) return undefined;
+        if (t.imageOverrideId) return t.imageOverrideId;
+        const linked = baseImages.find(
+          (i) => i.relatedEntity === t.id || i.linkedLocationIds?.includes(t.id) || t.relatedImages?.includes(i.id),
+        );
+        return linked?.id;
+      }
+      if (ls.sourceLibraryType === 'shop' && ls.sourceLibraryId) {
+        const s = shopById.get(ls.sourceLibraryId);
+        if (!s) return undefined;
+        if (s.image) return s.image;
+        const linked = baseImages.find(
+          (i) => i.relatedEntity === s.id || i.linkedLocationIds?.includes(s.id),
+        );
+        return linked?.id;
+      }
+      return undefined;
+    }
     const locationStatesWithImages = applyOverlayToList(base.data.locationStates, overlay.locationStatePatches, overlay.newLocationStates).map((ls) => {
-      const fromBaseLocation = locationImagesByLocationId.get(ls.locationId) ?? [];
-      if (fromBaseLocation.length === 0) return ls;
+      const extraIds = [...(locationImagesByLocationId.get(ls.locationId) ?? [])];
+      const artId = sourceEntityArtImageId(ls);
+      if (artId) extraIds.push(artId);
+      if (extraIds.length === 0) return ls;
       const merged = [...ls.imageIds];
-      for (const id of fromBaseLocation) if (!merged.includes(id)) merged.push(id);
+      for (const id of extraIds) if (!merged.includes(id)) merged.push(id);
       return merged.length === ls.imageIds.length ? ls : { ...ls, imageIds: merged };
     });
     const locationStates = sanitizeArc2VelKarNpcLinks(
@@ -184,8 +224,8 @@ export function useCampaignData(): CampaignDataState {
       travelEvents: applyOverlayToList(base.data.travelEvents, overlay.travelEventPatches, overlay.newTravelEvents),
       placements: applyOverlayToList(base.data.placements, overlay.placementPatches, overlay.newPlacements),
       npcs,
-      taverns: applyOverlayToList(base.data.taverns, overlay.tavernPatches, []),
-      shops: applyOverlayToList(base.data.shops, overlay.shopPatches, []),
+      taverns: tavernsForArt,
+      shops: shopsForArt,
       // Default ALL images to player-visible (per the DM's request: "по
       // умолчанию сделай все картинки... открытыми для игроков"). The seed
       // data was bulk-imported with `safeForPlayers: false` on ~225 of 420

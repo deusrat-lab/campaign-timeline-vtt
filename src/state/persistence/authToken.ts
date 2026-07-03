@@ -39,3 +39,21 @@ export function getStoredToken(): string | null {
     return null;
   }
 }
+
+/** Persists a token the DM pastes directly into the app (the "Ввести DM-код"
+ * flow in NavBar), for the common case where the DM opened the plain app URL
+ * on a new browser/device instead of the one-time `?token=...` link and would
+ * otherwise be silently read-only (edits never PUT to the server, so players
+ * never see them). Trimmed because a pasted code often carries stray
+ * whitespace/newlines. Returns the stored value, or null if it was empty. */
+export function setStoredToken(token: string): string | null {
+  const trimmed = token.trim();
+  if (!trimmed) return null;
+  try {
+    localStorage.setItem(TOKEN_STORAGE_KEY, trimmed);
+  } catch {
+    // localStorage unavailable — nothing more we can do; the caller reloads
+    // and the in-memory adapter simply won't have a token this session.
+  }
+  return trimmed;
+}

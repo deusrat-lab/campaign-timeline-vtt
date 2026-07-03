@@ -49,6 +49,18 @@ app.get('/api/overlay', (_req, res) => {
   res.json({ overlay: json ? JSON.parse(json) : null });
 });
 
+// Lets a client ask the server what role its token grants, WITHOUT trying a
+// destructive write. The DM UI uses this to show an honest "syncing / NOT
+// syncing" indicator: a browser that never captured the DM token (opened the
+// plain link instead of the ?token=... one) is silently read-only, which was
+// exactly why a DM's battle map / edits never reached players. Returns
+// { role: 'dm' | 'player' | null }.
+app.get('/api/whoami', (req, res) => {
+  const header = req.get('authorization') || '';
+  const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
+  res.json({ role: roleForToken(token) });
+});
+
 app.put('/api/overlay', requireDm, (req, res) => {
   const { overlay } = req.body;
   if (!overlay || typeof overlay !== 'object') {
