@@ -792,6 +792,7 @@ a:hover {
 .map-zoom-controls {
   display: flex;
   gap: 0.4rem;
+  flex-wrap: wrap;
 }
 
 .map-canvas {
@@ -5627,4 +5628,40 @@ textarea:focus {
   max-height: 60vh;
   border-radius: 8px;
   border: 1px solid var(--border);
+}
+
+/* ---------- mobile: map workspace (DM + player/observer) ----------
+   The map workspace (.workspace-body) is a fixed two-column flex row: map
+   area (flex:1) beside a clamp(440px, …) side panel. Below ~820px that min
+   440px panel starves the map into an unusable sliver and clips the zoom
+   toolbar (the reported mobile bug for both the DM /map view and the player
+   /observer view, which share these classes). On a narrow screen, stack them
+   vertically and let the whole workspace scroll as one page: map on top at a
+   real viewport-relative height, the side panel full-width below it. Inner
+   overflow-y:auto regions are neutralized so they don't collapse to zero
+   height inside the now auto-height column. */
+@media (max-width: 820px) {
+  .workspace {
+    height: auto;
+    min-height: calc(100vh - 56px);
+  }
+  .workspace-body {
+    flex-direction: column;
+  }
+  .workspace-map-area {
+    overflow-y: visible;
+    padding: 0.6rem;
+  }
+  .map-canvas {
+    min-height: 58vh;
+  }
+  .workspace-side-panel {
+    width: 100%;
+    max-width: 100%;
+    overflow-y: visible;
+    border-left: none;
+    border-top: 1px solid var(--border-soft);
+    box-shadow: none;
+    padding: 0.9rem 1rem 2rem;
+  }
 }
