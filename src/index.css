@@ -5742,4 +5742,18 @@ textarea:focus {
     box-shadow: none;
     padding: 0.9rem 1rem 2rem;
   }
+  /* The calendar chip is a nowrap inline pill (date + фаза/день/отдых
+     buttons) — on a phone it ran off the right edge, hiding "+ день",
+     "Долгий отдых" and "Отменить". Let it wrap its buttons onto a second
+     line and take the full row instead of overflowing. */
+  .calendar-chip {
+    flex-wrap: wrap;
+    white-space: normal;
+    width: 100%;
+    justify-content: flex-start;
+    border-radius: 14px;
+  }
+  .workspace-topbar {
+    padding: 0.55rem 0.7rem;
+  }
 }
