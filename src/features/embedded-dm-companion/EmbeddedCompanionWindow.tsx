@@ -132,6 +132,14 @@ export function EmbeddedCompanionWindow({
 }) {
   const store = useCampaignStore();
   const [inlineEditing, setInlineEditing] = useState(false);
+  // "Показать игрокам": is THIS card the one currently presented to players?
+  const isPresenting = store.presentedCard?.type === entity.type && store.presentedCard?.id === entity.id;
+  // Closing the card the DM is presenting also takes it down on the players'
+  // screens ("когда закрываю — она закрывается").
+  const handleClose = () => {
+    if (isPresenting) store.clearPresentedCard();
+    onClose();
+  };
   const openNpc = (id: string) => onOpen({ type: 'npc', id });
   const openQuest = (id: string) => onOpen({ type: 'quest', id });
   const openShop = (id: string) => onOpen({ type: 'shop', id });
@@ -421,7 +429,7 @@ export function EmbeddedCompanionWindow({
 	  const inlineKind = entity.type === 'npc' ? 'npc' : entity.type === 'quest' ? 'quests' : entity.type === 'enemy' ? 'enemies' : null;
 
   return (
-    <div className="companion-window-overlay" onClick={onClose}>
+    <div className="companion-window-overlay" onClick={handleClose}>
       <div className="companion-window-panel" onClick={(e) => e.stopPropagation()}>
         <div className="companion-window-header">
           <div>
@@ -433,6 +441,18 @@ export function EmbeddedCompanionWindow({
             <h2>{title}</h2>
           </div>
           <div className="companion-window-header-actions">
+            {/* "Показать игрокам" — only in DM View (not DM Edit): pushes this
+                exact card onto every player's screen; a second press (or
+                closing the card) takes it back down. */}
+            {store.mode === 'dm-view' && (
+              <button
+                className={`btn-compact ${isPresenting ? 'btn-danger' : 'btn-secondary'}`}
+                onClick={() => store.presentCard(isPresenting ? null : { type: entity.type, id: entity.id })}
+                title="Показать эту карточку игрокам на их экране"
+              >
+                {isPresenting ? '🔴 Скрыть у игроков' : '📺 Показать игрокам'}
+              </button>
+            )}
             {/* Header Edit button — moved up from the bottom action bar so
                 it's reachable in one click without scrolling past the
                 whole card body first, matching the same fix applied to the
@@ -442,7 +462,7 @@ export function EmbeddedCompanionWindow({
                 {inlineEditing ? 'Редактирование' : 'Редактировать'}
               </button>
             )}
-            <button className="btn-ghost" onClick={onClose}>
+            <button className="btn-ghost" onClick={handleClose}>
               Закрыть ✕
             </button>
           </div>

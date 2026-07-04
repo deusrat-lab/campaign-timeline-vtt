@@ -33,7 +33,7 @@ import { ARC2_FACTION_ZONES_BY_ID, LEGACY_ARC2_SEEDED_FACTION_ZONE_IDS } from '.
 import projectOverlaySnapshot from '../data/campaignOverlaySnapshot.json';
 import type { DmTavern, DmShop, DmImageItem, DmLocation, DmQuest, DmCustomEnemy, DmPlayer, DmEconomyReferenceItem } from '../types/dmCompanion';
 import { DELETED, EMPTY_OVERLAY, DEFAULT_CALENDAR } from './overlay';
-import type { CampaignOverlay, Patch } from './overlay';
+import type { CampaignOverlay, Patch, PresentedCard } from './overlay';
 import { createHttpOverlayAdapter, createLocalStorageOverlayAdapter, readLegacyOverlayRaw } from './persistence/overlayStorage';
 import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
 import { API_BASE_URL } from '../config';
@@ -207,6 +207,7 @@ function normalizeOverlay(input?: Partial<CampaignOverlay> | null): CampaignOver
     battleEntriesById: raw.battleEntriesById ?? {},
     partyRouteProgress: raw.partyRouteProgress ?? null,
     activeBattle: raw.activeBattle ?? null,
+    presentedCard: raw.presentedCard ?? null,
     newEnemies: raw.newEnemies ?? [],
     party: { ...defaultOverlay().party, ...raw.party },
     progress: { ...defaultOverlay().progress, ...raw.progress },
@@ -309,6 +310,7 @@ type Action =
   | { type: 'UPDATE_ACTIVE_BATTLE_COMBATANT'; combatantId: string; patch: Partial<ActiveBattleCombatant> }
   | { type: 'ADD_ACTIVE_BATTLE_COMBATANT'; combatant: ActiveBattleCombatant }
   | { type: 'END_ACTIVE_BATTLE' }
+  | { type: 'SET_PRESENTED_CARD'; card: PresentedCard | null }
   | { type: 'SET_PLACEMENT_LAYER_VISIBLE'; visible: boolean }
   | { type: 'SET_CALENDAR'; timelineId: string; calendar: CampaignCalendar }
   | { type: 'ADVANCE_TIME_PHASE'; timelineId: string }
@@ -853,6 +855,8 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
         : state;
     case 'END_ACTIVE_BATTLE':
       return { ...state, activeBattle: null };
+    case 'SET_PRESENTED_CARD':
+      return { ...state, presentedCard: action.card };
     case 'SET_PARTY_ROUTE_PROGRESS':
       return {
         ...state,
@@ -986,6 +990,9 @@ interface CampaignStoreValue extends CampaignOverlay {
   updateActiveBattleCombatant: (combatantId: string, patch: Partial<ActiveBattleCombatant>) => void;
   addActiveBattleCombatant: (combatant: ActiveBattleCombatant) => void;
   endActiveBattle: () => void;
+  /** Present a card to players (syncs to every player screen), or pass null to dismiss it. */
+  presentCard: (card: PresentedCard | null) => void;
+  clearPresentedCard: () => void;
   setPartyMapPosition: (position: NonNullable<PartyState['currentMapPosition']>) => void;
   setPartyRouteProgress: (progress: PartyRouteProgress | null) => void;
   exportOverlay: () => CampaignOverlay;
@@ -1162,6 +1169,8 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'UPDATE_ACTIVE_BATTLE_COMBATANT', combatantId, patch }),
       addActiveBattleCombatant: (combatant) => dispatch({ type: 'ADD_ACTIVE_BATTLE_COMBATANT', combatant }),
       endActiveBattle: () => dispatch({ type: 'END_ACTIVE_BATTLE' }),
+      presentCard: (card) => dispatch({ type: 'SET_PRESENTED_CARD', card }),
+      clearPresentedCard: () => dispatch({ type: 'SET_PRESENTED_CARD', card: null }),
       setPartyMapPosition: (position) => dispatch({ type: 'SET_PARTY_MAP_POSITION', position }),
       setPartyRouteProgress: (progress) => dispatch({ type: 'SET_PARTY_ROUTE_PROGRESS', progress }),
       confirmBattleMapLink: (locationStateId, battleMapId) => {

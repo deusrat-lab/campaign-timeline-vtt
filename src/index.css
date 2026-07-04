@@ -4984,6 +4984,31 @@ textarea:focus {
   padding: 2rem;
 }
 
+/* A card the DM is presenting to players — sits above everything else on the
+   player's screen (incl. the battle overlay at z-index 80) and reads as a
+   "spotlight" rather than a dismissible dialog. */
+.companion-window-overlay--presentation {
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.72);
+}
+.companion-window-overlay--presentation .companion-window-panel {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+.presented-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gold);
+  background: rgba(219, 184, 88, 0.14);
+  border: 1px solid rgba(219, 184, 88, 0.4);
+  white-space: nowrap;
+}
+
 .companion-window-panel {
   background: var(--bg-card-raised);
   border: 1px solid var(--border);

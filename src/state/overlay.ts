@@ -45,6 +45,17 @@ export const DEFAULT_CALENDAR: CampaignCalendar = {
 
 export type Patch<T> = Partial<T> | typeof DELETED;
 
+/** A card the DM is actively presenting to players (the "Показать игрокам"
+ * button on any card in DM View). Shape mirrors EmbeddedCompanionEntity so
+ * the same player-safe card renderer can display it — kept as its own type
+ * here to avoid a page→state import cycle. Synced through the overlay like
+ * everything else, so setting it on the DM's device pops the card on every
+ * player's screen and clearing it dismisses it. */
+export interface PresentedCard {
+  type: 'location' | 'tavern' | 'shop' | 'npc' | 'quest' | 'enemy' | 'image' | 'battleEntry';
+  id: string;
+}
+
 export interface CampaignOverlay {
   /** Patches applied on top of seed entities, keyed by id. */
   timelinePatches: Record<string, Patch<Timeline>>;
@@ -154,6 +165,12 @@ export interface CampaignOverlay {
    * tabs in the same browser can open/close the same battle without a server. */
   activeBattle: ActiveBattleState | null;
 
+  /** Card the DM is presenting to players right now, or null. Set by the
+   * "Показать игрокам" button on any card in DM View; players render it as a
+   * modal over whatever they were looking at, and it clears when the DM
+   * un-presents or closes the card. */
+  presentedCard: PresentedCard | null;
+
   currentTimelineId: string;
   mode: 'dm-view' | 'dm-edit' | 'player-view';
 
@@ -225,6 +242,7 @@ export const EMPTY_OVERLAY: CampaignOverlay = {
   battleEntriesById: {},
   partyRouteProgress: null,
   activeBattle: null,
+  presentedCard: null,
   currentTimelineId: '',
   mode: 'dm-view',
   routeEditorVersion: 0,

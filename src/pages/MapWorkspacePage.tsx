@@ -1831,6 +1831,23 @@ export function MapWorkspacePage() {
     setSelectedLocationStateId(id);
   }
 
+  // "Показать игрокам" for the map object-window (location / placed tavern /
+  // placed shop): resolve the entity the player-safe card renderer expects.
+  function presentEntityForLs(ls: LocationState): EmbeddedCompanionEntity {
+    if (ls.sourceLibraryType === 'tavern' && ls.sourceLibraryId) return { type: 'tavern', id: ls.sourceLibraryId };
+    if (ls.sourceLibraryType === 'shop' && ls.sourceLibraryId) return { type: 'shop', id: ls.sourceLibraryId };
+    return { type: 'location', id: ls.id };
+  }
+  // Closing the object window also stops presenting IT (but not some other
+  // card the DM may have presented) — "когда закрываю — она закрывается".
+  function closeObjectWindow() {
+    if (selectedLs) {
+      const pe = presentEntityForLs(selectedLs);
+      if (store.presentedCard?.type === pe.type && store.presentedCard?.id === pe.id) store.clearPresentedCard();
+    }
+    setObjectWindowOpen(false);
+  }
+
   // ---------- zoom / pan ----------
   function clampScale(s: number) {
     return Math.min(MAX_SCALE, Math.max(MIN_SCALE, s));
@@ -9296,7 +9313,7 @@ export function MapWorkspacePage() {
           )}
 
           {isDmMode && objectWindowOpen && selectedLs && (
-            <div className="object-window-overlay" onClick={() => setObjectWindowOpen(false)}>
+            <div className="object-window-overlay" onClick={closeObjectWindow}>
               <div className="object-window-panel" onClick={(e) => e.stopPropagation()}>
                 <div className="object-window-header">
                   <div>
@@ -9307,6 +9324,21 @@ export function MapWorkspacePage() {
                     </span>
                   </div>
                   <div className="object-window-header-actions">
+                    {/* "Показать игрокам" — DM View only: spotlight this
+                        location/tavern/shop card on every player's screen. */}
+                    {store.mode === 'dm-view' && (() => {
+                      const pe = presentEntityForLs(selectedLs);
+                      const on = store.presentedCard?.type === pe.type && store.presentedCard?.id === pe.id;
+                      return (
+                        <button
+                          className={`btn-compact ${on ? 'btn-danger' : 'btn-secondary'}`}
+                          onClick={() => store.presentCard(on ? null : pe)}
+                          title="Показать эту карточку игрокам на их экране"
+                        >
+                          {on ? '🔴 Скрыть у игроков' : '📺 Показать игрокам'}
+                        </button>
+                      );
+                    })()}
                     {/* Prominent header Edit button — content/UI pass:
                         the only edit entry point used to be the
                         Действия на карте → Редактирование tab, disabled
@@ -9326,7 +9358,7 @@ export function MapWorkspacePage() {
                     >
                       Редактировать
                     </button>
-                    <button className="btn-ghost" onClick={() => setObjectWindowOpen(false)}>
+                    <button className="btn-ghost" onClick={closeObjectWindow}>
                       Закрыть ✕
                     </button>
                   </div>
@@ -9731,6 +9763,25 @@ export function MapWorkspacePage() {
         )}
       </div>
 
+      {/* Card the DM is presenting to players ("Показать игрокам"): appears
+          over whatever the player was looking at, non-dismissible by them,
+          and vanishes when the DM un-presents/closes it — all via the synced
+          overlay's `presentedCard`. Reuses the same player-safe card renderer
+          a player gets when they open a card themselves, so nothing DM-only
+          leaks. Shown in any player-facing view (the /observer route and the
+          DM's own "Player View" preview). */}
+      {isPlayerView && store.presentedCard && data && (
+        <PlayerSafeCompanionWindow
+          entity={store.presentedCard as EmbeddedCompanionEntity}
+          data={data}
+          hasBack={false}
+          onBack={() => {}}
+          onClose={() => {}}
+          onOpen={() => {}}
+          presentation
+        />
+      )}
+
       {store.activeBattle && data && (
         <EmbeddedBattleOverlay
           battle={store.activeBattle}
@@ -9777,6 +9828,7 @@ function PlayerSafeCompanionWindow({
   onBack,
   onClose,
   onOpen,
+  presentation = false,
 }: {
   entity: EmbeddedCompanionEntity;
   data: CampaignData;
@@ -9784,6 +9836,11 @@ function PlayerSafeCompanionWindow({
   onBack: () => void;
   onClose: () => void;
   onOpen: (entity: EmbeddedCompanionEntity) => void;
+  /** When true this is a card the DM is PRESENTING to the player (not one the
+   * player opened themselves): render it as a non-dismissible overlay above
+   * everything, with a "показывает ДМ" badge instead of a close button — only
+   * the DM can take it down. */
+  presentation?: boolean;
 }) {
   const store = useCampaignStore();
   let title = 'Карточка';
@@ -9794,7 +9851,10 @@ function PlayerSafeCompanionWindow({
   const openLocation = (id: string) => onOpen({ type: 'location', id });
 
   if (entity.type === 'npc') {
-    const npc = data.npcs.find((n) => n.id === entity.id && n.visibleToPlayers === true);
+    // In presentation mode the DM is deliberately spotlighting this card, so
+    // bypass the "revealed to players" gate (secrets/notes are still stripped
+    // below); otherwise a player only sees NPCs already revealed to them.
+    const npc = data.npcs.find((n) => n.id === entity.id && (presentation || n.visibleToPlayers === true));
     title = npc?.name ?? 'NPC';
     if (npc) {
       const safeImages = data.images.filter((image) => image.safeForPlayers !== false);
@@ -9818,7 +9878,7 @@ function PlayerSafeCompanionWindow({
       );
     }
   } else if (entity.type === 'quest') {
-    const quest = data.quests.find((q) => q.id === entity.id && q.status !== 'hidden');
+    const quest = data.quests.find((q) => q.id === entity.id && (presentation || q.status !== 'hidden'));
     title = quest?.title ?? 'Квест';
     if (quest) {
       body = (
@@ -9841,7 +9901,7 @@ function PlayerSafeCompanionWindow({
       );
     }
   } else if (entity.type === 'image') {
-    const image = data.images.find((i) => i.id === entity.id && i.safeForPlayers !== false);
+    const image = data.images.find((i) => i.id === entity.id && (presentation || i.safeForPlayers !== false));
     title = image?.title ?? 'Изображение';
     if (image) {
       body = (
@@ -9855,7 +9915,7 @@ function PlayerSafeCompanionWindow({
       data.locationStates.find((ls) => ls.id === entity.id) ??
       data.locationStates.find((ls) => ls.locationId === entity.id && ls.timelineId === store.currentTimelineId);
     const loc = data.locations.find((l) => l.id === (locationState?.locationId ?? entity.id));
-    const canShowLocationState = locationState ? isLocationVisibleToPlayers(locationState, store.progress) : true;
+    const canShowLocationState = presentation ? true : locationState ? isLocationVisibleToPlayers(locationState, store.progress) : true;
     title = locationState?.title ?? loc?.name ?? 'Локация';
     // "Location open → its art is always open to players": this card only
     // renders for a player-visible location (canShowLocationState below), so
@@ -9923,14 +9983,21 @@ function PlayerSafeCompanionWindow({
   }
 
   return (
-    <div className="companion-window-overlay" onClick={onClose}>
+    <div
+      className={`companion-window-overlay${presentation ? ' companion-window-overlay--presentation' : ''}`}
+      onClick={presentation ? undefined : onClose}
+    >
       <div className="companion-window-panel" onClick={(e) => e.stopPropagation()}>
         <div className="companion-window-header">
           <div>
-            {hasBack && <button className="btn-ghost btn-compact" onClick={onBack}>← Назад</button>}
+            {!presentation && hasBack && <button className="btn-ghost btn-compact" onClick={onBack}>← Назад</button>}
             <h2>{title}</h2>
           </div>
-          <button className="btn-ghost" onClick={onClose}>Закрыть ✕</button>
+          {presentation ? (
+            <span className="presented-badge" title="Эту карточку показывает ведущий">📺 Показывает ДМ</span>
+          ) : (
+            <button className="btn-ghost" onClick={onClose}>Закрыть ✕</button>
+          )}
         </div>
         <div className="companion-window-body">{body}</div>
       </div>
