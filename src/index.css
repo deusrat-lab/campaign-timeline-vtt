@@ -2210,6 +2210,56 @@ a:hover {
   grid-template-columns: 320px minmax(0, 1fr) 270px;
 }
 
+/* ---------- mobile: battle overlay (DM + player) ----------
+   The battle window is a fixed 3-column grid (roster/palette · board · card),
+   up to 320+270px of side panels. On a phone that starved the MAP into an
+   unusable sliver (landscape) or pushed it off-screen entirely (portrait) —
+   so combat was literally impossible to run from a phone, for the DM AND for
+   players watching via /observer. Below 860px, drop the columns and stack:
+   the board (the map) becomes a full-width, tall primary area at the top, and
+   the panels flow beneath it as the page scrolls. The board's own
+   ResizeObserver refits the map to its new size automatically, so the map
+   fills the width with no extra JS. The `max-height` arm also catches a phone
+   held in LANDSCAPE (wide but short, e.g. 1280×580) — there the 3-column grid
+   still crushed the board vertically, so stack it there too. */
+@media (max-width: 860px), (max-height: 560px) {
+  .embedded-battle-backdrop {
+    padding: 0; /* full-bleed on phones — every pixel counts for the map */
+  }
+  .embedded-battle-window,
+  .embedded-battle-window--vtt {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+    border-radius: 0;
+    overflow-y: auto;
+  }
+  .embedded-battle-header {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    order: 0;
+  }
+  .embedded-battle-board {
+    order: 1;
+    flex: none;
+    height: 58vh; /* map is the primary surface; panels scroll below it */
+    min-height: 240px;
+  }
+  .embedded-battle-side {
+    order: 2;
+    flex: none;
+    overflow: visible; /* flow in the window's own scroll — no nested scrollbar that collapses to 0 height */
+    max-height: none;
+    border-right: 0;
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .embedded-battle-side--right {
+    order: 3;
+  }
+}
+
 .embedded-battle-board--vtt {
   display: block;
   cursor: crosshair;
