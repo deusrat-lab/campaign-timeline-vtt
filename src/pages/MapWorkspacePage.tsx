@@ -8725,6 +8725,23 @@ export function MapWorkspacePage() {
                     Редактировать
                   </button>
                 )}
+                {/* "Показать игрокам" on the side-panel card summary too (DM
+                    View only) — the city selects a location straight into this
+                    panel without opening the full modal, so the button has to
+                    live here as well, not only in the object-window header. */}
+                {store.mode === 'dm-view' && (() => {
+                  const pe = presentEntityForLs(selectedLs);
+                  const on = store.presentedCard?.type === pe.type && store.presentedCard?.id === pe.id;
+                  return (
+                    <button
+                      className={`btn-compact ${on ? 'btn-danger' : 'btn-secondary'}`}
+                      onClick={() => store.presentCard(on ? null : pe)}
+                      title="Показать эту карточку игрокам на их экране"
+                    >
+                      {on ? '🔴 Скрыть у игроков' : '📺 Показать игрокам'}
+                    </button>
+                  );
+                })()}
                 {isEditMode && (
                   <button
                     className="btn-secondary btn-compact"
