@@ -715,6 +715,34 @@ export function EmbeddedBattleOverlay({
           </div>
         </header>
 
+        {/* Initiative track, pinned directly above the map so the turn order
+            is obvious at a glance to BOTH the DM and players (players had no
+            initiative view at all before — only "Ход: X" buried in the
+            header). Horizontal, scrollable, current turn highlighted. Enemy
+            HP is hidden from players so the exact numbers don't leak; the DM
+            sees everyone's HP. Clicking a chip selects that combatant. */}
+        {ordered.length > 0 && (
+          <div className="embedded-battle-initiative-track" aria-label="Порядок инициативы">
+            {ordered.map((combatant, index) => {
+              const isCurrent = combatant.id === currentId;
+              const showHp = !isPlayerView || combatant.side === 'player';
+              return (
+                <button
+                  key={combatant.id}
+                  type="button"
+                  className={`initiative-chip initiative-chip--${combatant.side}${isCurrent ? ' initiative-chip--current' : ''}`}
+                  onClick={() => { setSelectedId(combatant.id); setSelectedPalette(null); }}
+                  title={`${combatant.name}${combatant.initiative != null ? ` · иниц. ${combatant.initiative}` : ''}`}
+                >
+                  <span className="initiative-chip__order">{index + 1}</span>
+                  <span className="initiative-chip__name">{combatant.name}</span>
+                  {showHp && <span className="initiative-chip__hp">{combatant.currentHp}/{combatant.maxHp}</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <aside className="embedded-battle-side embedded-battle-side--left embedded-battle-palette">
           {isPlayerView ? (
             <>
