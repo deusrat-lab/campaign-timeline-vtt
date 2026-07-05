@@ -485,6 +485,16 @@ export async function loadCampaignData(): Promise<CampaignData> {
   // has already finished exactly 2 mini-quests in Arc 1. Mark them as
   // completed via the Quests panel in the UI — do not guess which ones here.
 
+  // Data hygiene: `DmQuest.enemies` is typed `string[]`, but six Arc-2 quests
+  // in quests.json carry `enemies: ""` (an empty string, not an array). Any
+  // card that did `quest.enemies.map(...)` then crashed the whole app with a
+  // white screen ("(quest.enemies ?? []).map is not a function" — `?? []`
+  // only catches null/undefined, not ""). Coerce non-array values to [] once,
+  // at load, so every quest consumer is safe without its own guard.
+  for (const q of quests) {
+    if (!Array.isArray(q.enemies)) q.enemies = [];
+  }
+
   const timelines = TIMELINES;
   const locationStates = buildLocationStates(locations, npcs, quests, enemies, images, timelines, taverns);
   const { worldMapStates, hotspots } = buildWorldMapStatesAndHotspots(timelines);
