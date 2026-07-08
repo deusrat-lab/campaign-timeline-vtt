@@ -6,6 +6,7 @@ import { getLocationState } from '../data/selectors';
 import { API_BASE_URL } from '../config';
 import { getStoredToken, setStoredToken } from '../state/persistence/authToken';
 import type { AppMode } from '../types';
+import { CampaignSwitcher } from './CampaignSwitcher';
 
 /** DM-facing sync-connection indicator. The critical, repeatedly-hit failure
  * mode: a DM opens the plain app URL (or a fresh browser/device) without ever
@@ -157,6 +158,12 @@ export function NavBar() {
           <Link to="/" className="brand">
             <span className="brand-mark">⟡</span> Campaign Timeline VTT
           </Link>
+          {!observerLocked && store.mode !== 'player-view' && (
+            <>
+              <Link to="/home" className="navbar-text-link" title="Стартовый экран: карта мира, кампании, атлас">🏠 Дом мира</Link>
+              <CampaignSwitcher />
+            </>
+          )}
           {isEditMode && (
             <>
               <Link to="/admin" className="navbar-text-link">+ Локация</Link>

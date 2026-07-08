@@ -5907,3 +5907,17 @@ textarea:focus {
     padding: 1rem;
   }
 }
+
+/* Campaign Switcher in the top bar (multi-campaign layer). */
+.campaign-switcher {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  max-width: 220px;
+  cursor: pointer;
+}
+.campaign-switcher:focus { outline: none; border-color: var(--gold-dim); }

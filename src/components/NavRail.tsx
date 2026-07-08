@@ -9,6 +9,9 @@ interface RailItem {
 }
 
 const RAIL_ITEMS: RailItem[] = [
+  { key: 'home', label: 'Дом мира', icon: '🌍', to: '/' },
+  { key: 'campaigns', label: 'Кампании', icon: '🎲', to: '/campaigns' },
+  { key: 'world', label: 'Атлас', icon: '📖', to: '/world' },
   { key: 'map', label: 'Карта', icon: '🗺', to: '/map' },
   { key: 'search', label: 'Поиск', icon: '🔎', to: '/search' },
   { key: 'timeline', label: 'Таймлайн', icon: '⏳' },

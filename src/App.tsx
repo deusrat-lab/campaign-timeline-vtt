@@ -12,6 +12,12 @@ import { SearchPage } from './pages/SearchPage';
 import { PlayerVisibilityPage } from './pages/PlayerVisibilityPage';
 import { CampaignDataProvider } from './state/campaignDataContext';
 import { CampaignStoreProvider, useCampaignStore } from './state/campaignStore';
+import { CampaignRuntimeProvider } from './state/campaignRuntimeStore';
+import { WorldAtlasPage } from './features/world-atlas/WorldAtlasPage';
+import { WorldHomePage } from './features/world-home/WorldHomePage';
+import { CampaignsPage } from './features/campaigns/CampaignsPage';
+import { CampaignDashboardPage } from './features/campaigns/CampaignDashboardPage';
+import { CampaignSessionPage } from './features/campaigns/CampaignSessionPage';
 
 /** Legacy /location/:id deep links now resolve inside the Map Workspace instead of a standalone page. */
 function LocationRedirect() {
@@ -79,7 +85,11 @@ function AppShell() {
         <NavBar />
         <main>
           <Routes>
-            <Route path="/" element={<MapWorkspacePage />} />
+            {/* Start screen = World Home (DM). Players never reach it: DmOnlyRoute
+               bounces player-view to the main-campaign map. */}
+            <Route path="/" element={<DmOnlyRoute><WorldHomePage /></DmOnlyRoute>} />
+            <Route path="/home" element={<DmOnlyRoute><WorldHomePage /></DmOnlyRoute>} />
+            <Route path="/world-home" element={<DmOnlyRoute><WorldHomePage /></DmOnlyRoute>} />
             <Route path="/map" element={<MapWorkspacePage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/location/:id" element={<LocationRedirect />} />
@@ -99,6 +109,13 @@ function AppShell() {
             {/* New-location creation + the prefill/needs-review report still live here
                until they're migrated into the Map Workspace side panel. */}
             <Route path="/admin" element={<DmOnlyRoute><HomePage /></DmOnlyRoute>} />
+            {/* Multi-campaign layer. DM-only surfaces; isolated runtime never
+               touches the protected main-campaign state, arcs or session. */}
+            <Route path="/world" element={<DmOnlyRoute><WorldAtlasPage /></DmOnlyRoute>} />
+            <Route path="/world/:regionId" element={<DmOnlyRoute><WorldAtlasPage /></DmOnlyRoute>} />
+            <Route path="/campaigns" element={<DmOnlyRoute><CampaignsPage /></DmOnlyRoute>} />
+            <Route path="/campaigns/:campaignId" element={<DmOnlyRoute><CampaignDashboardPage /></DmOnlyRoute>} />
+            <Route path="/campaigns/:campaignId/session" element={<DmOnlyRoute><CampaignSessionPage /></DmOnlyRoute>} />
           </Routes>
         </main>
       </div>
@@ -110,7 +127,9 @@ function App() {
   return (
     <CampaignStoreProvider>
       <CampaignDataProvider>
-        <AppShell />
+        <CampaignRuntimeProvider>
+          <AppShell />
+        </CampaignRuntimeProvider>
       </CampaignDataProvider>
     </CampaignStoreProvider>
   );
