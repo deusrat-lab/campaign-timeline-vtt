@@ -180,6 +180,23 @@ export function getChildRegions(parentId: string | undefined): WorldRegion[] {
   return WORLD_REGIONS.filter((r) => r.parentId === parentId);
 }
 
+/** All regions under the given roots, including the roots and every
+ * descendant (depth-first). Used by the Atlas Map Workspace to list a map's
+ * clickable regions. */
+export function getRegionSubtree(rootIds: string[]): WorldRegion[] {
+  const seen = new Set<string>();
+  const out: WorldRegion[] = [];
+  const visit = (id: string) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    const region = getRegionById(id);
+    if (region) out.push(region);
+    for (const child of getChildRegions(id)) visit(child.id);
+  };
+  rootIds.forEach(visit);
+  return out;
+}
+
 export function getRegionBreadcrumbs(id: string): WorldRegion[] {
   const chain: WorldRegion[] = [];
   let current = getRegionById(id);

@@ -71,3 +71,14 @@ export const WORLD_ATLAS_MAPS: WorldAtlasMap[] = [
 export function getAtlasMapById(id: string): WorldAtlasMap | undefined {
   return WORLD_ATLAS_MAPS.find((m) => m.id === id);
 }
+
+/** Short slug used in the `/atlas/maps/:mapId` route (e.g. "caldran"). */
+export function atlasMapRouteId(map: WorldAtlasMap): string {
+  return map.id.replace(/^atlas-map-/, '');
+}
+
+/** Resolve a route param that may be the full id (`atlas-map-caldran`) or the
+ * short slug (`caldran`). */
+export function getAtlasMapByRouteId(routeId: string): WorldAtlasMap | undefined {
+  return WORLD_ATLAS_MAPS.find((m) => m.id === routeId || atlasMapRouteId(m) === routeId);
+}

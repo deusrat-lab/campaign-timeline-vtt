@@ -7,7 +7,7 @@ import {
   getChildRegions,
   getRegionBreadcrumbs,
 } from '../../data/worldRegions';
-import { getAtlasMapById } from '../../data/worldAtlasMaps';
+import { getAtlasMapById, atlasMapRouteId } from '../../data/worldAtlasMaps';
 import { ADVENTURE_MODULES } from '../../data/adventureModules';
 import { getCampaignByAdventureModuleId } from '../../data/campaignModules';
 import type { WorldRegion } from '../../types/worldAtlas';
@@ -133,9 +133,9 @@ function RegionDetail({ region }: { region: WorldRegion }) {
               <h2>Карта</h2>
               <img className="atlas-map-img" src={map.imageSrc} alt={map.titleRu ?? map.title} loading="lazy" />
               <div style={{ marginTop: 8 }}>
-                <a className="atlas-btn ghost small" href={map.imageSrc} target="_blank" rel="noreferrer">
+                <Link className="atlas-btn ghost small" to={`/atlas/maps/${atlasMapRouteId(map)}`}>
                   Открыть карту
-                </a>
+                </Link>
               </div>
             </div>
           )}

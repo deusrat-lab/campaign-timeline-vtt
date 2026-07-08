@@ -4,7 +4,7 @@ import '../world-atlas/atlasLayer.css';
 import { getCampaignById, buildCampaignContext } from '../../data/campaignModules';
 import { getModuleById } from '../../data/adventureModules';
 import { getRegionById } from '../../data/worldRegions';
-import { getAtlasMapById } from '../../data/worldAtlasMaps';
+import { getAtlasMapById, atlasMapRouteId } from '../../data/worldAtlasMaps';
 import { CAMPAIGN_TYPE_LABELS } from '../../types/campaign';
 import { useCampaignRuntime } from '../../state/campaignRuntimeStore';
 import { useCampaignStore } from '../../state/campaignStore';
@@ -143,7 +143,7 @@ export function CampaignDashboardPage() {
               <h2>World Info · Карта</h2>
               <img className="atlas-map-img" src={primaryMap.imageSrc} alt={primaryMap.titleRu ?? primaryMap.title} loading="lazy" />
               <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                <a className="atlas-btn small" href={primaryMap.imageSrc} target="_blank" rel="noreferrer">Открыть карту {primaryMap.titleRu ?? primaryMap.title}</a>
+                <Link className="atlas-btn small" to={`/atlas/maps/${atlasMapRouteId(primaryMap)}`}>Открыть карту {primaryMap.titleRu ?? primaryMap.title}</Link>
                 <button className="atlas-btn ghost small" onClick={() => navigate(`/world/${campaign.regionIds[0]}`)}>О регионе в атласе</button>
               </div>
             </div>

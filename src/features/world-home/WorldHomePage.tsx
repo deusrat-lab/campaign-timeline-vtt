@@ -1,7 +1,7 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../world-atlas/atlasLayer.css';
 import { CAMPAIGN_MODULES, MAIN_CAMPAIGN_ID } from '../../data/campaignModules';
-import { WORLD_ATLAS_MAPS } from '../../data/worldAtlasMaps';
+import { WORLD_ATLAS_MAPS, atlasMapRouteId } from '../../data/worldAtlasMaps';
 import { getRegionById } from '../../data/worldRegions';
 import { CAMPAIGN_TYPE_LABELS, type CampaignModule } from '../../types/campaign';
 import { useCampaignRuntime } from '../../state/campaignRuntimeStore';
@@ -95,7 +95,7 @@ export function WorldHomePage() {
               <h3>{m.titleRu ?? m.title}</h3>
               {m.description && <p>{m.description}</p>}
               <div style={{ display: 'flex', gap: 8, marginTop: 'auto', flexWrap: 'wrap' }}>
-                <a className="atlas-btn small" href={m.imageSrc} target="_blank" rel="noreferrer">Открыть карту</a>
+                <Link className="atlas-btn small" to={`/atlas/maps/${atlasMapRouteId(m)}`}>Открыть карту</Link>
                 <button className="atlas-btn ghost small" onClick={() => navigate(`/world/${m.regionIds[0]}`)}>Открыть библиотеку</button>
               </div>
             </div>

@@ -14,6 +14,7 @@ import { CampaignDataProvider } from './state/campaignDataContext';
 import { CampaignStoreProvider, useCampaignStore } from './state/campaignStore';
 import { CampaignRuntimeProvider } from './state/campaignRuntimeStore';
 import { WorldAtlasPage } from './features/world-atlas/WorldAtlasPage';
+import { AtlasMapWorkspace } from './features/world-atlas/AtlasMapWorkspace';
 import { WorldHomePage } from './features/world-home/WorldHomePage';
 import { CampaignsPage } from './features/campaigns/CampaignsPage';
 import { CampaignDashboardPage } from './features/campaigns/CampaignDashboardPage';
@@ -113,6 +114,9 @@ function AppShell() {
                touches the protected main-campaign state, arcs or session. */}
             <Route path="/world" element={<DmOnlyRoute><WorldAtlasPage /></DmOnlyRoute>} />
             <Route path="/world/:regionId" element={<DmOnlyRoute><WorldAtlasPage /></DmOnlyRoute>} />
+            {/* Atlas Map Workspace — opens a canonical map as a full campaign-prep
+               workspace (never a raw PNG). Shares the world atlas data only. */}
+            <Route path="/atlas/maps/:mapId" element={<DmOnlyRoute><AtlasMapWorkspace /></DmOnlyRoute>} />
             <Route path="/campaigns" element={<DmOnlyRoute><CampaignsPage /></DmOnlyRoute>} />
             <Route path="/campaigns/:campaignId" element={<DmOnlyRoute><CampaignDashboardPage /></DmOnlyRoute>} />
             <Route path="/campaigns/:campaignId/session" element={<DmOnlyRoute><CampaignSessionPage /></DmOnlyRoute>} />
