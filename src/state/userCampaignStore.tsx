@@ -13,6 +13,7 @@ import type {
   CampaignMapPlacement,
   CampaignEntityType,
 } from '../types/userCampaign';
+import { getRegionPreset } from '../data/regionPresets';
 
 /**
  * Isolated user-campaign store.
@@ -51,10 +52,24 @@ function loadRegistry(): UserCampaignRegistryEntry[] {
 }
 
 function emptyData(campaignId: string, title: string, type: UserCampaignType, baseMapId: string, regionIds: string[]): UserCampaignData {
+  // Seed the new campaign's library with COPIES of the region's canon presets
+  // (general locations + houses/powers). Fresh ids → fully isolated data.
+  const preset = getRegionPreset(baseMapId);
+  const locations: CampaignLocation[] = (preset?.locations ?? []).map((l, i) => ({
+    id: `loc-seed-${i}-${Math.random().toString(36).slice(2, 6)}`,
+    title: l.title,
+    description: l.description,
+  }));
+  const npcs: CampaignNpc[] = (preset?.npcs ?? []).map((n, i) => ({
+    id: `npc-seed-${i}-${Math.random().toString(36).slice(2, 6)}`,
+    name: n.name,
+    role: n.role,
+    description: n.description,
+  }));
   return {
     campaignId, title, type, baseMapId,
     mapIds: [baseMapId], regionIds,
-    locations: [], npcs: [], quests: [], enemies: [], images: [], routes: [], zones: [], notes: [], mapPlacements: [],
+    locations, npcs, quests: [], enemies: [], images: [], routes: [], zones: [], notes: [], mapPlacements: [],
   };
 }
 

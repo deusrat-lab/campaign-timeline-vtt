@@ -12,15 +12,23 @@ export function NewCampaignWizard() {
   const [params] = useSearchParams();
   const store = useUserCampaigns();
 
-  const [type, setType] = useState<UserCampaignType>((params.get('type') as UserCampaignType) || 'campaign');
-  const [title, setTitle] = useState('');
-  const [mapId, setMapId] = useState<string>(() => {
+  const initialMapId = (() => {
     const raw = params.get('mapId');
     if (!raw) return '';
-    // accept short slug or full id
     const map = getAtlasMapById(raw) ?? WORLD_ATLAS_MAPS.find((m) => m.id.replace(/^atlas-map-/, '') === raw);
     return map?.id ?? '';
-  });
+  })();
+  const mapTitle = (id: string) => { const m = getAtlasMapById(id); return m?.titleRu ?? m?.title ?? ''; };
+
+  const [type, setType] = useState<UserCampaignType>((params.get('type') as UserCampaignType) || 'campaign');
+  // Name is prefilled from the chosen map so the DM can create in one click.
+  const [title, setTitle] = useState(initialMapId ? `Кампания: ${mapTitle(initialMapId)}` : '');
+  const [mapId, setMapId] = useState<string>(initialMapId);
+
+  const pickMap = (id: string) => {
+    setMapId(id);
+    if (!title.trim() || title.startsWith('Кампания: ')) setTitle(`Кампания: ${mapTitle(id)}`);
+  };
 
   const canCreate = title.trim().length > 0 && !!mapId;
 
@@ -79,7 +87,7 @@ export function NewCampaignWizard() {
               type="button"
               className="atlas-card"
               style={{ borderColor: mapId === m.id ? 'var(--gold)' : undefined }}
-              onClick={() => setMapId(m.id)}
+              onClick={() => pickMap(m.id)}
             >
               <img className="atlas-map-img" src={m.imageSrc} alt={m.titleRu ?? m.title} loading="lazy" style={{ maxHeight: 120, objectFit: 'cover' }} />
               <h3>{m.titleRu ?? m.title}</h3>

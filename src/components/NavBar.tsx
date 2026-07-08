@@ -89,6 +89,10 @@ export function NavBar() {
   const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const observerLocked = location.pathname === '/observer';
+  // Inside a user campaign (or its map), hide all main-campaign controls (arc
+  // toggles, DM/Player mode, Observer, export/import, party) — they belong to
+  // the protected main campaign and must not bleed into another context.
+  const inUserCampaign = /^\/campaigns\/(?!new(?:$|\/))[^/]+/.test(location.pathname);
 
   const currentLocation =
     data && store.party.currentLocationStateId ? getLocationState(data, store.party.currentLocationStateId) : undefined;
@@ -174,7 +178,12 @@ export function NavBar() {
           )}
         </div>
         <div className="navbar-center">
-          {data && (
+          {inUserCampaign && (
+            <span className="navbar-text-link navbar-text-link-hint" title="Открыта отдельная кампания">
+              Отдельная кампания — данные основной кампании скрыты
+            </span>
+          )}
+          {!inUserCampaign && data && (
             <div className="segmented" role="group" aria-label="Текущая арка">
               {data.timelines.map((t) => {
                 const disabled = t.arcId === 'arc-2' && store.mode === 'player-view' && !store.arc2RevealedToPlayers;
@@ -192,13 +201,13 @@ export function NavBar() {
               })}
             </div>
           )}
-          {observerLocked ? (
+          {!inUserCampaign && observerLocked ? (
             <div className="segmented" role="group" aria-label="Режим приложения">
               <button type="button" title={MODE_LABELS['player-view']} className="segmented-option active" disabled>
                 {MODE_SHORT['player-view']}
               </button>
             </div>
-          ) : (
+          ) : inUserCampaign ? null : (
             <div className="segmented" role="group" aria-label="Режим приложения">
               {(['dm-view', 'dm-edit', 'player-view'] as AppMode[]).map((m) => (
                 <button
@@ -215,18 +224,18 @@ export function NavBar() {
           )}
         </div>
         <div className="navbar-right">
-          {store.mode !== 'player-view' && !observerLocked && API_BASE_URL && <DmSyncIndicator />}
-          {store.mode === 'dm-edit' && store.saveStatus !== 'idle' && (
+          {!inUserCampaign && store.mode !== 'player-view' && !observerLocked && API_BASE_URL && <DmSyncIndicator />}
+          {!inUserCampaign && store.mode === 'dm-edit' && store.saveStatus !== 'idle' && (
             <span className={`save-status save-status-${store.saveStatus}`}>
               {store.saveStatus === 'saved' ? 'Сохранено' : 'Ошибка сохранения'}
             </span>
           )}
-          {currentLocation && (
+          {!inUserCampaign && currentLocation && (
             <span className="party-marker" title="Текущее положение партии">
               Партия: <Link to={`/map?selected=${currentLocation.id}`}>{currentLocation.title}</Link>
             </span>
           )}
-          {store.mode !== 'player-view' && (
+          {!inUserCampaign && store.mode !== 'player-view' && (
             <label className="reveal-toggle">
               <input
                 type="checkbox"
@@ -236,7 +245,7 @@ export function NavBar() {
               Открыть Арку 2 игрокам
             </label>
           )}
-          {!observerLocked && (
+          {!inUserCampaign && !observerLocked && (
             <button
               type="button"
               onClick={() => openObserverWindow(currentLocation?.id)}
@@ -245,7 +254,7 @@ export function NavBar() {
               Открыть Observer
             </button>
           )}
-          {store.mode !== 'player-view' && (
+          {!inUserCampaign && store.mode !== 'player-view' && (
             <div className="navbar-menu">
               <button onClick={downloadExport}>Export JSON</button>
               <button onClick={triggerImport}>Import JSON</button>

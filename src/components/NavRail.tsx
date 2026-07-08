@@ -36,7 +36,12 @@ export function NavRail() {
   const location = useLocation();
   const store = useCampaignStore();
   if (store.mode === 'player-view') return null;
-  const items = RAIL_ITEMS;
+  // Inside a user campaign, only world-level navigation is relevant — the
+  // main-campaign library items (map, quests, NPC, …) show main data, so hide
+  // them to avoid mixing contexts.
+  const inUserCampaign = /^\/campaigns\/(?!new(?:$|\/))[^/]+/.test(location.pathname);
+  const WORLD_KEYS = new Set(['home', 'campaigns', 'world']);
+  const items = inUserCampaign ? RAIL_ITEMS.filter((i) => WORLD_KEYS.has(i.key)) : RAIL_ITEMS;
 
   return (
     <nav className="nav-rail" aria-label="Основная навигация">

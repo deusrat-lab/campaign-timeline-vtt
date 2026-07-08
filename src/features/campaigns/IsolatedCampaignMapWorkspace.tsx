@@ -27,6 +27,9 @@ export function IsolatedCampaignMapWorkspace() {
   const rootRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  // Auto-fit stays on (re-fitting as the flex layout settles) until the user
+  // takes control by zooming/panning — then we stop overriding their view.
+  const autoFitRef = useRef(true);
 
   // `.app-shell` is content-height (min-height:100vh), so `height:100%` would
   // collapse. Measure the space below the top chrome and size the workspace
@@ -41,7 +44,6 @@ export function IsolatedCampaignMapWorkspace() {
   const [selected, setSelected] = useState<{ type: CampaignEntityType; id: string } | null>(null);
   const [search, setSearch] = useState('');
   const [layers, setLayers] = useState({ objects: true, routes: true, zones: true });
-  const [fitted, setFitted] = useState(false);
 
   const mode: UserCampaignMode = runtime?.mode ?? 'dmView';
   const isEdit = mode === 'dmEdit';
@@ -65,37 +67,38 @@ export function IsolatedCampaignMapWorkspace() {
     return () => window.removeEventListener('resize', measure);
   }, []);
 
-  const fitToScreen = useCallback(() => {
+  const fitToScreen = useCallback((markManual = false) => {
     const vp = viewportRef.current, img = imgRef.current;
     if (!vp || !img || !img.naturalWidth || vp.clientWidth < 2 || vp.clientHeight < 2) return;
+    if (markManual) autoFitRef.current = false;
     const scale = Math.min(vp.clientWidth / img.naturalWidth, vp.clientHeight / img.naturalHeight) * 0.98;
     const z = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, scale));
     const px = (vp.clientWidth - img.naturalWidth * z) / 2;
     const py = (vp.clientHeight - img.naturalHeight * z) / 2;
-    setZoom(z); setPan({ x: px, y: py }); persistView(z, { x: px, y: py });
+    setZoom(z); setPan({ x: px, y: py });
+    // Only persist on an explicit user fit. Persisting during auto-fit would
+    // update the store → re-render → re-fit → infinite loop.
+    if (markManual) persistView(z, { x: px, y: py });
   }, [persistView]);
 
-  // Fit once the viewport actually has a real size AND the image has loaded.
-  // A ResizeObserver handles the case where the flex layout settles after the
-  // first paint (the reason the map used to fit at ~15%).
+  // Keep the latest fit fn in a ref so the observer effect below doesn't depend
+  // on its identity (which changes when the store re-renders).
+  const fitRef = useRef(fitToScreen);
+  fitRef.current = fitToScreen;
+
+  // Fit the map after the flex layout settles. The viewport height arrives in
+  // stages after first paint (the reason the map used to end up at ~15%/34%),
+  // so we fit on a double-rAF, again on a short timeout as a safety net, and on
+  // window resize — until the user takes control (autoFitRef → false). These
+  // are discrete events (never observer feedback), so there is no render loop.
   useEffect(() => {
-    if (fitted) return;
-    const vp = viewportRef.current;
-    if (!vp) return;
-    const tryFit = () => {
-      const img = imgRef.current;
-      if (img && img.complete && img.naturalWidth && vp.clientWidth > 2 && vp.clientHeight > 2) {
-        fitToScreen();
-        setFitted(true);
-        return true;
-      }
-      return false;
-    };
-    if (tryFit()) return;
-    const ro = new ResizeObserver(() => { tryFit(); });
-    ro.observe(vp);
-    return () => ro.disconnect();
-  }, [fitted, fitToScreen, shellHeight]);
+    if (!autoFitRef.current) return;
+    const doFit = () => { if (autoFitRef.current) fitRef.current(false); };
+    const raf = requestAnimationFrame(() => requestAnimationFrame(doFit));
+    const t = setTimeout(doFit, 220);
+    window.addEventListener('resize', doFit);
+    return () => { cancelAnimationFrame(raf); clearTimeout(t); window.removeEventListener('resize', doFit); };
+  }, [shellHeight]);
 
   if (!data || !runtime || !campaignId) {
     return (
@@ -122,6 +125,7 @@ export function IsolatedCampaignMapWorkspace() {
 
   const clampZoom = (z: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
   const zoomBy = (factor: number) => {
+    autoFitRef.current = false;
     const vp = viewportRef.current;
     const cx = vp ? vp.clientWidth / 2 : 0, cy = vp ? vp.clientHeight / 2 : 0;
     const nz = clampZoom(zoom * factor);
@@ -132,6 +136,7 @@ export function IsolatedCampaignMapWorkspace() {
 
   const onWheel = (e: React.WheelEvent) => {
     e.preventDefault();
+    autoFitRef.current = false;
     const vp = viewportRef.current; if (!vp) return;
     const rect = vp.getBoundingClientRect();
     const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
@@ -152,6 +157,7 @@ export function IsolatedCampaignMapWorkspace() {
       const d = downRef.current; if (!d) return;
       if (Math.abs(ev.clientX - d.x) + Math.abs(ev.clientY - d.y) > 4) d.moved = true;
       if (!placing && !routeEditId && d.moved) {
+        autoFitRef.current = false;
         setPan({ x: d.startPan.x + (ev.clientX - d.x), y: d.startPan.y + (ev.clientY - d.y) });
       }
     };
@@ -280,8 +286,8 @@ export function IsolatedCampaignMapWorkspace() {
         <button className="ucw-tbtn" onClick={() => zoomBy(1.2)} aria-label="Приблизить">+</button>
         <button className="ucw-tbtn" onClick={() => zoomBy(1 / 1.2)} aria-label="Отдалить">−</button>
         <span className="ucw-zoomreadout">{Math.round(zoom * 100)}%</span>
-        <button className="ucw-tbtn" onClick={fitToScreen}>По размеру экрана</button>
-        <button className="ucw-tbtn" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); persistView(1, { x: 0, y: 0 }); }}>Сброс</button>
+        <button className="ucw-tbtn" onClick={() => fitToScreen(true)}>По размеру экрана</button>
+        <button className="ucw-tbtn" onClick={() => { autoFitRef.current = false; setZoom(1); setPan({ x: 0, y: 0 }); persistView(1, { x: 0, y: 0 }); }}>Сброс</button>
         <span className="sep" />
         <button className={`ucw-tbtn ${layers.objects ? 'active' : ''}`} onClick={() => setLayers((l) => ({ ...l, objects: !l.objects }))}>Объекты {layers.objects ? '(вкл)' : '(выкл)'}</button>
         <button className={`ucw-tbtn ${layers.routes ? 'active' : ''}`} onClick={() => setLayers((l) => ({ ...l, routes: !l.routes }))}>Маршруты {layers.routes ? '(вкл)' : '(выкл)'}</button>
@@ -310,10 +316,7 @@ export function IsolatedCampaignMapWorkspace() {
                 src={map?.imageSrc}
                 alt={map?.titleRu ?? map?.title ?? 'Карта'}
                 draggable={false}
-                onLoad={() => {
-                  const vp = viewportRef.current;
-                  if (!fitted && vp && vp.clientWidth > 2 && vp.clientHeight > 2) { fitToScreen(); setFitted(true); }
-                }}
+                onLoad={() => { if (autoFitRef.current) fitToScreen(); }}
               />
               {/* routes */}
               {layers.routes && (

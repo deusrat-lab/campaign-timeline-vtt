@@ -73,7 +73,11 @@ export function WorldHomePage() {
       </div>
 
       <div className="atlas-section">
-        <h2>Карты мира — основа для кампании</h2>
+        <h2>Создать кампанию — выберите карту</h2>
+        <p className="atlas-sub" style={{ marginBottom: 12 }}>
+          Например, чтобы играть в Кальдране: найдите карту «Кальдран» ниже и нажмите «Создать кампанию».
+          Откроется пустая изолированная кампания с канон-локациями региона.
+        </p>
         <div className="atlas-grid">
           {WORLD_ATLAS_MAPS.map((m) => (
             <div key={m.id} className="atlas-card" style={{ cursor: 'default' }}>
