@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import '../world-atlas/atlasLayer.css';
 import './campaignWorkspace.css';
@@ -24,8 +24,14 @@ export function IsolatedCampaignMapWorkspace() {
   const data = campaignId ? store.getData(campaignId) : null;
   const runtime = campaignId ? store.getRuntime(campaignId) : null;
 
+  const rootRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+
+  // `.app-shell` is content-height (min-height:100vh), so `height:100%` would
+  // collapse. Measure the space below the top chrome and size the workspace
+  // explicitly so the map viewport gets a real height.
+  const [shellHeight, setShellHeight] = useState<number>();
 
   const [zoom, setZoom] = useState(runtime?.mapViewState.zoom ?? 1);
   const [pan, setPan] = useState({ x: runtime?.mapViewState.panX ?? 0, y: runtime?.mapViewState.panY ?? 0 });
@@ -46,21 +52,50 @@ export function IsolatedCampaignMapWorkspace() {
     store.updateRuntime(campaignId, (prev) => ({ ...prev, mapViewState: { zoom: z, panX: p.x, panY: p.y } }));
   }, [campaignId, store]);
 
+  // Size the workspace to fill the viewport below the top chrome.
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = rootRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      setShellHeight(Math.max(320, window.innerHeight - top));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+
   const fitToScreen = useCallback(() => {
     const vp = viewportRef.current, img = imgRef.current;
-    if (!vp || !img || !img.naturalWidth) return;
-    const scale = Math.min(vp.clientWidth / img.naturalWidth, vp.clientHeight / img.naturalHeight) * 0.96;
+    if (!vp || !img || !img.naturalWidth || vp.clientWidth < 2 || vp.clientHeight < 2) return;
+    const scale = Math.min(vp.clientWidth / img.naturalWidth, vp.clientHeight / img.naturalHeight) * 0.98;
     const z = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, scale));
     const px = (vp.clientWidth - img.naturalWidth * z) / 2;
     const py = (vp.clientHeight - img.naturalHeight * z) / 2;
     setZoom(z); setPan({ x: px, y: py }); persistView(z, { x: px, y: py });
   }, [persistView]);
 
+  // Fit once the viewport actually has a real size AND the image has loaded.
+  // A ResizeObserver handles the case where the flex layout settles after the
+  // first paint (the reason the map used to fit at ~15%).
   useEffect(() => {
     if (fitted) return;
-    const img = imgRef.current;
-    if (img && img.complete && img.naturalWidth) { fitToScreen(); setFitted(true); }
-  }, [fitted, fitToScreen]);
+    const vp = viewportRef.current;
+    if (!vp) return;
+    const tryFit = () => {
+      const img = imgRef.current;
+      if (img && img.complete && img.naturalWidth && vp.clientWidth > 2 && vp.clientHeight > 2) {
+        fitToScreen();
+        setFitted(true);
+        return true;
+      }
+      return false;
+    };
+    if (tryFit()) return;
+    const ro = new ResizeObserver(() => { tryFit(); });
+    ro.observe(vp);
+    return () => ro.disconnect();
+  }, [fitted, fitToScreen, shellHeight]);
 
   if (!data || !runtime || !campaignId) {
     return (
@@ -217,7 +252,7 @@ export function IsolatedCampaignMapWorkspace() {
   const routeInEdit = routeEditId ? data.routes.find((r) => r.id === routeEditId) : undefined;
 
   return (
-    <div className="ucw">
+    <div className="ucw" ref={rootRef} style={shellHeight ? { height: shellHeight } : undefined}>
       {/* Header */}
       <div className="ucw-header">
         <div className="ucw-title">
@@ -275,7 +310,10 @@ export function IsolatedCampaignMapWorkspace() {
                 src={map?.imageSrc}
                 alt={map?.titleRu ?? map?.title ?? 'Карта'}
                 draggable={false}
-                onLoad={() => { if (!fitted) { fitToScreen(); setFitted(true); } }}
+                onLoad={() => {
+                  const vp = viewportRef.current;
+                  if (!fitted && vp && vp.clientWidth > 2 && vp.clientHeight > 2) { fitToScreen(); setFitted(true); }
+                }}
               />
               {/* routes */}
               {layers.routes && (

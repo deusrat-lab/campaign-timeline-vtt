@@ -1,6 +1,6 @@
 /* Isolated Campaign Map Workspace — mirrors the main map workspace look,
    but is a self-contained component. Scoped under .ucw-* class names. */
-.ucw { display: flex; flex-direction: column; height: 100%; min-height: 0; color: var(--fg); }
+.ucw { display: flex; flex-direction: column; height: 100%; min-height: 480px; color: var(--fg); overflow: hidden; }
 
 .ucw-header {
   display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
