@@ -1,46 +1,14 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import '../world-atlas/atlasLayer.css';
-import { CAMPAIGN_MODULES, MAIN_CAMPAIGN_ID } from '../../data/campaignModules';
+import { CAMPAIGN_MODULES } from '../../data/campaignModules';
 import { WORLD_ATLAS_MAPS, atlasMapRouteId } from '../../data/worldAtlasMaps';
-import { getRegionById } from '../../data/worldRegions';
-import { CAMPAIGN_TYPE_LABELS, type CampaignModule } from '../../types/campaign';
-import { useCampaignRuntime } from '../../state/campaignRuntimeStore';
-
-function CampaignRow({ campaign, onOpen }: { campaign: CampaignModule; onOpen: () => void }) {
-  const runtime = useCampaignRuntime();
-  const region = campaign.regionIds[0] ? getRegionById(campaign.regionIds[0]) : undefined;
-  const st = campaign.protected ? 'active' : runtime.getRuntime(campaign.id).status;
-  return (
-    <div className="atlas-card" style={{ cursor: 'default' }}>
-      <div className="atlas-badges">
-        <span className="atlas-badge type-badge">{CAMPAIGN_TYPE_LABELS[campaign.type]}</span>
-        {campaign.protected && <span className="atlas-badge canon-fixedCanon">protected</span>}
-        {st && st !== 'notStarted' && <span className={`atlas-badge status-${st}`}>{st}</span>}
-      </div>
-      <h3>{campaign.titleRu ?? campaign.title}</h3>
-      <p>{campaign.description}</p>
-      <div className="atlas-badges" style={{ marginTop: 4 }}>
-        {region && <span className="atlas-tag">{region.titleRu ?? region.title}</span>}
-        <span className="atlas-tag">{campaign.canonPolicy}</span>
-      </div>
-      <div style={{ marginTop: 'auto', paddingTop: 8 }}>
-        <button className="atlas-btn small" onClick={onOpen}>Открыть</button>
-      </div>
-    </div>
-  );
-}
+import { useUserCampaigns } from '../../state/userCampaignStore';
+import { USER_CAMPAIGN_TYPE_LABELS } from '../../types/userCampaign';
 
 export function WorldHomePage() {
   const navigate = useNavigate();
-  const main = CAMPAIGN_MODULES.find((c) => c.id === MAIN_CAMPAIGN_ID)!;
-  const oneShots = CAMPAIGN_MODULES.filter((c) => !c.protected && c.status !== 'draft');
-  const drafts = CAMPAIGN_MODULES.filter((c) => c.status === 'draft');
-
-  const openCampaign = (c: CampaignModule) => {
-    if (c.protected) navigate(c.startRoute); // legacy /map flow
-    else navigate(`/campaigns/${c.id}`);
-  };
-
+  const { registry } = useUserCampaigns();
+  const main = CAMPAIGN_MODULES.find((c) => c.protected)!;
   const worldMap = WORLD_ATLAS_MAPS.find((m) => m.id === 'atlas-map-known-world');
 
   return (
@@ -48,9 +16,13 @@ export function WorldHomePage() {
       <div className="atlas-header">
         <div>
           <h1>Дом мира · World Home</h1>
-          <p className="atlas-sub">Один мир, много кампаний. Выберите контекст игры.</p>
+          <p className="atlas-sub">Один мир, много кампаний. Возьмите любую карту и создайте на её основе кампанию.</p>
         </div>
-        <button className="atlas-btn ghost" onClick={() => navigate('/world')}>Открыть World Atlas</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="atlas-btn" onClick={() => navigate('/campaigns/new?type=campaign')}>+ Новая кампания</button>
+          <button className="atlas-btn ghost" onClick={() => navigate('/campaigns/new?type=oneShot')}>+ Новый ваншот</button>
+          <button className="atlas-btn ghost" onClick={() => navigate('/world')}>World Atlas</button>
+        </div>
       </div>
 
       {worldMap && (
@@ -58,36 +30,50 @@ export function WorldHomePage() {
           type="button"
           onClick={() => navigate('/world/region-known-world')}
           style={{ display: 'block', width: '100%', border: 'none', background: 'none', padding: 0, cursor: 'pointer', marginBottom: 8 }}
+          title="Открыть справку в World Atlas"
         >
           <img className="atlas-map-img" src={worldMap.imageSrc} alt="Карта мира" loading="lazy" />
         </button>
       )}
 
       <div className="atlas-section">
-        <h2>Активная кампания</h2>
+        <h2>Основная кампания</h2>
         <div className="atlas-grid">
-          <CampaignRow campaign={main} onOpen={() => openCampaign(main)} />
-        </div>
-      </div>
-
-      <div className="atlas-section">
-        <h2>Ваншоты и кампании</h2>
-        <div className="atlas-grid">
-          {oneShots.map((c) => <CampaignRow key={c.id} campaign={c} onOpen={() => openCampaign(c)} />)}
-        </div>
-      </div>
-
-      {drafts.length > 0 && (
-        <div className="atlas-section">
-          <h2>Черновики</h2>
-          <div className="atlas-grid">
-            {drafts.map((c) => <CampaignRow key={c.id} campaign={c} onOpen={() => openCampaign(c)} />)}
+          <div className="atlas-card" style={{ cursor: 'default' }}>
+            <div className="atlas-badges">
+              <span className="atlas-badge canon-fixedCanon">protected</span>
+              <span className="atlas-badge status-active">active</span>
+            </div>
+            <h3>{main.titleRu ?? main.title}</h3>
+            <p>{main.description}</p>
+            <div style={{ marginTop: 'auto' }}>
+              <button className="atlas-btn small" onClick={() => navigate('/map')}>Открыть основную кампанию</button>
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
       <div className="atlas-section">
-        <h2>Карты мира</h2>
+        <h2>Мои кампании</h2>
+        {registry.length === 0 ? (
+          <p className="atlas-empty">Новых кампаний пока нет. Создайте кампанию или ваншот на любой карте ниже.</p>
+        ) : (
+          <div className="atlas-grid">
+            {registry.map((c) => (
+              <div key={c.campaignId} className="atlas-card" style={{ cursor: 'default' }}>
+                <div className="atlas-badges"><span className="atlas-badge type-badge">{USER_CAMPAIGN_TYPE_LABELS[c.type]}</span></div>
+                <h3>{c.title}</h3>
+                <div style={{ marginTop: 'auto' }}>
+                  <button className="atlas-btn small" onClick={() => navigate(`/campaigns/${c.campaignId}/map`)}>Открыть</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="atlas-section">
+        <h2>Карты мира — основа для кампании</h2>
         <div className="atlas-grid">
           {WORLD_ATLAS_MAPS.map((m) => (
             <div key={m.id} className="atlas-card" style={{ cursor: 'default' }}>
@@ -95,8 +81,9 @@ export function WorldHomePage() {
               <h3>{m.titleRu ?? m.title}</h3>
               {m.description && <p>{m.description}</p>}
               <div style={{ display: 'flex', gap: 8, marginTop: 'auto', flexWrap: 'wrap' }}>
-                <Link className="atlas-btn small" to={`/atlas/maps/${atlasMapRouteId(m)}`}>Открыть карту</Link>
-                <button className="atlas-btn ghost small" onClick={() => navigate(`/world/${m.regionIds[0]}`)}>Открыть библиотеку</button>
+                <button className="atlas-btn small" onClick={() => navigate(`/campaigns/new?type=campaign&mapId=${atlasMapRouteId(m)}`)}>Создать кампанию</button>
+                <button className="atlas-btn ghost small" onClick={() => navigate(`/campaigns/new?type=oneShot&mapId=${atlasMapRouteId(m)}`)}>Создать ваншот</button>
+                <button className="atlas-btn ghost small" onClick={() => navigate(`/world/${m.regionIds[0]}`)}>Справка в Атласе</button>
               </div>
             </div>
           ))}

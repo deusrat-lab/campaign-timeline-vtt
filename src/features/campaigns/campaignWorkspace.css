@@ -1,0 +1,103 @@
+/* Isolated Campaign Map Workspace — mirrors the main map workspace look,
+   but is a self-contained component. Scoped under .ucw-* class names. */
+.ucw { display: flex; flex-direction: column; height: 100%; min-height: 0; color: var(--fg); }
+
+.ucw-header {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 18px; border-bottom: 1px solid var(--border-soft); background: var(--bg-card);
+}
+.ucw-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-family: var(--font-heading); }
+.ucw-title strong { color: var(--gold-soft); font-size: 1.1rem; }
+.ucw-chip { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--amber); border: 1px solid var(--amber); border-radius: 999px; padding: 2px 9px; }
+.ucw-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.ucw-segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.ucw-segmented button { background: transparent; color: var(--fg-dim); border: none; padding: 6px 12px; font: inherit; cursor: pointer; }
+.ucw-segmented button.active { background: var(--gold-dim); color: #16140f; font-weight: 600; }
+
+.ucw-toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 18px; border-bottom: 1px solid var(--border-soft); background: var(--bg-deep);
+}
+.ucw-toolbar .sep { width: 1px; height: 22px; background: var(--border-soft); margin: 0 4px; }
+.ucw-tbtn { background: var(--bg-card); border: 1px solid var(--border-soft); color: var(--fg); border-radius: 7px; padding: 5px 10px; font: inherit; font-size: 0.85rem; cursor: pointer; }
+.ucw-tbtn:hover { border-color: var(--gold-dim); }
+.ucw-tbtn.active { background: var(--gold-dim); color: #16140f; border-color: var(--gold-dim); font-weight: 600; }
+.ucw-zoomreadout { color: var(--fg-dim); font-size: 0.82rem; min-width: 42px; text-align: center; }
+.ucw-search { background: var(--bg-card); border: 1px solid var(--border-soft); color: var(--fg); border-radius: 7px; padding: 5px 10px; font: inherit; font-size: 0.85rem; min-width: 180px; }
+
+.ucw-body { display: flex; flex: 1; min-height: 0; }
+
+.ucw-viewport {
+  position: relative; flex: 1; overflow: hidden; background: var(--bg-deep);
+  cursor: grab; user-select: none; touch-action: none;
+}
+.ucw-viewport.placing { cursor: crosshair; }
+.ucw-viewport.panning { cursor: grabbing; }
+.ucw-world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.ucw-mapstack { position: relative; display: inline-block; }
+.ucw-mapimg { display: block; max-width: none; border: 1px solid var(--border); box-shadow: var(--shadow); pointer-events: none; }
+.ucw-overlay-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.ucw-markers { position: absolute; inset: 0; }
+
+.ucw-marker {
+  position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center;
+  cursor: pointer; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7));
+}
+.ucw-marker.edit { cursor: move; }
+.ucw-marker.selected .ucw-pin { outline: 2px solid var(--gold); outline-offset: 1px; }
+.ucw-marker.hidden-pin { opacity: 0.55; }
+.ucw-pin { width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid rgba(0,0,0,0.5); display: grid; place-items: center; }
+.ucw-pin span { transform: rotate(45deg); font-size: 12px; }
+.ucw-pin.location { background: var(--gold); }
+.ucw-pin.npc { background: var(--green); }
+.ucw-pin.quest { background: var(--purple); }
+.ucw-pin.enemy { background: var(--danger); }
+.ucw-pin.party { background: #4f7fd6; }
+.ucw-pin.custom, .ucw-pin.image { background: var(--amber); }
+.ucw-marker-label { margin-top: 2px; font-size: 0.68rem; color: var(--fg); background: rgba(9,8,7,0.8); border: 1px solid var(--border-soft); border-radius: 4px; padding: 0 4px; white-space: nowrap; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+
+.ucw-routept { fill: var(--gold); stroke: #16140f; stroke-width: 0.3; cursor: move; }
+.ucw-legend {
+  position: absolute; right: 14px; bottom: 14px; background: rgba(9,8,7,0.85); border: 1px solid var(--border-soft);
+  border-radius: 8px; padding: 8px 12px; font-size: 0.78rem; color: var(--fg-dim); display: flex; flex-direction: column; gap: 3px;
+}
+.ucw-legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+
+.ucw-hint {
+  position: absolute; left: 50%; top: 12px; transform: translateX(-50%);
+  background: rgba(212,175,55,0.14); border: 1px solid var(--gold-dim); color: var(--gold-soft);
+  border-radius: 8px; padding: 6px 14px; font-size: 0.85rem; pointer-events: none;
+}
+
+.ucw-library {
+  width: 340px; flex-shrink: 0; overflow: auto; padding: 14px 16px;
+  border-left: 1px solid var(--border-soft); background: var(--bg-card);
+}
+.ucw-lib-heading { font-family: var(--font-heading); color: var(--gold-soft); font-size: 1.05rem; margin: 0 0 4px; }
+.ucw-add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0; }
+.ucw-add-grid .atlas-btn { width: 100%; }
+.ucw-lib-group { margin-top: 14px; }
+.ucw-lib-group > .label { color: var(--fg-faint); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+.ucw-entity-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 9px; background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 8px; margin-bottom: 6px; font-size: 0.88rem; }
+.ucw-entity-row.selected { border-color: var(--gold); }
+.ucw-entity-row .row-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.ucw-entity-row button { background: none; border: 1px solid var(--border-soft); color: var(--fg-dim); border-radius: 6px; padding: 2px 7px; font: inherit; font-size: 0.75rem; cursor: pointer; }
+.ucw-entity-row button:hover { border-color: var(--gold-dim); color: var(--gold-soft); }
+.ucw-placed-badge { color: var(--green); font-size: 0.7rem; }
+
+.ucw-card { background: var(--bg-card-raised); border: 1px solid var(--border-soft); border-radius: 10px; padding: 12px; }
+.ucw-card label { display: block; font-size: 0.74rem; color: var(--fg-faint); text-transform: uppercase; letter-spacing: 0.03em; margin: 8px 0 3px; }
+.ucw-card input, .ucw-card textarea, .ucw-card select {
+  width: 100%; background: var(--bg-card); border: 1px solid var(--border-soft); color: var(--fg);
+  border-radius: 6px; padding: 6px 8px; font: inherit; font-size: 0.88rem;
+}
+.ucw-card textarea { min-height: 60px; resize: vertical; }
+.ucw-card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+.ucw-empty-note { color: var(--fg-faint); font-style: italic; font-size: 0.9rem; margin: 6px 0 0; }
+
+@media (max-width: 860px) {
+  .ucw-body { flex-direction: column; }
+  .ucw-library { width: auto; border-left: none; border-top: 1px solid var(--border-soft); max-height: 46vh; }
+}

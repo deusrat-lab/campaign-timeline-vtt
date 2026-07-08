@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import './atlasLayer.css';
-import { getAtlasMapByRouteId } from '../../data/worldAtlasMaps';
+import { getAtlasMapByRouteId, atlasMapRouteId } from '../../data/worldAtlasMaps';
 import { getRegionById, getRegionSubtree } from '../../data/worldRegions';
 import { ADVENTURE_MODULES } from '../../data/adventureModules';
 import { CAMPAIGN_MODULES, getCampaignByAdventureModuleId } from '../../data/campaignModules';
@@ -109,7 +109,8 @@ export function AtlasMapWorkspace() {
   }
 
   const selectedRegion = selectedRegionId ? getRegionById(selectedRegionId) : undefined;
-  const prep = (what: string) => window.alert(`${what}\n\nКонструктор появится позже. Карта: ${map.titleRu ?? map.title}.`);
+  const mapSlug = atlasMapRouteId(map);
+  const startCampaign = (type: 'campaign' | 'oneShot') => navigate(`/campaigns/new?type=${type}&mapId=${mapSlug}`);
 
   return (
     <div className="atlas-workspace">
@@ -143,7 +144,7 @@ export function AtlasMapWorkspace() {
           {selectedRegion ? (
             <>
               <button className="atlas-back-link" style={{ margin: '0 0 10px' }} onClick={() => setSelectedRegionId(null)}>← К обзору карты</button>
-              <RegionInspector region={selectedRegion} onCreateOneShot={() => prep('Создать ваншот здесь')} />
+              <RegionInspector region={selectedRegion} onCreateOneShot={() => startCampaign('oneShot')} />
             </>
           ) : (
             <>
@@ -178,8 +179,8 @@ export function AtlasMapWorkspace() {
               ) : <p className="atlas-empty" style={{ fontSize: '0.85rem' }}>Пока нет.</p>}
 
               <div className="atlas-prep-actions">
-                <button className="atlas-btn small" onClick={() => prep('Создать кампанию на этой карте')}>Создать кампанию</button>
-                <button className="atlas-btn small" onClick={() => prep('Создать ваншот на этой карте')}>Создать ваншот</button>
+                <button className="atlas-btn small" onClick={() => startCampaign('campaign')}>Создать кампанию</button>
+                <button className="atlas-btn small" onClick={() => startCampaign('oneShot')}>Создать ваншот</button>
                 <button className="atlas-btn ghost small" onClick={() => navigate('/campaigns')}>Связанные кампании</button>
                 <Link className="atlas-btn ghost small" to={`/world/${map.regionIds[0]}`}>Полная библиотека</Link>
               </div>

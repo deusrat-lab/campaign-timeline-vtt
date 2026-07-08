@@ -1,79 +1,77 @@
-import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../world-atlas/atlasLayer.css';
 import { CAMPAIGN_MODULES } from '../../data/campaignModules';
 import { getRegionById } from '../../data/worldRegions';
-import { CAMPAIGN_TYPE_LABELS, type CampaignCanonPolicy, type CampaignModuleType } from '../../types/campaign';
-import { useCampaignRuntime } from '../../state/campaignRuntimeStore';
-
-const TYPE_FILTERS: (CampaignModuleType | 'all')[] = [
-  'all', 'mainCampaign', 'campaign', 'miniCampaign', 'oneShot', 'historicalOneShot', 'sandbox',
-];
-const POLICY_FILTERS: (CampaignCanonPolicy | 'all')[] = [
-  'all', 'mainCanon', 'historicalCanon', 'possibleCanon', 'alternateCanon', 'nonCanonSandbox',
-];
+import { getAtlasMapById } from '../../data/worldAtlasMaps';
+import { CAMPAIGN_TYPE_LABELS } from '../../types/campaign';
+import { USER_CAMPAIGN_TYPE_LABELS } from '../../types/userCampaign';
+import { useUserCampaigns } from '../../state/userCampaignStore';
 
 export function CampaignsPage() {
   const navigate = useNavigate();
-  const runtime = useCampaignRuntime();
-  const [typeFilter, setTypeFilter] = useState<CampaignModuleType | 'all'>('all');
-  const [policyFilter, setPolicyFilter] = useState<CampaignCanonPolicy | 'all'>('all');
-  const [query, setQuery] = useState('');
-
-  const filtered = useMemo(() => CAMPAIGN_MODULES.filter((c) => {
-    if (typeFilter !== 'all' && c.type !== typeFilter) return false;
-    if (policyFilter !== 'all' && c.canonPolicy !== policyFilter) return false;
-    if (query.trim()) {
-      const q = query.trim().toLowerCase();
-      if (!((c.titleRu ?? c.title).toLowerCase().includes(q) || c.description.toLowerCase().includes(q))) return false;
-    }
-    return true;
-  }), [typeFilter, policyFilter, query]);
+  const { registry, deleteCampaign } = useUserCampaigns();
+  const main = CAMPAIGN_MODULES.find((c) => c.protected)!;
 
   return (
     <div className="atlas-layer">
       <div className="atlas-header">
         <div>
           <h1>Кампании · Campaigns</h1>
-          <p className="atlas-sub">Все игровые контексты одного мира. Основная кампания открывается старым flow.</p>
+          <p className="atlas-sub">Защищённая основная кампания и созданные вами кампании. Заранее готовых ваншотов здесь нет.</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="atlas-btn" onClick={() => navigate('/campaigns/new?type=campaign')}>+ Новая кампания</button>
+          <button className="atlas-btn ghost" onClick={() => navigate('/campaigns/new?type=oneShot')}>+ Новый ваншот</button>
         </div>
       </div>
 
-      <div className="atlas-toolbar">
-        <input className="atlas-input" placeholder="Поиск…" value={query} onChange={(e) => setQuery(e.target.value)} />
-        <select className="atlas-select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as CampaignModuleType | 'all')}>
-          {TYPE_FILTERS.map((t) => <option key={t} value={t}>{t === 'all' ? 'Все типы' : CAMPAIGN_TYPE_LABELS[t]}</option>)}
-        </select>
-        <select className="atlas-select" value={policyFilter} onChange={(e) => setPolicyFilter(e.target.value as CampaignCanonPolicy | 'all')}>
-          {POLICY_FILTERS.map((p) => <option key={p} value={p}>{p === 'all' ? 'Любой canon policy' : p}</option>)}
-        </select>
+      <div className="atlas-section" style={{ marginTop: 8 }}>
+        <h2>Основная кампания</h2>
+        <div className="atlas-grid">
+          <button type="button" className="atlas-card" onClick={() => navigate('/map')}>
+            <div className="atlas-badges">
+              <span className="atlas-badge type-badge">{CAMPAIGN_TYPE_LABELS[main.type]}</span>
+              <span className="atlas-badge canon-fixedCanon">protected</span>
+              <span className="atlas-badge status-active">active</span>
+            </div>
+            <h3>{main.titleRu ?? main.title}</h3>
+            <p>{main.description}</p>
+          </button>
+        </div>
       </div>
 
-      <div className="atlas-grid">
-        {filtered.map((c) => {
-          const region = c.regionIds[0] ? getRegionById(c.regionIds[0]) : undefined;
-          const st = c.protected ? undefined : runtime.getRuntime(c.id).status;
-          return (
-            <button
-              key={c.id}
-              type="button"
-              className="atlas-card"
-              onClick={() => (c.protected ? navigate(c.startRoute) : navigate(`/campaigns/${c.id}`))}
-            >
-              <div className="atlas-badges">
-                <span className="atlas-badge type-badge">{CAMPAIGN_TYPE_LABELS[c.type]}</span>
-                <span className="atlas-badge">{c.canonPolicy}</span>
-                {c.protected && <span className="atlas-badge canon-fixedCanon">protected</span>}
-                {st && st !== 'notStarted' && <span className={`atlas-badge status-${st}`}>{st}</span>}
-              </div>
-              <h3>{c.titleRu ?? c.title}</h3>
-              <p>{c.description}</p>
-              {region && <div className="atlas-badges" style={{ marginTop: 'auto' }}><span className="atlas-tag">{region.titleRu ?? region.title}</span></div>}
-            </button>
-          );
-        })}
+      <div className="atlas-section">
+        <h2>Мои кампании</h2>
+        {registry.length === 0 ? (
+          <div className="atlas-panel">
+            <p className="atlas-empty" style={{ margin: 0 }}>Новых кампаний пока нет.</p>
+            <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="atlas-btn" onClick={() => navigate('/campaigns/new?type=campaign')}>+ Создать кампанию</button>
+              <button className="atlas-btn ghost" onClick={() => navigate('/campaigns/new?type=oneShot')}>+ Создать ваншот</button>
+            </div>
+          </div>
+        ) : (
+          <div className="atlas-grid">
+            {registry.map((c) => {
+              const region = c.regionIds[0] ? getRegionById(c.regionIds[0]) : undefined;
+              const map = getAtlasMapById(c.baseMapId);
+              return (
+                <div key={c.campaignId} className="atlas-card" style={{ cursor: 'default' }}>
+                  <div className="atlas-badges">
+                    <span className="atlas-badge type-badge">{USER_CAMPAIGN_TYPE_LABELS[c.type]}</span>
+                  </div>
+                  <h3>{c.title}</h3>
+                  <p>{map?.titleRu ?? map?.title}{region ? ` · ${region.titleRu ?? region.title}` : ''}</p>
+                  <div style={{ marginTop: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button className="atlas-btn small" onClick={() => navigate(`/campaigns/${c.campaignId}/map`)}>Открыть</button>
+                    <button className="atlas-btn danger small" onClick={() => { if (window.confirm(`Удалить кампанию «${c.title}»? Это не затронет основную кампанию.`)) deleteCampaign(c.campaignId); }}>Удалить</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
-      {filtered.length === 0 && <p className="atlas-empty">Ничего не найдено.</p>}
     </div>
   );
 }

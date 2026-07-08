@@ -8,10 +8,6 @@ export const WORLD_ID = 'known-world';
 export const MAIN_CAMPAIGN_RUNTIME_KEY = 'campaign-timeline-vtt:overlay:v2';
 export const MAIN_CAMPAIGN_ID = 'main-greyholm-campaign';
 
-function runtimeKeyFor(id: string): string {
-  return `dmCompanion.campaignRuntime.${id}.v1`;
-}
-
 /**
  * Campaign registry — one shared world, many campaigns.
  *
@@ -39,102 +35,10 @@ export const CAMPAIGN_MODULES: CampaignModule[] = [
     startRoute: '/map',
     runtimeKey: MAIN_CAMPAIGN_RUNTIME_KEY,
   },
-  {
-    id: 'salt-ledge-prisoners',
-    title: 'Captives of the Salt Ledge',
-    titleRu: 'Пленные Солёного Уступа',
-    type: 'historicalOneShot',
-    status: 'ready',
-    worldId: WORLD_ID,
-    canonPolicy: 'historicalCanon',
-    mapIds: ['atlas-map-known-world', 'atlas-map-caldran', 'atlas-map-talassian-union'],
-    regionIds: ['region-caldran', 'region-caldran-salt-ledge', 'region-talassian-union'],
-    locationIds: [],
-    description: 'Исторический ваншот: талассийские моряки в кальдранской системе плена после проигранной войны.',
-    startRoute: '/campaigns/salt-ledge-prisoners',
-    runtimeKey: runtimeKeyFor('salt-ledge-prisoners'),
-    adventureModuleId: 'module-salt-ledge-captives',
-  },
-  {
-    id: 'dragon-ridges-road',
-    title: 'The Road Through Dragon Ridges',
-    titleRu: 'Дорога через Драконьи Кряжи',
-    type: 'oneShot',
-    status: 'ready',
-    worldId: WORLD_ID,
-    canonPolicy: 'possibleCanon',
-    mapIds: ['atlas-map-known-world', 'atlas-map-caldran'],
-    regionIds: ['region-caldran', 'region-caldran-dragon-ridges'],
-    locationIds: [],
-    description: 'Survival-ваншот: переход через земли виверн и старых договоров Дома Крылатой Кости.',
-    startRoute: '/campaigns/dragon-ridges-road',
-    runtimeKey: runtimeKeyFor('dragon-ridges-road'),
-    adventureModuleId: 'module-dragon-ridges-road',
-  },
-  {
-    id: 'greyholm-night-one-shot',
-    title: 'A Night in Greyholm',
-    titleRu: 'Ночь в Грейхольме',
-    type: 'oneShot',
-    status: 'ready',
-    worldId: WORLD_ID,
-    canonPolicy: 'possibleCanon',
-    mapIds: ['atlas-map-greyholm-city'],
-    regionIds: ['region-greyholm-city'],
-    locationIds: [],
-    description: 'Городской ваншот на карте Грейхольма. Отдельная история — НЕ основная кампания, свой runtime.',
-    startRoute: '/campaigns/greyholm-night-one-shot',
-    runtimeKey: runtimeKeyFor('greyholm-night-one-shot'),
-    adventureModuleId: 'module-greyholm-night',
-  },
-  {
-    id: 'varnel-deal',
-    title: 'The Varnel Deal',
-    titleRu: 'Сделка в Варнеле',
-    type: 'oneShot',
-    status: 'ready',
-    worldId: WORLD_ID,
-    canonPolicy: 'possibleCanon',
-    mapIds: ['atlas-map-known-world', 'atlas-map-aurelon', 'atlas-map-wildlands'],
-    regionIds: ['region-free-cities', 'region-varnel'],
-    locationIds: [],
-    description: 'Политический ваншот: тайные переговоры четырёх держав в нейтральном Варнеле.',
-    startRoute: '/campaigns/varnel-deal',
-    runtimeKey: runtimeKeyFor('varnel-deal'),
-    adventureModuleId: 'module-varnel-deal',
-  },
-  {
-    id: 'thalorias-towers',
-    title: 'The Towers of Thalorias',
-    titleRu: 'Башни Талориаса',
-    type: 'oneShot',
-    status: 'ready',
-    worldId: WORLD_ID,
-    canonPolicy: 'possibleCanon',
-    mapIds: ['atlas-map-known-world', 'atlas-map-wildlands'],
-    regionIds: ['region-thalorias', 'region-wildlands-dead-towers'],
-    locationIds: [],
-    description: 'Ваншот-экспедиция к древней башне в Полях Мёртвых Башен.',
-    startRoute: '/campaigns/thalorias-towers',
-    runtimeKey: runtimeKeyFor('thalorias-towers'),
-    adventureModuleId: 'module-thalorias-towers',
-  },
-  {
-    id: 'skaar-shadows',
-    title: 'Shadows of House Skaar',
-    titleRu: 'Тени Дома Скаар',
-    type: 'oneShot',
-    status: 'ready',
-    worldId: WORLD_ID,
-    canonPolicy: 'possibleCanon',
-    mapIds: ['atlas-map-caldran'],
-    regionIds: ['region-caldran', 'region-caldran-stone-terraces'],
-    locationIds: [],
-    description: 'Политический ваншот внутри кальдранского Дома Скаар на Каменных Террасах.',
-    startRoute: '/campaigns/skaar-shadows',
-    runtimeKey: runtimeKeyFor('skaar-shadows'),
-    adventureModuleId: 'module-skaar-shadows',
-  },
+  // NOTE: no pre-seeded one-shots here. New campaigns/one-shots are created by
+  // the user via the wizard (/campaigns/new) and live in the user-campaign
+  // store (dmCompanion.userCampaign*). The rich seed modules in
+  // adventureModules.ts are reference templates only, not registered campaigns.
 ];
 
 export function getCampaignById(id: string): CampaignModule | undefined {
