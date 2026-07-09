@@ -27,7 +27,9 @@ export function CampaignBattlePage() {
   const isCustom = !!mapId && mapId.startsWith('custom-');
   const customMap = isCustom ? (data?.customBattleMaps ?? []).find((m) => m.id === mapId!.slice(7)) : undefined;
   const map = !isCustom && catalog && mapId ? getBattleMapById(catalog, mapId) : undefined;
-  const variants = map ? battleMapVariantTypes(map) : [];
+  const variants = isCustom
+    ? (customMap?.nightImage ? ['day', 'night'] : [])
+    : (map ? battleMapVariantTypes(map) : []);
   const variant = board.variant && variants.includes(board.variant) ? board.variant : variants[0];
   const columns = board.columns ?? customMap?.columns ?? 24;
   const title = customMap?.title ?? map?.title ?? 'Бой';
@@ -78,7 +80,9 @@ export function CampaignBattlePage() {
     );
   }
 
-  const imgUrl = isCustom ? customMap?.imageSrc : battleMapImageUrl(map, variant);
+  const imgUrl = isCustom
+    ? (variant === 'night' && customMap?.nightImage ? customMap.nightImage : customMap?.dayImage)
+    : battleMapImageUrl(map, variant);
 
   const clientToPct = (cx: number, cy: number) => {
     const img = imgRef.current; if (!img) return { x: 50, y: 50 };
@@ -86,8 +90,11 @@ export function CampaignBattlePage() {
     return { x: Math.max(0, Math.min(100, ((cx - r.left) / r.width) * 100)), y: Math.max(0, Math.min(100, ((cy - r.top) / r.height) * 100)) };
   };
 
-  // Grid geometry (square cells based on the image's natural aspect).
-  const rows = natural ? Math.max(1, Math.round((natural.h / natural.w) * columns)) : columns;
+  // Grid geometry. Custom maps with a fixed NxN preset use those rows; otherwise
+  // rows follow the image aspect so cells stay square.
+  const rows = customMap?.rows
+    ? customMap.rows
+    : (natural ? Math.max(1, Math.round((natural.h / natural.w) * columns)) : columns);
   const cellW = 100 / columns;            // % of width
   const cellH = 100 / rows;               // % of height
   const cellAt = (pctX: number, pctY: number) => ({ col: Math.min(columns - 1, Math.floor(pctX / cellW)), row: Math.min(rows - 1, Math.floor(pctY / cellH)) });

@@ -104,7 +104,7 @@ interface UserCampaignValue {
   addImage: (id: string, image: { title: string; src: string; playerSafe?: boolean }) => string;
   addNote: (id: string, text: string) => void;
   removeNote: (id: string, noteId: string) => void;
-  addCustomBattleMap: (id: string, map: { title: string; imageSrc: string; columns: number }) => string;
+  addCustomBattleMap: (id: string, map: { title: string; dayImage: string; nightImage?: string; columns: number; rows?: number }) => string;
   removeCustomBattleMap: (id: string, mapId: string) => void;
   updateEntity: (id: string, entityType: CampaignEntityType, entityId: string, patch: Record<string, unknown>) => void;
   deleteEntity: (id: string, entityType: CampaignEntityType, entityId: string) => void;

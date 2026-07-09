@@ -7,38 +7,102 @@ import { useUserCampaigns } from '../../state/userCampaignStore';
 import { getBattleMapCatalog, battleMapImageUrl } from '../../data/battleMapCatalog';
 import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
 
-/** Create a battle field from any image (upload / generated / URL): the DM
- * gives it a name + grid columns; it becomes a playable field with grid +
- * terrain. Reuses the same board tools — nothing is built by hand. */
+const GRID_PRESETS = [
+  { label: '20 × 20', cols: 20, rows: 20 },
+  { label: '25 × 25', cols: 25, rows: 25 },
+  { label: '30 × 30', cols: 30, rows: 30 },
+  { label: '40 × 40', cols: 40, rows: 40 },
+  { label: 'По ширине картинки', cols: 30, rows: 0 },
+];
+
+async function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+/** «Создать карту боя»: загрузить дневную (и, по желанию, ночную) картинку,
+ * выбрать сетку и сохранить карту в библиотеку кампании. Дальше карта играется
+ * с сеткой, террейном и переключением день/ночь. */
 function CustomFieldCreator({ campaignId, onCreated }: { campaignId: string; onCreated: (mapId: string) => void }) {
   const store = useUserCampaigns();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [title, setTitle] = useState('Горное поле боя');
-  const [columns, setColumns] = useState(24);
+  const dayRef = useRef<HTMLInputElement>(null);
+  const nightRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [presetIdx, setPresetIdx] = useState(2); // 30×30
+  const [dayImage, setDayImage] = useState<string>('');
+  const [nightImage, setNightImage] = useState<string>('');
+  const [busy, setBusy] = useState(false);
 
-  const create = (imageSrc: string) => {
-    const id = store.addCustomBattleMap(campaignId, { title: title.trim() || 'Поле боя', imageSrc, columns });
+  const pick = async (which: 'day' | 'night', e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = '';
+    if (!file) return;
+    if (file.size > 5_000_000 && !window.confirm('Картинка больше ~5 МБ — она хранится в браузере. Продолжить?')) return;
+    setBusy(true);
+    const url = await fileToDataUrl(file);
+    if (which === 'day') setDayImage(url); else setNightImage(url);
+    setBusy(false);
+  };
+
+  const create = () => {
+    if (!dayImage) { window.alert('Загрузите хотя бы дневную картинку.'); return; }
+    const p = GRID_PRESETS[presetIdx];
+    const id = store.addCustomBattleMap(campaignId, {
+      title: title.trim() || 'Карта боя',
+      dayImage,
+      nightImage: nightImage || undefined,
+      columns: p.cols,
+      rows: p.rows || undefined,
+    });
     onCreated(`custom-${id}`);
   };
 
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return;
-    if (file.size > 4_000_000 && !window.confirm('Картинка больше ~4 МБ — она хранится в браузере и может замедлить приложение. Продолжить?')) { e.target.value = ''; return; }
-    const reader = new FileReader();
-    reader.onload = () => create(String(reader.result));
-    reader.readAsDataURL(file); e.target.value = '';
-  };
+  if (!open) {
+    return (
+      <div style={{ marginBottom: 20 }}>
+        <button className="atlas-btn" onClick={() => setOpen(true)}>+ Создать карту боя</button>
+      </div>
+    );
+  }
 
   return (
     <div className="atlas-panel" style={{ marginBottom: 20 }}>
-      <h3 style={{ margin: '0 0 8px', color: 'var(--gold-soft)', fontFamily: 'var(--font-heading)' }}>Создать своё поле боя</h3>
-      <p className="atlas-sub" style={{ margin: '0 0 10px' }}>Нет нужной карты (например, горной)? Вставьте свою картинку — сгенерированную или с диска — и она станет полем с сеткой и террейном.</p>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <label style={{ fontSize: '0.8rem', color: 'var(--fg-faint)' }}>Название<br /><input className="atlas-input" style={{ minWidth: 220 }} value={title} onChange={(e) => setTitle(e.target.value)} /></label>
-        <label style={{ fontSize: '0.8rem', color: 'var(--fg-faint)' }}>Клеток по ширине<br /><input className="atlas-input" style={{ minWidth: 90 }} type="number" min={4} max={80} value={columns} onChange={(e) => setColumns(Math.max(4, Math.min(80, Number(e.target.value) || 24)))} /></label>
-        <button className="atlas-btn" onClick={() => fileRef.current?.click()}>Загрузить картинку</button>
-        <button className="atlas-btn ghost" onClick={() => { const url = window.prompt('URL картинки (https://…):'); if (url && url.trim()) create(url.trim()); }}>Вставить по URL</button>
-        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ margin: 0, color: 'var(--gold-soft)', fontFamily: 'var(--font-heading)' }}>Создать карту боя</h3>
+        <button className="atlas-btn ghost small" onClick={() => setOpen(false)}>Свернуть</button>
+      </div>
+      <p className="atlas-sub" style={{ margin: '6px 0 12px' }}>Загрузите дневную и (по желанию) ночную версию картинки, выберите сетку — карта добавится в библиотеку кампании.</p>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <label style={{ fontSize: '0.8rem', color: 'var(--fg-faint)' }}>Название<br />
+          <input className="atlas-input" style={{ minWidth: 220 }} placeholder="Например: Горный перевал" value={title} onChange={(e) => setTitle(e.target.value)} />
+        </label>
+        <label style={{ fontSize: '0.8rem', color: 'var(--fg-faint)' }}>Сетка<br />
+          <select className="atlas-select" value={presetIdx} onChange={(e) => setPresetIdx(Number(e.target.value))}>
+            {GRID_PRESETS.map((p, i) => <option key={p.label} value={i}>{p.label}</option>)}
+          </select>
+        </label>
+        <div style={{ fontSize: '0.8rem', color: 'var(--fg-faint)' }}>Дневная картинка<br />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
+            <button className="atlas-btn small" onClick={() => dayRef.current?.click()}>{dayImage ? 'Заменить' : 'Загрузить'}</button>
+            {dayImage && <img src={dayImage} alt="день" style={{ height: 44, borderRadius: 6, border: '1px solid var(--border)' }} />}
+          </div>
+        </div>
+        <div style={{ fontSize: '0.8rem', color: 'var(--fg-faint)' }}>Ночная картинка (необязательно)<br />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
+            <button className="atlas-btn ghost small" onClick={() => nightRef.current?.click()}>{nightImage ? 'Заменить' : 'Загрузить'}</button>
+            {nightImage && <img src={nightImage} alt="ночь" style={{ height: 44, borderRadius: 6, border: '1px solid var(--border)' }} />}
+          </div>
+        </div>
+        <input ref={dayRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => pick('day', e)} />
+        <input ref={nightRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => pick('night', e)} />
+      </div>
+      <div style={{ marginTop: 14 }}>
+        <button className="atlas-btn" disabled={!dayImage || busy} onClick={create}>Создать и открыть</button>
+        {busy && <span className="atlas-sub" style={{ marginLeft: 10 }}>Загрузка…</span>}
       </div>
     </div>
   );
@@ -101,9 +165,9 @@ export function CampaignBattleMapsPage() {
           <div className="ucw-cardgrid">
             {(data.customBattleMaps ?? []).map((m) => (
               <div key={m.id} className="ucw-ecard" style={{ cursor: 'default' }}>
-                <img className="atlas-map-img" src={m.imageSrc} alt={m.title} loading="lazy" style={{ maxHeight: 150, objectFit: 'cover' }} />
+                <img className="atlas-map-img" src={m.dayImage} alt={m.title} loading="lazy" style={{ maxHeight: 150, objectFit: 'cover' }} />
                 <h3>{m.title}</h3>
-                <span className="meta">сетка {m.columns} клеток</span>
+                <span className="meta">сетка {m.rows ? `${m.columns}×${m.rows}` : `${m.columns} клеток`}{m.nightImage ? ' · день/ночь' : ''}</span>
                 <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                   <button className="atlas-btn small" onClick={() => navigate(`/campaigns/${campaignId}/battle/custom-${m.id}`)}>Открыть бой</button>
                   <button className="atlas-btn danger small" onClick={() => { if (window.confirm(`Удалить поле «${m.title}»?`)) store.removeCustomBattleMap(campaignId, m.id); }}>Удалить</button>

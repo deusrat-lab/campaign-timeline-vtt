@@ -153,8 +153,10 @@ export interface CampaignBattleToken {
 export interface CampaignCustomBattleMap {
   id: string;
   title: string;
-  imageSrc: string; // data URL or https URL
-  columns: number;  // grid columns (rows derived from aspect)
+  dayImage: string;    // data URL or https URL (required)
+  nightImage?: string; // optional night variant
+  columns: number;     // grid columns
+  rows?: number;       // grid rows (for square NxN presets; else derived from aspect)
 }
 
 export type TerrainType = 'blocked' | 'difficult';
