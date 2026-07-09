@@ -36,12 +36,40 @@ export function NavRail() {
   const location = useLocation();
   const store = useCampaignStore();
   if (store.mode === 'player-view') return null;
-  // Inside a user campaign, only world-level navigation is relevant — the
-  // main-campaign library items (map, quests, NPC, …) show main data, so hide
-  // them to avoid mixing contexts.
-  const inUserCampaign = /^\/campaigns\/(?!new(?:$|\/))[^/]+/.test(location.pathname);
-  const WORLD_KEYS = new Set(['home', 'campaigns', 'world']);
-  const items = inUserCampaign ? RAIL_ITEMS.filter((i) => WORLD_KEYS.has(i.key)) : RAIL_ITEMS;
+  // Inside a user campaign, swap the main-campaign library items for THIS
+  // campaign's own sections (map + locations/NPC/quests/enemies/images/notes),
+  // scoped to the open campaign — same structure as the main campaign, but
+  // isolated data. Outside a campaign, show the normal rail.
+  const campaignMatch = location.pathname.match(/^\/campaigns\/(?!new(?:$|\/))([^/]+)/);
+  const campaignId = campaignMatch?.[1];
+  if (campaignId) {
+    const cItems: RailItem[] = [
+      { key: 'home', label: 'Дом мира', icon: '🌍', to: '/' },
+      { key: 'campaigns', label: 'Кампании', icon: '🎲', to: '/campaigns' },
+      { key: 'c-map', label: 'Карта', icon: '🗺', to: `/campaigns/${campaignId}/map` },
+      { key: 'c-locations', label: 'Локации', icon: '⌂', to: `/campaigns/${campaignId}/library/locations` },
+      { key: 'c-npc', label: 'NPC', icon: '🧑', to: `/campaigns/${campaignId}/library/npc` },
+      { key: 'c-quests', label: 'Квесты', icon: '📜', to: `/campaigns/${campaignId}/library/quests` },
+      { key: 'c-enemies', label: 'Враги', icon: '☠', to: `/campaigns/${campaignId}/library/enemies` },
+      { key: 'c-images', label: 'Картинки', icon: '🖼', to: `/campaigns/${campaignId}/library/images` },
+      { key: 'c-notes', label: 'Заметки', icon: '📝', to: `/campaigns/${campaignId}/library/notes` },
+      { key: 'world', label: 'Атлас', icon: '📖', to: '/world' },
+    ];
+    return (
+      <nav className="nav-rail" aria-label="Навигация кампании">
+        {cItems.map((item) => {
+          const isActive = !!item.to && (location.pathname + location.search === item.to || location.pathname === item.to);
+          return (
+            <Link key={item.key} to={item.to!} className={`nav-rail-item${isActive ? ' active' : ''}`}>
+              <span className="nav-rail-icon" aria-hidden="true">{item.icon}</span>
+              <span className="nav-rail-label">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  }
+  const items = RAIL_ITEMS;
 
   return (
     <nav className="nav-rail" aria-label="Основная навигация">

@@ -98,6 +98,9 @@ interface UserCampaignValue {
   addNpc: (id: string, npc: Omit<CampaignNpc, 'id'>) => string;
   addQuest: (id: string, quest: Omit<CampaignQuest, 'id'>) => string;
   addEnemy: (id: string, enemy: Omit<CampaignEnemy, 'id'>) => string;
+  addImage: (id: string, image: { title: string; src: string; playerSafe?: boolean }) => string;
+  addNote: (id: string, text: string) => void;
+  removeNote: (id: string, noteId: string) => void;
   updateEntity: (id: string, entityType: CampaignEntityType, entityId: string, patch: Record<string, unknown>) => void;
   deleteEntity: (id: string, entityType: CampaignEntityType, entityId: string) => void;
 
@@ -201,6 +204,9 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     addNpc: (id, npc) => { const eid = uid('npc'); patchData(id, (p) => ({ ...p, npcs: [...p.npcs, { ...npc, id: eid }] })); return eid; },
     addQuest: (id, quest) => { const eid = uid('qst'); patchData(id, (p) => ({ ...p, quests: [...p.quests, { ...quest, id: eid }] })); return eid; },
     addEnemy: (id, enemy) => { const eid = uid('emy'); patchData(id, (p) => ({ ...p, enemies: [...p.enemies, { ...enemy, id: eid }] })); return eid; },
+    addImage: (id, image) => { const eid = uid('img'); patchData(id, (p) => ({ ...p, images: [...p.images, { ...image, id: eid }] })); return eid; },
+    addNote: (id, text) => patchData(id, (p) => ({ ...p, notes: [...p.notes, { id: uid('note'), text, createdAt: new Date().toISOString() }] })),
+    removeNote: (id, noteId) => patchData(id, (p) => ({ ...p, notes: p.notes.filter((n) => n.id !== noteId) })),
 
     updateEntity: (id, entityType, entityId, patch) => patchData(id, (p) => {
       const key = ({ location: 'locations', npc: 'npcs', quest: 'quests', enemy: 'enemies', image: 'images' } as const)[entityType as 'location'];

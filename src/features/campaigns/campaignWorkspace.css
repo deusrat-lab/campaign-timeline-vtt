@@ -101,3 +101,34 @@
   .ucw-body { flex-direction: column; }
   .ucw-library { width: auto; border-left: none; border-top: 1px solid var(--border-soft); max-height: 46vh; }
 }
+
+/* ── Entity card modal (parity with main-campaign cards) ─────────────── */
+.ucw-modal-overlay {
+  position: fixed; inset: 0; background: rgba(6,5,4,0.66); z-index: 60;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.ucw-modal {
+  width: min(560px, 96vw); max-height: 88vh; overflow: auto;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: var(--shadow); padding: 20px 22px;
+}
+.ucw-modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
+.ucw-modal-head h2 { font-family: var(--font-heading); color: var(--gold-soft); font-size: 1.4rem; margin: 0; }
+.ucw-modal-close { background: none; border: none; color: var(--fg-dim); font-size: 1.4rem; cursor: pointer; line-height: 1; }
+.ucw-modal-close:hover { color: var(--gold); }
+.ucw-modal-type { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-faint); }
+
+/* library page grid of entity cards */
+.ucw-lib-page { padding: 20px 26px 60px; }
+.ucw-lib-page-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.ucw-lib-page-head h1 { font-family: var(--font-heading); color: var(--gold-soft); font-size: 1.6rem; margin: 0; }
+.ucw-cardgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.ucw-ecard {
+  background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 12px; padding: 14px;
+  cursor: pointer; text-align: left; color: inherit; font: inherit; display: flex; flex-direction: column; gap: 6px;
+  transition: border-color .15s, transform .15s;
+}
+.ucw-ecard:hover { border-color: var(--gold-dim); transform: translateY(-2px); }
+.ucw-ecard h3 { font-family: var(--font-heading); color: var(--gold-soft); font-size: 1.05rem; margin: 0; }
+.ucw-ecard p { margin: 0; color: var(--fg-dim); font-size: 0.88rem; line-height: 1.4; }
+.ucw-ecard .meta { color: var(--fg-faint); font-size: 0.78rem; }

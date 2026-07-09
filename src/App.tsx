@@ -19,6 +19,7 @@ import { WorldHomePage } from './features/world-home/WorldHomePage';
 import { CampaignsPage } from './features/campaigns/CampaignsPage';
 import { NewCampaignWizard } from './features/campaigns/NewCampaignWizard';
 import { IsolatedCampaignMapWorkspace } from './features/campaigns/IsolatedCampaignMapWorkspace';
+import { CampaignLibraryPage } from './features/campaigns/CampaignLibraryPage';
 import { CampaignEntryRedirect } from './features/campaigns/CampaignEntryRedirect';
 
 /** Legacy /location/:id deep links now resolve inside the Map Workspace instead of a standalone page. */
@@ -121,6 +122,7 @@ function AppShell() {
             <Route path="/campaigns" element={<DmOnlyRoute><CampaignsPage /></DmOnlyRoute>} />
             <Route path="/campaigns/new" element={<DmOnlyRoute><NewCampaignWizard /></DmOnlyRoute>} />
             <Route path="/campaigns/:campaignId/map" element={<DmOnlyRoute><IsolatedCampaignMapWorkspace /></DmOnlyRoute>} />
+            <Route path="/campaigns/:campaignId/library/:kind" element={<DmOnlyRoute><CampaignLibraryPage /></DmOnlyRoute>} />
             <Route path="/campaigns/:campaignId" element={<DmOnlyRoute><CampaignEntryRedirect /></DmOnlyRoute>} />
           </Routes>
         </main>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import '../world-atlas/atlasLayer.css';
 import './campaignWorkspace.css';
 import { getAtlasMapById } from '../../data/worldAtlasMaps';
@@ -7,6 +7,7 @@ import { getRegionById } from '../../data/worldRegions';
 import { useUserCampaigns } from '../../state/userCampaignStore';
 import { USER_CAMPAIGN_TYPE_LABELS, type CampaignEntityType, type UserCampaignMode } from '../../types/userCampaign';
 import type { WorldRegion } from '../../types/worldAtlas';
+import { CampaignEntityCard } from './CampaignEntityCard';
 
 const ZOOM_MIN = 0.15;
 const ZOOM_MAX = 6;
@@ -23,6 +24,7 @@ export function IsolatedCampaignMapWorkspace() {
 
   const data = campaignId ? store.getData(campaignId) : null;
   const runtime = campaignId ? store.getRuntime(campaignId) : null;
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const rootRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -99,6 +101,24 @@ export function IsolatedCampaignMapWorkspace() {
     window.addEventListener('resize', doFit);
     return () => { cancelAnimationFrame(raf); clearTimeout(t); window.removeEventListener('resize', doFit); };
   }, [shellHeight]);
+
+  // Arriving from a library card's "Поставить на карту" (?place=type:id) —
+  // start placement mode for that entity, then clear the query param.
+  useEffect(() => {
+    const place = searchParams.get('place');
+    if (!place || !data) return;
+    const [t, eid] = place.split(':');
+    const label =
+      t === 'location' ? data.locations.find((l) => l.id === eid)?.title
+      : t === 'npc' ? data.npcs.find((n) => n.id === eid)?.name
+      : t === 'quest' ? data.quests.find((q) => q.id === eid)?.title
+      : t === 'enemy' ? data.enemies.find((e) => e.id === eid)?.title
+      : undefined;
+    if (label) setPlacing({ entityType: t as CampaignEntityType, entityId: eid, label });
+    const next = new URLSearchParams(searchParams);
+    next.delete('place');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, data, setSearchParams]);
 
   if (!data || !runtime || !campaignId) {
     return (
@@ -389,11 +409,22 @@ export function IsolatedCampaignMapWorkspace() {
           />
         </aside>
       </div>
+
+      {selected && (
+        <CampaignEntityCard
+          campaignId={campaignId}
+          type={selected.type}
+          id={selected.id}
+          canEdit={isEdit}
+          onClose={() => setSelected(null)}
+          onPlaceOnMap={() => setPlacing({ entityType: selected.type, entityId: selected.id, label: entityLabel(selected.type, selected.id) })}
+        />
+      )}
     </div>
   );
 }
 
-/* ── Right library panel + entity editor ──────────────────────────────── */
+/* ── Right library panel ──────────────────────────────────────────────── */
 function LibraryPanel(props: {
   campaignId: string;
   search: string;
@@ -408,7 +439,7 @@ function LibraryPanel(props: {
   addAndSelect: (type: CampaignEntityType) => void;
   region?: WorldRegion;
 }) {
-  const { campaignId, search, isEdit, isPlayer, selected, setSelected, placing, setPlacing, routeEditId, setRouteEditId, addAndSelect, region } = props;
+  const { campaignId, search, isEdit, isPlayer, setSelected, placing, setPlacing, routeEditId, setRouteEditId, addAndSelect, region } = props;
   const store = useUserCampaigns();
   const data = store.getData(campaignId);
   const runtime = store.getRuntime(campaignId);
@@ -418,10 +449,6 @@ function LibraryPanel(props: {
   const match = (s: string) => !q || s.toLowerCase().includes(q);
 
   const isPlaced = (type: CampaignEntityType, id: string) => data.mapPlacements.some((mp) => mp.entityType === type && mp.entityId === id);
-
-  if (selected) {
-    return <EntityEditor campaignId={campaignId} selected={selected} onClose={() => setSelected(null)} isEdit={isEdit} isPlayer={isPlayer} setPlacing={setPlacing} />;
-  }
 
   const groups: Array<{ type: CampaignEntityType; label: string; items: Array<{ id: string; label: string }> }> = [
     { type: 'location', label: 'Локации', items: data.locations.filter((l) => match(l.title)).map((l) => ({ id: l.id, label: l.title })) },
@@ -503,109 +530,6 @@ function LibraryPanel(props: {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function EntityEditor(props: {
-  campaignId: string;
-  selected: { type: CampaignEntityType; id: string };
-  onClose: () => void;
-  isEdit: boolean;
-  isPlayer: boolean;
-  setPlacing: (p: Placing) => void;
-}) {
-  const { campaignId, selected, onClose, isEdit, isPlayer, setPlacing } = props;
-  const store = useUserCampaigns();
-  const data = store.getData(campaignId);
-  if (!data) return null;
-
-  const placement = data.mapPlacements.find((mp) => mp.entityType === selected.type && mp.entityId === selected.id);
-  const upd = (patch: Record<string, unknown>) => store.updateEntity(campaignId, selected.type, selected.id, patch);
-
-  const location = selected.type === 'location' ? data.locations.find((l) => l.id === selected.id) : undefined;
-  const npc = selected.type === 'npc' ? data.npcs.find((n) => n.id === selected.id) : undefined;
-  const quest = selected.type === 'quest' ? data.quests.find((q) => q.id === selected.id) : undefined;
-  const enemy = selected.type === 'enemy' ? data.enemies.find((e) => e.id === selected.id) : undefined;
-  const entity = location ?? npc ?? quest ?? enemy;
-  if (!entity) { onClose(); return null; }
-
-  const readOnly = !isEdit;
-  const title = location?.title ?? npc?.name ?? quest?.title ?? enemy?.title ?? '';
-
-  return (
-    <div>
-      <button className="atlas-back-link" onClick={onClose}>← К библиотеке</button>
-      <div className="ucw-card">
-        {readOnly ? (
-          <h3 style={{ margin: 0, color: 'var(--gold-soft)' }}>{title}</h3>
-        ) : (
-          <>
-            <label>{selected.type === 'npc' ? 'Имя' : 'Название'}</label>
-            <input value={title} onChange={(e) => upd(selected.type === 'npc' ? { name: e.target.value } : { title: e.target.value })} />
-          </>
-        )}
-
-        {npc && (
-          <>
-            <label>Роль</label>
-            {readOnly ? <p>{npc.role || '—'}</p> : <input value={npc.role ?? ''} onChange={(e) => upd({ role: e.target.value })} />}
-            <label>Локация</label>
-            {readOnly ? <p>{data.locations.find((l) => l.id === npc.locationId)?.title ?? '—'}</p> : (
-              <select value={npc.locationId ?? ''} onChange={(e) => upd({ locationId: e.target.value || undefined })}>
-                <option value="">— не привязан —</option>
-                {data.locations.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
-              </select>
-            )}
-          </>
-        )}
-
-        {quest && (
-          <>
-            <label>Статус</label>
-            {readOnly ? <p>{quest.status}</p> : (
-              <select value={quest.status} onChange={(e) => upd({ status: e.target.value })}>
-                {['notStarted', 'active', 'completed', 'failed', 'hidden'].map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            )}
-          </>
-        )}
-
-        {enemy && (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ flex: 1 }}><label>AC</label>{readOnly ? <p>{enemy.ac ?? '—'}</p> : <input type="number" value={enemy.ac ?? ''} onChange={(e) => upd({ ac: Number(e.target.value) })} />}</div>
-            <div style={{ flex: 1 }}><label>HP</label>{readOnly ? <p>{enemy.hp ?? '—'}</p> : <input type="number" value={enemy.hp ?? ''} onChange={(e) => upd({ hp: Number(e.target.value) })} />}</div>
-          </div>
-        )}
-
-        <label>Описание</label>
-        {readOnly ? <p>{entity.description || '—'}</p> : <textarea value={entity.description ?? ''} onChange={(e) => upd({ description: e.target.value })} />}
-
-        {!isPlayer && (
-          <>
-            <label>DM-заметки (скрыто от игроков)</label>
-            {readOnly
-              ? <p style={{ color: 'var(--gold-soft)' }}>{(entity as { dmNotes?: string }).dmNotes || '—'}</p>
-              : <textarea value={(entity as { dmNotes?: string }).dmNotes ?? ''} onChange={(e) => upd({ dmNotes: e.target.value })} />}
-          </>
-        )}
-
-        {isEdit && (
-          <div className="ucw-card-actions">
-            {placement ? (
-              <>
-                <button className="atlas-btn ghost small" onClick={() => store.updatePlacement(campaignId, placement.id, { visibleToPlayers: !placement.visibleToPlayers })}>
-                  {placement.visibleToPlayers ? '👁 Видно игрокам' : '🚫 Скрыто от игроков'}
-                </button>
-                <button className="atlas-btn ghost small" onClick={() => store.removePlacement(campaignId, placement.id)}>Снять с карты</button>
-              </>
-            ) : (
-              <button className="atlas-btn small" onClick={() => { setPlacing({ entityType: selected.type, entityId: selected.id, label: title }); onClose(); }}>Поставить на карту</button>
-            )}
-            <button className="atlas-btn danger small" onClick={() => { store.deleteEntity(campaignId, selected.type, selected.id); onClose(); }}>Удалить</button>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
