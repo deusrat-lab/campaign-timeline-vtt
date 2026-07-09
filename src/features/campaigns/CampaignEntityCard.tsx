@@ -84,10 +84,14 @@ export function CampaignEntityCard({
           )}
 
           {enemy && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <div style={{ flex: 1 }}><label>AC</label>{ro ? <p>{enemy.ac ?? '—'}</p> : <input type="number" value={enemy.ac ?? ''} onChange={(e) => upd({ ac: Number(e.target.value) })} />}</div>
-              <div style={{ flex: 1 }}><label>HP</label>{ro ? <p>{enemy.hp ?? '—'}</p> : <input type="number" value={enemy.hp ?? ''} onChange={(e) => upd({ hp: Number(e.target.value) })} />}</div>
-            </div>
+            <>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ flex: 1 }}><label>AC</label>{ro ? <p>{enemy.ac ?? '—'}</p> : <input type="number" value={enemy.ac ?? ''} onChange={(e) => upd({ ac: Number(e.target.value) })} />}</div>
+                <div style={{ flex: 1 }}><label>HP</label>{ro ? <p>{enemy.hp ?? '—'}</p> : <input type="number" value={enemy.hp ?? ''} onChange={(e) => upd({ hp: Number(e.target.value) })} />}</div>
+              </div>
+              <label>Тактика / особенности</label>
+              {ro ? <p style={{ whiteSpace: 'pre-wrap' }}>{enemy.tactics || '—'}</p> : <textarea value={enemy.tactics ?? ''} onChange={(e) => upd({ tactics: e.target.value })} />}
+            </>
           )}
 
           <label>Описание</label>

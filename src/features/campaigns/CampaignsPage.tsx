@@ -9,7 +9,7 @@ import { useUserCampaigns } from '../../state/userCampaignStore';
 
 export function CampaignsPage() {
   const navigate = useNavigate();
-  const { registry, deleteCampaign } = useUserCampaigns();
+  const { registry, deleteCampaign, renameCampaign } = useUserCampaigns();
   const main = CAMPAIGN_MODULES.find((c) => c.protected)!;
 
   return (
@@ -64,6 +64,7 @@ export function CampaignsPage() {
                   <p>{map?.titleRu ?? map?.title}{region ? ` · ${region.titleRu ?? region.title}` : ''}</p>
                   <div style={{ marginTop: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <button className="atlas-btn small" onClick={() => navigate(`/campaigns/${c.campaignId}/map`)}>Открыть</button>
+                    <button className="atlas-btn ghost small" onClick={() => { const t = window.prompt('Новое название:', c.title); if (t && t.trim()) renameCampaign(c.campaignId, t.trim()); }}>Переименовать</button>
                     <button className="atlas-btn danger small" onClick={() => { if (window.confirm(`Удалить кампанию «${c.title}»? Это не затронет основную кампанию.`)) deleteCampaign(c.campaignId); }}>Удалить</button>
                   </div>
                 </div>

@@ -295,9 +295,11 @@ export function IsolatedCampaignMapWorkspace() {
               </button>
             ))}
           </div>
+          <button className="ucw-tbtn" onClick={() => { const t = window.prompt('Новое название кампании:', data.title); if (t && t.trim()) store.renameCampaign(campaignId, t.trim()); }}>Переименовать</button>
           <button className="ucw-tbtn" onClick={exportCampaign}>Export</button>
           <button className="ucw-tbtn" onClick={() => fileInputRef.current?.click()}>Import</button>
           <input ref={fileInputRef} type="file" accept="application/json" style={{ display: 'none' }} onChange={importCampaign} />
+          <button className="ucw-tbtn" style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => { if (window.confirm(`Удалить кампанию «${data.title}»?`)) { store.deleteCampaign(campaignId); navigate('/'); } }}>Удалить</button>
         </div>
       </div>
 

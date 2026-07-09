@@ -51,25 +51,27 @@ function loadRegistry(): UserCampaignRegistryEntry[] {
   return readJson<UserCampaignRegistryEntry[]>(REGISTRY_KEY) ?? [];
 }
 
-function emptyData(campaignId: string, title: string, type: UserCampaignType, baseMapId: string, regionIds: string[]): UserCampaignData {
-  // Seed the new campaign's library with COPIES of the region's canon presets
-  // (general locations + houses/powers). Fresh ids → fully isolated data.
+export interface CampaignSeed {
+  locations?: Array<{ title: string; type?: string; description?: string; dmNotes?: string }>;
+  npcs?: Array<{ name: string; role?: string; description?: string; dmNotes?: string }>;
+  enemies?: Array<{ title: string; ac?: number; hp?: number; description?: string; dmNotes?: string }>;
+}
+
+function emptyData(campaignId: string, title: string, type: UserCampaignType, baseMapId: string, regionIds: string[], seed?: CampaignSeed): UserCampaignData {
+  // Seed the new campaign's library with COPIES (fresh ids → isolated data).
+  // A scenario seed wins; otherwise fall back to the region's canon presets.
   const preset = getRegionPreset(baseMapId);
-  const locations: CampaignLocation[] = (preset?.locations ?? []).map((l, i) => ({
-    id: `loc-seed-${i}-${Math.random().toString(36).slice(2, 6)}`,
-    title: l.title,
-    description: l.description,
-  }));
-  const npcs: CampaignNpc[] = (preset?.npcs ?? []).map((n, i) => ({
-    id: `npc-seed-${i}-${Math.random().toString(36).slice(2, 6)}`,
-    name: n.name,
-    role: n.role,
-    description: n.description,
-  }));
+  const rid = (p: string, i: number) => `${p}-seed-${i}-${Math.random().toString(36).slice(2, 6)}`;
+  const locSrc = seed?.locations ?? preset?.locations ?? [];
+  const npcSrc = seed?.npcs ?? preset?.npcs ?? [];
+  const enemySrc = seed?.enemies ?? [];
+  const locations: CampaignLocation[] = locSrc.map((l, i) => ({ id: rid('loc', i), title: l.title, description: l.description, dmNotes: (l as { dmNotes?: string }).dmNotes }));
+  const npcs: CampaignNpc[] = npcSrc.map((n, i) => ({ id: rid('npc', i), name: n.name, role: n.role, description: n.description, dmNotes: (n as { dmNotes?: string }).dmNotes }));
+  const enemies: CampaignEnemy[] = enemySrc.map((e, i) => ({ id: rid('emy', i), title: e.title, ac: e.ac, hp: e.hp, description: e.description, tactics: e.dmNotes }));
   return {
     campaignId, title, type, baseMapId,
     mapIds: [baseMapId], regionIds,
-    locations, npcs, quests: [], enemies: [], images: [], routes: [], zones: [], notes: [], mapPlacements: [],
+    locations, npcs, quests: [], enemies, images: [], routes: [], zones: [], notes: [], mapPlacements: [],
   };
 }
 
@@ -83,7 +85,8 @@ function emptyRuntime(campaignId: string, baseMapId: string): UserCampaignRuntim
 
 interface UserCampaignValue {
   registry: UserCampaignRegistryEntry[];
-  createCampaign: (input: { title: string; type: UserCampaignType; baseMapId: string; regionIds: string[] }) => string;
+  createCampaign: (input: { title: string; type: UserCampaignType; baseMapId: string; regionIds: string[]; seed?: CampaignSeed }) => string;
+  renameCampaign: (id: string, title: string) => void;
   deleteCampaign: (id: string) => void;
 
   getData: (id: string) => UserCampaignData | null;
@@ -171,18 +174,27 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
   const value = useMemo<UserCampaignValue>(() => ({
     registry,
 
-    createCampaign: ({ title, type, baseMapId, regionIds }) => {
+    createCampaign: ({ title, type, baseMapId, regionIds, seed }) => {
       const id = uid('camp');
       const now = new Date().toISOString();
       const entry: UserCampaignRegistryEntry = { campaignId: id, title, type, baseMapId, regionIds, createdAt: now, updatedAt: now };
       persistRegistry([...registry, entry]);
-      const data = emptyData(id, title, type, baseMapId, regionIds);
+      const data = emptyData(id, title, type, baseMapId, regionIds, seed);
       writeJson(dataKey(id), data);
       setDataCache((prev) => ({ ...prev, [id]: data }));
       const rt = emptyRuntime(id, baseMapId);
       writeJson(runtimeKey(id), rt);
       setRuntimeCache((prev) => ({ ...prev, [id]: rt }));
       return id;
+    },
+
+    renameCampaign: (id, title) => {
+      setRegistry((prev) => {
+        const next = prev.map((r) => (r.campaignId === id ? { ...r, title, updatedAt: new Date().toISOString() } : r));
+        writeJson(REGISTRY_KEY, next);
+        return next;
+      });
+      patchData(id, (p) => ({ ...p, title }));
     },
 
     deleteCampaign: (id) => {

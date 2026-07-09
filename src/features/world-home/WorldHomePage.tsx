@@ -4,10 +4,12 @@ import { CAMPAIGN_MODULES } from '../../data/campaignModules';
 import { WORLD_ATLAS_MAPS, atlasMapRouteId } from '../../data/worldAtlasMaps';
 import { useUserCampaigns } from '../../state/userCampaignStore';
 import { USER_CAMPAIGN_TYPE_LABELS } from '../../types/userCampaign';
+import { CAMPAIGN_SCENARIOS } from '../../data/campaignScenarios';
 
 export function WorldHomePage() {
   const navigate = useNavigate();
-  const { registry } = useUserCampaigns();
+  const store = useUserCampaigns();
+  const { registry } = store;
   const main = CAMPAIGN_MODULES.find((c) => c.protected)!;
   const worldMap = WORLD_ATLAS_MAPS.find((m) => m.id === 'atlas-map-known-world');
 
@@ -54,6 +56,29 @@ export function WorldHomePage() {
       </div>
 
       <div className="atlas-section">
+        <h2>Готовые ваншоты</h2>
+        <p className="atlas-sub" style={{ marginBottom: 12 }}>Сценарии с уже заполненными карточками локаций, NPC и врагов из канон-документов.</p>
+        <div className="atlas-grid">
+          {CAMPAIGN_SCENARIOS.map((s) => (
+            <div key={s.id} className="atlas-card" style={{ cursor: 'default' }}>
+              <div className="atlas-badges">
+                <span className="atlas-badge type-badge">{USER_CAMPAIGN_TYPE_LABELS[s.type]}</span>
+                <span className="atlas-badge">{s.locations.length} лок · {s.npcs.length} NPC · {s.enemies.length} врагов</span>
+              </div>
+              <h3>{s.title}</h3>
+              <p>{s.summary}</p>
+              <div style={{ marginTop: 'auto' }}>
+                <button className="atlas-btn small" onClick={() => {
+                  const id = store.createCampaign({ title: s.title, type: s.type, baseMapId: s.baseMapId, regionIds: s.regionIds, seed: { locations: s.locations, npcs: s.npcs, enemies: s.enemies } });
+                  navigate(`/campaigns/${id}/map`);
+                }}>Создать этот ваншот</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="atlas-section">
         <h2>Мои кампании</h2>
         {registry.length === 0 ? (
           <p className="atlas-empty">Новых кампаний пока нет. Создайте кампанию или ваншот на любой карте ниже.</p>
@@ -63,8 +88,10 @@ export function WorldHomePage() {
               <div key={c.campaignId} className="atlas-card" style={{ cursor: 'default' }}>
                 <div className="atlas-badges"><span className="atlas-badge type-badge">{USER_CAMPAIGN_TYPE_LABELS[c.type]}</span></div>
                 <h3>{c.title}</h3>
-                <div style={{ marginTop: 'auto' }}>
+                <div style={{ marginTop: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button className="atlas-btn small" onClick={() => navigate(`/campaigns/${c.campaignId}/map`)}>Открыть</button>
+                  <button className="atlas-btn ghost small" onClick={() => { const t = window.prompt('Новое название кампании:', c.title); if (t && t.trim()) store.renameCampaign(c.campaignId, t.trim()); }}>Переименовать</button>
+                  <button className="atlas-btn danger small" onClick={() => { if (window.confirm(`Удалить кампанию «${c.title}»? Это не затронет основную кампанию.`)) store.deleteCampaign(c.campaignId); }}>Удалить</button>
                 </div>
               </div>
             ))}
