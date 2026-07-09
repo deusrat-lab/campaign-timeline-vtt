@@ -51,6 +51,7 @@ export function NavRail() {
       { key: 'c-npc', label: 'NPC', icon: '🧑', to: `/campaigns/${campaignId}/library/npc` },
       { key: 'c-quests', label: 'Квесты', icon: '📜', to: `/campaigns/${campaignId}/library/quests` },
       { key: 'c-enemies', label: 'Враги', icon: '☠', to: `/campaigns/${campaignId}/library/enemies` },
+      { key: 'c-battle', label: 'Карты боя', icon: '⚔', to: `/campaigns/${campaignId}/library/battle-maps` },
       { key: 'c-images', label: 'Картинки', icon: '🖼', to: `/campaigns/${campaignId}/library/images` },
       { key: 'c-notes', label: 'Заметки', icon: '📝', to: `/campaigns/${campaignId}/library/notes` },
       { key: 'world', label: 'Атлас', icon: '📖', to: '/world' },

@@ -133,6 +133,31 @@ export interface UserCampaignData {
 
 export type UserCampaignMode = 'dmView' | 'dmEdit' | 'playerView';
 
+export type BattleTokenSide = 'enemy' | 'player' | 'ally' | 'neutral';
+
+export interface CampaignBattleToken {
+  id: string;
+  name: string;
+  side: BattleTokenSide;
+  x: number; // % of battle-map image
+  y: number;
+  currentHp?: number;
+  maxHp?: number;
+  ac?: number;
+  statuses?: string[];
+}
+
+/** Which catalog battle map is loaded, the day/night variant, and the tokens
+ * placed on it. Reuses the shared battle-map-vtt catalog (nothing is created
+ * from scratch). Persisted per-campaign, isolated from the main campaign. */
+export interface CampaignBattleBoard {
+  mapId?: string;
+  variant?: string; // 'day' | 'evening' | 'night' | 'default'
+  tokens: CampaignBattleToken[];
+  round?: number;
+  view?: { zoom: number; panX: number; panY: number };
+}
+
 export interface UserCampaignRuntime {
   campaignId: string;
   activeMapId: string;
@@ -143,6 +168,7 @@ export interface UserCampaignRuntime {
   revealedToPlayers: string[];
   questStatuses: Record<string, string>;
   battleTracker: unknown;
+  battleBoard?: CampaignBattleBoard;
   mapViewState: { zoom: number; panX: number; panY: number };
 }
 
