@@ -104,6 +104,8 @@ interface UserCampaignValue {
   addImage: (id: string, image: { title: string; src: string; playerSafe?: boolean }) => string;
   addNote: (id: string, text: string) => void;
   removeNote: (id: string, noteId: string) => void;
+  addCustomBattleMap: (id: string, map: { title: string; imageSrc: string; columns: number }) => string;
+  removeCustomBattleMap: (id: string, mapId: string) => void;
   updateEntity: (id: string, entityType: CampaignEntityType, entityId: string, patch: Record<string, unknown>) => void;
   deleteEntity: (id: string, entityType: CampaignEntityType, entityId: string) => void;
 
@@ -219,6 +221,8 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     addImage: (id, image) => { const eid = uid('img'); patchData(id, (p) => ({ ...p, images: [...p.images, { ...image, id: eid }] })); return eid; },
     addNote: (id, text) => patchData(id, (p) => ({ ...p, notes: [...p.notes, { id: uid('note'), text, createdAt: new Date().toISOString() }] })),
     removeNote: (id, noteId) => patchData(id, (p) => ({ ...p, notes: p.notes.filter((n) => n.id !== noteId) })),
+    addCustomBattleMap: (id, map) => { const eid = uid('bmap'); patchData(id, (p) => ({ ...p, customBattleMaps: [...(p.customBattleMaps ?? []), { ...map, id: eid }] })); return eid; },
+    removeCustomBattleMap: (id, mapId) => patchData(id, (p) => ({ ...p, customBattleMaps: (p.customBattleMaps ?? []).filter((m) => m.id !== mapId) })),
 
     updateEntity: (id, entityType, entityId, patch) => patchData(id, (p) => {
       const key = ({ location: 'locations', npc: 'npcs', quest: 'quests', enemy: 'enemies', image: 'images' } as const)[entityType as 'location'];

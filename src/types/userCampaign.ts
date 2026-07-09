@@ -127,6 +127,7 @@ export interface UserCampaignData {
   routes: CampaignRoute[];
   zones: CampaignZone[];
   notes: CampaignNote[];
+  customBattleMaps?: CampaignCustomBattleMap[];
 
   mapPlacements: CampaignMapPlacement[];
 }
@@ -147,15 +148,31 @@ export interface CampaignBattleToken {
   statuses?: string[];
 }
 
-/** Which catalog battle map is loaded, the day/night variant, and the tokens
- * placed on it. Reuses the shared battle-map-vtt catalog (nothing is created
- * from scratch). Persisted per-campaign, isolated from the main campaign. */
+/** A DM-created battle field: any image (upload / generated / URL) turned into
+ * a playable field with a grid + terrain. Lives in the campaign's data. */
+export interface CampaignCustomBattleMap {
+  id: string;
+  title: string;
+  imageSrc: string; // data URL or https URL
+  columns: number;  // grid columns (rows derived from aspect)
+}
+
+export type TerrainType = 'blocked' | 'difficult';
+
+/** Which battle map is loaded (catalog id OR `custom-<id>`), the day/night
+ * variant, the grid + terrain, and the tokens. Persisted per-campaign,
+ * isolated from the main campaign. */
 export interface CampaignBattleBoard {
   mapId?: string;
   variant?: string; // 'day' | 'evening' | 'night' | 'default'
   tokens: CampaignBattleToken[];
   round?: number;
   view?: { zoom: number; panX: number; panY: number };
+  showGrid?: boolean;
+  columns?: number;
+  snap?: boolean;
+  /** cell key "row,col" → terrain type */
+  terrain?: Record<string, TerrainType>;
 }
 
 export interface UserCampaignRuntime {

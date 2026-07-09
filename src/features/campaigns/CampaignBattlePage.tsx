@@ -23,25 +23,32 @@ export function CampaignBattlePage() {
   const isMain = campaignId ? getCampaignById(campaignId)?.protected : false;
 
   const board: CampaignBattleBoard = runtime?.battleBoard ?? { tokens: [], round: 1 };
-  const map = catalog && mapId ? getBattleMapById(catalog, mapId) : undefined;
+  // Custom field (`custom-<id>`) or a shared-catalog map.
+  const isCustom = !!mapId && mapId.startsWith('custom-');
+  const customMap = isCustom ? (data?.customBattleMaps ?? []).find((m) => m.id === mapId!.slice(7)) : undefined;
+  const map = !isCustom && catalog && mapId ? getBattleMapById(catalog, mapId) : undefined;
   const variants = map ? battleMapVariantTypes(map) : [];
   const variant = board.variant && variants.includes(board.variant) ? board.variant : variants[0];
+  const columns = board.columns ?? customMap?.columns ?? 24;
+  const title = customMap?.title ?? map?.title ?? 'Бой';
 
   const [zoom, setZoom] = useState(board.view?.zoom ?? 1);
   const [pan, setPan] = useState({ x: board.view?.panX ?? 0, y: board.view?.panY ?? 0 });
   const [placing, setPlacing] = useState<{ side: BattleTokenSide; name: string; ac?: number; hp?: number } | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [fitted, setFitted] = useState(false);
+  const [terrainMode, setTerrainMode] = useState<'off' | 'blocked' | 'difficult' | 'erase'>('off');
+  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
 
   useEffect(() => { getBattleMapCatalog().then(setCatalog); }, []);
 
-  // Persist the loaded map id once the catalog is ready.
+  // Persist which map is loaded (route id) so the board follows the URL.
   useEffect(() => {
-    if (campaignId && map && board.mapId !== map.id) {
-      store.updateRuntime(campaignId, (p) => ({ ...p, battleBoard: { ...(p.battleBoard ?? { tokens: [] }), mapId: map.id, variant: p.battleBoard?.variant ?? variants[0] } }));
+    if (campaignId && mapId && (map || customMap) && board.mapId !== mapId) {
+      store.updateRuntime(campaignId, (p) => ({ ...p, battleBoard: { ...(p.battleBoard ?? { tokens: [] }), mapId, variant: p.battleBoard?.variant ?? variants[0], columns: p.battleBoard?.columns ?? customMap?.columns } }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map?.id]);
+  }, [mapId, map?.id, customMap?.id]);
 
   const patchBoard = (updater: (b: CampaignBattleBoard) => CampaignBattleBoard) => {
     if (!campaignId) return;
@@ -71,12 +78,33 @@ export function CampaignBattlePage() {
     );
   }
 
-  const imgUrl = battleMapImageUrl(map, variant);
+  const imgUrl = isCustom ? customMap?.imageSrc : battleMapImageUrl(map, variant);
 
   const clientToPct = (cx: number, cy: number) => {
     const img = imgRef.current; if (!img) return { x: 50, y: 50 };
     const r = img.getBoundingClientRect();
     return { x: Math.max(0, Math.min(100, ((cx - r.left) / r.width) * 100)), y: Math.max(0, Math.min(100, ((cy - r.top) / r.height) * 100)) };
+  };
+
+  // Grid geometry (square cells based on the image's natural aspect).
+  const rows = natural ? Math.max(1, Math.round((natural.h / natural.w) * columns)) : columns;
+  const cellW = 100 / columns;            // % of width
+  const cellH = 100 / rows;               // % of height
+  const cellAt = (pctX: number, pctY: number) => ({ col: Math.min(columns - 1, Math.floor(pctX / cellW)), row: Math.min(rows - 1, Math.floor(pctY / cellH)) });
+  const snapPct = (pctX: number, pctY: number) => {
+    if (!board.showGrid || !board.snap) return { x: pctX, y: pctY };
+    const { col, row } = cellAt(pctX, pctY);
+    return { x: (col + 0.5) * cellW, y: (row + 0.5) * cellH };
+  };
+  const paintCell = (pctX: number, pctY: number) => {
+    const { col, row } = cellAt(pctX, pctY);
+    const key = `${row},${col}`;
+    patchBoard((b) => {
+      const terrain = { ...(b.terrain ?? {}) };
+      if (terrainMode === 'erase') delete terrain[key];
+      else if (terrainMode === 'blocked' || terrainMode === 'difficult') terrain[key] = terrainMode;
+      return { ...b, terrain };
+    });
   };
 
   const onWheel = (e: React.WheelEvent) => {
@@ -93,16 +121,21 @@ export function CampaignBattlePage() {
   const onDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     downRef.current = { x: e.clientX, y: e.clientY, moved: false, sp: { ...pan } };
+    const painting = terrainMode !== 'off';
+    if (painting) { const p = clientToPct(e.clientX, e.clientY); paintCell(p.x, p.y); }
     const move = (ev: MouseEvent) => {
       const d = downRef.current; if (!d) return;
       if (Math.abs(ev.clientX - d.x) + Math.abs(ev.clientY - d.y) > 4) d.moved = true;
-      if (!placing && d.moved) setPan({ x: d.sp.x + (ev.clientX - d.x), y: d.sp.y + (ev.clientY - d.y) });
+      if (painting) { const p = clientToPct(ev.clientX, ev.clientY); paintCell(p.x, p.y); }
+      else if (!placing && d.moved) setPan({ x: d.sp.x + (ev.clientX - d.x), y: d.sp.y + (ev.clientY - d.y) });
     };
     const up = (ev: MouseEvent) => {
       window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up);
       const d = downRef.current; downRef.current = null; if (!d) return;
+      if (painting) return;
       if (!d.moved && placing) {
-        const pct = clientToPct(ev.clientX, ev.clientY);
+        const raw = clientToPct(ev.clientX, ev.clientY);
+        const pct = snapPct(raw.x, raw.y);
         const tok: CampaignBattleToken = { id: `tok-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`, name: placing.name, side: placing.side, x: pct.x, y: pct.y, ac: placing.ac, currentHp: placing.hp, maxHp: placing.hp };
         patchBoard((b) => ({ ...b, tokens: [...b.tokens, tok] }));
         setPlacing(null);
@@ -114,9 +147,14 @@ export function CampaignBattlePage() {
   };
 
   const dragToken = (e: React.MouseEvent, id: string) => {
+    if (terrainMode !== 'off') return;
     e.stopPropagation();
     const move = (ev: MouseEvent) => { const pct = clientToPct(ev.clientX, ev.clientY); patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === id ? { ...t, x: pct.x, y: pct.y } : t) })); };
-    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+    const up = (ev: MouseEvent) => {
+      window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up);
+      const raw = clientToPct(ev.clientX, ev.clientY); const pct = snapPct(raw.x, raw.y);
+      patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === id ? { ...t, x: pct.x, y: pct.y } : t) }));
+    };
     window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
   };
 
@@ -128,8 +166,8 @@ export function CampaignBattlePage() {
         <div className="ucw-title">
           <button className="atlas-back-link" style={{ margin: 0 }} onClick={() => navigate(`/campaigns/${campaignId}/library/battle-maps`)}>← Карты боя</button>
           <span className="atlas-crumb-sep">→</span>
-          <strong>{map?.title ?? 'Бой'}</strong>
-          <span className="ucw-chip">Бой · изолирован</span>
+          <strong>{title}</strong>
+          <span className="ucw-chip">{isCustom ? 'Своё поле · изолирован' : 'Бой · изолирован'}</span>
         </div>
         <div className="ucw-header-actions">
           {variants.length > 1 && (
@@ -152,15 +190,45 @@ export function CampaignBattlePage() {
         <span className="sep" />
         <span className="atlas-sub" style={{ margin: 0 }}>Раунд {board.round ?? 1}</span>
         <button className="ucw-tbtn" onClick={() => patchBoard((b) => ({ ...b, round: (b.round ?? 1) + 1 }))}>+ раунд</button>
-        <button className="ucw-tbtn" onClick={() => { if (window.confirm('Убрать все токены с поля?')) patchBoard((b) => ({ ...b, tokens: [] })); }}>Очистить поле</button>
+        <button className="ucw-tbtn" onClick={() => { if (window.confirm('Убрать все токены с поля?')) patchBoard((b) => ({ ...b, tokens: [] })); }}>Очистить токены</button>
+        <span className="sep" />
+        <button className={`ucw-tbtn ${board.showGrid ? 'active' : ''}`} onClick={() => patchBoard((b) => ({ ...b, showGrid: !b.showGrid }))}>Сетка</button>
+        {board.showGrid && (
+          <>
+            <label style={{ fontSize: '0.8rem', color: 'var(--fg-dim)' }}>Клеток:
+              <input type="number" min={4} max={80} value={columns} onChange={(e) => patchBoard((b) => ({ ...b, columns: Math.max(4, Math.min(80, Number(e.target.value) || 24)) }))}
+                style={{ width: 56, marginLeft: 4, background: 'var(--bg-card)', border: '1px solid var(--border-soft)', color: 'var(--fg)', borderRadius: 6, padding: '3px 6px' }} />
+            </label>
+            <button className={`ucw-tbtn ${board.snap ? 'active' : ''}`} onClick={() => patchBoard((b) => ({ ...b, snap: !b.snap }))}>Привязка</button>
+            <span className="sep" />
+            <span style={{ fontSize: '0.78rem', color: 'var(--fg-faint)' }}>Террейн:</span>
+            {(['off', 'blocked', 'difficult', 'erase'] as const).map((m) => (
+              <button key={m} className={`ucw-tbtn ${terrainMode === m ? 'active' : ''}`} onClick={() => setTerrainMode(m)}>
+                {m === 'off' ? 'Выкл' : m === 'blocked' ? 'Стена' : m === 'difficult' ? 'Трудно' : 'Стереть'}
+              </button>
+            ))}
+          </>
+        )}
         {placing && <span className="ucw-chip">Клик по карте — поставить: {placing.name}</span>}
       </div>
 
       <div className="ucw-body">
-        <div className={`ucw-viewport${placing ? ' placing' : ''}`} ref={viewportRef} onMouseDown={onDown} onWheel={onWheel}>
+        <div className={`ucw-viewport${placing || terrainMode !== 'off' ? ' placing' : ''}`} ref={viewportRef} onMouseDown={onDown} onWheel={onWheel}>
           <div className="ucw-world" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
             <div className="ucw-mapstack">
-              {imgUrl && <img ref={imgRef} className="ucw-mapimg" src={imgUrl} alt={map?.title} draggable={false} onLoad={() => { if (!fitted) { fit(); setFitted(true); } }} />}
+              {imgUrl && <img ref={imgRef} className="ucw-mapimg" src={imgUrl} alt={title} draggable={false} onLoad={(e) => { const im = e.currentTarget; setNatural({ w: im.naturalWidth, h: im.naturalHeight }); if (!fitted) { fit(); setFitted(true); } }} />}
+              {/* grid + terrain overlay */}
+              {board.showGrid && (
+                <svg className="ucw-overlay-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  {Object.entries(board.terrain ?? {}).map(([key, type]) => {
+                    const [r, c] = key.split(',').map(Number);
+                    return <rect key={key} x={c * cellW} y={r * cellH} width={cellW} height={cellH}
+                      fill={type === 'blocked' ? 'rgba(179,65,58,0.45)' : 'rgba(192,138,46,0.4)'} stroke="none" />;
+                  })}
+                  {Array.from({ length: columns + 1 }, (_, i) => <line key={`v${i}`} x1={i * cellW} y1={0} x2={i * cellW} y2={100} stroke="rgba(255,255,255,0.25)" strokeWidth={0.15} vectorEffect="non-scaling-stroke" style={{ strokeWidth: 1 } as React.CSSProperties} />)}
+                  {Array.from({ length: rows + 1 }, (_, i) => <line key={`h${i}`} x1={0} y1={i * cellH} x2={100} y2={i * cellH} stroke="rgba(255,255,255,0.25)" strokeWidth={0.15} vectorEffect="non-scaling-stroke" style={{ strokeWidth: 1 } as React.CSSProperties} />)}
+                </svg>
+              )}
               <div className="ucw-markers">
                 {board.tokens.map((t) => (
                   <div key={t.id} className={`ucw-btoken side-${t.side}${selected === t.id ? ' selected' : ''}`} style={{ left: `${t.x}%`, top: `${t.y}%` }}

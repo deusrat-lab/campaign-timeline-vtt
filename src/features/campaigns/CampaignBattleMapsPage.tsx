@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import '../world-atlas/atlasLayer.css';
 import './campaignWorkspace.css';
@@ -6,6 +6,43 @@ import { getCampaignById } from '../../data/campaignModules';
 import { useUserCampaigns } from '../../state/userCampaignStore';
 import { getBattleMapCatalog, battleMapImageUrl } from '../../data/battleMapCatalog';
 import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
+
+/** Create a battle field from any image (upload / generated / URL): the DM
+ * gives it a name + grid columns; it becomes a playable field with grid +
+ * terrain. Reuses the same board tools — nothing is built by hand. */
+function CustomFieldCreator({ campaignId, onCreated }: { campaignId: string; onCreated: (mapId: string) => void }) {
+  const store = useUserCampaigns();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [title, setTitle] = useState('Горное поле боя');
+  const [columns, setColumns] = useState(24);
+
+  const create = (imageSrc: string) => {
+    const id = store.addCustomBattleMap(campaignId, { title: title.trim() || 'Поле боя', imageSrc, columns });
+    onCreated(`custom-${id}`);
+  };
+
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    if (file.size > 4_000_000 && !window.confirm('Картинка больше ~4 МБ — она хранится в браузере и может замедлить приложение. Продолжить?')) { e.target.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = () => create(String(reader.result));
+    reader.readAsDataURL(file); e.target.value = '';
+  };
+
+  return (
+    <div className="atlas-panel" style={{ marginBottom: 20 }}>
+      <h3 style={{ margin: '0 0 8px', color: 'var(--gold-soft)', fontFamily: 'var(--font-heading)' }}>Создать своё поле боя</h3>
+      <p className="atlas-sub" style={{ margin: '0 0 10px' }}>Нет нужной карты (например, горной)? Вставьте свою картинку — сгенерированную или с диска — и она станет полем с сеткой и террейном.</p>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label style={{ fontSize: '0.8rem', color: 'var(--fg-faint)' }}>Название<br /><input className="atlas-input" style={{ minWidth: 220 }} value={title} onChange={(e) => setTitle(e.target.value)} /></label>
+        <label style={{ fontSize: '0.8rem', color: 'var(--fg-faint)' }}>Клеток по ширине<br /><input className="atlas-input" style={{ minWidth: 90 }} type="number" min={4} max={80} value={columns} onChange={(e) => setColumns(Math.max(4, Math.min(80, Number(e.target.value) || 24)))} /></label>
+        <button className="atlas-btn" onClick={() => fileRef.current?.click()}>Загрузить картинку</button>
+        <button className="atlas-btn ghost" onClick={() => { const url = window.prompt('URL картинки (https://…):'); if (url && url.trim()) create(url.trim()); }}>Вставить по URL</button>
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
+      </div>
+    </div>
+  );
+}
 
 export function CampaignBattleMapsPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -53,9 +90,31 @@ export function CampaignBattleMapsPage() {
         </div>
       </div>
       <p className="atlas-sub" style={{ marginTop: -6 }}>
-        Готовые поля боя из общей библиотеки (battle-map-vtt). Выберите карту и откройте бой — с переключением день / вечер / ночь.
+        Готовые поля боя из общей библиотеки (battle-map-vtt) + свои поля из любой картинки — с сеткой, террейном и день/ночь.
       </p>
 
+      <CustomFieldCreator campaignId={campaignId} onCreated={(mid) => navigate(`/campaigns/${campaignId}/battle/${mid}`)} />
+
+      {(data.customBattleMaps ?? []).length > 0 && (
+        <div className="atlas-section" style={{ marginTop: 0 }}>
+          <h2>Мои поля боя</h2>
+          <div className="ucw-cardgrid">
+            {(data.customBattleMaps ?? []).map((m) => (
+              <div key={m.id} className="ucw-ecard" style={{ cursor: 'default' }}>
+                <img className="atlas-map-img" src={m.imageSrc} alt={m.title} loading="lazy" style={{ maxHeight: 150, objectFit: 'cover' }} />
+                <h3>{m.title}</h3>
+                <span className="meta">сетка {m.columns} клеток</span>
+                <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                  <button className="atlas-btn small" onClick={() => navigate(`/campaigns/${campaignId}/battle/custom-${m.id}`)}>Открыть бой</button>
+                  <button className="atlas-btn danger small" onClick={() => { if (window.confirm(`Удалить поле «${m.title}»?`)) store.removeCustomBattleMap(campaignId, m.id); }}>Удалить</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <h2 className="atlas-section" style={{ marginBottom: 0 }}>Общая библиотека</h2>
       <div className="atlas-toolbar">
         <input className="atlas-input" placeholder="Поиск карты…" value={query} onChange={(e) => setQuery(e.target.value)} />
         <select className="atlas-select" value={group} onChange={(e) => setGroup(e.target.value)}>
