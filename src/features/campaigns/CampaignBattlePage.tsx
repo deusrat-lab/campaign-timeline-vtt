@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import '../world-atlas/atlasLayer.css';
 import './campaignWorkspace.css';
@@ -52,8 +52,29 @@ export function CampaignBattlePage() {
   const [fitted, setFitted] = useState(false);
   const [terrainMode, setTerrainMode] = useState<'off' | 'blocked' | 'difficult' | 'erase'>('off');
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
+  // Live distance readout while a token is dragged (D&D 5e: 1 cell = 5 ft,
+  // diagonal counts as one — Chebyshev distance). Positioned at the pointer.
+  const [measure, setMeasure] = useState<{ cells: number; feet: number; sx: number; sy: number; ex: number; ey: number } | null>(null);
+  // Active touch/mouse pointers (id → viewport-local point) for pinch-zoom.
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchRef = useRef<{ dist: number; zoom: number; midWorldX: number; midWorldY: number } | null>(null);
+  // The app shell is content-height, so size the board explicitly to fill the
+  // space below the top chrome — otherwise the map viewport collapses (esp. on
+  // mobile, where the library stacks below it). Mirrors the map workspace.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [shellHeight, setShellHeight] = useState<number>();
 
   useEffect(() => { getBattleMapCatalog().then(setCatalog); }, []);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = rootRef.current; if (!el) return;
+      setShellHeight(Math.max(360, window.innerHeight - el.getBoundingClientRect().top));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
 
   // Initialize this map's own board once (if it has no entry yet), carrying over
   // a legacy single-board setup only when it belonged to this same map.
@@ -138,60 +159,107 @@ export function CampaignBattlePage() {
     });
   };
 
+  const zoomAt = (cx: number, cy: number, factor: number) => {
+    const nz = Math.max(0.15, Math.min(6, zoom * factor));
+    const wx = (cx - pan.x) / zoom, wy = (cy - pan.y) / zoom;
+    setZoom(nz); setPan({ x: cx - wx * nz, y: cy - wy * nz });
+    patchBoard((b) => ({ ...b, view: { zoom: nz, panX: cx - wx * nz, panY: cy - wy * nz } }));
+  };
+
   const onWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const vp = viewportRef.current; if (!vp) return;
     const rect = vp.getBoundingClientRect();
-    const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
-    const nz = Math.max(0.15, Math.min(6, zoom * (e.deltaY < 0 ? 1.12 : 0.89)));
-    const wx = (cx - pan.x) / zoom, wy = (cy - pan.y) / zoom;
-    setZoom(nz); setPan({ x: cx - wx * nz, y: cy - wy * nz });
+    zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 1.12 : 0.89);
   };
 
-  const onDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
+  // Pointer-based pan / place / paint / pinch-zoom — works with both mouse and
+  // touch. Two fingers = pinch to zoom; one finger = pan (or place/paint).
+  const onPointerDown = (e: React.PointerEvent) => {
+    const vp = viewportRef.current; if (!vp) return;
+    const rect = vp.getBoundingClientRect();
+    vp.setPointerCapture?.(e.pointerId);
+    pointersRef.current.set(e.pointerId, { x: e.clientX - rect.left, y: e.clientY - rect.top });
+    if (pointersRef.current.size === 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+      pinchRef.current = { dist: Math.hypot(a.x - b.x, a.y - b.y), zoom, midWorldX: (midX - pan.x) / zoom, midWorldY: (midY - pan.y) / zoom };
+      downRef.current = null;
+      return;
+    }
+    if (e.button != null && e.button !== 0 && e.pointerType === 'mouse') return;
     downRef.current = { x: e.clientX, y: e.clientY, moved: false, sp: { ...pan } };
-    const painting = terrainMode !== 'off';
-    if (painting) { const p = clientToPct(e.clientX, e.clientY); paintCell(p.x, p.y); }
-    const move = (ev: MouseEvent) => {
-      const d = downRef.current; if (!d) return;
-      if (Math.abs(ev.clientX - d.x) + Math.abs(ev.clientY - d.y) > 4) d.moved = true;
-      if (painting) { const p = clientToPct(ev.clientX, ev.clientY); paintCell(p.x, p.y); }
-      else if (!placing && d.moved) setPan({ x: d.sp.x + (ev.clientX - d.x), y: d.sp.y + (ev.clientY - d.y) });
-    };
-    const up = (ev: MouseEvent) => {
-      window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up);
-      const d = downRef.current; downRef.current = null; if (!d) return;
-      if (painting) return;
-      if (!d.moved && placing) {
-        const raw = clientToPct(ev.clientX, ev.clientY);
-        const pct = snapPct(raw.x, raw.y);
-        const tok: CampaignBattleToken = { id: `tok-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`, name: placing.name, side: placing.side, x: pct.x, y: pct.y, ac: placing.ac, currentHp: placing.hp, maxHp: placing.hp };
-        patchBoard((b) => ({ ...b, tokens: [...b.tokens, tok] }));
-        setPlacing(null);
-      } else if (d.moved) {
-        patchBoard((b) => ({ ...b, view: { zoom, panX: d.sp.x + (ev.clientX - d.x), panY: d.sp.y + (ev.clientY - d.y) } }));
-      }
-    };
-    window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+    if (terrainMode !== 'off') { const p = clientToPct(e.clientX, e.clientY); paintCell(p.x, p.y); }
   };
 
-  const dragToken = (e: React.MouseEvent, id: string) => {
+  const onPointerMove = (e: React.PointerEvent) => {
+    const vp = viewportRef.current; if (!vp) return;
+    const rect = vp.getBoundingClientRect();
+    if (pointersRef.current.has(e.pointerId)) pointersRef.current.set(e.pointerId, { x: e.clientX - rect.left, y: e.clientY - rect.top });
+    // Pinch-zoom with two pointers.
+    if (pointersRef.current.size === 2 && pinchRef.current) {
+      const [a, b] = [...pointersRef.current.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+      const nz = Math.max(0.15, Math.min(6, pinchRef.current.zoom * (dist / (pinchRef.current.dist || 1))));
+      setZoom(nz); setPan({ x: midX - pinchRef.current.midWorldX * nz, y: midY - pinchRef.current.midWorldY * nz });
+      return;
+    }
+    const d = downRef.current; if (!d) return;
+    if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 4) d.moved = true;
+    if (terrainMode !== 'off') { const p = clientToPct(e.clientX, e.clientY); paintCell(p.x, p.y); }
+    else if (!placing && d.moved) setPan({ x: d.sp.x + (e.clientX - d.x), y: d.sp.y + (e.clientY - d.y) });
+  };
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) pinchRef.current = null;
+    const d = downRef.current; if (!d) return;
+    if (pointersRef.current.size > 0) return; // still pinching / other finger down
+    downRef.current = null;
+    if (terrainMode !== 'off') return;
+    if (!d.moved && placing) {
+      const raw = clientToPct(e.clientX, e.clientY);
+      const pct = snapPct(raw.x, raw.y);
+      const tok: CampaignBattleToken = { id: `tok-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`, name: placing.name, side: placing.side, x: pct.x, y: pct.y, ac: placing.ac, currentHp: placing.hp, maxHp: placing.hp };
+      patchBoard((b) => ({ ...b, tokens: [...b.tokens, tok] }));
+      setPlacing(null);
+    } else if (d.moved) {
+      patchBoard((b) => ({ ...b, view: { zoom, panX: d.sp.x + (e.clientX - d.x), panY: d.sp.y + (e.clientY - d.y) } }));
+    }
+  };
+
+  // Drag a token with mouse OR touch, showing the live distance moved.
+  const dragToken = (e: React.PointerEvent, id: string) => {
     if (terrainMode !== 'off' || isPlayer) return;
     e.stopPropagation();
-    const move = (ev: MouseEvent) => { const pct = clientToPct(ev.clientX, ev.clientY); patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === id ? { ...t, x: pct.x, y: pct.y } : t) })); };
-    const up = (ev: MouseEvent) => {
-      window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up);
-      const raw = clientToPct(ev.clientX, ev.clientY); const pct = snapPct(raw.x, raw.y);
+    const el = e.currentTarget as HTMLElement;
+    const pid = e.pointerId;
+    try { el.setPointerCapture?.(pid); } catch { /* pointer not capturable — window listeners below still work */ }
+    const tok = board.tokens.find((t) => t.id === id);
+    const start = tok ? cellAt(tok.x, tok.y) : { col: 0, row: 0 };
+    const move = (ev: PointerEvent) => {
+      const pct = clientToPct(ev.clientX, ev.clientY);
+      const cur = cellAt(pct.x, pct.y);
+      const cells = Math.max(Math.abs(cur.col - start.col), Math.abs(cur.row - start.row));
+      const vp = viewportRef.current; const rect = vp?.getBoundingClientRect();
+      setMeasure({ cells, feet: cells * 5, sx: 0, sy: 0, ex: rect ? ev.clientX - rect.left : 0, ey: rect ? ev.clientY - rect.top : 0 });
       patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === id ? { ...t, x: pct.x, y: pct.y } : t) }));
     };
-    window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+    const up = (ev: PointerEvent) => {
+      try { el.releasePointerCapture?.(pid); } catch { /* already released */ }
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
+      const raw = clientToPct(ev.clientX, ev.clientY); const pct = snapPct(raw.x, raw.y);
+      patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === id ? { ...t, x: pct.x, y: pct.y } : t) }));
+      setMeasure(null);
+    };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
   };
 
   const selTok = board.tokens.find((t) => t.id === selected);
 
   return (
-    <div className="ucw">
+    <div className="ucw" ref={rootRef} style={shellHeight ? { height: shellHeight } : undefined}>
       <div className="ucw-header">
         <div className="ucw-title">
           <button className="atlas-back-link" style={{ margin: 0 }} onClick={() => navigate(`/campaigns/${campaignId}/library/battle-maps`)}>← Карты боя</button>
@@ -253,7 +321,7 @@ export function CampaignBattlePage() {
       </div>
 
       <div className="ucw-body">
-        <div className={`ucw-viewport${placing || terrainMode !== 'off' ? ' placing' : ''}`} ref={viewportRef} onMouseDown={onDown} onWheel={onWheel}>
+        <div className={`ucw-viewport${placing || terrainMode !== 'off' ? ' placing' : ''}`} ref={viewportRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onWheel={onWheel}>
           <div className="ucw-world" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
             <div className="ucw-mapstack">
               {imgUrl && <img ref={imgRef} className="ucw-mapimg" src={imgUrl} alt={title} draggable={false} onLoad={(e) => { const im = e.currentTarget; setNatural({ w: im.naturalWidth, h: im.naturalHeight }); if (!fitted) { fit(); setFitted(true); } }} />}
@@ -272,7 +340,7 @@ export function CampaignBattlePage() {
               <div className="ucw-markers">
                 {board.tokens.map((t) => (
                   <div key={t.id} className={`ucw-btoken side-${t.side}${selected === t.id ? ' selected' : ''}`} style={{ left: `${t.x}%`, top: `${t.y}%` }}
-                    onMouseDown={(e) => dragToken(e, t.id)} onClick={(e) => { e.stopPropagation(); setSelected(t.id); }} title={t.name}>
+                    onPointerDown={(e) => dragToken(e, t.id)} onClick={(e) => { e.stopPropagation(); setSelected(t.id); }} title={t.name}>
                     <span className="btoken-init">{t.name.slice(0, 2)}</span>
                     {(t.currentHp != null) && <span className="btoken-hp">{t.currentHp}{t.maxHp ? `/${t.maxHp}` : ''}</span>}
                   </div>
@@ -280,6 +348,11 @@ export function CampaignBattlePage() {
               </div>
             </div>
           </div>
+          {measure && (
+            <div className="ucw-measure" style={{ left: measure.ex, top: measure.ey }}>
+              {measure.cells} кл · {measure.feet} фт
+            </div>
+          )}
           <div className="ucw-legend">
             <div><span className="dot" style={{ background: 'var(--danger)' }} />Враг</div>
             <div><span className="dot" style={{ background: '#4f7fd6' }} />Игрок</div>

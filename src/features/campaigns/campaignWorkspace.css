@@ -107,6 +107,9 @@
 @media (max-width: 860px) {
   .ucw-body { flex-direction: column; }
   .ucw-library { width: auto; border-left: none; border-top: 1px solid var(--border-soft); max-height: 46vh; }
+  /* On the battle board the map must stay dominant — keep it at least ~48% of
+     the height and let the setup panel scroll below it. */
+  .ucw-viewport { min-height: 48vh; }
 }
 
 /* ── Entity card modal (parity with main-campaign cards) ─────────────── */
@@ -153,3 +156,19 @@
 .ucw-btoken.selected { outline: 2px solid var(--gold); outline-offset: 2px; }
 .ucw-btoken .btoken-init { font-size: 0.72rem; font-weight: 700; color: #16140f; line-height: 1; }
 .ucw-btoken .btoken-hp { position: absolute; bottom: -14px; font-size: 0.62rem; color: var(--fg); background: rgba(9,8,7,0.82); border: 1px solid var(--border-soft); border-radius: 4px; padding: 0 3px; white-space: nowrap; }
+
+/* Live distance readout while dragging a token (D&D 5e: 5 ft / cell). */
+.ucw-measure {
+  position: absolute; transform: translate(14px, -50%); z-index: 20; pointer-events: none;
+  background: rgba(9,8,7,0.9); border: 1px solid var(--gold); color: var(--gold-soft);
+  border-radius: 6px; padding: 3px 8px; font-size: 0.9rem; font-weight: 700; white-space: nowrap;
+}
+
+/* Touch devices: bigger tap targets so combat is usable on a phone. */
+@media (pointer: coarse) {
+  .ucw-btoken { width: 44px; height: 44px; }
+  .ucw-btoken .btoken-init { font-size: 0.85rem; }
+  .ucw-btoken .btoken-hp { bottom: -16px; font-size: 0.7rem; padding: 1px 5px; }
+  .ucw-toolbar .ucw-tbtn { padding: 9px 13px; font-size: 0.95rem; }
+  .ucw-measure { font-size: 1rem; padding: 5px 10px; }
+}
