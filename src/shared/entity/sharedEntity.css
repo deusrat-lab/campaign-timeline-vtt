@@ -1,0 +1,43 @@
+/* Shared, campaign-agnostic entity UI. Uses the app's design tokens only. */
+.shared-lib { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 16px; align-items: start; }
+.shared-lib-listhead { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.shared-lib-listhead input { flex: 1; }
+.shared-lib-count { font-size: 0.78rem; color: var(--fg-faint); margin: 6px 0; text-transform: uppercase; letter-spacing: 0.04em; }
+.shared-lib-row { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; padding: 8px; border-radius: 9px; border: 1px solid var(--border-soft); background: var(--bg-card); color: var(--fg); cursor: pointer; margin-bottom: 6px; }
+.shared-lib-row:hover { border-color: var(--gold-dim); }
+.shared-lib-row.active { border-color: var(--gold); background: rgba(192,138,46,0.12); }
+.shared-lib-row .entity-library-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.shared-lib-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shared-lib-sub { font-size: 0.8rem; color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shared-lib-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.shared-badge { font-size: 0.7rem; color: var(--fg-faint); border: 1px solid var(--border-soft); border-radius: 4px; padding: 0 5px; }
+.shared-badge.ok { color: var(--green); border-color: var(--green); }
+
+.shared-lib-detail { min-height: 200px; border: 1px solid var(--border-soft); border-radius: 12px; background: var(--bg-panel, rgba(255,255,255,0.02)); overflow: hidden; }
+.shared-detail { padding: 0 0 16px; }
+.shared-detail-hero { width: 100%; max-height: 260px; object-fit: cover; display: block; }
+.shared-detail-head { display: flex; gap: 12px; align-items: flex-start; padding: 16px 16px 8px; }
+.shared-detail-kind { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-faint); }
+.shared-detail-title { margin: 2px 0 0; font-family: var(--font-heading); color: var(--gold-soft); }
+.shared-detail-sub { color: var(--fg-dim); font-size: 0.85rem; margin-top: 2px; }
+.shared-tags { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 16px 8px; }
+.shared-tag { font-size: 0.72rem; color: var(--gold-soft); background: rgba(192,138,46,0.12); border: 1px solid var(--gold-dim); border-radius: 999px; padding: 1px 9px; }
+.shared-detail-actions { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 16px 10px; }
+.shared-fields { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 16px 8px; }
+.shared-field { display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 7px; padding: 4px 10px; min-width: 60px; }
+.shared-field .k { font-size: 0.68rem; color: var(--fg-faint); text-transform: uppercase; }
+.shared-field .v { font-weight: 700; }
+.shared-counters { display: flex; gap: 10px; flex-wrap: wrap; padding: 0 16px 8px; font-size: 0.82rem; color: var(--fg-dim); }
+.shared-counter strong { color: var(--fg); }
+.shared-detail-block { padding: 8px 16px; border-top: 1px solid var(--border-soft); }
+.shared-detail-block h4 { margin: 0 0 6px; color: var(--gold-soft); font-size: 0.9rem; }
+.shared-detail-block p { margin: 0; color: var(--fg); }
+.shared-rel-head { display: flex; justify-content: space-between; align-items: center; }
+.shared-rel-count { font-size: 0.75rem; color: var(--fg-faint); border: 1px solid var(--border-soft); border-radius: 999px; padding: 0 7px; }
+.shared-rel-list { display: flex; gap: 6px; flex-wrap: wrap; }
+.shared-rel-chip { font-size: 0.8rem; color: var(--fg); background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 7px; padding: 4px 10px; cursor: pointer; }
+.shared-rel-chip:hover:not(:disabled) { border-color: var(--gold-dim); }
+.shared-rel-chip:disabled { cursor: default; opacity: 0.8; }
+.shared-muted { color: var(--fg-faint); }
+
+@media (max-width: 860px) { .shared-lib { grid-template-columns: 1fr; } }
