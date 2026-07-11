@@ -8,6 +8,14 @@ import { useUserCampaigns } from '../../state/userCampaignStore';
 import { USER_CAMPAIGN_TYPE_LABELS, type CampaignEntityType, type UserCampaignMode } from '../../types/userCampaign';
 import type { WorldRegion } from '../../types/worldAtlas';
 import { CampaignEntityCard } from './CampaignEntityCard';
+import '../../shared/entity/sharedEntity.css';
+import { RichEntityDetail } from '../../shared/entity/RichEntityDetail';
+import { buildDetail, type LibraryKind } from '../../shared/entity/userCampaignEntityVM';
+
+/** CampaignEntityType → shared library kind (for the neutral VM mapper). */
+const ENTITY_TO_LIBKIND: Partial<Record<CampaignEntityType, LibraryKind>> = {
+  location: 'locations', npc: 'npc', quest: 'quests', enemy: 'enemies', party: 'players', faction: 'factions',
+};
 
 const ZOOM_MIN = 0.15;
 const ZOOM_MAX = 6;
@@ -47,6 +55,7 @@ export function IsolatedCampaignMapWorkspace() {
   const [routeEditId, setRouteEditId] = useState<string | null>(null);
   const [zoneEditId, setZoneEditId] = useState<string | null>(null);
   const [selected, setSelected] = useState<{ type: CampaignEntityType; id: string } | null>(null);
+  const [editing, setEditing] = useState<{ type: CampaignEntityType; id: string } | null>(null);
   const [search, setSearch] = useState('');
   const [layers, setLayers] = useState({ objects: true, routes: true, zones: true });
 
@@ -527,36 +536,76 @@ export function IsolatedCampaignMapWorkspace() {
           </div>
         </div>
 
-        {/* Library */}
+        {/* Library — or the rich detail card of the selected entity (parity
+            with the main campaign's right-panel location/NPC card). */}
         <aside className="ucw-library">
-          <LibraryPanel
-            campaignId={campaignId}
-            search={search}
-            isEdit={isEdit}
-            isPlayer={isPlayer}
-            selected={selected}
-            setSelected={setSelected}
-            placing={placing}
-            setPlacing={setPlacing}
-            routeEditId={routeEditId}
-            setRouteEditId={setRouteEditId}
-            zoneEditId={zoneEditId}
-            setZoneEditId={setZoneEditId}
-            addAndSelect={addAndSelect}
-            region={region}
-          />
+          {(() => {
+            const libKind = selected ? ENTITY_TO_LIBKIND[selected.type] : undefined;
+            if (!selected || !libKind) {
+              return (
+                <LibraryPanel
+                  campaignId={campaignId}
+                  search={search}
+                  isEdit={isEdit}
+                  isPlayer={isPlayer}
+                  selected={selected}
+                  setSelected={setSelected}
+                  placing={placing}
+                  setPlacing={setPlacing}
+                  routeEditId={routeEditId}
+                  setRouteEditId={setRouteEditId}
+                  zoneEditId={zoneEditId}
+                  setZoneEditId={setZoneEditId}
+                  addAndSelect={addAndSelect}
+                  region={region}
+                />
+              );
+            }
+            const revealed = new Set(runtime.revealedToPlayers ?? []);
+            const vm = buildDetail(libKind, selected.id, data, {
+              imageUrl: (imageId?: string) => (imageId ? data.images.find((im) => im.id === imageId)?.src : undefined),
+              onOpen: (_k, id) => { const t = data.locations.some((l) => l.id === id) ? 'location' : data.npcs.some((n) => n.id === id) ? 'npc' : data.quests.some((q) => q.id === id) ? 'quest' : 'enemy'; setSelected({ type: t as CampaignEntityType, id }); },
+              isPlaced: (et, id) => data.mapPlacements.some((mp) => mp.entityType === et && mp.entityId === id),
+              isRevealed: (id) => revealed.has(id),
+              match: () => true,
+              isPlayer,
+            });
+            const placement = data.mapPlacements.find((mp) => mp.entityType === selected.type && mp.entityId === selected.id);
+            return (
+              <div>
+                <button className="atlas-back-link" style={{ margin: '0 0 8px' }} onClick={() => setSelected(null)}>← Библиотека кампании</button>
+                {vm ? (
+                  <RichEntityDetail
+                    vm={vm}
+                    isPlayer={isPlayer}
+                    actions={{
+                      onEdit: !isPlayer ? () => setEditing(selected) : undefined,
+                      onPlace: !isPlayer && !placement ? () => setPlacing({ entityType: selected.type, entityId: selected.id, label: entityLabel(selected.type, selected.id) }) : undefined,
+                      placed: !!placement,
+                      onToggleReveal: !isPlayer ? () => store.toggleReveal(campaignId, selected.id) : undefined,
+                      revealed: revealed.has(selected.id),
+                      onDelete: !isPlayer ? () => { store.deleteEntity(campaignId, selected.type, selected.id); setSelected(null); } : undefined,
+                    }}
+                  />
+                ) : <p className="atlas-empty">Карточка не найдена.</p>}
+                {!isPlayer && placement && (
+                  <button className="atlas-btn ghost small" style={{ marginTop: 8 }} onClick={() => store.removePlacement(campaignId, placement.id)}>Снять с карты</button>
+                )}
+              </div>
+            );
+          })()}
         </aside>
       </div>
 
-      {selected && (
+      {editing && (
         <CampaignEntityCard
           campaignId={campaignId}
-          type={selected.type}
-          id={selected.id}
-          canEdit={isEdit}
+          type={editing.type}
+          id={editing.id}
+          canEdit={!isPlayer}
           isPlayer={isPlayer}
-          onClose={() => setSelected(null)}
-          onPlaceOnMap={() => setPlacing({ entityType: selected.type, entityId: selected.id, label: entityLabel(selected.type, selected.id) })}
+          onClose={() => setEditing(null)}
+          onPlaceOnMap={() => setPlacing({ entityType: editing.type, entityId: editing.id, label: entityLabel(editing.type, editing.id) })}
         />
       )}
     </div>
