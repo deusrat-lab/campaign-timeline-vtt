@@ -68,13 +68,15 @@ function emptyData(campaignId: string, title: string, type: UserCampaignType, ba
   const locSrc = seed?.locations ?? preset?.locations ?? [];
   const npcSrc = seed?.npcs ?? preset?.npcs ?? [];
   const enemySrc = seed?.enemies ?? [];
+  const factionSrc = preset?.factions ?? [];
   const locations: CampaignLocation[] = locSrc.map((l, i) => ({ id: rid('loc', i), title: l.title, description: l.description, dmNotes: (l as { dmNotes?: string }).dmNotes }));
   const npcs: CampaignNpc[] = npcSrc.map((n, i) => ({ id: rid('npc', i), name: n.name, role: n.role, description: n.description, dmNotes: (n as { dmNotes?: string }).dmNotes }));
   const enemies: CampaignEnemy[] = enemySrc.map((e, i) => ({ id: rid('emy', i), title: e.title, ac: e.ac, hp: e.hp, description: e.description, tactics: e.dmNotes }));
+  const factions: CampaignFaction[] = factionSrc.map((f, i) => ({ id: rid('fac', i), name: f.name, role: f.role, description: f.description, attitude: 'neutral' as const }));
   return {
     campaignId, title, type, baseMapId,
     mapIds: [baseMapId], regionIds,
-    locations, npcs, quests: [], enemies, images: [], routes: [], zones: [], notes: [], mapPlacements: [],
+    locations, npcs, quests: [], enemies, factions, images: [], routes: [], zones: [], notes: [], mapPlacements: [],
   };
 }
 

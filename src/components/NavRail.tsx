@@ -48,7 +48,8 @@ export function NavRail() {
     // Player View gets a reduced rail: only the map and the card sections the
     // DM can reveal — no DM tools (battle maps, bestiary, factions, players,
     // images, notes). Matches "у игроков меньше панелей — только карта и карточки".
-    const isPlayerView = userStore.getRuntime(campaignId).mode === 'playerView';
+    const asPlayer = new URLSearchParams(location.search).get('as') === 'player';
+    const isPlayerView = asPlayer || userStore.getRuntime(campaignId).mode === 'playerView';
     const cItems: RailItem[] = isPlayerView ? [
       { key: 'home', label: 'Дом мира', icon: '🌍', to: '/' },
       { key: 'c-map', label: 'Карта', icon: '🗺', to: `/campaigns/${campaignId}/map` },

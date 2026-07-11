@@ -10,7 +10,8 @@
 
 export interface PresetLocation { title: string; description?: string }
 export interface PresetNpc { name: string; role?: string; description?: string }
-export interface RegionPreset { locations: PresetLocation[]; npcs: PresetNpc[] }
+export interface PresetFaction { name: string; role?: string; description?: string }
+export interface RegionPreset { locations: PresetLocation[]; npcs: PresetNpc[]; factions?: PresetFaction[] }
 
 /** Keyed by atlas map id (baseMapId of the campaign). */
 export const REGION_PRESETS: Record<string, RegionPreset> = {
@@ -29,7 +30,9 @@ export const REGION_PRESETS: Record<string, RegionPreset> = {
       { title: 'Дворы Железного Вепря', description: 'Военные дворы и школы Дома Железного Вепря.' },
       { title: 'Тихие Молотовые Залы', description: 'Кузни и мастерские Дома Тихого Молота.' },
     ],
-    npcs: [
+    npcs: [],
+    // Великие Дома Кальдрана — это фракции, а не отдельные NPC.
+    factions: [
       { name: 'Дом Серебряного Камня', role: 'Высокий Дом Кальдрана', description: 'Престиж, легитимность, старшинство среди домов.' },
       { name: 'Дом Скаар', role: 'Высокий Дом Кальдрана', description: 'Тени, сделки и скрытая сила; один из опаснейших домов.' },
       { name: 'Дом Крылатой Кости', role: 'Высокий Дом Кальдрана', description: 'Охотники Драконьих Кряжей, договоры с вивернами.' },

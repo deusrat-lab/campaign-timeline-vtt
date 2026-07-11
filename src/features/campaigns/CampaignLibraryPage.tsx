@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import '../world-atlas/atlasLayer.css';
 import './campaignWorkspace.css';
 import '../../shared/entity/sharedEntity.css';
@@ -23,6 +23,7 @@ export function CampaignLibraryPage() {
   const { campaignId, kind } = useParams<{ campaignId: string; kind: Kind }>();
   const navigate = useNavigate();
   const store = useUserCampaigns();
+  const [searchParams] = useSearchParams();
   const [editOpen, setEditOpen] = useState<{ type: CampaignEntityType; id: string } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -35,7 +36,8 @@ export function CampaignLibraryPage() {
 
   const k = (kind && KIND_LABEL[kind] ? kind : 'locations') as Kind;
   const isEntityKind = k !== 'images' && k !== 'notes';
-  const mode: UserCampaignMode = runtime?.mode ?? 'dmView';
+  const asPlayer = searchParams.get('as') === 'player';
+  const mode: UserCampaignMode = asPlayer ? 'playerView' : (runtime?.mode ?? 'dmView');
   const isEdit = mode === 'dmEdit';
   const isPlayer = mode === 'playerView';
   const canEdit = isEdit;
@@ -103,13 +105,17 @@ export function CampaignLibraryPage() {
           <button className="atlas-back-link" style={{ margin: 0 }} onClick={() => navigate(`/campaigns/${campaignId}/map`)}>← Карта</button>
           <h1>{data.title} · {KIND_LABEL[k]}</h1>
         </div>
-        <div className="ucw-segmented" role="group" aria-label="Режим">
-          {(['dmView', 'dmEdit', 'playerView'] as UserCampaignMode[]).map((m) => (
-            <button key={m} className={mode === m ? 'active' : ''} onClick={() => store.setMode(campaignId, m)}>
-              {m === 'dmView' ? 'DM View' : m === 'dmEdit' ? 'DM Edit' : 'Player View'}
-            </button>
-          ))}
-        </div>
+        {asPlayer ? (
+          <span className="ucw-chip">Вид игрока</span>
+        ) : (
+          <div className="ucw-segmented" role="group" aria-label="Режим">
+            {(['dmView', 'dmEdit', 'playerView'] as UserCampaignMode[]).map((m) => (
+              <button key={m} className={mode === m ? 'active' : ''} onClick={() => store.setMode(campaignId, m)}>
+                {m === 'dmView' ? 'DM View' : m === 'dmEdit' ? 'DM Edit' : 'Player View'}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {k === 'notes' ? (

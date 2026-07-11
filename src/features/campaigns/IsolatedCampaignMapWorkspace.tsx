@@ -59,7 +59,11 @@ export function IsolatedCampaignMapWorkspace() {
   const [search, setSearch] = useState('');
   const [layers, setLayers] = useState({ objects: true, routes: true, zones: true });
 
-  const mode: UserCampaignMode = runtime?.mode ?? 'dmView';
+  // `?as=player` forces a player-safe view locally (for opening a dedicated
+  // player tab), independent of the shared runtime.mode — so the DM can keep
+  // editing in their own tab while a player tab shows only revealed content.
+  const asPlayer = searchParams.get('as') === 'player';
+  const mode: UserCampaignMode = asPlayer ? 'playerView' : (runtime?.mode ?? 'dmView');
   const isEdit = mode === 'dmEdit';
   const isPlayer = mode === 'playerView';
 
@@ -316,15 +320,6 @@ export function IsolatedCampaignMapWorkspace() {
 
   const setMode = (m: UserCampaignMode) => store.setMode(campaignId, m);
 
-  // ── entity CRUD helpers ─────────────────────────────────────────────
-  const addAndSelect = (type: CampaignEntityType) => {
-    let id = '';
-    if (type === 'location') id = store.addLocation(campaignId, { title: 'Новая локация' });
-    else if (type === 'npc') id = store.addNpc(campaignId, { name: 'Новый NPC' });
-    else if (type === 'quest') id = store.addQuest(campaignId, { title: 'Новый квест', status: 'notStarted' });
-    else if (type === 'enemy') id = store.addEnemy(campaignId, { title: 'Новый враг' });
-    if (id) setSelected({ type, id });
-  };
 
   const exportCampaign = () => {
     const json = store.exportCampaign(campaignId, window.confirm('Включить runtime (режим, вид карты, статусы) в экспорт?'));
@@ -358,18 +353,25 @@ export function IsolatedCampaignMapWorkspace() {
           <span className="ucw-chip">{USER_CAMPAIGN_TYPE_LABELS[data.type]} · изолирован</span>
         </div>
         <div className="ucw-header-actions">
-          <div className="ucw-segmented" role="group" aria-label="Режим">
-            {(['dmView', 'dmEdit', 'playerView'] as UserCampaignMode[]).map((m) => (
-              <button key={m} className={mode === m ? 'active' : ''} onClick={() => setMode(m)}>
-                {m === 'dmView' ? 'DM View' : m === 'dmEdit' ? 'DM Edit' : 'Player View'}
-              </button>
-            ))}
-          </div>
-          <button className="ucw-tbtn" onClick={() => { const t = window.prompt('Новое название кампании:', data.title); if (t && t.trim()) store.renameCampaign(campaignId, t.trim()); }}>Переименовать</button>
-          <button className="ucw-tbtn" onClick={exportCampaign}>Export</button>
-          <button className="ucw-tbtn" onClick={() => fileInputRef.current?.click()}>Import</button>
-          <input ref={fileInputRef} type="file" accept="application/json" style={{ display: 'none' }} onChange={importCampaign} />
-          <button className="ucw-tbtn" style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => { if (window.confirm(`Удалить кампанию «${data.title}»?`)) { store.deleteCampaign(campaignId); navigate('/'); } }}>Удалить</button>
+          {asPlayer ? (
+            <span className="ucw-chip">Вид игрока — только раскрытое Мастером</span>
+          ) : (
+            <>
+              <div className="ucw-segmented" role="group" aria-label="Режим">
+                {(['dmView', 'dmEdit', 'playerView'] as UserCampaignMode[]).map((m) => (
+                  <button key={m} className={mode === m ? 'active' : ''} onClick={() => setMode(m)}>
+                    {m === 'dmView' ? 'DM View' : m === 'dmEdit' ? 'DM Edit' : 'Player View'}
+                  </button>
+                ))}
+              </div>
+              <button className="ucw-tbtn" title="Открыть вид игрока в отдельной вкладке (можно показать/дать игрокам)" onClick={() => { const u = new URL(window.location.href); u.searchParams.set('as', 'player'); window.open(u.toString(), '_blank', 'noopener'); }}>↗ Вид игрока</button>
+              <button className="ucw-tbtn" onClick={() => { const t = window.prompt('Новое название кампании:', data.title); if (t && t.trim()) store.renameCampaign(campaignId, t.trim()); }}>Переименовать</button>
+              <button className="ucw-tbtn" onClick={exportCampaign}>Export</button>
+              <button className="ucw-tbtn" onClick={() => fileInputRef.current?.click()}>Import</button>
+              <input ref={fileInputRef} type="file" accept="application/json" style={{ display: 'none' }} onChange={importCampaign} />
+              <button className="ucw-tbtn" style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => { if (window.confirm(`Удалить кампанию «${data.title}»?`)) { store.deleteCampaign(campaignId); navigate('/'); } }}>Удалить</button>
+            </>
+          )}
         </div>
       </div>
 
@@ -545,18 +547,12 @@ export function IsolatedCampaignMapWorkspace() {
               return (
                 <LibraryPanel
                   campaignId={campaignId}
-                  search={search}
                   isEdit={isEdit}
                   isPlayer={isPlayer}
-                  selected={selected}
-                  setSelected={setSelected}
-                  placing={placing}
-                  setPlacing={setPlacing}
                   routeEditId={routeEditId}
                   setRouteEditId={setRouteEditId}
                   zoneEditId={zoneEditId}
                   setZoneEditId={setZoneEditId}
-                  addAndSelect={addAndSelect}
                   region={region}
                 />
               );
@@ -615,56 +611,36 @@ export function IsolatedCampaignMapWorkspace() {
 /* ── Right library panel ──────────────────────────────────────────────── */
 function LibraryPanel(props: {
   campaignId: string;
-  search: string;
   isEdit: boolean;
   isPlayer: boolean;
-  selected: { type: CampaignEntityType; id: string } | null;
-  setSelected: (s: { type: CampaignEntityType; id: string } | null) => void;
-  placing: Placing;
-  setPlacing: (p: Placing) => void;
   routeEditId: string | null;
   setRouteEditId: (id: string | null) => void;
   zoneEditId: string | null;
   setZoneEditId: (id: string | null) => void;
-  addAndSelect: (type: CampaignEntityType) => void;
   region?: WorldRegion;
 }) {
-  const { campaignId, search, isEdit, isPlayer, setSelected, placing, setPlacing, routeEditId, setRouteEditId, zoneEditId, setZoneEditId, addAndSelect, region } = props;
+  const { campaignId, isEdit, isPlayer, routeEditId, setRouteEditId, zoneEditId, setZoneEditId, region } = props;
   const store = useUserCampaigns();
   const data = store.getData(campaignId);
   const runtime = store.getRuntime(campaignId);
   if (!data) return null;
 
-  const q = search.trim().toLowerCase();
-  const match = (s: string) => !q || s.toLowerCase().includes(q);
-
-  const isPlaced = (type: CampaignEntityType, id: string) => data.mapPlacements.some((mp) => mp.entityType === type && mp.entityId === id);
-  // Player View lists only entities the DM has revealed; DM sees everything.
-  const revealed = new Set(runtime?.revealedToPlayers ?? []);
-  const shown = (id: string) => !isPlayer || revealed.has(id);
-
-  const groups: Array<{ type: CampaignEntityType; label: string; items: Array<{ id: string; label: string }> }> = [
-    { type: 'location', label: 'Локации', items: data.locations.filter((l) => match(l.title) && shown(l.id)).map((l) => ({ id: l.id, label: l.title })) },
-    { type: 'npc', label: 'NPC', items: data.npcs.filter((n) => match(n.name) && shown(n.id)).map((n) => ({ id: n.id, label: n.name })) },
-    { type: 'quest', label: 'Квесты', items: data.quests.filter((qq) => match(qq.title) && shown(qq.id) && (!isPlayer || qq.status !== 'hidden')).map((qq) => ({ id: qq.id, label: qq.title })) },
-    { type: 'enemy', label: 'Враги', items: data.enemies.filter((e) => match(e.title) && shown(e.id)).map((e) => ({ id: e.id, label: e.title })) },
-  ];
-
-  const totalObjects = data.locations.length + data.npcs.length + data.quests.length + data.enemies.length;
-
+  // Parity with the main campaign: the right panel shows the SELECTED entity's
+  // card (handled by the parent) or this placeholder — never a full entity
+  // list. Entities are created in the left-rail sections and placed via the
+  // card's «Разместить на карте». DM keeps route/zone drawing tools here.
   return (
     <div>
-      <h2 className="ucw-lib-heading">Библиотека кампании</h2>
+      <h2 className="ucw-lib-heading">Библиотека</h2>
       {region && <p style={{ color: 'var(--fg-faint)', fontSize: '0.8rem', margin: '2px 0 0' }}>World info: {region.titleRu ?? region.title} · <a href={`/world/${region.id}`} onClick={(e) => { e.preventDefault(); window.open(`/world/${region.id}`, '_blank'); }} style={{ color: 'var(--gold)' }}>справка в Атласе</a></p>}
 
+      <p className="ucw-empty-note" style={{ marginTop: 10 }}>
+        Кликните точку на карте, чтобы открыть карточку. Объекты добавляются в разделах слева (Локации, NPC, Квесты, Враги) и ставятся на карту кнопкой «Разместить на карте» в карточке.
+      </p>
+
       {!isPlayer && isEdit && (
-        <>
-          <div className="ucw-add-grid">
-            <button className="atlas-btn small" onClick={() => addAndSelect('location')}>+ Локация</button>
-            <button className="atlas-btn small" onClick={() => addAndSelect('npc')}>+ NPC</button>
-            <button className="atlas-btn small" onClick={() => addAndSelect('quest')}>+ Квест</button>
-            <button className="atlas-btn small" onClick={() => addAndSelect('enemy')}>+ Враг</button>
-          </div>
+        <div className="ucw-lib-group" style={{ marginTop: 12 }}>
+          <div className="label">Маршруты и зоны</div>
           <button
             className={`atlas-btn ${routeEditId ? '' : 'ghost'} small`}
             style={{ width: '100%' }}
@@ -688,35 +664,8 @@ function LibraryPanel(props: {
           >
             {zoneEditId ? '✓ Завершить зону' : '+ Зона'}
           </button>
-        </>
-      )}
-
-      {totalObjects === 0 && (!isEdit || isPlayer)
-        ? <p className="ucw-empty-note">Кампания пока пустая. Включите DM Edit, чтобы добавлять объекты.</p>
-        : totalObjects === 0
-          ? <p className="ucw-empty-note">Кампания пока пустая — добавьте первый объект кнопками выше.</p>
-          : null}
-
-      {groups.map((g) => g.items.length > 0 && (
-        <div key={g.type} className="ucw-lib-group">
-          <div className="label">{g.label} ({g.items.length})</div>
-          {g.items.map((it) => (
-            <div key={it.id} className="ucw-entity-row">
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {it.label} {isPlaced(g.type, it.id) && <span className="ucw-placed-badge">● на карте</span>}
-              </span>
-              <div className="row-actions">
-                <button onClick={() => setSelected({ type: g.type, id: it.id })}>Открыть</button>
-                {isEdit && !isPlaced(g.type, it.id) && (
-                  <button onClick={() => setPlacing(placing?.entityId === it.id ? null : { entityType: g.type, entityId: it.id, label: it.label })}>
-                    {placing?.entityId === it.id ? '…клик' : 'На карту'}
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
         </div>
-      ))}
+      )}
 
       {data.routes.length > 0 && (
         <div className="ucw-lib-group">
