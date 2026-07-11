@@ -43,4 +43,56 @@ export function saveOverlay(json) {
   upsertStmt.run(CAMPAIGN_ID, json, new Date().toISOString());
 }
 
+// ── User campaigns (multi-campaign) ────────────────────────────────────────
+// User-created campaigns are stored as their OWN rows in the SAME table, under
+// a namespaced id `uc:<campaignId>`, so they never collide with the main
+// campaign's fixed `default` row and the existing /api/overlay flow is 100%
+// untouched. Each row's blob is `{ data, runtime }` JSON — the server never
+// parses its shape (lift-and-shift), it only stores/serves/lists it.
+const UC_PREFIX = 'uc:';
+const listUcStmt = db.prepare("SELECT id, overlay_json, updated_at FROM campaigns WHERE id LIKE 'uc:%'");
+const deleteStmt = db.prepare('DELETE FROM campaigns WHERE id = ?');
+
+/** Returns the stored `{ data, runtime }` JSON string for a user campaign, or
+ * null if none saved yet. */
+export function loadUserCampaign(campaignId) {
+  const row = selectStmt.get(UC_PREFIX + campaignId);
+  return row ? row.overlay_json : null;
+}
+
+/** Persists a user campaign's `{ data, runtime }` JSON string as-is. */
+export function saveUserCampaign(campaignId, json) {
+  upsertStmt.run(UC_PREFIX + campaignId, json, new Date().toISOString());
+}
+
+/** Removes a user campaign row entirely. */
+export function deleteUserCampaign(campaignId) {
+  deleteStmt.run(UC_PREFIX + campaignId);
+}
+
+/** Lightweight registry: one entry per stored user campaign with just enough
+ * to render the list without shipping every blob. Parses each row defensively;
+ * a malformed blob is skipped rather than breaking the whole list. */
+export function listUserCampaigns() {
+  const out = [];
+  for (const row of listUcStmt.all()) {
+    const campaignId = row.id.slice(UC_PREFIX.length);
+    try {
+      const parsed = JSON.parse(row.overlay_json);
+      const d = parsed?.data ?? {};
+      out.push({
+        campaignId,
+        title: d.title ?? 'Без названия',
+        type: d.type ?? 'campaign',
+        baseMapId: d.baseMapId ?? '',
+        regionIds: Array.isArray(d.regionIds) ? d.regionIds : [],
+        updatedAt: row.updated_at,
+      });
+    } catch {
+      out.push({ campaignId, title: 'Без названия', type: 'campaign', baseMapId: '', regionIds: [], updatedAt: row.updated_at });
+    }
+  }
+  return out;
+}
+
 export default db;

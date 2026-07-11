@@ -1,7 +1,7 @@
 import express from 'express';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
-import { loadOverlay, saveOverlay } from './db.js';
+import { loadOverlay, saveOverlay, loadUserCampaign, saveUserCampaign, deleteUserCampaign, listUserCampaigns } from './db.js';
 import { assertTokensConfigured, requireDm, roleForToken } from './auth.js';
 
 assertTokensConfigured();
@@ -21,7 +21,7 @@ app.use((req, res, next) => {
   if (origin && (ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin))) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS');
   }
   if (req.method === 'OPTIONS') {
     res.sendStatus(204);
@@ -73,8 +73,57 @@ app.put('/api/overlay', requireDm, (req, res) => {
   res.json({ ok: true });
 });
 
+// ── User campaigns (multi-campaign) ────────────────────────────────────────
+// Fully additive to the single-overlay main-campaign flow above: separate
+// routes, separate `uc:` DB rows, separate `/ws-uc` socket. Reads are public
+// (players open a tokenless link, same rationale as GET /api/overlay); writes
+// and deletes require the DM token.
+app.get('/api/campaigns', (_req, res) => {
+  res.json({ campaigns: listUserCampaigns() });
+});
+
+app.get('/api/campaigns/:id', (req, res) => {
+  const json = loadUserCampaign(req.params.id);
+  res.json({ campaign: json ? JSON.parse(json) : null });
+});
+
+app.put('/api/campaigns/:id', requireDm, (req, res) => {
+  const { campaign } = req.body;
+  if (!campaign || typeof campaign !== 'object') {
+    res.status(400).json({ error: 'Body must be { campaign: { data, runtime } }' });
+    return;
+  }
+  const json = JSON.stringify(campaign);
+  saveUserCampaign(req.params.id, json);
+  broadcastUc(req.params.id, JSON.stringify({ campaignId: req.params.id, payload: campaign }), req.query.clientId);
+  res.json({ ok: true });
+});
+
+app.delete('/api/campaigns/:id', requireDm, (req, res) => {
+  deleteUserCampaign(req.params.id);
+  broadcastUc(req.params.id, JSON.stringify({ campaignId: req.params.id, deleted: true }), req.query.clientId);
+  res.json({ ok: true });
+});
+
 const httpServer = createServer(app);
-const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+// Two independent sockets on one HTTP server. `{ server, path }` can't be used
+// for both (the first WSS aborts upgrades for the other's path with 400), so
+// we run both in `noServer` mode and route the HTTP upgrade by pathname
+// ourselves. `/ws` is the untouched main-campaign socket; `/ws-uc` carries
+// per-user-campaign messages so they never reach the main `/ws` listener
+// (which applies any message verbatim as the overlay).
+const wss = new WebSocketServer({ noServer: true });
+const wssUc = new WebSocketServer({ noServer: true });
+httpServer.on('upgrade', (req, socket, head) => {
+  const { pathname } = new URL(req.url, 'http://localhost');
+  if (pathname === '/ws') {
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+  } else if (pathname === '/ws-uc') {
+    wssUc.handleUpgrade(req, socket, head, (ws) => wssUc.emit('connection', ws, req));
+  } else {
+    socket.destroy();
+  }
+});
 
 /** Broadcasts the new overlay JSON to every connected client except the one
  * that just wrote it (identified by the same `clientId` query param it
@@ -90,6 +139,21 @@ function broadcast(json, originClientId) {
     client.send(json);
   }
 }
+
+/** Same echo-loop guard as `broadcast`, but for the user-campaign socket. */
+function broadcastUc(_campaignId, json, originClientId) {
+  for (const client of wssUc.clients) {
+    if (client.readyState !== client.OPEN) continue;
+    if (originClientId && client.clientId === originClientId) continue;
+    client.send(json);
+  }
+}
+
+wssUc.on('connection', (ws, req) => {
+  const url = new URL(req.url, 'http://localhost');
+  ws.clientId = url.searchParams.get('clientId') || undefined;
+  ws.role = roleForToken(url.searchParams.get('token'));
+});
 
 wss.on('connection', (ws, req) => {
   const url = new URL(req.url, 'http://localhost');

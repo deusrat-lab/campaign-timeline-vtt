@@ -7,12 +7,12 @@ import { useUserCampaigns } from '../../state/userCampaignStore';
 import type { CampaignEntityType, UserCampaignMode } from '../../types/userCampaign';
 import { CampaignEntityCard } from './CampaignEntityCard';
 
-type Kind = 'locations' | 'npc' | 'quests' | 'enemies' | 'images' | 'notes';
+type Kind = 'locations' | 'npc' | 'quests' | 'enemies' | 'players' | 'factions' | 'images' | 'notes';
 
 const KIND_LABEL: Record<Kind, string> = {
-  locations: 'Локации', npc: 'NPC', quests: 'Квесты', enemies: 'Враги', images: 'Картинки', notes: 'Заметки',
+  locations: 'Локации', npc: 'NPC', quests: 'Квесты', enemies: 'Враги', players: 'Игроки', factions: 'Фракции', images: 'Картинки', notes: 'Заметки',
 };
-const KIND_ENTITY: Record<string, CampaignEntityType> = { locations: 'location', npc: 'npc', quests: 'quest', enemies: 'enemy' };
+const KIND_ENTITY: Record<string, CampaignEntityType> = { locations: 'location', npc: 'npc', quests: 'quest', enemies: 'enemy', players: 'party', factions: 'faction' };
 
 export function CampaignLibraryPage() {
   const { campaignId, kind } = useParams<{ campaignId: string; kind: Kind }>();
@@ -25,6 +25,32 @@ export function CampaignLibraryPage() {
   const runtime = campaignId ? store.getRuntime(campaignId) : null;
   const registryEntry = campaignId ? getCampaignById(campaignId) : undefined; // main campaign guard
 
+  const k = (kind && KIND_LABEL[kind] ? kind : 'locations') as Kind;
+  const mode: UserCampaignMode = runtime?.mode ?? 'dmView';
+  const isEdit = mode === 'dmEdit';
+  const isPlayer = mode === 'playerView';
+  const canEdit = isEdit;
+
+  const q = query.trim().toLowerCase();
+  const match = (s: string) => !q || s.toLowerCase().includes(q);
+
+  // Computed before the early return below so hook order is stable while the
+  // campaign hydrates from the server (data null → present). Null-safe.
+  // Player View lists only entities the DM has revealed.
+  const revealed = new Set(runtime?.revealedToPlayers ?? []);
+  const shown = (id: string) => !isPlayer || revealed.has(id);
+  const items = useMemo(() => {
+    if (!data) return [];
+    if (k === 'locations') return data.locations.filter((l) => match(l.title) && shown(l.id)).map((l) => ({ id: l.id, title: l.title, sub: l.description }));
+    if (k === 'npc') return data.npcs.filter((n) => match(n.name) && shown(n.id)).map((n) => ({ id: n.id, title: n.name, sub: n.role || n.description }));
+    if (k === 'quests') return data.quests.filter((x) => match(x.title) && shown(x.id) && (!isPlayer || x.status !== 'hidden')).map((x) => ({ id: x.id, title: x.title, sub: x.status }));
+    if (k === 'enemies') return data.enemies.filter((e) => match(e.title) && shown(e.id)).map((e) => ({ id: e.id, title: e.title, sub: e.hp ? `HP ${e.hp}` : e.description }));
+    if (k === 'players') return (data.party ?? []).filter((pc) => match(pc.name) && shown(pc.id)).map((pc) => ({ id: pc.id, title: pc.name, sub: [pc.class, pc.level ? `ур. ${pc.level}` : '', pc.playerName ? `(${pc.playerName})` : ''].filter(Boolean).join(' · ') }));
+    if (k === 'factions') return (data.factions ?? []).filter((f) => match(f.name) && shown(f.id)).map((f) => ({ id: f.id, title: f.name, sub: [f.role, f.attitude].filter(Boolean).join(' · ') }));
+    return [];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [k, data, q, isPlayer, runtime?.revealedToPlayers]);
+
   if (!campaignId || !data || !runtime || registryEntry?.protected) {
     return (
       <div className="ucw-lib-page">
@@ -34,29 +60,14 @@ export function CampaignLibraryPage() {
     );
   }
 
-  const k = (kind && KIND_LABEL[kind] ? kind : 'locations') as Kind;
-  const mode: UserCampaignMode = runtime.mode;
-  const isEdit = mode === 'dmEdit';
-  const isPlayer = mode === 'playerView';
-  const canEdit = isEdit;
-
-  const q = query.trim().toLowerCase();
-  const match = (s: string) => !q || s.toLowerCase().includes(q);
-
-  const items = useMemo(() => {
-    if (k === 'locations') return data.locations.filter((l) => match(l.title)).map((l) => ({ id: l.id, title: l.title, sub: l.description }));
-    if (k === 'npc') return data.npcs.filter((n) => match(n.name)).map((n) => ({ id: n.id, title: n.name, sub: n.role || n.description }));
-    if (k === 'quests') return data.quests.filter((x) => match(x.title) && (!isPlayer || x.status !== 'hidden')).map((x) => ({ id: x.id, title: x.title, sub: x.status }));
-    if (k === 'enemies') return data.enemies.filter((e) => match(e.title)).map((e) => ({ id: e.id, title: e.title, sub: e.hp ? `HP ${e.hp}` : e.description }));
-    return [];
-  }, [k, data, q, isPlayer]);
-
   const createEntity = () => {
     let id = '';
     if (k === 'locations') id = store.addLocation(campaignId, { title: 'Новая локация' });
     else if (k === 'npc') id = store.addNpc(campaignId, { name: 'Новый NPC' });
     else if (k === 'quests') id = store.addQuest(campaignId, { title: 'Новый квест', status: 'notStarted' });
     else if (k === 'enemies') id = store.addEnemy(campaignId, { title: 'Новый враг' });
+    else if (k === 'players') id = store.addPlayer(campaignId, { name: 'Новый персонаж' });
+    else if (k === 'factions') id = store.addFaction(campaignId, { name: 'Новая фракция', attitude: 'neutral' });
     if (id) setOpen({ type: KIND_ENTITY[k], id });
   };
 
@@ -114,6 +125,7 @@ export function CampaignLibraryPage() {
           type={open.type}
           id={open.id}
           canEdit={canEdit}
+          isPlayer={isPlayer}
           onClose={() => setOpen(null)}
           onPlaceOnMap={() => placeOnMap(open.type, open.id)}
         />

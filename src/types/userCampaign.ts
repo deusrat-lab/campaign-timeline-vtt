@@ -11,7 +11,31 @@
 
 export type UserCampaignType = 'campaign' | 'oneShot' | 'miniArc' | 'sandbox';
 
-export type CampaignEntityType = 'location' | 'npc' | 'quest' | 'enemy' | 'image' | 'party' | 'custom';
+export type CampaignEntityType = 'location' | 'npc' | 'quest' | 'enemy' | 'image' | 'party' | 'faction' | 'custom';
+
+export interface CampaignPlayer {
+  id: string;
+  name: string;          // character name
+  playerName?: string;   // the real player behind the character
+  class?: string;
+  level?: number;
+  ac?: number;
+  hp?: number;
+  maxHp?: number;
+  description?: string;
+  dmNotes?: string;
+}
+
+export type FactionAttitude = 'ally' | 'neutral' | 'enemy' | 'unknown';
+
+export interface CampaignFaction {
+  id: string;
+  name: string;
+  role?: string;
+  attitude?: FactionAttitude;
+  description?: string;
+  dmNotes?: string;
+}
 
 export interface CampaignLocation {
   id: string;
@@ -128,6 +152,9 @@ export interface UserCampaignData {
   zones: CampaignZone[];
   notes: CampaignNote[];
   customBattleMaps?: CampaignCustomBattleMap[];
+  // Optional (added after initial schema) — always read with `?? []`.
+  party?: CampaignPlayer[];
+  factions?: CampaignFaction[];
 
   mapPlacements: CampaignMapPlacement[];
 }
@@ -187,7 +214,18 @@ export interface UserCampaignRuntime {
   revealedToPlayers: string[];
   questStatuses: Record<string, string>;
   battleTracker: unknown;
+  /** @deprecated Legacy single shared board. Superseded by `battleBoards`
+   * (one board per battle-map id). Kept only for backward-compatible reads /
+   * lazy migration — never written to anymore. */
   battleBoard?: CampaignBattleBoard;
+  /** Per-battle-map boards, keyed by the route map id (`custom-<id>` or a
+   * shared-catalog id). Each battle map gets its OWN tokens + terrain + grid +
+   * view, so opening a different map never inherits another map's setup. */
+  battleBoards?: Record<string, CampaignBattleBoard>;
+  /** The battle the DM has "opened to players": when set, the player/observer
+   * view surfaces it (banner on the map + read-only board). Synced to the
+   * server so players see it live. Cleared when the DM hides the battle. */
+  presentedBattle?: { mapId: string } | null;
   mapViewState: { zoom: number; panX: number; panY: number };
 }
 

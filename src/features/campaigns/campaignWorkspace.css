@@ -34,6 +34,13 @@
 }
 .ucw-viewport.placing { cursor: crosshair; }
 .ucw-viewport.panning { cursor: grabbing; }
+.ucw-battle-banner { display: block; width: 100%; border: none; border-bottom: 1px solid var(--gold); background: linear-gradient(90deg, rgba(192,138,46,0.28), rgba(192,138,46,0.12)); color: var(--gold-soft); font-family: var(--font-heading); font-size: 0.95rem; padding: 10px 16px; cursor: pointer; text-align: left; }
+.ucw-battle-banner:hover { background: linear-gradient(90deg, rgba(192,138,46,0.4), rgba(192,138,46,0.2)); }
+.ucw-nomap { position: absolute; inset: 0; overflow: auto; padding: 24px; z-index: 2; background: var(--bg-deep); cursor: default; }
+.ucw-nomap h3 { margin: 0 0 6px; color: var(--gold-soft); font-family: var(--font-heading); }
+.ucw-nomap p { margin: 0 0 16px; color: var(--fg-faint); max-width: 640px; }
+.ucw-nomap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.ucw-nomap-grid .atlas-card { cursor: pointer; }
 .ucw-world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
 .ucw-mapstack { position: relative; display: inline-block; }
 .ucw-mapimg { display: block; max-width: none; border: 1px solid var(--border); box-shadow: var(--shadow); pointer-events: none; }

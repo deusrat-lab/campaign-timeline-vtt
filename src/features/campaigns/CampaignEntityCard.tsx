@@ -3,7 +3,7 @@ import { useUserCampaigns } from '../../state/userCampaignStore';
 import type { CampaignEntityType } from '../../types/userCampaign';
 
 const TYPE_LABEL: Record<string, string> = {
-  location: 'Локация', npc: 'NPC', quest: 'Квест', enemy: 'Враг', image: 'Картинка',
+  location: 'Локация', npc: 'NPC', quest: 'Квест', enemy: 'Враг', image: 'Картинка', party: 'Игрок', faction: 'Фракция',
 };
 
 /**
@@ -13,7 +13,7 @@ const TYPE_LABEL: Record<string, string> = {
  * campaign library pages.
  */
 export function CampaignEntityCard({
-  campaignId, type, id, onClose, canEdit, onPlaceOnMap,
+  campaignId, type, id, onClose, canEdit, onPlaceOnMap, isPlayer = false,
 }: {
   campaignId: string;
   type: CampaignEntityType;
@@ -21,6 +21,8 @@ export function CampaignEntityCard({
   onClose: () => void;
   canEdit: boolean;
   onPlaceOnMap?: () => void;
+  /** Player view: hide DM-only fields (DM notes, enemy tactics). */
+  isPlayer?: boolean;
 }) {
   const store = useUserCampaigns();
   const data = store.getData(campaignId);
@@ -34,10 +36,13 @@ export function CampaignEntityCard({
   const npc = type === 'npc' ? data.npcs.find((n) => n.id === id) : undefined;
   const quest = type === 'quest' ? data.quests.find((q) => q.id === id) : undefined;
   const enemy = type === 'enemy' ? data.enemies.find((e) => e.id === id) : undefined;
-  const entity = location ?? npc ?? quest ?? enemy;
+  const player = type === 'party' ? (data.party ?? []).find((p) => p.id === id) : undefined;
+  const faction = type === 'faction' ? (data.factions ?? []).find((f) => f.id === id) : undefined;
+  const entity = location ?? npc ?? quest ?? enemy ?? player ?? faction;
   if (!entity) { onClose(); return null; }
 
-  const title = location?.title ?? npc?.name ?? quest?.title ?? enemy?.title ?? '';
+  const nameField = type === 'npc' || type === 'party' || type === 'faction';
+  const title = location?.title ?? npc?.name ?? quest?.title ?? enemy?.title ?? player?.name ?? faction?.name ?? '';
   const ro = !editing || !canEdit;
 
   return (
@@ -50,7 +55,7 @@ export function CampaignEntityCard({
               <input
                 className="ucw-search" style={{ fontSize: '1.2rem', minWidth: 260 }}
                 value={title}
-                onChange={(e) => upd(type === 'npc' ? { name: e.target.value } : { title: e.target.value })}
+                onChange={(e) => upd(nameField ? { name: e.target.value } : { title: e.target.value })}
               />
             )}
           </div>
@@ -89,23 +94,66 @@ export function CampaignEntityCard({
                 <div style={{ flex: 1 }}><label>AC</label>{ro ? <p>{enemy.ac ?? '—'}</p> : <input type="number" value={enemy.ac ?? ''} onChange={(e) => upd({ ac: Number(e.target.value) })} />}</div>
                 <div style={{ flex: 1 }}><label>HP</label>{ro ? <p>{enemy.hp ?? '—'}</p> : <input type="number" value={enemy.hp ?? ''} onChange={(e) => upd({ hp: Number(e.target.value) })} />}</div>
               </div>
-              <label>Тактика / особенности</label>
-              {ro ? <p style={{ whiteSpace: 'pre-wrap' }}>{enemy.tactics || '—'}</p> : <textarea value={enemy.tactics ?? ''} onChange={(e) => upd({ tactics: e.target.value })} />}
+              {!isPlayer && (
+                <>
+                  <label>Тактика / особенности</label>
+                  {ro ? <p style={{ whiteSpace: 'pre-wrap' }}>{enemy.tactics || '—'}</p> : <textarea value={enemy.tactics ?? ''} onChange={(e) => upd({ tactics: e.target.value })} />}
+                </>
+              )}
+            </>
+          )}
+
+          {player && (
+            <>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ flex: 2 }}><label>Игрок</label>{ro ? <p>{player.playerName || '—'}</p> : <input value={player.playerName ?? ''} onChange={(e) => upd({ playerName: e.target.value })} />}</div>
+                <div style={{ flex: 2 }}><label>Класс</label>{ro ? <p>{player.class || '—'}</p> : <input value={player.class ?? ''} onChange={(e) => upd({ class: e.target.value })} />}</div>
+                <div style={{ flex: 1 }}><label>Уровень</label>{ro ? <p>{player.level ?? '—'}</p> : <input type="number" value={player.level ?? ''} onChange={(e) => upd({ level: Number(e.target.value) })} />}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ flex: 1 }}><label>AC</label>{ro ? <p>{player.ac ?? '—'}</p> : <input type="number" value={player.ac ?? ''} onChange={(e) => upd({ ac: Number(e.target.value) })} />}</div>
+                <div style={{ flex: 1 }}><label>HP</label>{ro ? <p>{player.hp ?? '—'}</p> : <input type="number" value={player.hp ?? ''} onChange={(e) => upd({ hp: Number(e.target.value) })} />}</div>
+                <div style={{ flex: 1 }}><label>Макс HP</label>{ro ? <p>{player.maxHp ?? '—'}</p> : <input type="number" value={player.maxHp ?? ''} onChange={(e) => upd({ maxHp: Number(e.target.value) })} />}</div>
+              </div>
+            </>
+          )}
+
+          {faction && (
+            <>
+              <label>Роль</label>
+              {ro ? <p>{faction.role || '—'}</p> : <input value={faction.role ?? ''} onChange={(e) => upd({ role: e.target.value })} />}
+              <label>Отношение</label>
+              {ro ? <p>{faction.attitude ?? '—'}</p> : (
+                <select value={faction.attitude ?? 'neutral'} onChange={(e) => upd({ attitude: e.target.value })}>
+                  {['ally', 'neutral', 'enemy', 'unknown'].map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              )}
             </>
           )}
 
           <label>Описание</label>
           {ro ? <p style={{ whiteSpace: 'pre-wrap' }}>{entity.description || '—'}</p> : <textarea value={entity.description ?? ''} onChange={(e) => upd({ description: e.target.value })} />}
 
-          <label>DM-заметки (скрыто от игроков)</label>
-          {ro
-            ? <p style={{ color: 'var(--gold-soft)', whiteSpace: 'pre-wrap' }}>{(entity as { dmNotes?: string }).dmNotes || '—'}</p>
-            : <textarea value={(entity as { dmNotes?: string }).dmNotes ?? ''} onChange={(e) => upd({ dmNotes: e.target.value })} />}
+          {!isPlayer && (
+            <>
+              <label>DM-заметки (скрыто от игроков)</label>
+              {ro
+                ? <p style={{ color: 'var(--gold-soft)', whiteSpace: 'pre-wrap' }}>{(entity as { dmNotes?: string }).dmNotes || '—'}</p>
+                : <textarea value={(entity as { dmNotes?: string }).dmNotes ?? ''} onChange={(e) => upd({ dmNotes: e.target.value })} />}
+            </>
+          )}
         </div>
 
         {canEdit && (
           <div className="ucw-card-actions">
             <button className="atlas-btn small" onClick={() => setEditing((v) => !v)}>{editing ? 'Готово' : 'Редактировать'}</button>
+            <button
+              className="atlas-btn ghost small"
+              title={store.isRevealed(campaignId, id) ? 'Игроки видят эту карточку в библиотеке' : 'Скрыто от игроков'}
+              onClick={() => store.toggleReveal(campaignId, id)}
+            >
+              {store.isRevealed(campaignId, id) ? '👁 Показано игрокам' : '🚫 Показать игрокам'}
+            </button>
             {onPlaceOnMap && !placement && (
               <button className="atlas-btn ghost small" onClick={() => { onPlaceOnMap(); onClose(); }}>Поставить на карту</button>
             )}

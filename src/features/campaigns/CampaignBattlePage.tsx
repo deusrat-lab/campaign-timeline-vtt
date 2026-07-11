@@ -22,7 +22,18 @@ export function CampaignBattlePage() {
   const runtime = campaignId ? store.getRuntime(campaignId) : null;
   const isMain = campaignId ? getCampaignById(campaignId)?.protected : false;
 
-  const board: CampaignBattleBoard = runtime?.battleBoard ?? { tokens: [], round: 1 };
+  // Each battle map has its OWN board (tokens/terrain/grid/view), keyed by the
+  // route map id. Fall back to the legacy single `battleBoard` only when it
+  // belonged to THIS same map, so old campaigns keep their one saved setup on
+  // that map and every other map opens clean.
+  const emptyBoard: CampaignBattleBoard = { tokens: [], round: 1 };
+  const board: CampaignBattleBoard =
+    (mapId ? runtime?.battleBoards?.[mapId] : undefined)
+    ?? (runtime?.battleBoard && runtime.battleBoard.mapId === mapId ? runtime.battleBoard : emptyBoard);
+  // Player view = read-only board (see what the DM set up, edit nothing). The
+  // DM can flip to Player View to preview exactly what players get.
+  const isPlayer = runtime?.mode === 'playerView';
+  const isPresented = !!mapId && runtime?.presentedBattle?.mapId === mapId;
   // Custom field (`custom-<id>`) or a shared-catalog map.
   const isCustom = !!mapId && mapId.startsWith('custom-');
   const customMap = isCustom ? (data?.customBattleMaps ?? []).find((m) => m.id === mapId!.slice(7)) : undefined;
@@ -44,17 +55,26 @@ export function CampaignBattlePage() {
 
   useEffect(() => { getBattleMapCatalog().then(setCatalog); }, []);
 
-  // Persist which map is loaded (route id) so the board follows the URL.
+  // Initialize this map's own board once (if it has no entry yet), carrying over
+  // a legacy single-board setup only when it belonged to this same map.
   useEffect(() => {
-    if (campaignId && mapId && (map || customMap) && board.mapId !== mapId) {
-      store.updateRuntime(campaignId, (p) => ({ ...p, battleBoard: { ...(p.battleBoard ?? { tokens: [] }), mapId, variant: p.battleBoard?.variant ?? variants[0], columns: p.battleBoard?.columns ?? customMap?.columns } }));
+    if (campaignId && mapId && (map || customMap) && !runtime?.battleBoards?.[mapId]) {
+      store.updateRuntime(campaignId, (p) => {
+        const legacy = p.battleBoard && p.battleBoard.mapId === mapId ? p.battleBoard : undefined;
+        const seed: CampaignBattleBoard = legacy ?? { tokens: [], round: 1, mapId, variant: variants[0], columns: customMap?.columns };
+        return { ...p, battleBoards: { ...(p.battleBoards ?? {}), [mapId]: { ...seed, mapId } } };
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapId, map?.id, customMap?.id]);
 
   const patchBoard = (updater: (b: CampaignBattleBoard) => CampaignBattleBoard) => {
-    if (!campaignId) return;
-    store.updateRuntime(campaignId, (p) => ({ ...p, battleBoard: updater(p.battleBoard ?? { tokens: [], round: 1 }) }));
+    if (!campaignId || !mapId) return;
+    store.updateRuntime(campaignId, (p) => {
+      const prev = p.battleBoards?.[mapId]
+        ?? (p.battleBoard && p.battleBoard.mapId === mapId ? p.battleBoard : { tokens: [], round: 1 });
+      return { ...p, battleBoards: { ...(p.battleBoards ?? {}), [mapId]: { ...updater(prev), mapId } } };
+    });
   };
 
   const fit = () => {
@@ -70,6 +90,10 @@ export function CampaignBattlePage() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitted, variant, map?.id]);
+
+  // Declared before the early return below so hook order stays stable when the
+  // campaign hydrates from the server (data null → present).
+  const downRef = useRef<{ x: number; y: number; moved: boolean; sp: { x: number; y: number } } | null>(null);
 
   if (!campaignId || !data || !runtime || isMain) {
     return (
@@ -124,7 +148,6 @@ export function CampaignBattlePage() {
     setZoom(nz); setPan({ x: cx - wx * nz, y: cy - wy * nz });
   };
 
-  const downRef = useRef<{ x: number; y: number; moved: boolean; sp: { x: number; y: number } } | null>(null);
   const onDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     downRef.current = { x: e.clientX, y: e.clientY, moved: false, sp: { ...pan } };
@@ -154,7 +177,7 @@ export function CampaignBattlePage() {
   };
 
   const dragToken = (e: React.MouseEvent, id: string) => {
-    if (terrainMode !== 'off') return;
+    if (terrainMode !== 'off' || isPlayer) return;
     e.stopPropagation();
     const move = (ev: MouseEvent) => { const pct = clientToPct(ev.clientX, ev.clientY); patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === id ? { ...t, x: pct.x, y: pct.y } : t) })); };
     const up = (ev: MouseEvent) => {
@@ -186,6 +209,16 @@ export function CampaignBattlePage() {
               ))}
             </div>
           )}
+          {!isPlayer && campaignId && mapId && (
+            <button
+              className={`ucw-tbtn ${isPresented ? 'active' : ''}`}
+              title={isPresented ? 'Игроки видят этот бой — нажмите, чтобы скрыть' : 'Открыть этот бой игрокам (появится у них)'}
+              onClick={() => store.updateRuntime(campaignId, (p) => ({ ...p, presentedBattle: isPresented ? null : { mapId } }))}
+            >
+              {isPresented ? '● Показано игрокам' : '▶ Показать игрокам'}
+            </button>
+          )}
+          {isPlayer && <span className="ucw-chip">Режим игрока — только просмотр</span>}
         </div>
       </div>
 
@@ -196,11 +229,11 @@ export function CampaignBattlePage() {
         <button className="ucw-tbtn" onClick={fit}>По размеру экрана</button>
         <span className="sep" />
         <span className="atlas-sub" style={{ margin: 0 }}>Раунд {board.round ?? 1}</span>
-        <button className="ucw-tbtn" onClick={() => patchBoard((b) => ({ ...b, round: (b.round ?? 1) + 1 }))}>+ раунд</button>
-        <button className="ucw-tbtn" onClick={() => { if (window.confirm('Убрать все токены с поля?')) patchBoard((b) => ({ ...b, tokens: [] })); }}>Очистить токены</button>
+        {!isPlayer && <button className="ucw-tbtn" onClick={() => patchBoard((b) => ({ ...b, round: (b.round ?? 1) + 1 }))}>+ раунд</button>}
+        {!isPlayer && <button className="ucw-tbtn" onClick={() => { if (window.confirm('Убрать все токены с поля?')) patchBoard((b) => ({ ...b, tokens: [] })); }}>Очистить токены</button>}
         <span className="sep" />
         <button className={`ucw-tbtn ${board.showGrid ? 'active' : ''}`} onClick={() => patchBoard((b) => ({ ...b, showGrid: !b.showGrid }))}>Сетка</button>
-        {board.showGrid && (
+        {board.showGrid && !isPlayer && (
           <>
             <label style={{ fontSize: '0.8rem', color: 'var(--fg-dim)' }}>Клеток:
               <input type="number" min={4} max={80} value={columns} onChange={(e) => patchBoard((b) => ({ ...b, columns: Math.max(4, Math.min(80, Number(e.target.value) || 24)) }))}
@@ -255,41 +288,49 @@ export function CampaignBattlePage() {
         </div>
 
         <aside className="ucw-library">
-          <h2 className="ucw-lib-heading">Расстановка</h2>
-          <p className="atlas-sub" style={{ fontSize: '0.82rem' }}>Выберите токен и кликните по карте, чтобы поставить.</p>
-          <div className="ucw-add-grid">
-            <button className="atlas-btn small" onClick={() => setPlacing({ side: 'player', name: 'Игрок' })}>+ Игрок</button>
-            <button className="atlas-btn small" onClick={() => setPlacing({ side: 'ally', name: 'Союзник' })}>+ Союзник</button>
-            <button className="atlas-btn small" onClick={() => setPlacing({ side: 'neutral', name: 'Нейтрал' })}>+ Нейтрал</button>
-            <button className="atlas-btn small" onClick={() => { const n = window.prompt('Имя токена:'); if (n) setPlacing({ side: 'enemy', name: n }); }}>+ Свой</button>
-          </div>
+          <h2 className="ucw-lib-heading">{isPlayer ? 'Бой' : 'Расстановка'}</h2>
+          {isPlayer
+            ? <p className="atlas-sub" style={{ fontSize: '0.82rem' }}>Идёт бой. Вы видите поле, токены и сетку так, как их показывает Мастер.</p>
+            : <p className="atlas-sub" style={{ fontSize: '0.82rem' }}>Выберите токен и кликните по карте, чтобы поставить.</p>}
+          {!isPlayer && (
+            <div className="ucw-add-grid">
+              <button className="atlas-btn small" onClick={() => setPlacing({ side: 'player', name: 'Игрок' })}>+ Игрок</button>
+              <button className="atlas-btn small" onClick={() => setPlacing({ side: 'ally', name: 'Союзник' })}>+ Союзник</button>
+              <button className="atlas-btn small" onClick={() => setPlacing({ side: 'neutral', name: 'Нейтрал' })}>+ Нейтрал</button>
+              <button className="atlas-btn small" onClick={() => { const n = window.prompt('Имя токена:'); if (n) setPlacing({ side: 'enemy', name: n }); }}>+ Свой</button>
+            </div>
+          )}
 
-          <div className="ucw-lib-group">
-            <div className="label">Враги кампании</div>
-            {data.enemies.length === 0 ? <p className="ucw-empty-note">Нет врагов. Добавьте их в разделе «Враги».</p> : data.enemies.map((e) => (
-              <div key={e.id} className="ucw-entity-row">
-                <span>{e.title}{e.hp ? ` · HP ${e.hp}` : ''}</span>
-                <div className="row-actions">
-                  <button onClick={() => setPlacing({ side: 'enemy', name: e.title, ac: e.ac, hp: e.hp })}>{placing?.name === e.title ? '…клик' : 'На поле'}</button>
+          {!isPlayer && (
+            <div className="ucw-lib-group">
+              <div className="label">Враги кампании</div>
+              {data.enemies.length === 0 ? <p className="ucw-empty-note">Нет врагов. Добавьте их в разделе «Враги».</p> : data.enemies.map((e) => (
+                <div key={e.id} className="ucw-entity-row">
+                  <span>{e.title}{e.hp ? ` · HP ${e.hp}` : ''}</span>
+                  <div className="row-actions">
+                    <button onClick={() => setPlacing({ side: 'enemy', name: e.title, ac: e.ac, hp: e.hp })}>{placing?.name === e.title ? '…клик' : 'На поле'}</button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           <div className="ucw-lib-group">
             <div className="label">Токены на поле ({board.tokens.length})</div>
             {board.tokens.length === 0 ? <p className="ucw-empty-note">Пока пусто.</p> : board.tokens.map((t) => (
               <div key={t.id} className={`ucw-entity-row${selected === t.id ? ' selected' : ''}`}>
                 <span>{SIDE_LABEL[t.side]}: {t.name}{t.currentHp != null ? ` · ${t.currentHp}${t.maxHp ? '/' + t.maxHp : ''}` : ''}</span>
-                <div className="row-actions">
-                  <button onClick={() => setSelected(t.id)}>Открыть</button>
-                  <button onClick={() => patchBoard((b) => ({ ...b, tokens: b.tokens.filter((x) => x.id !== t.id) }))}>✕</button>
-                </div>
+                {!isPlayer && (
+                  <div className="row-actions">
+                    <button onClick={() => setSelected(t.id)}>Открыть</button>
+                    <button onClick={() => patchBoard((b) => ({ ...b, tokens: b.tokens.filter((x) => x.id !== t.id) }))}>✕</button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
 
-          {selTok && (
+          {!isPlayer && selTok && (
             <div className="ucw-card" style={{ marginTop: 12 }}>
               <label>Имя</label>
               <input value={selTok.name} onChange={(e) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, name: e.target.value } : t) }))} />

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import '../world-atlas/atlasLayer.css';
 import './campaignWorkspace.css';
-import { getAtlasMapById } from '../../data/worldAtlasMaps';
+import { getAtlasMapById, WORLD_ATLAS_MAPS } from '../../data/worldAtlasMaps';
 import { getRegionById } from '../../data/worldRegions';
 import { useUserCampaigns } from '../../state/userCampaignStore';
 import { USER_CAMPAIGN_TYPE_LABELS, type CampaignEntityType, type UserCampaignMode } from '../../types/userCampaign';
@@ -15,6 +15,7 @@ const ZOOM_MAX = 6;
 type Placing = { entityType: CampaignEntityType; entityId: string; label: string } | null;
 
 const PIN_ICON: Record<string, string> = { location: '⌂', npc: '🧑', quest: '📜', enemy: '☠', image: '🖼', party: '★', custom: '●' };
+const PARTY_ENTITY_ID = 'party';
 
 export function IsolatedCampaignMapWorkspace() {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -42,7 +43,9 @@ export function IsolatedCampaignMapWorkspace() {
   const [pan, setPan] = useState({ x: runtime?.mapViewState.panX ?? 0, y: runtime?.mapViewState.panY ?? 0 });
   const [panning, setPanning] = useState(false);
   const [placing, setPlacing] = useState<Placing>(null);
+  const [placingParty, setPlacingParty] = useState(false);
   const [routeEditId, setRouteEditId] = useState<string | null>(null);
+  const [zoneEditId, setZoneEditId] = useState<string | null>(null);
   const [selected, setSelected] = useState<{ type: CampaignEntityType; id: string } | null>(null);
   const [search, setSearch] = useState('');
   const [layers, setLayers] = useState({ objects: true, routes: true, zones: true });
@@ -120,6 +123,11 @@ export function IsolatedCampaignMapWorkspace() {
     setSearchParams(next, { replace: true });
   }, [searchParams, data, setSearchParams]);
 
+  // Declared before the early return below so hook order stays stable when
+  // `data` is momentarily null (e.g. during async server hydration) and then
+  // arrives — otherwise React sees a different hook count between renders.
+  const downRef = useRef<{ x: number; y: number; moved: boolean; startPan: { x: number; y: number } } | null>(null);
+
   if (!data || !runtime || !campaignId) {
     return (
       <div className="atlas-layer">
@@ -131,6 +139,24 @@ export function IsolatedCampaignMapWorkspace() {
 
   const map = getAtlasMapById(runtime.activeMapId) ?? getAtlasMapById(data.baseMapId);
   const region = data.regionIds[0] ? getRegionById(data.regionIds[0]) : undefined;
+
+  // Set (or repair) the campaign's base map. Some campaigns — imported, seeded
+  // from an old scenario, or created before a map id was renamed — can hold a
+  // `baseMapId` that no atlas map resolves, which would otherwise render a blank
+  // "broken image" instead of a map. This lets the DM pick/replace the map right
+  // in the workspace, keeping each campaign fully self-contained and isolated.
+  const changeBaseMap = (newMapId: string) => {
+    if (!newMapId || !getAtlasMapById(newMapId)) return;
+    const newRegions = getAtlasMapById(newMapId)?.regionIds ?? data.regionIds;
+    store.updateData(campaignId, (p) => ({
+      ...p,
+      baseMapId: newMapId,
+      mapIds: p.mapIds.includes(newMapId) ? p.mapIds : [newMapId, ...p.mapIds],
+      regionIds: p.regionIds.length ? p.regionIds : newRegions,
+    }));
+    store.updateRuntime(campaignId, (p) => ({ ...p, activeMapId: newMapId }));
+    autoFitRef.current = true;
+  };
 
   // ── coordinate helpers ──────────────────────────────────────────────
   const clientToPct = (clientX: number, clientY: number) => {
@@ -167,16 +193,15 @@ export function IsolatedCampaignMapWorkspace() {
   };
 
   // ── panning + click-to-place ────────────────────────────────────────
-  const downRef = useRef<{ x: number; y: number; moved: boolean; startPan: { x: number; y: number } } | null>(null);
-
   const onViewportMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
+    const editingShape = placing || placingParty || routeEditId || zoneEditId;
     downRef.current = { x: e.clientX, y: e.clientY, moved: false, startPan: { ...pan } };
-    if (!placing && !routeEditId) setPanning(true);
+    if (!editingShape) setPanning(true);
     const onMove = (ev: MouseEvent) => {
       const d = downRef.current; if (!d) return;
       if (Math.abs(ev.clientX - d.x) + Math.abs(ev.clientY - d.y) > 4) d.moved = true;
-      if (!placing && !routeEditId && d.moved) {
+      if (!editingShape && d.moved) {
         autoFitRef.current = false;
         setPan({ x: d.startPan.x + (ev.clientX - d.x), y: d.startPan.y + (ev.clientY - d.y) });
       }
@@ -193,9 +218,20 @@ export function IsolatedCampaignMapWorkspace() {
         if (placing) {
           store.addPlacement(campaignId, { mapId: runtime.activeMapId, entityType: placing.entityType, entityId: placing.entityId, x: pct.x, y: pct.y, visibleToPlayers: false });
           setPlacing(null);
+        } else if (placingParty) {
+          // Party is a singleton pin per map — drop any previous party placement
+          // on this map before adding the new one.
+          data.mapPlacements
+            .filter((mp) => mp.entityType === 'party' && mp.mapId === runtime.activeMapId)
+            .forEach((mp) => store.removePlacement(campaignId, mp.id));
+          store.addPlacement(campaignId, { mapId: runtime.activeMapId, entityType: 'party', entityId: PARTY_ENTITY_ID, x: pct.x, y: pct.y, visibleToPlayers: true });
+          setPlacingParty(false);
         } else if (routeEditId) {
           const route = data.routes.find((r) => r.id === routeEditId);
           if (route) store.updateRoute(campaignId, routeEditId, { points: [...route.points, pct] });
+        } else if (zoneEditId) {
+          const zone = data.zones.find((z) => z.id === zoneEditId);
+          if (zone) store.updateData(campaignId, (p) => ({ ...p, zones: p.zones.map((z) => (z.id === zoneEditId ? { ...z, points: [...z.points, pct] } : z)) }));
         }
       } else {
         persistView(zoom, { x: d.startPan.x + (ev.clientX - d.x), y: d.startPan.y + (ev.clientY - d.y) });
@@ -233,9 +269,33 @@ export function IsolatedCampaignMapWorkspace() {
     window.addEventListener('mouseup', onUp);
   };
 
+  const startZonePointDrag = (e: React.MouseEvent, zoneId: string, index: number) => {
+    if (!isEdit) return;
+    e.stopPropagation();
+    const onMove = (ev: MouseEvent) => {
+      const pct = clientToPct(ev.clientX, ev.clientY);
+      store.updateData(campaignId, (p) => ({ ...p, zones: p.zones.map((z) => (z.id === zoneId ? { ...z, points: z.points.map((pt, i) => (i === index ? pct : pt)) } : z)) }));
+    };
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  // Center the view on the party pin (main-campaign parity: "Партия" button).
+  const focusParty = () => {
+    const vp = viewportRef.current, img = imgRef.current;
+    const party = data.mapPlacements.find((mp) => mp.entityType === 'party' && mp.mapId === runtime.activeMapId);
+    if (!vp || !img || !img.naturalWidth || !party) return;
+    autoFitRef.current = false;
+    const np = { x: vp.clientWidth / 2 - (party.x / 100) * img.naturalWidth * zoom, y: vp.clientHeight / 2 - (party.y / 100) * img.naturalHeight * zoom };
+    setPan(np); persistView(zoom, np);
+  };
+
   // ── data views (respect Player View) ────────────────────────────────
   const visiblePlacements = data.mapPlacements.filter((mp) => mp.mapId === runtime.activeMapId && (!isPlayer || mp.visibleToPlayers));
   const visibleRoutes = data.routes.filter((r) => r.mapId === runtime.activeMapId && (!isPlayer || r.visibleToPlayers));
+  const visibleZones = data.zones.filter((z) => z.mapId === runtime.activeMapId && (!isPlayer || z.visibleToPlayers));
+  const hasParty = data.mapPlacements.some((mp) => mp.entityType === 'party' && mp.mapId === runtime.activeMapId);
 
   const entityLabel = (type: CampaignEntityType, id: string): string => {
     if (type === 'location') return data.locations.find((l) => l.id === id)?.title ?? 'Локация';
@@ -276,6 +336,7 @@ export function IsolatedCampaignMapWorkspace() {
   };
 
   const routeInEdit = routeEditId ? data.routes.find((r) => r.id === routeEditId) : undefined;
+  const zoneInEdit = zoneEditId ? data.zones.find((z) => z.id === zoneEditId) : undefined;
 
   return (
     <div className="ucw" ref={rootRef} style={shellHeight ? { height: shellHeight } : undefined}>
@@ -303,6 +364,18 @@ export function IsolatedCampaignMapWorkspace() {
         </div>
       </div>
 
+      {/* Active battle the DM has opened to players — visible to everyone
+          (players especially), links straight into the presented battle. */}
+      {runtime.presentedBattle?.mapId && (
+        <button
+          type="button"
+          className="ucw-battle-banner"
+          onClick={() => navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(runtime.presentedBattle!.mapId)}`)}
+        >
+          ▶ Мастер открыл бой — нажмите, чтобы перейти на поле боя
+        </button>
+      )}
+
       {/* Toolbar */}
       <div className="ucw-toolbar">
         <button className="ucw-tbtn" onClick={() => zoomBy(1.2)} aria-label="Приблизить">+</button>
@@ -311,8 +384,31 @@ export function IsolatedCampaignMapWorkspace() {
         <button className="ucw-tbtn" onClick={() => fitToScreen(true)}>По размеру экрана</button>
         <button className="ucw-tbtn" onClick={() => { autoFitRef.current = false; setZoom(1); setPan({ x: 0, y: 0 }); persistView(1, { x: 0, y: 0 }); }}>Сброс</button>
         <span className="sep" />
+        <button className="ucw-tbtn" disabled={!hasParty} onClick={focusParty} title={hasParty ? 'Показать партию на карте' : 'Партия ещё не поставлена'}>Партия</button>
+        {isEdit && (
+          <button className={`ucw-tbtn ${placingParty ? 'active' : ''}`} onClick={() => { setPlacing(null); setRouteEditId(null); setZoneEditId(null); setPlacingParty((v) => !v); }}>
+            {placingParty ? '…клик по карте' : 'Поставить партию'}
+          </button>
+        )}
+        <span className="sep" />
         <button className={`ucw-tbtn ${layers.objects ? 'active' : ''}`} onClick={() => setLayers((l) => ({ ...l, objects: !l.objects }))}>Объекты {layers.objects ? '(вкл)' : '(выкл)'}</button>
         <button className={`ucw-tbtn ${layers.routes ? 'active' : ''}`} onClick={() => setLayers((l) => ({ ...l, routes: !l.routes }))}>Маршруты {layers.routes ? '(вкл)' : '(выкл)'}</button>
+        <button className={`ucw-tbtn ${layers.zones ? 'active' : ''}`} onClick={() => setLayers((l) => ({ ...l, zones: !l.zones }))}>Зоны {layers.zones ? '(вкл)' : '(выкл)'}</button>
+        <span className="sep" />
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: 'var(--fg-faint)' }}>
+          Карта:
+          <select
+            className="atlas-select"
+            value={map?.id ?? ''}
+            onChange={(e) => changeBaseMap(e.target.value)}
+            title="Базовая карта этой кампании"
+          >
+            {!map && <option value="">— выберите карту —</option>}
+            {WORLD_ATLAS_MAPS.map((m) => (
+              <option key={m.id} value={m.id}>{m.titleRu ?? m.title}</option>
+            ))}
+          </select>
+        </label>
         <span className="sep" />
         <input className="ucw-search" placeholder="Поиск объектов…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
@@ -321,16 +417,33 @@ export function IsolatedCampaignMapWorkspace() {
         {/* Map viewport */}
         <div
           ref={viewportRef}
-          className={`ucw-viewport${panning ? ' panning' : ''}${placing || routeEditId ? ' placing' : ''}`}
+          className={`ucw-viewport${panning ? ' panning' : ''}${placing || placingParty || routeEditId || zoneEditId ? ' placing' : ''}`}
           onMouseDown={onViewportMouseDown}
           onWheel={onWheel}
         >
-          {(placing || routeEditId) && (
+          {(placing || placingParty || routeEditId || zoneEditId) && (
             <div className="ucw-hint">
-              {placing ? `Кликните на карту, чтобы поставить: ${placing.label}` : 'Кликайте по карте, чтобы добавить точки маршрута'}
+              {placing ? `Кликните на карту, чтобы поставить: ${placing.label}`
+                : placingParty ? 'Кликните на карту, чтобы поставить партию'
+                : zoneEditId ? 'Кликайте по карте, чтобы добавить точки зоны (замкните обход)'
+                : 'Кликайте по карте, чтобы добавить точки маршрута'}
             </div>
           )}
-          <div className="ucw-world" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
+          {!map && (
+            <div className="ucw-nomap">
+              <h3>У этой кампании не выбрана карта</h3>
+              <p>Базовая карта не найдена{data.baseMapId ? ` (id: ${data.baseMapId})` : ''}. Выберите карту мира — она станет основой этой кампании. Данные основной кампании не затрагиваются.</p>
+              <div className="ucw-nomap-grid">
+                {WORLD_ATLAS_MAPS.map((m) => (
+                  <button key={m.id} type="button" className="atlas-card" onClick={() => changeBaseMap(m.id)}>
+                    <img className="atlas-map-img" src={m.imageSrc} alt={m.titleRu ?? m.title} loading="lazy" style={{ maxHeight: 110, objectFit: 'cover' }} />
+                    <h4 style={{ margin: '6px 0 0' }}>{m.titleRu ?? m.title}</h4>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="ucw-world" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, display: map ? undefined : 'none' }}>
             <div className="ucw-mapstack">
               <img
                 ref={imgRef}
@@ -340,6 +453,27 @@ export function IsolatedCampaignMapWorkspace() {
                 draggable={false}
                 onLoad={() => { if (autoFitRef.current) fitToScreen(); }}
               />
+              {/* zones */}
+              {layers.zones && (
+                <svg className="ucw-overlay-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  {visibleZones.map((z) => (
+                    <polygon
+                      key={z.id}
+                      points={z.points.map((p) => `${p.x},${p.y}`).join(' ')}
+                      fill={z.color ?? 'var(--gold)'}
+                      fillOpacity={z.id === zoneEditId ? 0.28 : 0.16}
+                      stroke={z.id === zoneEditId ? 'var(--gold-soft)' : z.color ?? 'var(--gold)'}
+                      vectorEffect="non-scaling-stroke"
+                      style={{ strokeWidth: z.id === zoneEditId ? 3 : 2 } as React.CSSProperties}
+                    />
+                  ))}
+                  {isEdit && zoneInEdit?.points.map((p, i) => (
+                    <circle key={i} cx={p.x} cy={p.y} r={0.8} className="ucw-routept"
+                      onMouseDown={(e) => startZonePointDrag(e, zoneInEdit.id, i)}
+                      onDoubleClick={(e) => { e.stopPropagation(); store.updateData(campaignId, (prev) => ({ ...prev, zones: prev.zones.map((zz) => (zz.id === zoneInEdit.id ? { ...zz, points: zz.points.filter((_, idx) => idx !== i) } : zz)) })); }} />
+                  ))}
+                </svg>
+              )}
               {/* routes */}
               {layers.routes && (
                 <svg className="ucw-overlay-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -406,6 +540,8 @@ export function IsolatedCampaignMapWorkspace() {
             setPlacing={setPlacing}
             routeEditId={routeEditId}
             setRouteEditId={setRouteEditId}
+            zoneEditId={zoneEditId}
+            setZoneEditId={setZoneEditId}
             addAndSelect={addAndSelect}
             region={region}
           />
@@ -418,6 +554,7 @@ export function IsolatedCampaignMapWorkspace() {
           type={selected.type}
           id={selected.id}
           canEdit={isEdit}
+          isPlayer={isPlayer}
           onClose={() => setSelected(null)}
           onPlaceOnMap={() => setPlacing({ entityType: selected.type, entityId: selected.id, label: entityLabel(selected.type, selected.id) })}
         />
@@ -438,10 +575,12 @@ function LibraryPanel(props: {
   setPlacing: (p: Placing) => void;
   routeEditId: string | null;
   setRouteEditId: (id: string | null) => void;
+  zoneEditId: string | null;
+  setZoneEditId: (id: string | null) => void;
   addAndSelect: (type: CampaignEntityType) => void;
   region?: WorldRegion;
 }) {
-  const { campaignId, search, isEdit, isPlayer, setSelected, placing, setPlacing, routeEditId, setRouteEditId, addAndSelect, region } = props;
+  const { campaignId, search, isEdit, isPlayer, setSelected, placing, setPlacing, routeEditId, setRouteEditId, zoneEditId, setZoneEditId, addAndSelect, region } = props;
   const store = useUserCampaigns();
   const data = store.getData(campaignId);
   const runtime = store.getRuntime(campaignId);
@@ -451,12 +590,15 @@ function LibraryPanel(props: {
   const match = (s: string) => !q || s.toLowerCase().includes(q);
 
   const isPlaced = (type: CampaignEntityType, id: string) => data.mapPlacements.some((mp) => mp.entityType === type && mp.entityId === id);
+  // Player View lists only entities the DM has revealed; DM sees everything.
+  const revealed = new Set(runtime?.revealedToPlayers ?? []);
+  const shown = (id: string) => !isPlayer || revealed.has(id);
 
   const groups: Array<{ type: CampaignEntityType; label: string; items: Array<{ id: string; label: string }> }> = [
-    { type: 'location', label: 'Локации', items: data.locations.filter((l) => match(l.title)).map((l) => ({ id: l.id, label: l.title })) },
-    { type: 'npc', label: 'NPC', items: data.npcs.filter((n) => match(n.name)).map((n) => ({ id: n.id, label: n.name })) },
-    { type: 'quest', label: 'Квесты', items: data.quests.filter((qq) => match(qq.title) && (!isPlayer || qq.status !== 'hidden')).map((qq) => ({ id: qq.id, label: qq.title })) },
-    { type: 'enemy', label: 'Враги', items: data.enemies.filter((e) => match(e.title)).map((e) => ({ id: e.id, label: e.title })) },
+    { type: 'location', label: 'Локации', items: data.locations.filter((l) => match(l.title) && shown(l.id)).map((l) => ({ id: l.id, label: l.title })) },
+    { type: 'npc', label: 'NPC', items: data.npcs.filter((n) => match(n.name) && shown(n.id)).map((n) => ({ id: n.id, label: n.name })) },
+    { type: 'quest', label: 'Квесты', items: data.quests.filter((qq) => match(qq.title) && shown(qq.id) && (!isPlayer || qq.status !== 'hidden')).map((qq) => ({ id: qq.id, label: qq.title })) },
+    { type: 'enemy', label: 'Враги', items: data.enemies.filter((e) => match(e.title) && shown(e.id)).map((e) => ({ id: e.id, label: e.title })) },
   ];
 
   const totalObjects = data.locations.length + data.npcs.length + data.quests.length + data.enemies.length;
@@ -484,6 +626,18 @@ function LibraryPanel(props: {
             }}
           >
             {routeEditId ? '✓ Завершить маршрут' : '+ Маршрут'}
+          </button>
+          <button
+            className={`atlas-btn ${zoneEditId ? '' : 'ghost'} small`}
+            style={{ width: '100%', marginTop: 6 }}
+            onClick={() => {
+              if (zoneEditId) { setZoneEditId(null); return; }
+              const zid = `zone-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+              store.updateData(campaignId, (p) => ({ ...p, zones: [...p.zones, { id: zid, title: `Зона ${p.zones.length + 1}`, mapId: runtime.activeMapId, points: [], color: 'var(--gold)', visibleToPlayers: false }] }));
+              setZoneEditId(zid);
+            }}
+          >
+            {zoneEditId ? '✓ Завершить зону' : '+ Зона'}
           </button>
         </>
       )}
@@ -526,6 +680,24 @@ function LibraryPanel(props: {
                   <button onClick={() => setRouteEditId(routeEditId === r.id ? null : r.id)}>{routeEditId === r.id ? 'Готово' : 'Точки'}</button>
                   <button onClick={() => store.updateRoute(campaignId, r.id, { visibleToPlayers: !r.visibleToPlayers })}>{r.visibleToPlayers ? '👁' : '🚫'}</button>
                   <button onClick={() => { store.removeRoute(campaignId, r.id); if (routeEditId === r.id) setRouteEditId(null); }}>✕</button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {data.zones.length > 0 && (
+        <div className="ucw-lib-group">
+          <div className="label">Зоны ({data.zones.length})</div>
+          {data.zones.map((z) => (
+            <div key={z.id} className={`ucw-entity-row${zoneEditId === z.id ? ' selected' : ''}`}>
+              <span>{z.title} <span className="ucw-placed-badge">{z.points.length} тчк</span></span>
+              {isEdit && (
+                <div className="row-actions">
+                  <button onClick={() => setZoneEditId(zoneEditId === z.id ? null : z.id)}>{zoneEditId === z.id ? 'Готово' : 'Точки'}</button>
+                  <button onClick={() => store.updateData(campaignId, (p) => ({ ...p, zones: p.zones.map((zz) => (zz.id === z.id ? { ...zz, visibleToPlayers: !zz.visibleToPlayers } : zz)) }))}>{z.visibleToPlayers ? '👁' : '🚫'}</button>
+                  <button onClick={() => { store.updateData(campaignId, (p) => ({ ...p, zones: p.zones.filter((zz) => zz.id !== z.id) })); if (zoneEditId === z.id) setZoneEditId(null); }}>✕</button>
                 </div>
               )}
             </div>

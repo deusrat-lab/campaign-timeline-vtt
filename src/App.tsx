@@ -21,6 +21,7 @@ import { NewCampaignWizard } from './features/campaigns/NewCampaignWizard';
 import { IsolatedCampaignMapWorkspace } from './features/campaigns/IsolatedCampaignMapWorkspace';
 import { CampaignLibraryPage } from './features/campaigns/CampaignLibraryPage';
 import { CampaignBattleMapsPage } from './features/campaigns/CampaignBattleMapsPage';
+import { CampaignBestiaryPage } from './features/campaigns/CampaignBestiaryPage';
 import { CampaignBattlePage } from './features/campaigns/CampaignBattlePage';
 import { CampaignEntryRedirect } from './features/campaigns/CampaignEntryRedirect';
 
@@ -125,6 +126,7 @@ function AppShell() {
             <Route path="/campaigns/new" element={<DmOnlyRoute><NewCampaignWizard /></DmOnlyRoute>} />
             <Route path="/campaigns/:campaignId/map" element={<DmOnlyRoute><IsolatedCampaignMapWorkspace /></DmOnlyRoute>} />
             <Route path="/campaigns/:campaignId/library/battle-maps" element={<DmOnlyRoute><CampaignBattleMapsPage /></DmOnlyRoute>} />
+            <Route path="/campaigns/:campaignId/library/bestiary" element={<DmOnlyRoute><CampaignBestiaryPage /></DmOnlyRoute>} />
             <Route path="/campaigns/:campaignId/library/:kind" element={<DmOnlyRoute><CampaignLibraryPage /></DmOnlyRoute>} />
             <Route path="/campaigns/:campaignId/battle/:mapId" element={<DmOnlyRoute><CampaignBattlePage /></DmOnlyRoute>} />
             <Route path="/campaigns/:campaignId" element={<DmOnlyRoute><CampaignEntryRedirect /></DmOnlyRoute>} />
