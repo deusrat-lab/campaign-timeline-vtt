@@ -14,6 +14,7 @@ import type {
   CampaignEntityType,
   CampaignPlayer,
   CampaignFaction,
+  CampaignImage,
 } from '../types/userCampaign';
 import { getRegionPreset } from '../data/regionPresets';
 import { syncEnabled, pushCampaign, deleteCampaignRemote, fetchRegistry, fetchCampaign, subscribeUc } from './userCampaignSync';
@@ -55,8 +56,8 @@ function loadRegistry(): UserCampaignRegistryEntry[] {
 }
 
 export interface CampaignSeed {
-  locations?: Array<{ title: string; type?: string; description?: string; dmNotes?: string }>;
-  npcs?: Array<{ name: string; role?: string; description?: string; dmNotes?: string }>;
+  locations?: Array<{ title: string; type?: string; description?: string; dmNotes?: string; image?: string }>;
+  npcs?: Array<{ name: string; role?: string; description?: string; dmNotes?: string; image?: string }>;
   enemies?: Array<{ title: string; ac?: number; hp?: number; description?: string; dmNotes?: string }>;
 }
 
@@ -69,14 +70,23 @@ function emptyData(campaignId: string, title: string, type: UserCampaignType, ba
   const npcSrc = seed?.npcs ?? preset?.npcs ?? [];
   const enemySrc = seed?.enemies ?? [];
   const factionSrc = preset?.factions ?? [];
-  const locations: CampaignLocation[] = locSrc.map((l, i) => ({ id: rid('loc', i), title: l.title, description: l.description, dmNotes: (l as { dmNotes?: string }).dmNotes }));
-  const npcs: CampaignNpc[] = npcSrc.map((n, i) => ({ id: rid('npc', i), name: n.name, role: n.role, description: n.description, dmNotes: (n as { dmNotes?: string }).dmNotes }));
+  // Seeded art (scenario portraits / location images) becomes CampaignImage
+  // records referenced by imageId, so the cards show pictures.
+  const images: CampaignImage[] = [];
+  const mkImage = (imgTitle: string, src?: string): string | undefined => {
+    if (!src) return undefined;
+    const id = rid('img', images.length);
+    images.push({ id, title: imgTitle, src });
+    return id;
+  };
+  const locations: CampaignLocation[] = locSrc.map((l, i) => ({ id: rid('loc', i), title: l.title, description: l.description, dmNotes: (l as { dmNotes?: string }).dmNotes, imageId: mkImage(l.title, (l as { image?: string }).image) }));
+  const npcs: CampaignNpc[] = npcSrc.map((n, i) => ({ id: rid('npc', i), name: n.name, role: n.role, description: n.description, dmNotes: (n as { dmNotes?: string }).dmNotes, imageId: mkImage(n.name, (n as { image?: string }).image) }));
   const enemies: CampaignEnemy[] = enemySrc.map((e, i) => ({ id: rid('emy', i), title: e.title, ac: e.ac, hp: e.hp, description: e.description, tactics: e.dmNotes }));
   const factions: CampaignFaction[] = factionSrc.map((f, i) => ({ id: rid('fac', i), name: f.name, role: f.role, description: f.description, attitude: 'neutral' as const }));
   return {
     campaignId, title, type, baseMapId,
     mapIds: [baseMapId], regionIds,
-    locations, npcs, quests: [], enemies, factions, images: [], routes: [], zones: [], notes: [], mapPlacements: [],
+    locations, npcs, quests: [], enemies, factions, images, routes: [], zones: [], notes: [], mapPlacements: [],
   };
 }
 

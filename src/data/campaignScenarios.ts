@@ -6,8 +6,8 @@ import type { UserCampaignType } from '../types/userCampaign';
  * fresh isolated campaign whose Locations/NPC/Enemies cards are pre-filled from
  * canon documents. Editable and deletable like any user campaign.
  */
-export interface ScenarioLocation { title: string; type?: string; description?: string; dmNotes?: string }
-export interface ScenarioNpc { name: string; role?: string; description?: string; dmNotes?: string }
+export interface ScenarioLocation { title: string; type?: string; description?: string; dmNotes?: string; image?: string }
+export interface ScenarioNpc { name: string; role?: string; description?: string; dmNotes?: string; image?: string }
 export interface ScenarioEnemy { title: string; ac?: number; hp?: number; description?: string; dmNotes?: string }
 
 export interface CampaignScenario {
@@ -76,6 +76,12 @@ const CALDRAN_CAPTIVITY: CampaignScenario = {
     { title: 'Дуэльный воин Железного Вепря', ac: 17, hp: 38, description: 'Мастер поединка; парные удары, парирование.', dmNotes: 'Обычно тренировочный бой без смерти (Йорн). L02, L05, L06.' },
   ],
 };
+
+// Portraits/location art live in /public/scenarios/caldran-captivity/. Attached
+// by index (locations in L01..L12 order → l01..l12; NPCs in list order →
+// npc-01..npc-11), so the scenario's cards get images without inlining base64.
+CALDRAN_CAPTIVITY.locations.forEach((l, i) => { l.image = `/scenarios/caldran-captivity/loc/l${String(i + 1).padStart(2, '0')}.jpg`; });
+CALDRAN_CAPTIVITY.npcs.forEach((n, i) => { n.image = `/scenarios/caldran-captivity/npc/npc-${String(i + 1).padStart(2, '0')}.jpg`; });
 
 export const CAMPAIGN_SCENARIOS: CampaignScenario[] = [CALDRAN_CAPTIVITY];
 
