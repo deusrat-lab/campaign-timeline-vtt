@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useCampaignStore } from '../state/campaignStore';
+import { useUserCampaigns } from '../state/userCampaignStore';
 
 interface RailItem {
   key: string;
@@ -35,6 +36,7 @@ const RAIL_ITEMS: RailItem[] = [
 export function NavRail() {
   const location = useLocation();
   const store = useCampaignStore();
+  const userStore = useUserCampaigns();
   if (store.mode === 'player-view') return null;
   // Inside a user campaign, swap the main-campaign library items for THIS
   // campaign's own sections (map + locations/NPC/quests/enemies/images/notes),
@@ -43,7 +45,17 @@ export function NavRail() {
   const campaignMatch = location.pathname.match(/^\/campaigns\/(?!new(?:$|\/))([^/]+)/);
   const campaignId = campaignMatch?.[1];
   if (campaignId) {
-    const cItems: RailItem[] = [
+    // Player View gets a reduced rail: only the map and the card sections the
+    // DM can reveal — no DM tools (battle maps, bestiary, factions, players,
+    // images, notes). Matches "у игроков меньше панелей — только карта и карточки".
+    const isPlayerView = userStore.getRuntime(campaignId).mode === 'playerView';
+    const cItems: RailItem[] = isPlayerView ? [
+      { key: 'home', label: 'Дом мира', icon: '🌍', to: '/' },
+      { key: 'c-map', label: 'Карта', icon: '🗺', to: `/campaigns/${campaignId}/map` },
+      { key: 'c-locations', label: 'Локации', icon: '⌂', to: `/campaigns/${campaignId}/library/locations` },
+      { key: 'c-npc', label: 'NPC', icon: '🧑', to: `/campaigns/${campaignId}/library/npc` },
+      { key: 'c-quests', label: 'Квесты', icon: '📜', to: `/campaigns/${campaignId}/library/quests` },
+    ] : [
       { key: 'home', label: 'Дом мира', icon: '🌍', to: '/' },
       { key: 'campaigns', label: 'Кампании', icon: '🎲', to: '/campaigns' },
       { key: 'c-map', label: 'Карта', icon: '🗺', to: `/campaigns/${campaignId}/map` },

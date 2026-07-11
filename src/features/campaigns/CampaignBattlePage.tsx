@@ -8,7 +8,6 @@ import { getBattleMapCatalog, getBattleMapById, battleMapImageUrl, battleMapVari
 import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
 import type { CampaignBattleToken, BattleTokenSide, CampaignBattleBoard } from '../../types/userCampaign';
 
-const SIDE_LABEL: Record<BattleTokenSide, string> = { enemy: 'Враг', player: 'Игрок', ally: 'Союзник', neutral: 'Нейтрал' };
 
 export function CampaignBattlePage() {
   const { campaignId, mapId } = useParams<{ campaignId: string; mapId: string }>();
@@ -257,6 +256,11 @@ export function CampaignBattlePage() {
   };
 
   const selTok = board.tokens.find((t) => t.id === selected);
+  // Initiative order — highest acts first (undefined sorts last), same rule as
+  // the main campaign's battle. Rendered at the TOP of the panel.
+  const ordered = [...board.tokens].sort((a, b) => (b.initiative ?? -999) - (a.initiative ?? -999) || a.name.localeCompare(b.name, 'ru'));
+  const setInit = (id: string, v: number | undefined) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === id ? { ...t, initiative: v } : t) }));
+  const rollAllInitiative = () => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => ({ ...t, initiative: 1 + Math.floor(Math.random() * 20) })) }));
 
   return (
     <div className="ucw" ref={rootRef} style={shellHeight ? { height: shellHeight } : undefined}>
@@ -362,9 +366,29 @@ export function CampaignBattlePage() {
 
         <aside className="ucw-library">
           <h2 className="ucw-lib-heading">{isPlayer ? 'Бой' : 'Расстановка'}</h2>
-          {isPlayer
-            ? <p className="atlas-sub" style={{ fontSize: '0.82rem' }}>Идёт бой. Вы видите поле, токены и сетку так, как их показывает Мастер.</p>
-            : <p className="atlas-sub" style={{ fontSize: '0.82rem' }}>Выберите токен и кликните по карте, чтобы поставить.</p>}
+
+          {/* INITIATIVE — always at the TOP (never under the enemy roster).
+              Sorted highest-first, same rule as the main campaign. */}
+          <div className="ucw-lib-group">
+            <div className="label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Инициатива ({ordered.length})</span>
+              {!isPlayer && ordered.length > 0 && <button className="ucw-tbtn" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={rollAllInitiative}>🎲 Бросить всем</button>}
+            </div>
+            {ordered.length === 0 ? <p className="ucw-empty-note">Пока пусто.</p> : ordered.map((t, i) => (
+              <div key={t.id} className={`ucw-init-row side-${t.side}${selected === t.id ? ' selected' : ''}${i === 0 ? ' current' : ''}`} onClick={() => !isPlayer && setSelected(t.id)}>
+                {!isPlayer
+                  ? <input className="ucw-init-input" type="number" value={t.initiative ?? ''} onClick={(e) => e.stopPropagation()} onChange={(e) => setInit(t.id, e.target.value === '' ? undefined : Number(e.target.value))} title="Инициатива" />
+                  : <span className="ucw-init-badge">{t.initiative ?? '—'}</span>}
+                <span className="ucw-init-name">{t.name}</span>
+                {t.currentHp != null && <span className="ucw-init-hp">{t.currentHp}{t.maxHp ? `/${t.maxHp}` : ''}</span>}
+                {!isPlayer && <button className="ucw-init-x" onClick={(e) => { e.stopPropagation(); patchBoard((b) => ({ ...b, tokens: b.tokens.filter((x) => x.id !== t.id) })); }}>✕</button>}
+              </div>
+            ))}
+          </div>
+
+          {!isPlayer && (
+            <p className="atlas-sub" style={{ fontSize: '0.82rem', marginTop: 4 }}>Выберите токен и кликните по карте, чтобы поставить.</p>
+          )}
           {!isPlayer && (
             <div className="ucw-add-grid">
               <button className="atlas-btn small" onClick={() => setPlacing({ side: 'player', name: 'Игрок' })}>+ Игрок</button>
@@ -387,21 +411,6 @@ export function CampaignBattlePage() {
               ))}
             </div>
           )}
-
-          <div className="ucw-lib-group">
-            <div className="label">Токены на поле ({board.tokens.length})</div>
-            {board.tokens.length === 0 ? <p className="ucw-empty-note">Пока пусто.</p> : board.tokens.map((t) => (
-              <div key={t.id} className={`ucw-entity-row${selected === t.id ? ' selected' : ''}`}>
-                <span>{SIDE_LABEL[t.side]}: {t.name}{t.currentHp != null ? ` · ${t.currentHp}${t.maxHp ? '/' + t.maxHp : ''}` : ''}</span>
-                {!isPlayer && (
-                  <div className="row-actions">
-                    <button onClick={() => setSelected(t.id)}>Открыть</button>
-                    <button onClick={() => patchBoard((b) => ({ ...b, tokens: b.tokens.filter((x) => x.id !== t.id) }))}>✕</button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
 
           {!isPlayer && selTok && (
             <div className="ucw-card" style={{ marginTop: 12 }}>

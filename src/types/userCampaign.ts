@@ -172,6 +172,7 @@ export interface CampaignBattleToken {
   currentHp?: number;
   maxHp?: number;
   ac?: number;
+  initiative?: number; // initiative order — higher acts first (undefined sorts last)
   statuses?: string[];
 }
 

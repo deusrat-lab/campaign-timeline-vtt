@@ -157,6 +157,22 @@
 .ucw-btoken .btoken-init { font-size: 0.72rem; font-weight: 700; color: #16140f; line-height: 1; }
 .ucw-btoken .btoken-hp { position: absolute; bottom: -14px; font-size: 0.62rem; color: var(--fg); background: rgba(9,8,7,0.82); border: 1px solid var(--border-soft); border-radius: 4px; padding: 0 3px; white-space: nowrap; }
 
+/* Initiative order rows (battle panel) — highest on top, colored by side. */
+.ucw-init-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--border-soft); border-left: 4px solid var(--fg-faint); margin-bottom: 4px; cursor: pointer; }
+.ucw-init-row.side-enemy { border-left-color: var(--danger); }
+.ucw-init-row.side-player { border-left-color: #4f7fd6; }
+.ucw-init-row.side-ally { border-left-color: var(--green); }
+.ucw-init-row.side-neutral { border-left-color: var(--amber); }
+.ucw-init-row.current { background: rgba(192,138,46,0.16); border-color: var(--gold-dim); }
+.ucw-init-row.selected { outline: 1px solid var(--gold); }
+.ucw-init-input { width: 42px; text-align: center; background: var(--bg-card); border: 1px solid var(--border-soft); color: var(--fg); border-radius: 5px; padding: 3px 2px; font: inherit; font-weight: 700; }
+.ucw-init-badge { width: 34px; text-align: center; font-weight: 700; color: var(--gold-soft); }
+.ucw-init-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ucw-init-hp { font-size: 0.78rem; color: var(--fg-dim); background: rgba(9,8,7,0.6); border: 1px solid var(--border-soft); border-radius: 4px; padding: 0 5px; }
+.ucw-init-x { background: none; border: none; color: var(--fg-faint); cursor: pointer; font-size: 0.9rem; padding: 2px 4px; }
+.ucw-init-x:hover { color: var(--danger); }
+@media (pointer: coarse) { .ucw-init-row { padding: 10px 8px; } .ucw-init-input { width: 52px; padding: 6px 2px; } }
+
 /* Live distance readout while dragging a token (D&D 5e: 5 ft / cell). */
 .ucw-measure {
   position: absolute; transform: translate(14px, -50%); z-index: 20; pointer-events: none;
