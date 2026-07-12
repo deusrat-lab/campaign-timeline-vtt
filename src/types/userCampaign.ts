@@ -35,6 +35,7 @@ export interface CampaignFaction {
   attitude?: FactionAttitude;
   description?: string;
   dmNotes?: string;
+  imageId?: string;
 }
 
 export interface CampaignLocation {

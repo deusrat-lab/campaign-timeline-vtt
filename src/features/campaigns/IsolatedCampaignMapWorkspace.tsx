@@ -364,7 +364,7 @@ export function IsolatedCampaignMapWorkspace() {
                   </button>
                 ))}
               </div>
-              <button className="ucw-tbtn" title="Открыть вид игрока в отдельной вкладке (можно показать/дать игрокам)" onClick={() => { const u = new URL(window.location.href); u.searchParams.set('as', 'player'); window.open(u.toString(), '_blank', 'noopener'); }}>↗ Вид игрока</button>
+              <button className="ucw-tbtn" title="Открыть Observer — чистый вид игрока в отдельной вкладке (можно показать/дать игрокам)" onClick={() => { const u = new URL(window.location.href); u.searchParams.set('as', 'player'); window.open(u.toString(), '_blank', 'noopener'); }}>Открыть Observer</button>
               <button className="ucw-tbtn" title="Безопасно до-насеять карточки, картинки и связи из шаблона сценария (ничего не удаляет)" onClick={() => {
                 const r = store.upgradeFromScenario(campaignId);
                 if (!r) { window.alert('Для этой кампании нет подходящего шаблона.'); return; }
@@ -640,7 +640,9 @@ function LibraryPanel(props: {
       {region && <p style={{ color: 'var(--fg-faint)', fontSize: '0.8rem', margin: '2px 0 0' }}>World info: {region.titleRu ?? region.title} · <a href={`/world/${region.id}`} onClick={(e) => { e.preventDefault(); window.open(`/world/${region.id}`, '_blank'); }} style={{ color: 'var(--gold)' }}>справка в Атласе</a></p>}
 
       <p className="ucw-empty-note" style={{ marginTop: 10 }}>
-        Кликните точку на карте, чтобы открыть карточку. Объекты добавляются в разделах слева (Локации, NPC, Квесты, Враги) и ставятся на карту кнопкой «Разместить на карте» в карточке.
+        {isPlayer
+          ? 'Кликните точку на карте, чтобы открыть карточку. Вы видите только то, что открыл Мастер.'
+          : 'Кликните точку на карте, чтобы открыть карточку. Объекты добавляются в разделах слева (Локации, NPC, Квесты, Враги) и ставятся на карту кнопкой «Разместить на карте» в карточке.'}
       </p>
 
       {!isPlayer && isEdit && (

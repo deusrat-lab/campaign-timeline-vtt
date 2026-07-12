@@ -40,7 +40,7 @@ export function buildListItems(kind: LibraryKind, data: UserCampaignData, o: VMO
     case 'quests': return data.quests.filter((q) => o.match(q.title) && (!o.isPlayer || q.status !== 'hidden')).map((q) => wrap(q.id, q.title, q.status));
     case 'enemies': return data.enemies.filter((e) => o.match(e.title)).map((e) => wrap(e.id, e.title, e.hp ? `HP ${e.hp}` : e.baseMonster, e.imageId));
     case 'players': return (data.party ?? []).filter((p) => o.match(p.name)).map((p) => wrap(p.id, p.name, [p.class, p.level ? `ур. ${p.level}` : ''].filter(Boolean).join(' · ')));
-    case 'factions': return (data.factions ?? []).filter((f) => o.match(f.name)).map((f) => wrap(f.id, f.name, [f.role, f.attitude].filter(Boolean).join(' · ')));
+    case 'factions': return (data.factions ?? []).filter((f) => o.match(f.name)).map((f) => wrap(f.id, f.name, [f.role, f.attitude].filter(Boolean).join(' · '), f.imageId));
   }
 }
 
@@ -109,7 +109,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
   }
   if (kind === 'factions') {
     const f = (data.factions ?? []).find((x) => x.id === id); if (!f) return null;
-    return { ...base(f.name), subtitle: f.role, description: f.description, dmNotes: f.dmNotes, fields: [{ label: 'Отношение', value: f.attitude ?? '—' }] };
+    return { ...base(f.name), subtitle: f.role, imageUrl: o.imageUrl(f.imageId), description: f.description, dmNotes: f.dmNotes, fields: [{ label: 'Отношение', value: f.attitude ?? '—' }] };
   }
   return null;
 }

@@ -94,13 +94,28 @@ export function mergeScenarioIntoData(data: UserCampaignData, scenario: Campaign
   for (const sf of scenario.factions) {
     const ex = factions.find((f) => norm(f.name) === norm(sf.name));
     if (ex) {
+      if (!ex.imageId && sf.image) ex.imageId = mkImage(sf.name, sf.image);
       if (!ex.role && sf.role) ex.role = sf.role;
       if (!ex.description && sf.description) ex.description = sf.description;
     } else {
-      factions.push({ id: uid('fac'), name: sf.name, role: sf.role, description: sf.description, attitude: 'neutral' });
+      factions.push({ id: uid('fac'), name: sf.name, role: sf.role, description: sf.description, attitude: 'neutral', imageId: mkImage(sf.name, sf.image) });
       added.factions += 1;
     }
   }
 
-  return { data: { ...data, locations, npcs, enemies, factions, images }, added, imagesAttached };
+  // ── Quests (scenes / encounter packs — match by title) ──
+  const quests = [...data.quests];
+  for (const sq of scenario.quests) {
+    const locId = sq.locationKey ? keyToLocId[sq.locationKey] : undefined;
+    const ex = quests.find((q) => norm(q.title) === norm(sq.title));
+    if (ex) {
+      if (!ex.locationId && locId) ex.locationId = locId;
+      if (!ex.description && sq.description) ex.description = sq.description;
+      if (!ex.dmNotes && sq.dmNotes) ex.dmNotes = sq.dmNotes;
+    } else {
+      quests.push({ id: uid('qst'), title: sq.title, status: (sq.status as (typeof quests)[number]['status']) ?? 'notStarted', description: sq.description, dmNotes: sq.dmNotes, locationId: locId });
+    }
+  }
+
+  return { data: { ...data, locations, npcs, enemies, factions, quests, images }, added, imagesAttached };
 }

@@ -61,6 +61,7 @@ export interface CampaignSeed {
   npcs?: Array<{ name: string; role?: string; description?: string; dmNotes?: string; image?: string; locationKey?: string }>;
   enemies?: Array<{ title: string; ac?: number; hp?: number; description?: string; dmNotes?: string; image?: string; locationKeys?: string[] }>;
   factions?: Array<{ name: string; role?: string; description?: string; image?: string }>;
+  quests?: Array<{ title: string; description?: string; dmNotes?: string; locationKey?: string; status?: string }>;
 }
 
 function emptyData(campaignId: string, title: string, type: UserCampaignType, baseMapId: string, regionIds: string[], seed?: CampaignSeed): UserCampaignData {
@@ -92,11 +93,13 @@ function emptyData(campaignId: string, title: string, type: UserCampaignType, ba
   });
   const npcs: CampaignNpc[] = npcSrc.map((n, i) => ({ id: rid('npc', i), name: n.name, role: n.role, description: n.description, dmNotes: (n as { dmNotes?: string }).dmNotes, imageId: mkImage(n.name, (n as { image?: string }).image), locationId: locKeyToId[(n as { locationKey?: string }).locationKey ?? ''] }));
   const enemies: CampaignEnemy[] = enemySrc.map((e, i) => ({ id: rid('emy', i), title: e.title, ac: e.ac, hp: e.hp, description: e.description, tactics: e.dmNotes, imageId: mkImage(e.title, (e as { image?: string }).image), locationIds: ((e as { locationKeys?: string[] }).locationKeys ?? []).map((k) => locKeyToId[k]).filter(Boolean) }));
-  const factions: CampaignFaction[] = factionSrc.map((f, i) => ({ id: rid('fac', i), name: f.name, role: f.role, description: f.description, attitude: 'neutral' as const }));
+  const factions: CampaignFaction[] = factionSrc.map((f, i) => ({ id: rid('fac', i), name: f.name, role: f.role, description: f.description, attitude: 'neutral' as const, imageId: mkImage(f.name, (f as { image?: string }).image) }));
+  const questSrc = seed?.quests ?? [];
+  const quests: CampaignQuest[] = questSrc.map((q, i) => ({ id: rid('qst', i), title: q.title, status: (q.status as CampaignQuest['status']) ?? 'notStarted', description: q.description, dmNotes: q.dmNotes, locationId: locKeyToId[q.locationKey ?? ''] }));
   return {
     campaignId, title, type, baseMapId,
     mapIds: [baseMapId], regionIds,
-    locations, npcs, quests: [], enemies, factions, images, routes: [], zones: [], notes: [], mapPlacements: [],
+    locations, npcs, quests, enemies, factions, images, routes: [], zones: [], notes: [], mapPlacements: [],
   };
 }
 
