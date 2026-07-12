@@ -365,6 +365,11 @@ export function IsolatedCampaignMapWorkspace() {
                 ))}
               </div>
               <button className="ucw-tbtn" title="Открыть вид игрока в отдельной вкладке (можно показать/дать игрокам)" onClick={() => { const u = new URL(window.location.href); u.searchParams.set('as', 'player'); window.open(u.toString(), '_blank', 'noopener'); }}>↗ Вид игрока</button>
+              <button className="ucw-tbtn" title="Безопасно до-насеять карточки, картинки и связи из шаблона сценария (ничего не удаляет)" onClick={() => {
+                const r = store.upgradeFromScenario(campaignId);
+                if (!r) { window.alert('Для этой кампании нет подходящего шаблона.'); return; }
+                window.alert(`Обновлено из шаблона.\nДобавлено: локаций ${r.added.locations}, NPC ${r.added.npcs}, врагов ${r.added.enemies}, фракций ${r.added.factions}.\nПривязано картинок: ${r.imagesAttached}.`);
+              }}>⟳ Обновить из шаблона</button>
               <button className="ucw-tbtn" onClick={() => { const t = window.prompt('Новое название кампании:', data.title); if (t && t.trim()) store.renameCampaign(campaignId, t.trim()); }}>Переименовать</button>
               <button className="ucw-tbtn" onClick={exportCampaign}>Export</button>
               <button className="ucw-tbtn" onClick={() => fileInputRef.current?.click()}>Import</button>

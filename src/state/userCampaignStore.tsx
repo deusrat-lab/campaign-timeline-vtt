@@ -17,6 +17,7 @@ import type {
   CampaignImage,
 } from '../types/userCampaign';
 import { getRegionPreset } from '../data/regionPresets';
+import { mergeScenarioIntoData, scenarioForCampaign } from '../data/scenarioMerge';
 import { syncEnabled, pushCampaign, deleteCampaignRemote, fetchRegistry, fetchCampaign, subscribeUc } from './userCampaignSync';
 
 /**
@@ -124,6 +125,10 @@ interface UserCampaignValue {
    * revealed to players. Player View only lists revealed entities. */
   toggleReveal: (id: string, entityId: string) => void;
   isRevealed: (id: string, entityId: string) => boolean;
+  /** Non-destructively upsert the matching scenario template into a campaign
+   * (fill missing images/relations, add new cards). Returns a summary, or null
+   * if no scenario matches the campaign's base map. */
+  upgradeFromScenario: (id: string) => { added: { locations: number; npcs: number; enemies: number; factions: number }; imagesAttached: number } | null;
 
   addLocation: (id: string, loc: Omit<CampaignLocation, 'id'>) => string;
   addNpc: (id: string, npc: Omit<CampaignNpc, 'id'>) => string;
@@ -339,6 +344,18 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
       return { ...prev, revealedToPlayers: [...set] };
     }),
     isRevealed: (id, entityId) => (readRuntime(id).revealedToPlayers ?? []).includes(entityId),
+    upgradeFromScenario: (id) => {
+      const data = readData(id);
+      if (!data) return null;
+      const scenario = scenarioForCampaign(data);
+      if (!scenario) return null;
+      const result = mergeScenarioIntoData(data, scenario, (p) => uid(p));
+      writeJson(dataKey(id), result.data);
+      setDataCache((prev) => ({ ...prev, [id]: result.data }));
+      touchRegistry(id);
+      pushBlob(id);
+      return { added: result.added, imagesAttached: result.imagesAttached };
+    },
 
     addLocation: (id, loc) => { const eid = uid('loc'); patchData(id, (p) => ({ ...p, locations: [...p.locations, { ...loc, id: eid }] })); return eid; },
     addNpc: (id, npc) => { const eid = uid('npc'); patchData(id, (p) => ({ ...p, npcs: [...p.npcs, { ...npc, id: eid }] })); return eid; },
