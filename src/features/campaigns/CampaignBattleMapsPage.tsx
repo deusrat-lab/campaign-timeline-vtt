@@ -6,6 +6,7 @@ import { getCampaignById } from '../../data/campaignModules';
 import { useUserCampaigns } from '../../state/userCampaignStore';
 import { getBattleMapCatalog, battleMapImageUrl } from '../../data/battleMapCatalog';
 import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
+import { scenarioForCampaign } from '../../data/scenarioMerge';
 
 const GRID_PRESETS = [
   { label: '20 × 20', cols: 20, rows: 20 },
@@ -121,20 +122,28 @@ export function CampaignBattleMapsPage() {
   const data = campaignId ? store.getData(campaignId) : null;
   const runtime = campaignId ? store.getRuntime(campaignId) : null;
   const isMain = campaignId ? getCampaignById(campaignId)?.protected : false;
+  const scenarioBattleMapIds = useMemo(() => {
+    if (!data) return null;
+    const ids = scenarioForCampaign(data)?.battleMapIds;
+    return ids?.length ? new Set(ids) : null;
+  }, [data]);
 
   const groups = useMemo(() => {
     const s = new Set<string>();
-    (maps ?? []).forEach((m) => (m.groupLabels ?? []).forEach((g) => s.add(g)));
+    (maps ?? [])
+      .filter((m) => !scenarioBattleMapIds || scenarioBattleMapIds.has(m.id))
+      .forEach((m) => (m.groupLabels ?? []).forEach((g) => s.add(g)));
     return [...s].sort((a, b) => a.localeCompare(b, 'ru'));
-  }, [maps]);
+  }, [maps, scenarioBattleMapIds]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (maps ?? [])
+      .filter((m) => !scenarioBattleMapIds || scenarioBattleMapIds.has(m.id))
       .filter((m) => group === 'all' || (m.groupLabels ?? []).includes(group))
       .filter((m) => !q || [m.title, m.normalizedName, ...(m.groupLabels ?? [])].some((p) => (p ?? '').toLowerCase().includes(q)))
       .sort((a, b) => a.title.localeCompare(b.title, 'ru', { numeric: true }));
-  }, [maps, query, group]);
+  }, [maps, query, group, scenarioBattleMapIds]);
 
   if (!campaignId || !data || !runtime || isMain) {
     return (
@@ -154,7 +163,7 @@ export function CampaignBattleMapsPage() {
         </div>
       </div>
       <p className="atlas-sub" style={{ marginTop: -6 }}>
-        Готовые поля боя из общей библиотеки (battle-map-vtt) + свои поля из любой картинки — с сеткой, террейном и день/ночь.
+        Готовые поля боя, отфильтрованные под выбранную кампанию, + свои поля из любой картинки — с сеткой, террейном и день/ночь.
       </p>
 
       <CustomFieldCreator campaignId={campaignId} onCreated={(mid) => navigate(`/campaigns/${campaignId}/battle/${mid}`)} />
@@ -178,18 +187,20 @@ export function CampaignBattleMapsPage() {
         </div>
       )}
 
-      <h2 className="atlas-section" style={{ marginBottom: 0 }}>Общая библиотека</h2>
+      <h2 className="atlas-section" style={{ marginBottom: 0 }}>Подходящие карты библиотеки</h2>
       <div className="atlas-toolbar">
         <input className="atlas-input" placeholder="Поиск карты…" value={query} onChange={(e) => setQuery(e.target.value)} />
         <select className="atlas-select" value={group} onChange={(e) => setGroup(e.target.value)}>
           <option value="all">Все группы</option>
           {groups.map((g) => <option key={g} value={g}>{g}</option>)}
         </select>
-        <span className="atlas-sub" style={{ margin: 0 }}>{filtered.length} / {maps?.length ?? 0}</span>
+        <span className="atlas-sub" style={{ margin: 0 }}>{filtered.length} / {scenarioBattleMapIds ? scenarioBattleMapIds.size : (maps?.length ?? 0)}</span>
       </div>
 
       {maps === null ? (
         <p className="atlas-empty">Загрузка каталога…</p>
+      ) : filtered.length === 0 ? (
+        <p className="atlas-empty">Для этой кампании пока нет подходящих готовых карт в общей библиотеке. Используйте «Мои поля боя» и загрузите свои карты сражений.</p>
       ) : (
         <div className="ucw-cardgrid">
           {filtered.map((m) => {

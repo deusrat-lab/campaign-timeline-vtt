@@ -12,6 +12,7 @@ import type { CampaignScenario } from './campaignScenarios';
 import { CAMPAIGN_SCENARIOS } from './campaignScenarios';
 
 const norm = (s: string) => s.trim().toLowerCase();
+const hasDamageDice = (s?: string): boolean => !!s && /(?:\d+[кd]\d+|\d+;\s*\d+к\d+)/i.test(s);
 
 /** The scenario whose base map matches this campaign (used for the upgrade). */
 export function scenarioForCampaign(data: Pick<UserCampaignData, 'baseMapId'>): CampaignScenario | undefined {
@@ -83,6 +84,7 @@ export function mergeScenarioIntoData(data: UserCampaignData, scenario: Campaign
       if (ex.ac == null && se.ac != null) ex.ac = se.ac;
       if (ex.hp == null && se.hp != null) ex.hp = se.hp;
       if (!ex.description && se.description) ex.description = se.description;
+      else if (se.description && hasDamageDice(se.description) && !hasDamageDice(ex.description)) ex.description = se.description;
       if (!ex.tactics && se.dmNotes) ex.tactics = se.dmNotes;
     } else {
       enemies.push({ id: uid('emy'), title: se.title, ac: se.ac, hp: se.hp, description: se.description, tactics: se.dmNotes, imageId: mkImage(se.title, se.image), locationIds: locIds });
@@ -127,10 +129,10 @@ export function mergeScenarioIntoData(data: UserCampaignData, scenario: Campaign
 
   // ── Map placements + canonical route (match by entity id / route title) ──
   const mapPlacements = [...data.mapPlacements];
-  const routePoints = scenario.locations
-    .map((sl) => {
+  scenario.locations
+    .forEach((sl) => {
       const entityId = keyToLocId[sl.key];
-      if (!entityId || sl.x == null || sl.y == null) return null;
+      if (!entityId || sl.x == null || sl.y == null) return;
       if (!mapPlacements.some((mp) => mp.mapId === scenario.baseMapId && mp.entityType === 'location' && mp.entityId === entityId)) {
         mapPlacements.push({
           id: uid('pin'),
@@ -142,22 +144,11 @@ export function mergeScenarioIntoData(data: UserCampaignData, scenario: Campaign
           visibleToPlayers: false,
         });
       }
-      return { x: sl.x, y: sl.y };
-    })
-    .filter(Boolean) as { x: number; y: number }[];
-
-  const routes = [...data.routes];
-  if (routePoints.length > 1 && !routes.some((r) => r.mapId === scenario.baseMapId && norm(r.title) === norm('Маршрут: Цена имени'))) {
-    routes.push({
-      id: uid('route'),
-      title: 'Маршрут: Цена имени',
-      mapId: scenario.baseMapId,
-      points: routePoints,
-      type: 'road',
-      visibleToPlayers: false,
-      notes: 'Канонический маршрут ваншота от Соляных Гаваней через дома Кальдрана к Нижним Землям и возвращению.',
     });
-  }
+
+  // The DM requested route drawing to be manual. Remove the old template route
+  // if it exists, but leave every custom/manual route untouched.
+  const routes = data.routes.filter((r) => !(r.mapId === scenario.baseMapId && norm(r.title) === norm('Маршрут: Цена имени')));
 
   return { data: { ...data, locations, npcs, enemies, factions, quests, images, mapPlacements, routes }, added, imagesAttached };
 }
