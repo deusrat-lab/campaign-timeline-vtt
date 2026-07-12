@@ -75,6 +75,8 @@ export interface EntityActionsVM {
   onPlace?: () => void;      // place on map
   onToggleReveal?: () => void;
   revealed?: boolean;
+  onPresent?: () => void;
+  presenting?: boolean;
   placed?: boolean;
   onDelete?: () => void;
 }

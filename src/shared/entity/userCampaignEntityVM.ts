@@ -62,9 +62,9 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
 
   if (kind === 'locations') {
     const l = data.locations.find((x) => x.id === id); if (!l) return null;
-    const npcs = data.npcs.filter((n) => n.locationId === l.id);
-    const quests = data.quests.filter((q) => q.locationId === l.id);
-    const enemies = data.enemies.filter((e) => e.locationIds?.includes(l.id));
+    const npcs = data.npcs.filter((n) => n.locationId === l.id && (!o.isPlayer || o.isRevealed(n.id)));
+    const quests = data.quests.filter((q) => q.locationId === l.id && (!o.isPlayer || (q.status !== 'hidden' && o.isRevealed(q.id))));
+    const enemies = data.enemies.filter((e) => e.locationIds?.includes(l.id) && (!o.isPlayer || o.isRevealed(e.id)));
     const images = data.images.filter((im) => im.id === l.imageId);
     return {
       ...base(l.title), subtitle: undefined, imageUrl: o.imageUrl(l.imageId), description: l.description,
@@ -115,8 +115,8 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
   }
   if (kind === 'npc') {
     const n = data.npcs.find((x) => x.id === id); if (!n) return null;
-    const quests = data.quests.filter((q) => q.npcIds?.includes(n.id));
-    const location = n.locationId ? locRelation(data, o, n.locationId) : undefined;
+    const quests = data.quests.filter((q) => q.npcIds?.includes(n.id) && (!o.isPlayer || (q.status !== 'hidden' && o.isRevealed(q.id))));
+    const location = n.locationId && (!o.isPlayer || o.isRevealed(n.locationId)) ? locRelation(data, o, n.locationId) : undefined;
     return {
       ...base(n.name), subtitle: n.role, imageUrl: o.imageUrl(n.imageId), description: n.description, dmNotes: n.dmNotes, tags: n.tags,
       fields: [{ label: 'Локация', value: locName(data, n.locationId) ?? '—' }],
@@ -139,8 +139,8 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
   }
   if (kind === 'quests') {
     const q = data.quests.find((x) => x.id === id); if (!q) return null;
-    const npcs = data.npcs.filter((n) => q.npcIds?.includes(n.id));
-    const location = q.locationId ? locRelation(data, o, q.locationId) : undefined;
+    const npcs = data.npcs.filter((n) => q.npcIds?.includes(n.id) && (!o.isPlayer || o.isRevealed(n.id)));
+    const location = q.locationId && (!o.isPlayer || o.isRevealed(q.locationId)) ? locRelation(data, o, q.locationId) : undefined;
     return {
       ...base(q.title), subtitle: q.status, description: q.description, dmNotes: q.dmNotes, tags: q.tags,
       imageUrl: o.imageUrl(q.imageId),
@@ -163,7 +163,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
   }
   if (kind === 'enemies') {
     const e = data.enemies.find((x) => x.id === id); if (!e) return null;
-    const locs = (e.locationIds ?? []).map((lid) => data.locations.find((l) => l.id === lid)).filter(Boolean) as typeof data.locations;
+    const locs = (e.locationIds ?? []).filter((lid) => !o.isPlayer || o.isRevealed(lid)).map((lid) => data.locations.find((l) => l.id === lid)).filter(Boolean) as typeof data.locations;
     return {
       ...base(e.title), subtitle: e.baseMonster, imageUrl: o.imageUrl(e.imageId), description: e.description, dmNotes: e.tactics, tags: e.tags,
       fields: [{ label: 'AC', value: String(e.ac ?? '—') }, { label: 'HP', value: String(e.hp ?? '—') }],

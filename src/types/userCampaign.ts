@@ -231,6 +231,10 @@ export interface UserCampaignRuntime {
    * view surfaces it (banner on the map + read-only board). Synced to the
    * server so players see it live. Cleared when the DM hides the battle. */
   presentedBattle?: { mapId: string } | null;
+  /** Card the DM is temporarily presenting to players over the map. Unlike
+   * `revealedToPlayers`, this does not permanently reveal the entity in the
+   * player library and closes only when the DM clears/closes it. */
+  presentedCard?: { entityType: CampaignEntityType; entityId: string } | null;
   mapViewState: { zoom: number; panX: number; panY: number };
 }
 

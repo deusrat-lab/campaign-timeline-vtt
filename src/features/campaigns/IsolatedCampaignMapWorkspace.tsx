@@ -311,6 +311,15 @@ export function IsolatedCampaignMapWorkspace() {
   const visibleRoutes = data.routes.filter((r) => r.mapId === runtime.activeMapId && (!isPlayer || r.visibleToPlayers));
   const visibleZones = data.zones.filter((z) => z.mapId === runtime.activeMapId && (!isPlayer || z.visibleToPlayers));
   const hasParty = data.mapPlacements.some((mp) => mp.entityType === 'party' && mp.mapId === runtime.activeMapId);
+  const isPresenting = (entityType: CampaignEntityType, entityId: string) => runtime.presentedCard?.entityType === entityType && runtime.presentedCard?.entityId === entityId;
+  const togglePresentedCard = (entityType: CampaignEntityType, entityId: string) => {
+    store.updateRuntime(campaignId, (prev) => ({
+      ...prev,
+      presentedCard: prev.presentedCard?.entityType === entityType && prev.presentedCard?.entityId === entityId
+        ? null
+        : { entityType, entityId },
+    }));
+  };
 
   const entityLabel = (type: CampaignEntityType, id: string): string => {
     if (type === 'location') return data.locations.find((l) => l.id === id)?.title ?? 'Локация';
@@ -392,6 +401,18 @@ export function IsolatedCampaignMapWorkspace() {
         >
           ▶ Мастер открыл бой — нажмите, чтобы перейти на поле боя
         </button>
+      )}
+
+      {isPlayer && runtime.presentedCard && (
+        <CampaignEntityCard
+          campaignId={campaignId}
+          type={runtime.presentedCard.entityType}
+          id={runtime.presentedCard.entityId}
+          canEdit={false}
+          isPlayer
+          allowClose={false}
+          onClose={() => undefined}
+        />
       )}
 
       {/* Toolbar */}
@@ -586,6 +607,8 @@ export function IsolatedCampaignMapWorkspace() {
                       onEdit: !isPlayer ? () => setEditing(selected) : undefined,
                       onPlace: !isPlayer && !placement ? () => setPlacing({ entityType: selected.type, entityId: selected.id, label: entityLabel(selected.type, selected.id) }) : undefined,
                       placed: !!placement,
+                      onPresent: !isPlayer ? () => togglePresentedCard(selected.type, selected.id) : undefined,
+                      presenting: isPresenting(selected.type, selected.id),
                       onToggleReveal: !isPlayer ? () => store.toggleReveal(campaignId, selected.id) : undefined,
                       revealed: revealed.has(selected.id),
                       onDelete: !isPlayer ? () => { store.deleteEntity(campaignId, selected.type, selected.id); setSelected(null); } : undefined,

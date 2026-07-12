@@ -33,7 +33,7 @@ const LIBKIND_TO_ENTITY: Record<LibraryKind, CampaignEntityType> = {
  * campaign library pages.
  */
 export function CampaignEntityCard({
-  campaignId, type, id, onClose, canEdit, onPlaceOnMap, isPlayer = false,
+  campaignId, type, id, onClose, canEdit, onPlaceOnMap, isPlayer = false, allowClose = true,
 }: {
   campaignId: string;
   type: CampaignEntityType;
@@ -43,9 +43,12 @@ export function CampaignEntityCard({
   onPlaceOnMap?: (type: CampaignEntityType, id: string) => void;
   /** Player view: hide DM-only fields (DM notes, enemy tactics). */
   isPlayer?: boolean;
+  /** Presentation overlay in player view is controlled by the DM, not players. */
+  allowClose?: boolean;
 }) {
   const store = useUserCampaigns();
   const data = store.getData(campaignId);
+  const runtime = store.getRuntime(campaignId);
   const originKey = `${type}:${id}`;
   const [editingFor, setEditingFor] = useState<string | null>(null);
   const [stackState, setStackState] = useState<{ originKey: string; items: Array<{ type: CampaignEntityType; id: string }> } | null>(null);
@@ -55,11 +58,21 @@ export function CampaignEntityCard({
   );
   const current = stack[stack.length - 1] ?? { type, id };
   const currentKey = `${current.type}:${current.id}`;
+  const presented = runtime.presentedCard;
+  const presenting = presented?.entityType === current.type && presented?.entityId === current.id;
+  const clearPresentingCurrent = () => {
+    if (presenting) store.updateRuntime(campaignId, (prev) => ({ ...prev, presentedCard: null }));
+  };
   const editing = editingFor === currentKey && canEdit;
+  const goBack = () => {
+    setEditingFor(null);
+    setStackState({ originKey, items: stack.slice(0, -1) });
+  };
   const closeTop = () => {
+    if (!allowClose) return;
+    clearPresentingCurrent();
     if (stack.length > 1) {
-      setEditingFor(null);
-      setStackState({ originKey, items: stack.slice(0, -1) });
+      goBack();
     } else {
       onClose();
     }
@@ -98,7 +111,7 @@ export function CampaignEntityCard({
   const ro = !editing || !canEdit;
 
   return (
-    <div className="ucw-modal-overlay" onClick={closeTop}>
+    <div className={`ucw-modal-overlay${!allowClose ? ' presentation' : ''}`} onClick={allowClose ? closeTop : undefined}>
       <div className="ucw-modal" onClick={(e) => e.stopPropagation()}>
         <div className="ucw-modal-head">
           <div>
@@ -111,7 +124,13 @@ export function CampaignEntityCard({
               />
             )}
           </div>
-          <button className="ucw-modal-close" onClick={closeTop} aria-label={stack.length > 1 ? 'Закрыть верхнюю карточку' : 'Закрыть'}>✕</button>
+          {allowClose ? (
+            <button className="ucw-modal-close" onClick={closeTop} aria-label={stack.length > 1 ? 'Закрыть верхнюю карточку' : 'Закрыть'}>✕</button>
+          ) : stack.length > 1 ? (
+            <button className="atlas-btn ghost small" onClick={goBack}>← Назад</button>
+          ) : (
+            <span className="ucw-chip">Показывает ДМ</span>
+          )}
         </div>
 
         {!editing && detailVm ? (
@@ -122,6 +141,11 @@ export function CampaignEntityCard({
               onEdit: canEdit ? () => setEditingFor(currentKey) : undefined,
               onPlace: canEdit && onPlaceOnMap && !placement ? () => { onPlaceOnMap(current.type, current.id); onClose(); } : undefined,
               placed: !!placement,
+              onPresent: canEdit ? () => store.updateRuntime(campaignId, (prev) => ({
+                ...prev,
+                presentedCard: presenting ? null : { entityType: current.type, entityId: current.id },
+              })) : undefined,
+              presenting,
               onToggleReveal: canEdit ? () => store.toggleReveal(campaignId, current.id) : undefined,
               revealed,
               onDelete: canEdit ? () => { store.deleteEntity(campaignId, current.type, current.id); onClose(); } : undefined,

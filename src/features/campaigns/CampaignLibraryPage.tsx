@@ -41,6 +41,16 @@ export function CampaignLibraryPage() {
   const isEdit = mode === 'dmEdit';
   const isPlayer = mode === 'playerView';
   const canEdit = isEdit;
+  const isPresenting = (entityType: CampaignEntityType, entityId: string) => runtime?.presentedCard?.entityType === entityType && runtime?.presentedCard?.entityId === entityId;
+  const togglePresentedCard = (entityType: CampaignEntityType, entityId: string) => {
+    if (!campaignId) return;
+    store.updateRuntime(campaignId, (prev) => ({
+      ...prev,
+      presentedCard: prev.presentedCard?.entityType === entityType && prev.presentedCard?.entityId === entityId
+        ? null
+        : { entityType, entityId },
+    }));
+  };
 
   const q = query.trim().toLowerCase();
   const revealed = new Set(runtime?.revealedToPlayers ?? []);
@@ -143,6 +153,8 @@ export function CampaignLibraryPage() {
             onOpenWindow: activeId ? () => setEditOpen({ type, id: activeId }) : undefined,
             onEdit: !isPlayer && activeId ? () => setEditOpen({ type, id: activeId }) : undefined,
             onPlace: !isPlayer && activeId ? () => navigate(`/campaigns/${campaignId}/map?place=${type}:${activeId}`) : undefined,
+            onPresent: !isPlayer && activeId ? () => togglePresentedCard(type, activeId) : undefined,
+            presenting: activeId ? isPresenting(type, activeId) : false,
             onToggleReveal: !isPlayer && activeId ? () => store.toggleReveal(campaignId, activeId) : undefined,
             revealed: activeId ? revealed.has(activeId) : false,
             placed: activeId ? data.mapPlacements.some((mp) => mp.entityType === type && mp.entityId === activeId) : false,
