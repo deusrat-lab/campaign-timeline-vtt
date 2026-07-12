@@ -224,7 +224,7 @@ export function NavBar() {
           )}
         </div>
         <div className="navbar-right">
-          {!inUserCampaign && store.mode !== 'player-view' && !observerLocked && API_BASE_URL && <DmSyncIndicator />}
+          {((!inUserCampaign && store.mode !== 'player-view' && !observerLocked) || inUserCampaign) && API_BASE_URL && <DmSyncIndicator />}
           {!inUserCampaign && store.mode === 'dm-edit' && store.saveStatus !== 'idle' && (
             <span className={`save-status save-status-${store.saveStatus}`}>
               {store.saveStatus === 'saved' ? 'Сохранено' : 'Ошибка сохранения'}

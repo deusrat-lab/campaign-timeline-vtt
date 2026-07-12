@@ -45,10 +45,11 @@ export function mergeScenarioIntoData(data: UserCampaignData, scenario: Campaign
       if (!ex.imageId && sl.image) ex.imageId = mkImage(sl.title, sl.image);
       if (!ex.description && sl.description) ex.description = sl.description;
       if (!ex.dmNotes && sl.dmNotes) ex.dmNotes = sl.dmNotes;
+      if ((!ex.tags || ex.tags.length === 0) && sl.type) ex.tags = [sl.type];
       if (sl.key) keyToLocId[sl.key] = ex.id;
     } else {
       const id = uid('loc');
-      locations.push({ id, title: sl.title, description: sl.description, dmNotes: sl.dmNotes, imageId: mkImage(sl.title, sl.image) });
+      locations.push({ id, title: sl.title, description: sl.description, dmNotes: sl.dmNotes, imageId: mkImage(sl.title, sl.image), tags: sl.type ? [sl.type] : undefined });
       if (sl.key) keyToLocId[sl.key] = id;
       added.locations += 1;
     }
@@ -117,5 +118,39 @@ export function mergeScenarioIntoData(data: UserCampaignData, scenario: Campaign
     }
   }
 
-  return { data: { ...data, locations, npcs, enemies, factions, quests, images }, added, imagesAttached };
+  // ── Map placements + canonical route (match by entity id / route title) ──
+  const mapPlacements = [...data.mapPlacements];
+  const routePoints = scenario.locations
+    .map((sl) => {
+      const entityId = keyToLocId[sl.key];
+      if (!entityId || sl.x == null || sl.y == null) return null;
+      if (!mapPlacements.some((mp) => mp.mapId === scenario.baseMapId && mp.entityType === 'location' && mp.entityId === entityId)) {
+        mapPlacements.push({
+          id: uid('pin'),
+          mapId: scenario.baseMapId,
+          entityType: 'location',
+          entityId,
+          x: sl.x,
+          y: sl.y,
+          visibleToPlayers: false,
+        });
+      }
+      return { x: sl.x, y: sl.y };
+    })
+    .filter(Boolean) as { x: number; y: number }[];
+
+  const routes = [...data.routes];
+  if (routePoints.length > 1 && !routes.some((r) => r.mapId === scenario.baseMapId && norm(r.title) === norm('Маршрут: Цена имени'))) {
+    routes.push({
+      id: uid('route'),
+      title: 'Маршрут: Цена имени',
+      mapId: scenario.baseMapId,
+      points: routePoints,
+      type: 'road',
+      visibleToPlayers: false,
+      notes: 'Канонический маршрут ваншота от Соляных Гаваней через дома Кальдрана к Нижним Землям и возвращению.',
+    });
+  }
+
+  return { data: { ...data, locations, npcs, enemies, factions, quests, images, mapPlacements, routes }, added, imagesAttached };
 }

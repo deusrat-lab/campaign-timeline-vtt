@@ -15,6 +15,9 @@ export type EntityKind = 'location' | 'npc' | 'quest' | 'enemy' | 'faction' | 'p
 export interface EntityRelationLink {
   id: string;
   label: string;
+  subtitle?: string;
+  meta?: string;
+  imageUrl?: string;
   onOpen?: () => void;
 }
 

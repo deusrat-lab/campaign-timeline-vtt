@@ -123,7 +123,7 @@ export function CampaignLibraryPage() {
       ) : k === 'images' ? (
         <>
           {canEdit && <div className="atlas-toolbar"><ImageAdder campaignId={campaignId} /></div>}
-          <ImagesSection campaignId={campaignId} />
+          <ImagesSection campaignId={campaignId} canReveal={!isPlayer} isPlayer={isPlayer} />
         </>
       ) : (
         <RichEntityLibrary
@@ -178,18 +178,33 @@ function ImageAdder({ campaignId }: { campaignId: string }) {
   );
 }
 
-function ImagesSection({ campaignId }: { campaignId: string }) {
+function ImagesSection({ campaignId, canReveal, isPlayer }: { campaignId: string; canReveal: boolean; isPlayer: boolean }) {
   const store = useUserCampaigns();
   const data = store.getData(campaignId);
   if (!data) return null;
-  if (data.images.length === 0) return <p className="atlas-empty">Картинок пока нет.</p>;
+  const images = isPlayer ? data.images.filter((img) => img.playerSafe) : data.images;
+  if (images.length === 0) return <p className="atlas-empty">{isPlayer ? 'Открытых картинок пока нет.' : 'Картинок пока нет.'}</p>;
   return (
     <div className="ucw-cardgrid">
-      {data.images.map((img) => (
-        <a key={img.id} className="ucw-ecard" href={img.src} target="_blank" rel="noreferrer">
-          <img className="atlas-map-img" src={img.src} alt={img.title} style={{ maxHeight: 140, objectFit: 'cover' }} />
+      {images.map((img) => (
+        <div key={img.id} className="ucw-ecard" style={{ cursor: 'default' }}>
+          <a href={img.src} target="_blank" rel="noreferrer" title="Открыть изображение">
+            <img className="atlas-map-img" src={img.src} alt={img.title} style={{ maxHeight: 140, objectFit: 'contain', background: '#050403' }} />
+          </a>
           <h3>{img.title}</h3>
-        </a>
+          {canReveal && (
+            <button
+              className="atlas-btn ghost small"
+              style={{ alignSelf: 'flex-start', marginTop: 6 }}
+              onClick={() => store.updateData(campaignId, (prev) => ({
+                ...prev,
+                images: prev.images.map((item) => (item.id === img.id ? { ...item, playerSafe: !item.playerSafe } : item)),
+              }))}
+            >
+              {img.playerSafe ? '👁 Показано игрокам' : '🚫 Показать игрокам'}
+            </button>
+          )}
+        </div>
       ))}
     </div>
   );

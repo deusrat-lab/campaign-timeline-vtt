@@ -93,7 +93,18 @@ export function RichEntityDetail({ vm, actions, isPlayer = false }: { vm: Entity
             {sec.items.length === 0 ? <p className="shared-muted">—</p> : (
               <div className="shared-rel-list">
                 {sec.items.map((it) => (
-                  <button key={it.id} type="button" className="shared-rel-chip" onClick={it.onOpen} disabled={!it.onOpen}>{it.label}</button>
+                  <button key={it.id} type="button" className="shared-rel-chip" onClick={it.onOpen} disabled={!it.onOpen}>
+                    {it.imageUrl ? (
+                      <img className="shared-rel-thumb" src={it.imageUrl} alt="" />
+                    ) : (
+                      <EntityImage name={it.label} size={42} />
+                    )}
+                    <span className="shared-rel-main">
+                      <strong>{it.label}</strong>
+                      {it.subtitle && <span>{it.subtitle}</span>}
+                      {it.meta && <span>{it.meta}</span>}
+                    </span>
+                  </button>
                 ))}
               </div>
             )}

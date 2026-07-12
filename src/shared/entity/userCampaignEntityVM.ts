@@ -6,7 +6,7 @@
  * global/main-campaign data, so campaigns stay isolated.
  */
 import type { UserCampaignData } from '../../types/userCampaign';
-import type { EntityDetailVM, EntityListItemVM, EntityKind } from './types';
+import type { EntityDetailVM, EntityListItemVM, EntityKind, EntityRelationLink } from './types';
 
 export type LibraryKind = 'npc' | 'locations' | 'quests' | 'enemies' | 'players' | 'factions';
 
@@ -28,6 +28,18 @@ export interface VMOpts {
 
 function locName(data: UserCampaignData, id?: string): string | undefined {
   return id ? data.locations.find((l) => l.id === id)?.title : undefined;
+}
+
+function locRelation(data: UserCampaignData, o: VMOpts, id: string): EntityRelationLink | undefined {
+  const l = data.locations.find((x) => x.id === id);
+  if (!l) return undefined;
+  return {
+    id: l.id,
+    label: l.title,
+    subtitle: l.tags?.join(' · '),
+    imageUrl: o.imageUrl(l.imageId),
+    onOpen: () => o.onOpen('locations', l.id),
+  };
 }
 
 export function buildListItems(kind: LibraryKind, data: UserCampaignData, o: VMOpts): EntityListItemVM[] {
@@ -64,31 +76,86 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
         { key: 'images', label: 'Изображения', value: images.length },
       ],
       relations: [
-        { key: 'npc', label: 'NPC', items: npcs.map((n) => ({ id: n.id, label: n.name, onOpen: () => o.onOpen('npc', n.id) })) },
-        { key: 'quests', label: 'Квесты', items: quests.map((q) => ({ id: q.id, label: q.title, onOpen: () => o.onOpen('quests', q.id) })) },
-        { key: 'enemies', label: 'Враги', items: enemies.map((e) => ({ id: e.id, label: e.title, onOpen: () => o.onOpen('enemies', e.id) })) },
+        {
+          key: 'npc',
+          label: 'NPC',
+          items: npcs.map((n) => ({
+            id: n.id,
+            label: n.name,
+            subtitle: n.role,
+            imageUrl: o.imageUrl(n.imageId),
+            onOpen: () => o.onOpen('npc', n.id),
+          })),
+        },
+        {
+          key: 'quests',
+          label: 'Квесты',
+          items: quests.map((q) => ({
+            id: q.id,
+            label: q.title,
+            subtitle: q.status,
+            meta: locName(data, q.locationId),
+            onOpen: () => o.onOpen('quests', q.id),
+          })),
+        },
+        {
+          key: 'enemies',
+          label: 'Враги',
+          items: enemies.map((e) => ({
+            id: e.id,
+            label: e.title,
+            subtitle: [e.baseMonster, e.ac != null ? `AC ${e.ac}` : '', e.hp != null ? `HP ${e.hp}` : ''].filter(Boolean).join(' · '),
+            imageUrl: o.imageUrl(e.imageId),
+            onOpen: () => o.onOpen('enemies', e.id),
+          })),
+        },
       ],
     };
   }
   if (kind === 'npc') {
     const n = data.npcs.find((x) => x.id === id); if (!n) return null;
     const quests = data.quests.filter((q) => q.npcIds?.includes(n.id));
+    const location = n.locationId ? locRelation(data, o, n.locationId) : undefined;
     return {
       ...base(n.name), subtitle: n.role, imageUrl: o.imageUrl(n.imageId), description: n.description, dmNotes: n.dmNotes, tags: n.tags,
       fields: [{ label: 'Локация', value: locName(data, n.locationId) ?? '—' }],
       relations: [
-        { key: 'loc', label: 'Локация', items: n.locationId && locName(data, n.locationId) ? [{ id: n.locationId, label: locName(data, n.locationId)!, onOpen: () => o.onOpen('locations', n.locationId!) }] : [] },
-        { key: 'quests', label: 'Связанные квесты', items: quests.map((q) => ({ id: q.id, label: q.title, onOpen: () => o.onOpen('quests', q.id) })) },
+        { key: 'loc', label: 'Локация', items: location ? [location] : [] },
+        {
+          key: 'quests',
+          label: 'Связанные квесты',
+          items: quests.map((q) => ({
+            id: q.id,
+            label: q.title,
+            subtitle: q.status,
+            meta: locName(data, q.locationId),
+            onOpen: () => o.onOpen('quests', q.id),
+          })),
+        },
       ],
     };
   }
   if (kind === 'quests') {
     const q = data.quests.find((x) => x.id === id); if (!q) return null;
     const npcs = data.npcs.filter((n) => q.npcIds?.includes(n.id));
+    const location = q.locationId ? locRelation(data, o, q.locationId) : undefined;
     return {
       ...base(q.title), subtitle: q.status, description: q.description, dmNotes: q.dmNotes, tags: q.tags,
       fields: [{ label: 'Статус', value: q.status }, { label: 'Локация', value: locName(data, q.locationId) ?? '—' }],
-      relations: [{ key: 'npc', label: 'Участники (NPC)', items: npcs.map((n) => ({ id: n.id, label: n.name, onOpen: () => o.onOpen('npc', n.id) })) }],
+      relations: [
+        { key: 'loc', label: 'Локация', items: location ? [location] : [] },
+        {
+          key: 'npc',
+          label: 'Участники (NPC)',
+          items: npcs.map((n) => ({
+            id: n.id,
+            label: n.name,
+            subtitle: n.role,
+            imageUrl: o.imageUrl(n.imageId),
+            onOpen: () => o.onOpen('npc', n.id),
+          })),
+        },
+      ],
     };
   }
   if (kind === 'enemies') {
@@ -97,7 +164,17 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
     return {
       ...base(e.title), subtitle: e.baseMonster, imageUrl: o.imageUrl(e.imageId), description: e.description, dmNotes: e.tactics, tags: e.tags,
       fields: [{ label: 'AC', value: String(e.ac ?? '—') }, { label: 'HP', value: String(e.hp ?? '—') }],
-      relations: [{ key: 'locs', label: 'Локации', items: locs.map((l) => ({ id: l.id, label: l.title, onOpen: () => o.onOpen('locations', l.id) })) }],
+      relations: [{
+        key: 'locs',
+        label: 'Локации',
+        items: locs.map((l) => ({
+          id: l.id,
+          label: l.title,
+          subtitle: l.tags?.join(' · '),
+          imageUrl: o.imageUrl(l.imageId),
+          onOpen: () => o.onOpen('locations', l.id),
+        })),
+      }],
     };
   }
   if (kind === 'players') {

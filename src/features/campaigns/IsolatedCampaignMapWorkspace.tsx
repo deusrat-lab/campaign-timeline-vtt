@@ -47,8 +47,8 @@ export function IsolatedCampaignMapWorkspace() {
   // explicitly so the map viewport gets a real height.
   const [shellHeight, setShellHeight] = useState<number>();
 
-  const [zoom, setZoom] = useState(runtime?.mapViewState.zoom ?? 1);
-  const [pan, setPan] = useState({ x: runtime?.mapViewState.panX ?? 0, y: runtime?.mapViewState.panY ?? 0 });
+  const [zoom, setZoom] = useState(runtime?.mapViewState?.zoom ?? 1);
+  const [pan, setPan] = useState({ x: runtime?.mapViewState?.panX ?? 0, y: runtime?.mapViewState?.panY ?? 0 });
   const [panning, setPanning] = useState(false);
   const [placing, setPlacing] = useState<Placing>(null);
   const [placingParty, setPlacingParty] = useState(false);
@@ -305,7 +305,9 @@ export function IsolatedCampaignMapWorkspace() {
   };
 
   // ── data views (respect Player View) ────────────────────────────────
-  const visiblePlacements = data.mapPlacements.filter((mp) => mp.mapId === runtime.activeMapId && (!isPlayer || mp.visibleToPlayers));
+  const revealedEntityIds = new Set(runtime.revealedToPlayers ?? []);
+  const isPlacementPlayerVisible = (mp: { entityId: string; visibleToPlayers?: boolean }) => mp.visibleToPlayers || revealedEntityIds.has(mp.entityId);
+  const visiblePlacements = data.mapPlacements.filter((mp) => mp.mapId === runtime.activeMapId && (!isPlayer || isPlacementPlayerVisible(mp)));
   const visibleRoutes = data.routes.filter((r) => r.mapId === runtime.activeMapId && (!isPlayer || r.visibleToPlayers));
   const visibleZones = data.zones.filter((z) => z.mapId === runtime.activeMapId && (!isPlayer || z.visibleToPlayers));
   const hasParty = data.mapPlacements.some((mp) => mp.entityType === 'party' && mp.mapId === runtime.activeMapId);
@@ -520,7 +522,7 @@ export function IsolatedCampaignMapWorkspace() {
                     return (
                       <div
                         key={mp.id}
-                        className={`ucw-marker${isEdit ? ' edit' : ''}${isSel ? ' selected' : ''}${!mp.visibleToPlayers ? ' hidden-pin' : ''}`}
+                        className={`ucw-marker${isEdit ? ' edit' : ''}${isSel ? ' selected' : ''}${!isPlacementPlayerVisible(mp) ? ' hidden-pin' : ''}`}
                         style={{ left: `${mp.x}%`, top: `${mp.y}%` }}
                         onMouseDown={(e) => startMarkerDrag(e, mp.id)}
                         onClick={(e) => { e.stopPropagation(); setSelected({ type: mp.entityType, id: mp.entityId }); }}
