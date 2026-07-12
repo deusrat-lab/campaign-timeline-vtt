@@ -52,6 +52,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
     const l = data.locations.find((x) => x.id === id); if (!l) return null;
     const npcs = data.npcs.filter((n) => n.locationId === l.id);
     const quests = data.quests.filter((q) => q.locationId === l.id);
+    const enemies = data.enemies.filter((e) => e.locationIds?.includes(l.id));
     const images = data.images.filter((im) => im.id === l.imageId);
     return {
       ...base(l.title), subtitle: undefined, imageUrl: o.imageUrl(l.imageId), description: l.description,
@@ -59,11 +60,13 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
       counters: [
         { key: 'npc', label: 'NPC', value: npcs.length },
         { key: 'quests', label: 'Квесты', value: quests.length },
+        { key: 'enemies', label: 'Враги', value: enemies.length },
         { key: 'images', label: 'Изображения', value: images.length },
       ],
       relations: [
         { key: 'npc', label: 'NPC', items: npcs.map((n) => ({ id: n.id, label: n.name, onOpen: () => o.onOpen('npc', n.id) })) },
         { key: 'quests', label: 'Квесты', items: quests.map((q) => ({ id: q.id, label: q.title, onOpen: () => o.onOpen('quests', q.id) })) },
+        { key: 'enemies', label: 'Враги', items: enemies.map((e) => ({ id: e.id, label: e.title, onOpen: () => o.onOpen('enemies', e.id) })) },
       ],
     };
   }
@@ -90,9 +93,11 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
   }
   if (kind === 'enemies') {
     const e = data.enemies.find((x) => x.id === id); if (!e) return null;
+    const locs = (e.locationIds ?? []).map((lid) => data.locations.find((l) => l.id === lid)).filter(Boolean) as typeof data.locations;
     return {
       ...base(e.title), subtitle: e.baseMonster, imageUrl: o.imageUrl(e.imageId), description: e.description, dmNotes: e.tactics, tags: e.tags,
       fields: [{ label: 'AC', value: String(e.ac ?? '—') }, { label: 'HP', value: String(e.hp ?? '—') }],
+      relations: [{ key: 'locs', label: 'Локации', items: locs.map((l) => ({ id: l.id, label: l.title, onOpen: () => o.onOpen('locations', l.id) })) }],
     };
   }
   if (kind === 'players') {

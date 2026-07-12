@@ -69,7 +69,7 @@ export function WorldHomePage() {
               <p>{s.summary}</p>
               <div style={{ marginTop: 'auto' }}>
                 <button className="atlas-btn small" onClick={() => {
-                  const id = store.createCampaign({ title: s.title, type: s.type, baseMapId: s.baseMapId, regionIds: s.regionIds, seed: { locations: s.locations, npcs: s.npcs, enemies: s.enemies } });
+                  const id = store.createCampaign({ title: s.title, type: s.type, baseMapId: s.baseMapId, regionIds: s.regionIds, seed: { locations: s.locations, npcs: s.npcs, enemies: s.enemies, factions: s.factions } });
                   navigate(`/campaigns/${id}/map`);
                 }}>Создать этот ваншот</button>
               </div>

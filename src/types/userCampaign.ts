@@ -83,6 +83,8 @@ export interface CampaignEnemy {
   tactics?: string;
   imageId?: string;
   tags?: string[];
+  /** Locations where this enemy appears — powers location↔enemy relations. */
+  locationIds?: string[];
 }
 
 export interface CampaignImage {

@@ -56,9 +56,10 @@ function loadRegistry(): UserCampaignRegistryEntry[] {
 }
 
 export interface CampaignSeed {
-  locations?: Array<{ title: string; type?: string; description?: string; dmNotes?: string; image?: string }>;
-  npcs?: Array<{ name: string; role?: string; description?: string; dmNotes?: string; image?: string }>;
-  enemies?: Array<{ title: string; ac?: number; hp?: number; description?: string; dmNotes?: string }>;
+  locations?: Array<{ key?: string; title: string; type?: string; description?: string; dmNotes?: string; image?: string }>;
+  npcs?: Array<{ name: string; role?: string; description?: string; dmNotes?: string; image?: string; locationKey?: string }>;
+  enemies?: Array<{ title: string; ac?: number; hp?: number; description?: string; dmNotes?: string; image?: string; locationKeys?: string[] }>;
+  factions?: Array<{ name: string; role?: string; description?: string; image?: string }>;
 }
 
 function emptyData(campaignId: string, title: string, type: UserCampaignType, baseMapId: string, regionIds: string[], seed?: CampaignSeed): UserCampaignData {
@@ -69,7 +70,7 @@ function emptyData(campaignId: string, title: string, type: UserCampaignType, ba
   const locSrc = seed?.locations ?? preset?.locations ?? [];
   const npcSrc = seed?.npcs ?? preset?.npcs ?? [];
   const enemySrc = seed?.enemies ?? [];
-  const factionSrc = preset?.factions ?? [];
+  const factionSrc = seed?.factions ?? preset?.factions ?? [];
   // Seeded art (scenario portraits / location images) becomes CampaignImage
   // records referenced by imageId, so the cards show pictures.
   const images: CampaignImage[] = [];
@@ -79,9 +80,17 @@ function emptyData(campaignId: string, title: string, type: UserCampaignType, ba
     images.push({ id, title: imgTitle, src });
     return id;
   };
-  const locations: CampaignLocation[] = locSrc.map((l, i) => ({ id: rid('loc', i), title: l.title, description: l.description, dmNotes: (l as { dmNotes?: string }).dmNotes, imageId: mkImage(l.title, (l as { image?: string }).image) }));
-  const npcs: CampaignNpc[] = npcSrc.map((n, i) => ({ id: rid('npc', i), name: n.name, role: n.role, description: n.description, dmNotes: (n as { dmNotes?: string }).dmNotes, imageId: mkImage(n.name, (n as { image?: string }).image) }));
-  const enemies: CampaignEnemy[] = enemySrc.map((e, i) => ({ id: rid('emy', i), title: e.title, ac: e.ac, hp: e.hp, description: e.description, tactics: e.dmNotes }));
+  // Resolve scenario relation keys (location `key`) → generated location ids so
+  // NPCs and enemies cross-link to the right location cards.
+  const locKeyToId: Record<string, string> = {};
+  const locations: CampaignLocation[] = locSrc.map((l, i) => {
+    const id = rid('loc', i);
+    const key = (l as { key?: string }).key;
+    if (key) locKeyToId[key] = id;
+    return { id, title: l.title, description: l.description, dmNotes: (l as { dmNotes?: string }).dmNotes, imageId: mkImage(l.title, (l as { image?: string }).image) };
+  });
+  const npcs: CampaignNpc[] = npcSrc.map((n, i) => ({ id: rid('npc', i), name: n.name, role: n.role, description: n.description, dmNotes: (n as { dmNotes?: string }).dmNotes, imageId: mkImage(n.name, (n as { image?: string }).image), locationId: locKeyToId[(n as { locationKey?: string }).locationKey ?? ''] }));
+  const enemies: CampaignEnemy[] = enemySrc.map((e, i) => ({ id: rid('emy', i), title: e.title, ac: e.ac, hp: e.hp, description: e.description, tactics: e.dmNotes, imageId: mkImage(e.title, (e as { image?: string }).image), locationIds: ((e as { locationKeys?: string[] }).locationKeys ?? []).map((k) => locKeyToId[k]).filter(Boolean) }));
   const factions: CampaignFaction[] = factionSrc.map((f, i) => ({ id: rid('fac', i), name: f.name, role: f.role, description: f.description, attitude: 'neutral' as const }));
   return {
     campaignId, title, type, baseMapId,
