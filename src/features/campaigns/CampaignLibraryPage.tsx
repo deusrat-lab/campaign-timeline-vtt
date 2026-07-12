@@ -130,10 +130,7 @@ export function CampaignLibraryPage() {
           title={KIND_LABEL[k]}
           items={items}
           selectedId={activeId}
-          onSelect={(id) => {
-            setSelectedId(id);
-            if (type) setEditOpen({ type, id });
-          }}
+          onSelect={setSelectedId}
           search={query}
           onSearch={setQuery}
           filters={filters}
@@ -143,6 +140,7 @@ export function CampaignLibraryPage() {
           isPlayer={isPlayer}
           emptyLabel={!isPlayer ? `Пусто. Нажмите «+ ${CREATE_LABEL[k as LibraryKind]}».` : 'Пусто.'}
           actions={type ? {
+            onOpenWindow: activeId ? () => setEditOpen({ type, id: activeId }) : undefined,
             onEdit: !isPlayer && activeId ? () => setEditOpen({ type, id: activeId }) : undefined,
             onPlace: !isPlayer && activeId ? () => navigate(`/campaigns/${campaignId}/map?place=${type}:${activeId}`) : undefined,
             onToggleReveal: !isPlayer && activeId ? () => store.toggleReveal(campaignId, activeId) : undefined,
@@ -161,7 +159,7 @@ export function CampaignLibraryPage() {
           canEdit={!isPlayer}
           isPlayer={isPlayer}
           onClose={() => setEditOpen(null)}
-          onPlaceOnMap={() => navigate(`/campaigns/${campaignId}/map?place=${editOpen.type}:${editOpen.id}`)}
+          onPlaceOnMap={(entityType, entityId) => navigate(`/campaigns/${campaignId}/map?place=${entityType}:${entityId}`)}
         />
       )}
     </div>

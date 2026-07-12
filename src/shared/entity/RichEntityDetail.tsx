@@ -24,8 +24,11 @@ export function RichEntityDetail({ vm, actions, isPlayer = false }: { vm: Entity
         <div className="shared-tags">{vm.tags.map((t) => <span key={t} className="shared-tag">{t}</span>)}</div>
       )}
 
-      {!isPlayer && actions && (
+      {actions && (actions.onOpenWindow || (!isPlayer && (actions.onEdit || actions.onPlace || actions.onToggleReveal || actions.onDelete))) && (
         <div className="shared-detail-actions">
+          {actions.onOpenWindow && <button className="atlas-btn ghost small" onClick={actions.onOpenWindow}>Открыть в окне</button>}
+          {!isPlayer && (
+            <>
           {actions.onEdit && <button className="atlas-btn small" onClick={actions.onEdit}>Редактировать</button>}
           {actions.onPlace && !actions.placed && <button className="atlas-btn ghost small" onClick={actions.onPlace}>Разместить на карте</button>}
           {actions.onToggleReveal && (
@@ -34,6 +37,8 @@ export function RichEntityDetail({ vm, actions, isPlayer = false }: { vm: Entity
             </button>
           )}
           {actions.onDelete && <button className="atlas-btn danger small" onClick={actions.onDelete}>Удалить</button>}
+            </>
+          )}
         </div>
       )}
 

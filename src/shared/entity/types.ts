@@ -67,6 +67,7 @@ export interface EntityListItemVM {
 
 /** Actions available on a selected entity (all optional; hidden when absent). */
 export interface EntityActionsVM {
+  onOpenWindow?: () => void;
   onEdit?: () => void;
   onPlace?: () => void;      // place on map
   onToggleReveal?: () => void;

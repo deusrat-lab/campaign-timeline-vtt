@@ -580,6 +580,7 @@ export function IsolatedCampaignMapWorkspace() {
                     vm={vm}
                     isPlayer={isPlayer}
                     actions={{
+                      onOpenWindow: () => setEditing(selected),
                       onEdit: !isPlayer ? () => setEditing(selected) : undefined,
                       onPlace: !isPlayer && !placement ? () => setPlacing({ entityType: selected.type, entityId: selected.id, label: entityLabel(selected.type, selected.id) }) : undefined,
                       placed: !!placement,
@@ -606,7 +607,7 @@ export function IsolatedCampaignMapWorkspace() {
           canEdit={!isPlayer}
           isPlayer={isPlayer}
           onClose={() => setEditing(null)}
-          onPlaceOnMap={() => setPlacing({ entityType: editing.type, entityId: editing.id, label: entityLabel(editing.type, editing.id) })}
+          onPlaceOnMap={(entityType, entityId) => setPlacing({ entityType, entityId, label: entityLabel(entityType, entityId) })}
         />
       )}
     </div>

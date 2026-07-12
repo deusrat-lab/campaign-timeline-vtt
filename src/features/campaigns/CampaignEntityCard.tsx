@@ -1,9 +1,29 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useUserCampaigns } from '../../state/userCampaignStore';
 import type { CampaignEntityType } from '../../types/userCampaign';
+import { RichEntityDetail } from '../../shared/entity/RichEntityDetail';
+import { buildDetail, type LibraryKind } from '../../shared/entity/userCampaignEntityVM';
 
 const TYPE_LABEL: Record<string, string> = {
   location: 'Локация', npc: 'NPC', quest: 'Квест', enemy: 'Враг', image: 'Картинка', party: 'Игрок', faction: 'Фракция',
+};
+
+const ENTITY_TO_LIBKIND: Partial<Record<CampaignEntityType, LibraryKind>> = {
+  location: 'locations',
+  npc: 'npc',
+  quest: 'quests',
+  enemy: 'enemies',
+  party: 'players',
+  faction: 'factions',
+};
+
+const LIBKIND_TO_ENTITY: Record<LibraryKind, CampaignEntityType> = {
+  locations: 'location',
+  npc: 'npc',
+  quests: 'quest',
+  enemies: 'enemy',
+  players: 'party',
+  factions: 'faction',
 };
 
 /**
@@ -20,28 +40,48 @@ export function CampaignEntityCard({
   id: string;
   onClose: () => void;
   canEdit: boolean;
-  onPlaceOnMap?: () => void;
+  onPlaceOnMap?: (type: CampaignEntityType, id: string) => void;
   /** Player view: hide DM-only fields (DM notes, enemy tactics). */
   isPlayer?: boolean;
 }) {
   const store = useUserCampaigns();
   const data = store.getData(campaignId);
-  const [editing, setEditing] = useState(false);
+  const originKey = `${type}:${id}`;
+  const [editingFor, setEditingFor] = useState<string | null>(null);
+  const [linkedCurrent, setLinkedCurrent] = useState<{ originKey: string; type: CampaignEntityType; id: string } | null>(null);
+  const current = linkedCurrent?.originKey === originKey ? linkedCurrent : { type, id };
+  const currentKey = `${current.type}:${current.id}`;
+  const editing = editingFor === currentKey && canEdit;
+
+  const currentKind = ENTITY_TO_LIBKIND[current.type];
+  const detailVm = useMemo(() => (data && currentKind) ? buildDetail(currentKind, current.id, data, {
+    imageUrl: (imageId?: string) => (imageId ? data.images.find((im) => im.id === imageId)?.src : undefined),
+    onOpen: (kind, nextId) => {
+      setEditingFor(null);
+      setLinkedCurrent({ originKey, type: LIBKIND_TO_ENTITY[kind], id: nextId });
+    },
+    isPlaced: (entityType, entityId) => data.mapPlacements.some((mp) => mp.entityType === entityType && mp.entityId === entityId),
+    isRevealed: (entityId) => store.isRevealed(campaignId, entityId),
+    match: () => true,
+    isPlayer,
+  }) : null, [campaignId, current.id, currentKind, data, isPlayer, originKey, store]);
+
   if (!data) return null;
 
-  const placement = data.mapPlacements.find((mp) => mp.entityType === type && mp.entityId === id);
-  const upd = (patch: Record<string, unknown>) => store.updateEntity(campaignId, type, id, patch);
+  const placement = data.mapPlacements.find((mp) => mp.entityType === current.type && mp.entityId === current.id);
+  const revealed = store.isRevealed(campaignId, current.id);
+  const upd = (patch: Record<string, unknown>) => store.updateEntity(campaignId, current.type, current.id, patch);
 
-  const location = type === 'location' ? data.locations.find((l) => l.id === id) : undefined;
-  const npc = type === 'npc' ? data.npcs.find((n) => n.id === id) : undefined;
-  const quest = type === 'quest' ? data.quests.find((q) => q.id === id) : undefined;
-  const enemy = type === 'enemy' ? data.enemies.find((e) => e.id === id) : undefined;
-  const player = type === 'party' ? (data.party ?? []).find((p) => p.id === id) : undefined;
-  const faction = type === 'faction' ? (data.factions ?? []).find((f) => f.id === id) : undefined;
+  const location = current.type === 'location' ? data.locations.find((l) => l.id === current.id) : undefined;
+  const npc = current.type === 'npc' ? data.npcs.find((n) => n.id === current.id) : undefined;
+  const quest = current.type === 'quest' ? data.quests.find((q) => q.id === current.id) : undefined;
+  const enemy = current.type === 'enemy' ? data.enemies.find((e) => e.id === current.id) : undefined;
+  const player = current.type === 'party' ? (data.party ?? []).find((p) => p.id === current.id) : undefined;
+  const faction = current.type === 'faction' ? (data.factions ?? []).find((f) => f.id === current.id) : undefined;
   const entity = location ?? npc ?? quest ?? enemy ?? player ?? faction;
   if (!entity) { onClose(); return null; }
 
-  const nameField = type === 'npc' || type === 'party' || type === 'faction';
+  const nameField = current.type === 'npc' || current.type === 'party' || current.type === 'faction';
   const title = location?.title ?? npc?.name ?? quest?.title ?? enemy?.title ?? player?.name ?? faction?.name ?? '';
   const ro = !editing || !canEdit;
 
@@ -50,7 +90,7 @@ export function CampaignEntityCard({
       <div className="ucw-modal" onClick={(e) => e.stopPropagation()}>
         <div className="ucw-modal-head">
           <div>
-            <div className="ucw-modal-type">{TYPE_LABEL[type]}{placement ? ' · на карте' : ''}</div>
+            <div className="ucw-modal-type">{TYPE_LABEL[current.type]}{placement ? ' · на карте' : ''}</div>
             {ro ? <h2>{title}</h2> : (
               <input
                 className="ucw-search" style={{ fontSize: '1.2rem', minWidth: 260 }}
@@ -62,6 +102,20 @@ export function CampaignEntityCard({
           <button className="ucw-modal-close" onClick={onClose} aria-label="Закрыть">✕</button>
         </div>
 
+        {!editing && detailVm ? (
+          <RichEntityDetail
+            vm={detailVm}
+            isPlayer={isPlayer}
+            actions={{
+              onEdit: canEdit ? () => setEditingFor(currentKey) : undefined,
+              onPlace: canEdit && onPlaceOnMap && !placement ? () => { onPlaceOnMap(current.type, current.id); onClose(); } : undefined,
+              placed: !!placement,
+              onToggleReveal: canEdit ? () => store.toggleReveal(campaignId, current.id) : undefined,
+              revealed,
+              onDelete: canEdit ? () => { store.deleteEntity(campaignId, current.type, current.id); onClose(); } : undefined,
+            }}
+          />
+        ) : (
         <div className="ucw-card" style={{ background: 'transparent', border: 'none', padding: 0 }}>
           {npc && (
             <>
@@ -143,19 +197,20 @@ export function CampaignEntityCard({
             </>
           )}
         </div>
+        )}
 
-        {canEdit && (
+        {canEdit && editing && (
           <div className="ucw-card-actions">
-            <button className="atlas-btn small" onClick={() => setEditing((v) => !v)}>{editing ? 'Готово' : 'Редактировать'}</button>
+            <button className="atlas-btn small" onClick={() => setEditingFor(editing ? null : currentKey)}>{editing ? 'Готово' : 'Редактировать'}</button>
             <button
               className="atlas-btn ghost small"
-              title={store.isRevealed(campaignId, id) ? 'Игроки видят эту карточку в библиотеке' : 'Скрыто от игроков'}
-              onClick={() => store.toggleReveal(campaignId, id)}
+              title={revealed ? 'Игроки видят эту карточку в библиотеке' : 'Скрыто от игроков'}
+              onClick={() => store.toggleReveal(campaignId, current.id)}
             >
-              {store.isRevealed(campaignId, id) ? '👁 Показано игрокам' : '🚫 Показать игрокам'}
+              {revealed ? '👁 Показано игрокам' : '🚫 Показать игрокам'}
             </button>
             {onPlaceOnMap && !placement && (
-              <button className="atlas-btn ghost small" onClick={() => { onPlaceOnMap(); onClose(); }}>Поставить на карту</button>
+              <button className="atlas-btn ghost small" onClick={() => { onPlaceOnMap(current.type, current.id); onClose(); }}>Поставить на карту</button>
             )}
             {placement && (
               <>
@@ -165,7 +220,7 @@ export function CampaignEntityCard({
                 <button className="atlas-btn ghost small" onClick={() => store.removePlacement(campaignId, placement.id)}>Снять с карты</button>
               </>
             )}
-            <button className="atlas-btn danger small" onClick={() => { store.deleteEntity(campaignId, type, id); onClose(); }}>Удалить</button>
+            <button className="atlas-btn danger small" onClick={() => { store.deleteEntity(campaignId, current.type, current.id); onClose(); }}>Удалить</button>
           </div>
         )}
       </div>
