@@ -49,7 +49,7 @@ export function buildListItems(kind: LibraryKind, data: UserCampaignData, o: VMO
   switch (kind) {
     case 'locations': return data.locations.filter((l) => o.match(l.title)).map((l) => wrap(l.id, l.title, l.tags?.join(' · '), l.imageId));
     case 'npc': return data.npcs.filter((n) => o.match(n.name)).map((n) => wrap(n.id, n.name, [n.role, locName(data, n.locationId)].filter(Boolean).join(' · '), n.imageId));
-    case 'quests': return data.quests.filter((q) => o.match(q.title) && (!o.isPlayer || q.status !== 'hidden')).map((q) => wrap(q.id, q.title, q.status));
+    case 'quests': return data.quests.filter((q) => o.match(q.title) && (!o.isPlayer || q.status !== 'hidden')).map((q) => wrap(q.id, q.title, q.status, q.imageId));
     case 'enemies': return data.enemies.filter((e) => o.match(e.title)).map((e) => wrap(e.id, e.title, e.hp ? `HP ${e.hp}` : e.baseMonster, e.imageId));
     case 'players': return (data.party ?? []).filter((p) => o.match(p.name)).map((p) => wrap(p.id, p.name, [p.class, p.level ? `ур. ${p.level}` : ''].filter(Boolean).join(' · ')));
     case 'factions': return (data.factions ?? []).filter((f) => o.match(f.name)).map((f) => wrap(f.id, f.name, [f.role, f.attitude].filter(Boolean).join(' · '), f.imageId));
@@ -95,6 +95,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
             label: q.title,
             subtitle: q.status,
             meta: locName(data, q.locationId),
+            imageUrl: o.imageUrl(q.imageId),
             onOpen: () => o.onOpen('quests', q.id),
           })),
         },
@@ -129,6 +130,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
             label: q.title,
             subtitle: q.status,
             meta: locName(data, q.locationId),
+            imageUrl: o.imageUrl(q.imageId),
             onOpen: () => o.onOpen('quests', q.id),
           })),
         },
@@ -141,6 +143,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
     const location = q.locationId ? locRelation(data, o, q.locationId) : undefined;
     return {
       ...base(q.title), subtitle: q.status, description: q.description, dmNotes: q.dmNotes, tags: q.tags,
+      imageUrl: o.imageUrl(q.imageId),
       fields: [{ label: 'Статус', value: q.status }, { label: 'Локация', value: locName(data, q.locationId) ?? '—' }],
       relations: [
         { key: 'loc', label: 'Локация', items: location ? [location] : [] },

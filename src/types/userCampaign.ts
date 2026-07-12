@@ -71,6 +71,7 @@ export interface CampaignQuest {
   description?: string;
   dmNotes?: string;
   playerSafeDescription?: string;
+  imageId?: string;
   tags?: string[];
 }
 

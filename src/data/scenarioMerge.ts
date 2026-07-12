@@ -108,14 +108,21 @@ export function mergeScenarioIntoData(data: UserCampaignData, scenario: Campaign
   const quests = [...data.quests];
   for (const sq of scenario.quests) {
     const locId = sq.locationKey ? keyToLocId[sq.locationKey] : undefined;
-    const ex = quests.find((q) => norm(q.title) === norm(sq.title));
+    const legacyTitles = sq.legacyTitles ?? [];
+    const ex = quests.find((q) => norm(q.title) === norm(sq.title) || legacyTitles.some((t) => norm(q.title) === norm(t)));
     if (ex) {
+      if (norm(ex.title) !== norm(sq.title)) ex.title = sq.title;
       if (!ex.locationId && locId) ex.locationId = locId;
       if (!ex.description && sq.description) ex.description = sq.description;
       if (!ex.dmNotes && sq.dmNotes) ex.dmNotes = sq.dmNotes;
+      if (!ex.imageId && sq.image) ex.imageId = mkImage(sq.title, sq.image);
     } else {
-      quests.push({ id: uid('qst'), title: sq.title, status: (sq.status as (typeof quests)[number]['status']) ?? 'notStarted', description: sq.description, dmNotes: sq.dmNotes, locationId: locId });
+      quests.push({ id: uid('qst'), title: sq.title, status: (sq.status as (typeof quests)[number]['status']) ?? 'notStarted', description: sq.description, dmNotes: sq.dmNotes, locationId: locId, imageId: mkImage(sq.title, sq.image) });
     }
+  }
+
+  for (const simg of scenario.images ?? []) {
+    mkImage(simg.title, simg.src);
   }
 
   // ── Map placements + canonical route (match by entity id / route title) ──
