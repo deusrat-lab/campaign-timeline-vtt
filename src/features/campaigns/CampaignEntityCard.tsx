@@ -48,23 +48,35 @@ export function CampaignEntityCard({
   const data = store.getData(campaignId);
   const originKey = `${type}:${id}`;
   const [editingFor, setEditingFor] = useState<string | null>(null);
-  const [linkedCurrent, setLinkedCurrent] = useState<{ originKey: string; type: CampaignEntityType; id: string } | null>(null);
-  const current = linkedCurrent?.originKey === originKey ? linkedCurrent : { type, id };
+  const [stackState, setStackState] = useState<{ originKey: string; items: Array<{ type: CampaignEntityType; id: string }> } | null>(null);
+  const stack = useMemo(
+    () => (stackState?.originKey === originKey ? stackState.items : [{ type, id }]),
+    [id, originKey, stackState, type],
+  );
+  const current = stack[stack.length - 1] ?? { type, id };
   const currentKey = `${current.type}:${current.id}`;
   const editing = editingFor === currentKey && canEdit;
+  const closeTop = () => {
+    if (stack.length > 1) {
+      setEditingFor(null);
+      setStackState({ originKey, items: stack.slice(0, -1) });
+    } else {
+      onClose();
+    }
+  };
 
   const currentKind = ENTITY_TO_LIBKIND[current.type];
   const detailVm = useMemo(() => (data && currentKind) ? buildDetail(currentKind, current.id, data, {
     imageUrl: (imageId?: string) => (imageId ? data.images.find((im) => im.id === imageId)?.src : undefined),
     onOpen: (kind, nextId) => {
       setEditingFor(null);
-      setLinkedCurrent({ originKey, type: LIBKIND_TO_ENTITY[kind], id: nextId });
+      setStackState({ originKey, items: [...stack, { type: LIBKIND_TO_ENTITY[kind], id: nextId }] });
     },
     isPlaced: (entityType, entityId) => data.mapPlacements.some((mp) => mp.entityType === entityType && mp.entityId === entityId),
     isRevealed: (entityId) => store.isRevealed(campaignId, entityId),
     match: () => true,
     isPlayer,
-  }) : null, [campaignId, current.id, currentKind, data, isPlayer, originKey, store]);
+  }) : null, [campaignId, current.id, currentKind, data, isPlayer, originKey, stack, store]);
 
   if (!data) return null;
 
@@ -79,14 +91,14 @@ export function CampaignEntityCard({
   const player = current.type === 'party' ? (data.party ?? []).find((p) => p.id === current.id) : undefined;
   const faction = current.type === 'faction' ? (data.factions ?? []).find((f) => f.id === current.id) : undefined;
   const entity = location ?? npc ?? quest ?? enemy ?? player ?? faction;
-  if (!entity) { onClose(); return null; }
+  if (!entity) return null;
 
   const nameField = current.type === 'npc' || current.type === 'party' || current.type === 'faction';
   const title = location?.title ?? npc?.name ?? quest?.title ?? enemy?.title ?? player?.name ?? faction?.name ?? '';
   const ro = !editing || !canEdit;
 
   return (
-    <div className="ucw-modal-overlay" onClick={onClose}>
+    <div className="ucw-modal-overlay" onClick={closeTop}>
       <div className="ucw-modal" onClick={(e) => e.stopPropagation()}>
         <div className="ucw-modal-head">
           <div>
@@ -99,7 +111,7 @@ export function CampaignEntityCard({
               />
             )}
           </div>
-          <button className="ucw-modal-close" onClick={onClose} aria-label="Закрыть">✕</button>
+          <button className="ucw-modal-close" onClick={closeTop} aria-label={stack.length > 1 ? 'Закрыть верхнюю карточку' : 'Закрыть'}>✕</button>
         </div>
 
         {!editing && detailVm ? (

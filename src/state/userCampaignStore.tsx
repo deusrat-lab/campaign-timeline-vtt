@@ -297,27 +297,23 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const patchData = useCallback((id: string, updater: (prev: UserCampaignData) => UserCampaignData) => {
-    setDataCache((prev) => {
-      const current = prev[id] ?? readJson<UserCampaignData>(dataKey(id));
-      if (!current) return prev;
-      const next = updater(current);
-      writeJson(dataKey(id), next);
-      return { ...prev, [id]: next };
-    });
+    const current = dataCache[id] ?? readJson<UserCampaignData>(dataKey(id));
+    if (!current) return;
+    const next = updater(current);
+    writeJson(dataKey(id), next);
+    setDataCache((prev) => ({ ...prev, [id]: next }));
     touchRegistry(id);
     pushBlob(id);
-  }, [touchRegistry, pushBlob]);
+  }, [dataCache, touchRegistry, pushBlob]);
 
   const patchRuntime = useCallback((id: string, updater: (prev: UserCampaignRuntime) => UserCampaignRuntime) => {
-    setRuntimeCache((prev) => {
-      const entry = registry.find((r) => r.campaignId === id);
-      const current = prev[id] ?? readJson<UserCampaignRuntime>(runtimeKey(id)) ?? emptyRuntime(id, entry?.baseMapId ?? '');
-      const next = updater(current);
-      writeJson(runtimeKey(id), next);
-      return { ...prev, [id]: next };
-    });
+    const entry = registry.find((r) => r.campaignId === id);
+    const current = runtimeCache[id] ?? readJson<UserCampaignRuntime>(runtimeKey(id)) ?? emptyRuntime(id, entry?.baseMapId ?? '');
+    const next = updater(current);
+    writeJson(runtimeKey(id), next);
+    setRuntimeCache((prev) => ({ ...prev, [id]: next }));
     pushBlob(id);
-  }, [registry, pushBlob]);
+  }, [registry, runtimeCache, pushBlob]);
 
   const value = useMemo<UserCampaignValue>(() => ({
     registry,
@@ -363,7 +359,17 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     setSelected: (id, entityId, entityType) => patchRuntime(id, (prev) => ({ ...prev, selectedEntityId: entityId, selectedEntityType: entityType })),
     toggleReveal: (id, entityId) => patchRuntime(id, (prev) => {
       const set = new Set(prev.revealedToPlayers ?? []);
-      if (set.has(entityId)) set.delete(entityId); else set.add(entityId);
+      const reveal = !set.has(entityId);
+      if (reveal) set.add(entityId); else set.delete(entityId);
+      const current = readJson<UserCampaignData>(dataKey(id));
+      if (current?.mapPlacements.some((mp) => mp.entityId === entityId)) {
+        const nextData = {
+          ...current,
+          mapPlacements: current.mapPlacements.map((mp) => (mp.entityId === entityId ? { ...mp, visibleToPlayers: reveal } : mp)),
+        };
+        writeJson(dataKey(id), nextData);
+        setDataCache((prevData) => ({ ...prevData, [id]: nextData }));
+      }
       return { ...prev, revealedToPlayers: [...set] };
     }),
     isRevealed: (id, entityId) => (readRuntime(id).revealedToPlayers ?? []).includes(entityId),

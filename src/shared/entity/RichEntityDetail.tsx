@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { ImageLightbox } from '../../features/embedded-dm-companion/ImageLightbox';
 import { EntityImage } from './EntityImage';
 import type { EntityDetailVM, EntityActionsVM } from './types';
 
@@ -8,9 +10,22 @@ import type { EntityDetailVM, EntityActionsVM } from './types';
  * callbacks. Player mode hides DM-only content (dmNotes) and edit/place/delete.
  */
 export function RichEntityDetail({ vm, actions, isPlayer = false }: { vm: EntityDetailVM; actions?: EntityActionsVM; isPlayer?: boolean }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   return (
     <div className="shared-detail">
-      {vm.imageUrl && <img className="shared-detail-hero" src={vm.imageUrl} alt={vm.title} />}
+      {vm.imageUrl && (
+        <>
+          <button type="button" className="shared-detail-hero-button" onClick={() => setLightboxOpen(true)} aria-label={`Открыть изображение: ${vm.title}`}>
+            <img className="shared-detail-hero" src={vm.imageUrl} alt={vm.title} />
+          </button>
+          {lightboxOpen && (
+            <ImageLightbox
+              image={{ src: vm.imageUrl, title: vm.title }}
+              onClose={() => setLightboxOpen(false)}
+            />
+          )}
+        </>
+      )}
       <div className="shared-detail-head">
         {!vm.imageUrl && <EntityImage name={vm.title} size={52} />}
         <div style={{ minWidth: 0 }}>
