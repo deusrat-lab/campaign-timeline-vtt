@@ -111,6 +111,15 @@ function emptyRuntime(campaignId: string, baseMapId: string): UserCampaignRuntim
   };
 }
 
+function upgradeFromScenarioIfNeeded(data: UserCampaignData): UserCampaignData {
+  const scenario = scenarioForCampaign(data);
+  if (!scenario) return data;
+  const before = JSON.stringify(data);
+  const clone = JSON.parse(before) as UserCampaignData;
+  const result = mergeScenarioIntoData(clone, scenario, (p) => uid(p));
+  return JSON.stringify(result.data) === before ? data : result.data;
+}
+
 interface UserCampaignValue {
   registry: UserCampaignRegistryEntry[];
   createCampaign: (input: { title: string; type: UserCampaignType; baseMapId: string; regionIds: string[]; seed?: CampaignSeed }) => string;
@@ -236,7 +245,16 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
   }, [upsertRegistryFrom]);
 
   const readData = useCallback((id: string): UserCampaignData | null => {
-    const local = dataCache[id] ?? readJson<UserCampaignData>(dataKey(id));
+    const localRaw = dataCache[id] ?? readJson<UserCampaignData>(dataKey(id));
+    const local = localRaw ? upgradeFromScenarioIfNeeded(localRaw) : null;
+    if (localRaw && local && local !== localRaw) {
+      const upgradedLocal = local;
+      writeJson(dataKey(id), upgradedLocal);
+      setTimeout(() => {
+        setDataCache((p) => ({ ...p, [id]: upgradedLocal }));
+        pushBlob(id);
+      }, 0);
+    }
     // Player / fresh browser with no local copy: pull it from the server once,
     // then let the resulting setState re-render. (Async — never mutates state
     // synchronously during render.)
@@ -244,23 +262,25 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
       fetchedRef.current.add(id);
       fetchCampaign(id).then((blob) => {
         if (!blob?.data) return;
-        writeJson(dataKey(id), blob.data);
-        setDataCache((p) => ({ ...p, [id]: blob.data }));
+        const upgradedData = upgradeFromScenarioIfNeeded(blob.data);
+        writeJson(dataKey(id), upgradedData);
+        setDataCache((p) => ({ ...p, [id]: upgradedData }));
         if (blob.runtime) {
           writeJson(runtimeKey(id), blob.runtime);
           setRuntimeCache((p) => ({ ...p, [id]: blob.runtime! }));
         }
+        if (upgradedData !== blob.data) pushBlob(id);
         setRegistry((prev) => {
           if (prev.some((r) => r.campaignId === id)) return prev;
           const now = new Date().toISOString();
-          const next = [...prev, { campaignId: id, title: blob.data.title, type: blob.data.type, baseMapId: blob.data.baseMapId, regionIds: blob.data.regionIds, createdAt: now, updatedAt: now }];
+          const next = [...prev, { campaignId: id, title: upgradedData.title, type: upgradedData.type, baseMapId: upgradedData.baseMapId, regionIds: upgradedData.regionIds, createdAt: now, updatedAt: now }];
           writeJson(REGISTRY_KEY, next);
           return next;
         });
       });
     }
     return local;
-  }, [dataCache]);
+  }, [dataCache, pushBlob]);
 
   const readRuntime = useCallback((id: string): UserCampaignRuntime => {
     const entry = registry.find((r) => r.campaignId === id);

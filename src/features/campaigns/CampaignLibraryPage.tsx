@@ -130,7 +130,10 @@ export function CampaignLibraryPage() {
           title={KIND_LABEL[k]}
           items={items}
           selectedId={activeId}
-          onSelect={setSelectedId}
+          onSelect={(id) => {
+            setSelectedId(id);
+            if (type) setEditOpen({ type, id });
+          }}
           search={query}
           onSearch={setQuery}
           filters={filters}
