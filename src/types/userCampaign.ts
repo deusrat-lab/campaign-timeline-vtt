@@ -205,6 +205,7 @@ export interface CampaignBattleBoard {
   variant?: string; // 'day' | 'evening' | 'night' | 'default'
   tokens: CampaignBattleToken[];
   round?: number;
+  currentTurnTokenId?: string;
   view?: { zoom: number; panX: number; panY: number };
   showGrid?: boolean;
   columns?: number;

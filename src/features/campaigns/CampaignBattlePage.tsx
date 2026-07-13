@@ -58,9 +58,7 @@ export function CampaignBattlePage() {
   const [terrainMode, setTerrainMode] = useState<'off' | 'blocked' | 'difficult' | 'erase'>('off');
   const [hoverCell, setHoverCell] = useState<{ row: number; col: number } | null>(null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
-  // Live distance readout while a token is dragged (D&D 5e: 1 cell = 5 ft,
-  // diagonal counts as one — Chebyshev distance). Positioned at the pointer.
-  const [measure, setMeasure] = useState<{ cells: number; feet: number; sx: number; sy: number; ex: number; ey: number } | null>(null);
+  const [postMovePrompt, setPostMovePrompt] = useState<{ id: string; name: string } | null>(null);
   // Active touch/mouse pointers (id → viewport-local point) for pinch-zoom.
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinchRef = useRef<{ dist: number; zoom: number; midWorldX: number; midWorldY: number } | null>(null);
@@ -329,41 +327,27 @@ export function CampaignBattlePage() {
         maxHp: placing.hp,
         speedFeet: DEFAULT_SPEED_FEET,
       };
-      patchBoard((b) => ({ ...b, tokens: [...b.tokens, tok] }));
+      patchBoard((b) => ({ ...b, tokens: [...b.tokens, tok], currentTurnTokenId: b.currentTurnTokenId ?? tok.id }));
+      setSelected(tok.id);
       setPlacing(null);
-    } else if (!d.moved && !placing && selTok && route?.status === 'valid' && !isPlayer) {
+    } else if (!d.moved && !placing && selTok && route?.status === 'valid' && selectedCanAct) {
       const center = cellCenterPct(route.cells[route.cells.length - 1]);
       patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, x: center.x, y: center.y } : t) }));
+      setPostMovePrompt({ id: selTok.id, name: selTok.name });
     } else if (d.moved) {
       patchBoard((b) => ({ ...b, view: { zoom, panX: d.sp.x + (e.clientX - d.x), panY: d.sp.y + (e.clientY - d.y) } }));
     }
   };
 
-  // Drag a token with mouse OR touch, showing the live distance moved.
+  // Movement follows the main campaign's battle board: select the active
+  // token, hover a destination to preview the route, then click the cell.
+  // Tokens are not dragged around directly; that avoids teleporting and keeps
+  // initiative/turn order meaningful.
   const dragToken = (e: React.PointerEvent, id: string) => {
-    if (terrainMode !== 'off' || isPlayer) return;
     e.stopPropagation();
-    const el = e.currentTarget as HTMLElement;
-    const pid = e.pointerId;
-    try { el.setPointerCapture?.(pid); } catch { /* pointer not capturable — window listeners below still work */ }
     const tok = board.tokens.find((t) => t.id === id);
-    const start = tok ? cellAt(tok.x, tok.y) : { col: 0, row: 0 };
-    const move = (ev: PointerEvent) => {
-      const pct = clientToPct(ev.clientX, ev.clientY);
-      const cur = cellAt(pct.x, pct.y);
-      const cells = Math.max(Math.abs(cur.col - start.col), Math.abs(cur.row - start.row));
-      const vp = viewportRef.current; const rect = vp?.getBoundingClientRect();
-      setMeasure({ cells, feet: cells * 5, sx: 0, sy: 0, ex: rect ? ev.clientX - rect.left : 0, ey: rect ? ev.clientY - rect.top : 0 });
-      patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === id ? { ...t, x: pct.x, y: pct.y } : t) }));
-    };
-    const up = (ev: PointerEvent) => {
-      try { el.releasePointerCapture?.(pid); } catch { /* already released */ }
-      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
-      const raw = clientToPct(ev.clientX, ev.clientY); const pct = snapPct(raw.x, raw.y);
-      patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === id ? { ...t, x: pct.x, y: pct.y } : t) }));
-      setMeasure(null);
-    };
-    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+    if (!tok) return;
+    if (!isPlayer || tok.side === 'player' || tok.side === 'ally') setSelected(id);
   };
 
   const selTok = board.tokens.find((t) => t.id === selected);
@@ -374,8 +358,13 @@ export function CampaignBattlePage() {
     ? (data.party ?? []).find((player) => player.id === selTok.sourcePlayerId)
     : (data.party ?? []).find((player) => selTok && norm(player.name) === norm(selTok.name));
   const selectedImage = imageSrcById(selectedEnemy?.imageId ?? selTok?.imageId);
+  const ordered = [...board.tokens].sort((a, b) => (b.initiative ?? -999) - (a.initiative ?? -999) || a.name.localeCompare(b.name, 'ru'));
+  const currentId = board.currentTurnTokenId && board.tokens.some((t) => t.id === board.currentTurnTokenId)
+    ? board.currentTurnTokenId
+    : ordered[0]?.id;
+  const currentToken = board.tokens.find((t) => t.id === currentId);
   const selectedCell = selTok ? cellAt(selTok.x, selTok.y) : null;
-  const selectedCanAct = !!selTok && !isPlayer && terrainMode === 'off';
+  const selectedCanAct = !!selTok && !isPlayer && selTok.id === currentId && terrainMode === 'off';
   const route = selTok && selectedCell && hoverCell && cellKey(selectedCell) !== cellKey(hoverCell) && selectedCanAct ? findRoute(selTok, hoverCell) : null;
   const selectedRouteFeet = route?.feet ?? 0;
   const placeEnemy = (enemy: typeof data.enemies[number]) => setPlacing({
@@ -393,13 +382,31 @@ export function CampaignBattlePage() {
     hp: player.hp ?? player.maxHp,
     sourcePlayerId: player.id,
   });
-  // Initiative order — highest acts first (undefined sorts last), same rule as
-  // the main campaign's battle. Rendered at the TOP of the panel.
-  const ordered = [...board.tokens].sort((a, b) => (b.initiative ?? -999) - (a.initiative ?? -999) || a.name.localeCompare(b.name, 'ru'));
   const fieldPlayers = board.tokens.filter((t) => t.side === 'player' || t.side === 'ally');
   const fieldEnemies = board.tokens.filter((t) => t.side === 'enemy' || t.side === 'neutral');
   const setInit = (id: string, v: number | undefined) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === id ? { ...t, initiative: v } : t) }));
-  const rollAllInitiative = () => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => ({ ...t, initiative: 1 + Math.floor(Math.random() * 20) })) }));
+  const rollAllInitiative = () => patchBoard((b) => {
+    const tokens = b.tokens.map((t) => ({ ...t, initiative: 1 + Math.floor(Math.random() * 20) }));
+    const first = [...tokens].sort((a, b) => (b.initiative ?? -999) - (a.initiative ?? -999) || a.name.localeCompare(b.name, 'ru'))[0];
+    if (first) setSelected(first.id);
+    setPostMovePrompt(null);
+    return { ...b, tokens, currentTurnTokenId: first?.id };
+  });
+  const nextTurn = () => {
+    if (!ordered.length) return;
+    const idx = Math.max(0, ordered.findIndex((token) => token.id === currentId));
+    const next = ordered[(idx + 1) % ordered.length];
+    patchBoard((b) => ({ ...b, currentTurnTokenId: next.id, round: idx === ordered.length - 1 ? (b.round ?? 1) + 1 : (b.round ?? 1) }));
+    setSelected(next.id);
+    setPostMovePrompt(null);
+  };
+  const finishBattle = () => {
+    if (!window.confirm('Закончить бой? Токены и инициатива будут убраны, террейн и сетка останутся.')) return;
+    patchBoard((b) => ({ ...b, tokens: [], round: 1, currentTurnTokenId: undefined }));
+    store.updateRuntime(campaignId, (p) => ({ ...p, presentedBattle: p.presentedBattle?.mapId === mapId ? null : p.presentedBattle }));
+    setSelected(null);
+    setPostMovePrompt(null);
+  };
 
   return (
     <div className="ucw" ref={rootRef} style={shellHeight ? { height: shellHeight } : undefined}>
@@ -415,6 +422,7 @@ export function CampaignBattlePage() {
           <span className="atlas-crumb-sep">→</span>
           <strong>{title}</strong>
           <span className="ucw-chip">{isCustom ? 'Своё поле · изолирован' : 'Бой · изолирован'}</span>
+          {currentToken && <span className="ucw-chip">Ход: {currentToken.name}</span>}
         </div>
         <div className="ucw-header-actions">
           {variants.length > 1 && (
@@ -446,8 +454,10 @@ export function CampaignBattlePage() {
         <button className="ucw-tbtn" onClick={fit}>По размеру экрана</button>
         <span className="sep" />
         <span className="atlas-sub" style={{ margin: 0 }}>Раунд {board.round ?? 1}</span>
+        {!isPlayer && <button className="ucw-tbtn" disabled={!ordered.length} onClick={nextTurn}>Закончить ход</button>}
         {!isPlayer && <button className="ucw-tbtn" onClick={() => patchBoard((b) => ({ ...b, round: (b.round ?? 1) + 1 }))}>+ раунд</button>}
-        {!isPlayer && <button className="ucw-tbtn" onClick={() => { if (window.confirm('Убрать все токены с поля?')) patchBoard((b) => ({ ...b, tokens: [] })); }}>Очистить токены</button>}
+        {!isPlayer && <button className="ucw-tbtn" onClick={() => { if (window.confirm('Убрать все токены с поля? Террейн останется.')) { patchBoard((b) => ({ ...b, tokens: [], currentTurnTokenId: undefined })); setSelected(null); setPostMovePrompt(null); } }}>Очистить токены</button>}
+        {!isPlayer && <button className="ucw-tbtn danger" onClick={finishBattle}>Закончить бой</button>}
         <span className="sep" />
         <button className={`ucw-tbtn ${board.showGrid ? 'active' : ''}`} onClick={() => patchBoard((b) => ({ ...b, showGrid: !b.showGrid }))}>Сетка</button>
         {board.showGrid && !isPlayer && (
@@ -506,7 +516,7 @@ export function CampaignBattlePage() {
               )}
               <div className="ucw-markers">
                 {board.tokens.map((t) => (
-                  <div key={t.id} className={`ucw-btoken side-${t.side}${selected === t.id ? ' selected' : ''}`} style={{ left: `${t.x}%`, top: `${t.y}%` }}
+                  <div key={t.id} className={`ucw-btoken side-${t.side}${selected === t.id ? ' selected' : ''}${t.id === currentId ? ' current' : ''}`} style={{ left: `${t.x}%`, top: `${t.y}%` }}
                     onPointerDown={(e) => dragToken(e, t.id)} onClick={(e) => { e.stopPropagation(); if (!isPlayer || t.side === 'player' || t.side === 'ally') setSelected(t.id); }} title={t.name}>
                     <span className="btoken-init">{t.name.slice(0, 2)}</span>
                     {(t.currentHp != null) && <span className="btoken-hp">{t.currentHp}{t.maxHp ? `/${t.maxHp}` : ''}</span>}
@@ -515,12 +525,14 @@ export function CampaignBattlePage() {
               </div>
             </div>
           </div>
-          {measure && (
-            <div className="ucw-measure" style={{ left: measure.ex, top: measure.ey }}>
-              {measure.cells} кл · {measure.feet} фт
+          {route && <div className={`ucw-route-hud ${route.status}`}>{route.status === 'valid' ? `Маршрут: ${selectedRouteFeet} фт` : route.status === 'too-far' ? `Недостаточно движения: ${selectedRouteFeet} фт` : 'Маршрут недоступен'}</div>}
+          {postMovePrompt && postMovePrompt.id === selTok?.id && (
+            <div className="ucw-next-turn-popover">
+              <strong>{postMovePrompt.name} сделал ход</strong>
+              <span>Можно передать ход следующему участнику.</span>
+              <button type="button" className="atlas-btn small" onClick={nextTurn}>Следующий юнит</button>
             </div>
           )}
-          {route && <div className={`ucw-route-hud ${route.status}`}>{route.status === 'valid' ? `Маршрут: ${selectedRouteFeet} фт` : route.status === 'too-far' ? `Недостаточно движения: ${selectedRouteFeet} фт` : 'Маршрут недоступен'}</div>}
           <div className="ucw-legend">
             <div><span className="dot" style={{ background: 'var(--danger)' }} />Враг</div>
             <div><span className="dot" style={{ background: '#4f7fd6' }} />Игрок</div>
@@ -538,8 +550,8 @@ export function CampaignBattlePage() {
               <span>Инициатива ({ordered.length})</span>
               {!isPlayer && ordered.length > 0 && <button className="ucw-tbtn" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={rollAllInitiative}>🎲 Бросить всем</button>}
             </div>
-            {ordered.length === 0 ? <p className="ucw-empty-note">Пока пусто.</p> : ordered.map((t, i) => (
-              <div key={t.id} className={`ucw-init-row side-${t.side}${selected === t.id ? ' selected' : ''}${i === 0 ? ' current' : ''}`} onClick={() => !isPlayer && setSelected(t.id)}>
+            {ordered.length === 0 ? <p className="ucw-empty-note">Пока пусто.</p> : ordered.map((t) => (
+              <div key={t.id} className={`ucw-init-row side-${t.side}${selected === t.id ? ' selected' : ''}${t.id === currentId ? ' current' : ''}`} onClick={() => !isPlayer && setSelected(t.id)}>
                 {!isPlayer
                   ? <input className="ucw-init-input" type="number" value={t.initiative ?? ''} onClick={(e) => e.stopPropagation()} onChange={(e) => setInit(t.id, e.target.value === '' ? undefined : Number(e.target.value))} title="Инициатива" />
                   : <span className="ucw-init-badge">{t.initiative ?? '—'}</span>}

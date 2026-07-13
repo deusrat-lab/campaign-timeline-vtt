@@ -176,16 +176,25 @@
   position: absolute; transform: translate(-50%, -50%); width: 34px; height: 34px; border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: move;
   border: 2px solid rgba(0,0,0,0.55); box-shadow: 0 2px 5px rgba(0,0,0,0.6); user-select: none;
+  transition: left 260ms ease, top 260ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 .ucw-btoken.side-enemy { background: var(--danger); }
 .ucw-btoken.side-player { background: #4f7fd6; }
 .ucw-btoken.side-ally { background: var(--green); }
 .ucw-btoken.side-neutral { background: var(--amber); }
 .ucw-btoken.selected { outline: 2px solid var(--gold); outline-offset: 2px; }
+.ucw-btoken.current { box-shadow: 0 0 0 3px rgba(244, 204, 92, 0.38), 0 4px 10px rgba(0,0,0,0.7); }
 .ucw-btoken .btoken-init { font-size: 0.72rem; font-weight: 700; color: #16140f; line-height: 1; }
 .ucw-btoken .btoken-hp { position: absolute; bottom: -14px; font-size: 0.62rem; color: var(--fg); background: rgba(9,8,7,0.82); border: 1px solid var(--border-soft); border-radius: 4px; padding: 0 3px; white-space: nowrap; }
 .ucw-cell-range { fill: rgba(63, 148, 255, 0.12); stroke: rgba(63, 148, 255, 0.18); stroke-width: 0.18; }
-.ucw-route-line { stroke: #6ee7b7; stroke-width: 0.45; stroke-linecap: round; stroke-dasharray: 1.1 0.8; vector-effect: non-scaling-stroke; }
+.ucw-route-line {
+  stroke: #6ee7b7;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 8 6;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 4px rgba(110,231,183,0.55));
+}
 .ucw-route-line.bad { stroke: #ef4444; }
 .ucw-route-hud {
   position: absolute; left: 14px; bottom: 14px; z-index: 22; pointer-events: none;
@@ -193,6 +202,22 @@
   border-radius: 6px; padding: 5px 9px; font-size: 0.9rem; font-weight: 700;
 }
 .ucw-route-hud.too-far, .ucw-route-hud.blocked, .ucw-route-hud.occupied { border-color: var(--danger); color: #ffb6ae; }
+.ucw-next-turn-popover {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 24;
+  display: grid;
+  gap: 6px;
+  width: min(280px, calc(100% - 28px));
+  padding: 10px;
+  border: 1px solid rgba(212, 175, 55, 0.62);
+  border-radius: 7px;
+  background: rgba(18, 15, 9, 0.92);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+}
+.ucw-next-turn-popover span { color: var(--fg-dim); font-size: 0.82rem; }
+.ucw-tbtn.danger { border-color: var(--danger); color: #ffb6ae; }
 
 /* Initiative order rows (battle panel) — highest on top, colored by side. */
 .ucw-init-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--border-soft); border-left: 4px solid var(--fg-faint); margin-bottom: 4px; cursor: pointer; }
