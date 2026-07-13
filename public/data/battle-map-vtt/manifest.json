@@ -1039,6 +1039,1340 @@
         }
       ],
       "status": "merged"
+    },
+    {
+      "id": "caldran-l01-a",
+      "title": "L01-A. Подбитый талассийский корабль",
+      "normalizedName": "l01-a. подбитый талассийский корабль",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l01-a--day.png",
+          "url": "/battle-maps/caldran-captivity/l01-a--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l01-a--night.png",
+          "url": "/battle-maps/caldran-captivity/l01-a--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l01"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Морской бой и абордаж",
+        "L01"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L01",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l01-b",
+      "title": "L01-B. Место абордажа",
+      "normalizedName": "l01-b. место абордажа",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l01-b--day.png",
+          "url": "/battle-maps/caldran-captivity/l01-b--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l01-b--night.png",
+          "url": "/battle-maps/caldran-captivity/l01-b--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l01"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Морской бой и абордаж",
+        "L01"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L01",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l01-c",
+      "title": "L01-C. Нос корабля у цепного фарватера",
+      "normalizedName": "l01-c. нос корабля у цепного фарватера",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l01-c--day.png",
+          "url": "/battle-maps/caldran-captivity/l01-c--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l01-c--night.png",
+          "url": "/battle-maps/caldran-captivity/l01-c--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l01"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Морской бой и абордаж",
+        "L01"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L01",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l02-a",
+      "title": "L02-A. Прибрежная площадь пленных",
+      "normalizedName": "l02-a. прибрежная площадь пленных",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l02-a--day.png",
+          "url": "/battle-maps/caldran-captivity/l02-a--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l02-a--night.png",
+          "url": "/battle-maps/caldran-captivity/l02-a--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l02"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Пленные и гавани",
+        "L02"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L02",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l02-b",
+      "title": "L02-B. Лечебный навес",
+      "normalizedName": "l02-b. лечебный навес",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l02-b--day.png",
+          "url": "/battle-maps/caldran-captivity/l02-b--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l02-b--night.png",
+          "url": "/battle-maps/caldran-captivity/l02-b--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l02"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Пленные и гавани",
+        "L02"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L02",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l02-c",
+      "title": "L02-C. Склад трофейного имущества",
+      "normalizedName": "l02-c. склад трофейного имущества",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l02-c--day.png",
+          "url": "/battle-maps/caldran-captivity/l02-c--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l02-c--night.png",
+          "url": "/battle-maps/caldran-captivity/l02-c--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l02"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Пленные и гавани",
+        "L02"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L02",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l03-a",
+      "title": "L03-A. Центральный двор проверки",
+      "normalizedName": "l03-a. центральный двор проверки",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l03-a--day.png",
+          "url": "/battle-maps/caldran-captivity/l03-a--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l03-a--night.png",
+          "url": "/battle-maps/caldran-captivity/l03-a--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l03"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Проверки и ремесло",
+        "L03"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L03",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l03-b",
+      "title": "L03-B. Ремесленная площадка",
+      "normalizedName": "l03-b. ремесленная площадка",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l03-b-craft-testing-yard-day.png",
+          "url": "/battle-maps/caldran-captivity/l03-b-craft-testing-yard-day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l03-b-craft-testing-yard-night.png",
+          "url": "/battle-maps/caldran-captivity/l03-b-craft-testing-yard-night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l03"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Проверки и ремесло",
+        "L03"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L03",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l03-c",
+      "title": "L03-C. Палуба баржи",
+      "normalizedName": "l03-c. палуба баржи",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l03-c--day.png",
+          "url": "/battle-maps/caldran-captivity/l03-c--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l03-c--night.png",
+          "url": "/battle-maps/caldran-captivity/l03-c--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l03"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Проверки и ремесло",
+        "L03"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L03",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l04-a",
+      "title": "L04-A. Нижняя ремонтная площадка",
+      "normalizedName": "l04-a. нижняя ремонтная площадка",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l04-a--day.png",
+          "url": "/battle-maps/caldran-captivity/l04-a--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l04-a--night.png",
+          "url": "/battle-maps/caldran-captivity/l04-a--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l04"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Цепной подъём",
+        "L04"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L04",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l04-b",
+      "title": "L04-B. Подъёмная платформа",
+      "normalizedName": "l04-b. подъёмная платформа",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l04-b--day.png",
+          "url": "/battle-maps/caldran-captivity/l04-b--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l04-b--night.png",
+          "url": "/battle-maps/caldran-captivity/l04-b--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l04"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Цепной подъём",
+        "L04"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L04",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l04-c",
+      "title": "L04-C. Верхняя баллистная площадка",
+      "normalizedName": "l04-c. верхняя баллистная площадка",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l04-c--day.png",
+          "url": "/battle-maps/caldran-captivity/l04-c--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l04-c--night.png",
+          "url": "/battle-maps/caldran-captivity/l04-c--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l04"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Цепной подъём",
+        "L04"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L04",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l05-a",
+      "title": "L05-A. Дорожная стоянка",
+      "normalizedName": "l05-a. дорожная стоянка",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l05-a--day.png",
+          "url": "/battle-maps/caldran-captivity/l05-a--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l05-a--night.png",
+          "url": "/battle-maps/caldran-captivity/l05-a--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l05"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Дорога и караван",
+        "L05"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L05",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l05-b",
+      "title": "L05-B. Перекрёсток Чёрной Конницы",
+      "normalizedName": "l05-b. перекрёсток чёрной конницы",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l05-b--day.png",
+          "url": "/battle-maps/caldran-captivity/l05-b--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l05-b--night.png",
+          "url": "/battle-maps/caldran-captivity/l05-b--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l05"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Дорога и караван",
+        "L05"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L05",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l05-c",
+      "title": "L05-C. Авария у оросительного канала",
+      "normalizedName": "l05-c. авария у оросительного канала",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l05-c-irrigation-canal-accident-day.png",
+          "url": "/battle-maps/caldran-captivity/l05-c-irrigation-canal-accident-day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l05-c-irrigation-canal-accident-night.png",
+          "url": "/battle-maps/caldran-captivity/l05-c-irrigation-canal-accident-night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l05"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Дорога и караван",
+        "L05"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L05",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l06-a",
+      "title": "L06-A. Подвесной мост",
+      "normalizedName": "l06-a. подвесной мост",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l06-a--day.png",
+          "url": "/battle-maps/caldran-captivity/l06-a--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l06-a--night.png",
+          "url": "/battle-maps/caldran-captivity/l06-a--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l06"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Кузни и испытания",
+        "L06"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L06",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l06-b",
+      "title": "L06-B. Рабочий двор кузни",
+      "normalizedName": "l06-b. рабочий двор кузни",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l06-b--day.png",
+          "url": "/battle-maps/caldran-captivity/l06-b--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l06-b--night.png",
+          "url": "/battle-maps/caldran-captivity/l06-b--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l06"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Кузни и испытания",
+        "L06"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L06",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l06-c",
+      "title": "L06-C. Учебный круг Железного Вепря",
+      "normalizedName": "l06-c. учебный круг железного вепря",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l06-c--day.png",
+          "url": "/battle-maps/caldran-captivity/l06-c--day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l06-c--night.png",
+          "url": "/battle-maps/caldran-captivity/l06-c--night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l06"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Кузни и испытания",
+        "L06"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L06",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l07-a",
+      "title": "L07-A. Комната личного допроса",
+      "normalizedName": "l07-a. комната личного допроса",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l07-a-skaar-interrogation-room-day.png",
+          "url": "/battle-maps/caldran-captivity/l07-a-skaar-interrogation-room-day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l07-a-skaar-interrogation-room-night.png",
+          "url": "/battle-maps/caldran-captivity/l07-a-skaar-interrogation-room-night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l07"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Дом Скаар",
+        "L07"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L07",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l08-a",
+      "title": "L08-A. Зал Вороньей Печати и архив",
+      "normalizedName": "l08-a. зал вороньей печати и архив",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l08-a-raven-seal-archive-hall-day.png",
+          "url": "/battle-maps/caldran-captivity/l08-a-raven-seal-archive-hall-day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l08-a-raven-seal-archive-hall-night.png",
+          "url": "/battle-maps/caldran-captivity/l08-a-raven-seal-archive-hall-night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l08"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Право и архив",
+        "L08"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L08",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l09-a",
+      "title": "L09-A. Площадка голосования",
+      "normalizedName": "l09-a. площадка голосования",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l09-a-stone-terraces-voting-platform-day.png",
+          "url": "/battle-maps/caldran-captivity/l09-a-stone-terraces-voting-platform-day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l09-a-stone-terraces-voting-platform-night.png",
+          "url": "/battle-maps/caldran-captivity/l09-a-stone-terraces-voting-platform-night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l09"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Террасы и поручительство",
+        "L09"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L09",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l10-a",
+      "title": "L10-A. Двор перед Нижними воротами",
+      "normalizedName": "l10-a. двор перед нижними воротами",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l10-a-ashen-horn-lower-gate-day.png",
+          "url": "/battle-maps/caldran-captivity/l10-a-ashen-horn-lower-gate-day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l10-a-ashen-horn-lower-gate-night.png",
+          "url": "/battle-maps/caldran-captivity/l10-a-ashen-horn-lower-gate-night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l10"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Пепельный Рог",
+        "L10"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L10",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l11-a",
+      "title": "L11-A. Развилка ложных голосов",
+      "normalizedName": "l11-a. развилка ложных голосов",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l11-a-misty-ravine-crossroads-day.png",
+          "url": "/battle-maps/caldran-captivity/l11-a-misty-ravine-crossroads-day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l11-a-misty-ravine-crossroads-night.png",
+          "url": "/battle-maps/caldran-captivity/l11-a-misty-ravine-crossroads-night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l11"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Нижние Земли",
+        "L11"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L11",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l12-a",
+      "title": "L12-A. Двор Крепости Последней Клятвы",
+      "normalizedName": "l12-a. двор крепости последней клятвы",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l12-a-last-oath-fortress-courtyard-day.png",
+          "url": "/battle-maps/caldran-captivity/l12-a-last-oath-fortress-courtyard-day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l12-a-last-oath-fortress-courtyard-night.png",
+          "url": "/battle-maps/caldran-captivity/l12-a-last-oath-fortress-courtyard-night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l12"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Крепость и руины",
+        "L12"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L12",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l13-a",
+      "title": "L13-A. Логово Пепельнорогого Глота",
+      "normalizedName": "l13-a. логово пепельнорогого глота",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l13-a-glot-lair-oathstone-dungeon-day.png",
+          "url": "/battle-maps/caldran-captivity/l13-a-glot-lair-oathstone-dungeon-day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l13-a-glot-lair-oathstone-dungeon-night.png",
+          "url": "/battle-maps/caldran-captivity/l13-a-glot-lair-oathstone-dungeon-night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l13"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Подземелья и боссы",
+        "L13"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L13",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l14-a",
+      "title": "L14-A. Аварийный путь через Дикие земли",
+      "normalizedName": "l14-a. аварийный путь через дикие земли",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l14-a-wildlands-emergency-route-day.png",
+          "url": "/battle-maps/caldran-captivity/l14-a-wildlands-emergency-route-day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l14-a-wildlands-emergency-route-night.png",
+          "url": "/battle-maps/caldran-captivity/l14-a-wildlands-emergency-route-night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l14"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Дикие земли",
+        "L14"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L14",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l15-a",
+      "title": "L15-A. Старые Камни Договора",
+      "normalizedName": "l15-a. старые камни договора",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l15-a-old-wyrm-treaty-stones-day.png",
+          "url": "/battle-maps/caldran-captivity/l15-a-old-wyrm-treaty-stones-day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l15-a-old-wyrm-treaty-stones-night.png",
+          "url": "/battle-maps/caldran-captivity/l15-a-old-wyrm-treaty-stones-night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l15"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Камни договора",
+        "L15"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L15",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l16-a",
+      "title": "L16-A. Площадка посадки виверн",
+      "normalizedName": "l16-a. площадка посадки виверн",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l16-a-wyvern-landing-platform-day.png",
+          "url": "/battle-maps/caldran-captivity/l16-a-wyvern-landing-platform-day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l16-a-wyvern-landing-platform-night.png",
+          "url": "/battle-maps/caldran-captivity/l16-a-wyvern-landing-platform-night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l16"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Воздушный путь",
+        "L16"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L16",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
+    },
+    {
+      "id": "caldran-l17-a",
+      "title": "L17-A. Суд имени",
+      "normalizedName": "l17-a. суд имени",
+      "variants": [
+        {
+          "type": "day",
+          "fileName": "l17-a-court-of-the-name-day.png",
+          "url": "/battle-maps/caldran-captivity/l17-a-court-of-the-name-day.png"
+        },
+        {
+          "type": "night",
+          "fileName": "l17-a-court-of-the-name-night.png",
+          "url": "/battle-maps/caldran-captivity/l17-a-court-of-the-name-night.png"
+        }
+      ],
+      "status": "caldran-ready",
+      "arcId": "caldran-captivity",
+      "mapSize": "30x30",
+      "gridSizeLabel": "30×30",
+      "groupIds": [
+        "caldran-captivity",
+        "caldran-l17"
+      ],
+      "groupLabels": [
+        "Кальдран: Цена имени",
+        "Финал",
+        "L17"
+      ],
+      "labels": [
+        "caldran-captivity",
+        "L17",
+        "day-night"
+      ],
+      "gridStatus": "ready-for-terrain",
+      "gridProfile": {
+        "columns": 30,
+        "rows": 30,
+        "verticalLines": [],
+        "horizontalLines": []
+      },
+      "navigationProfile": {
+        "terrainCells": []
+      },
+      "terrainCellCount": 0
     }
   ]
 }

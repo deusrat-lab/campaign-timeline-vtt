@@ -1,8 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUserCampaigns } from '../../state/userCampaignStore';
 import type { CampaignEntityType } from '../../types/userCampaign';
 import { RichEntityDetail } from '../../shared/entity/RichEntityDetail';
 import { buildDetail, type LibraryKind } from '../../shared/entity/userCampaignEntityVM';
+import { getBattleMapCatalog, battleMapImageUrl } from '../../data/battleMapCatalog';
+import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
+import { scenarioForCampaign } from '../../data/scenarioMerge';
 
 const TYPE_LABEL: Record<string, string> = {
   location: 'Локация', npc: 'NPC', quest: 'Квест', enemy: 'Враг', image: 'Картинка', party: 'Игрок', faction: 'Фракция',
@@ -46,9 +50,11 @@ export function CampaignEntityCard({
   /** Presentation overlay in player view is controlled by the DM, not players. */
   allowClose?: boolean;
 }) {
+  const navigate = useNavigate();
   const store = useUserCampaigns();
   const data = store.getData(campaignId);
   const runtime = store.getRuntime(campaignId);
+  const [battleCatalog, setBattleCatalog] = useState<BattleMapManifestEntry[]>([]);
   const originKey = `${type}:${id}`;
   const [editingFor, setEditingFor] = useState<string | null>(null);
   const [stackState, setStackState] = useState<{ originKey: string; items: Array<{ type: CampaignEntityType; id: string }> } | null>(null);
@@ -64,6 +70,11 @@ export function CampaignEntityCard({
     if (presenting) store.updateRuntime(campaignId, (prev) => ({ ...prev, presentedCard: null }));
   };
   const editing = editingFor === currentKey && canEdit;
+  useEffect(() => {
+    let alive = true;
+    getBattleMapCatalog().then((maps) => { if (alive) setBattleCatalog(maps); });
+    return () => { alive = false; };
+  }, []);
   const goBack = () => {
     setEditingFor(null);
     setStackState({ originKey, items: stack.slice(0, -1) });
@@ -89,7 +100,26 @@ export function CampaignEntityCard({
     isRevealed: (entityId) => store.isRevealed(campaignId, entityId),
     match: () => true,
     isPlayer,
-  }) : null, [campaignId, current.id, currentKind, data, isPlayer, originKey, stack, store]);
+    battleMapsForLocation: (locationId) => {
+      if (!data) return [];
+      const loc = data.locations.find((l) => l.id === locationId);
+      const key = loc?.title.match(/^L\d{2}/)?.[0];
+      const scenario = scenarioForCampaign(data);
+      if (!key || !scenario?.battleMapLinks?.length) return [];
+      return scenario.battleMapLinks
+        .filter((link) => link.locationKey === key)
+        .map((link) => {
+          const map = battleCatalog.find((m) => m.id === link.battleMapId);
+          return {
+            id: link.battleMapId,
+            label: map?.title ?? link.battleMapId,
+            subtitle: map?.gridSizeLabel ?? map?.mapSize ?? 'Карта боя',
+            imageUrl: map ? battleMapImageUrl(map, 'day') : undefined,
+            onOpen: () => navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(link.battleMapId)}`),
+          };
+        });
+    },
+  }) : null, [battleCatalog, campaignId, current.id, currentKind, data, isPlayer, navigate, originKey, stack, store]);
 
   if (!data) return null;
 

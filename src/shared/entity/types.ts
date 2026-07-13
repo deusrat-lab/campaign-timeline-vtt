@@ -10,7 +10,7 @@
  * now (userCampaignEntityVM.ts).
  */
 
-export type EntityKind = 'location' | 'npc' | 'quest' | 'enemy' | 'faction' | 'party' | 'image';
+export type EntityKind = 'location' | 'npc' | 'quest' | 'enemy' | 'faction' | 'party' | 'image' | 'battleMap';
 
 export interface EntityRelationLink {
   id: string;

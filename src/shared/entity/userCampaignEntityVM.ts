@@ -14,7 +14,7 @@ const KIND_ENTITY: Record<LibraryKind, EntityKind> = {
   npc: 'npc', locations: 'location', quests: 'quest', enemies: 'enemy', players: 'party', factions: 'faction',
 };
 const KIND_LABEL: Record<EntityKind, string> = {
-  location: 'Локация', npc: 'NPC', quest: 'Квест', enemy: 'Враг', faction: 'Фракция', party: 'Игрок', image: 'Картинка',
+  location: 'Локация', npc: 'NPC', quest: 'Квест', enemy: 'Враг', faction: 'Фракция', party: 'Игрок', image: 'Картинка', battleMap: 'Карта боя',
 };
 
 export interface VMOpts {
@@ -24,6 +24,7 @@ export interface VMOpts {
   isRevealed: (id: string) => boolean;
   match: (s: string) => boolean; // search predicate
   isPlayer: boolean;
+  battleMapsForLocation?: (locationId: string) => EntityRelationLink[];
 }
 
 function locName(data: UserCampaignData, id?: string): string | undefined {
@@ -66,6 +67,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
     const quests = data.quests.filter((q) => q.locationId === l.id && (!o.isPlayer || (q.status !== 'hidden' && o.isRevealed(q.id))));
     const enemies = data.enemies.filter((e) => e.locationIds?.includes(l.id) && (!o.isPlayer || o.isRevealed(e.id)));
     const images = data.images.filter((im) => im.id === l.imageId);
+    const battleMaps = o.battleMapsForLocation?.(l.id) ?? [];
     return {
       ...base(l.title), subtitle: undefined, imageUrl: o.imageUrl(l.imageId), description: l.description,
       dmNotes: l.dmNotes, tags: l.tags,
@@ -74,6 +76,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
         { key: 'quests', label: 'Квесты', value: quests.length },
         { key: 'enemies', label: 'Враги', value: enemies.length },
         { key: 'images', label: 'Изображения', value: images.length },
+        { key: 'battleMaps', label: 'Карты боя', value: battleMaps.length },
       ],
       relations: [
         {
@@ -109,6 +112,11 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
             imageUrl: o.imageUrl(e.imageId),
             onOpen: () => o.onOpen('enemies', e.id),
           })),
+        },
+        {
+          key: 'battleMaps',
+          label: 'Карты боя',
+          items: battleMaps,
         },
       ],
     };

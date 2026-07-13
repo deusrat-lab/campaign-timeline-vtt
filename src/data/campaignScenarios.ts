@@ -20,6 +20,7 @@ export interface ScenarioEnemy { title: string; ac?: number; hp?: number; descri
 export interface ScenarioFaction { name: string; role?: string; description?: string; image?: string }
 export interface ScenarioQuest { title: string; description?: string; dmNotes?: string; locationKey?: string; status?: string; image?: string; legacyTitles?: string[] }
 export interface ScenarioImage { title: string; src: string; playerSafe?: boolean }
+export interface ScenarioBattleMapLink { battleMapId: string; locationKey: string }
 
 export interface CampaignScenario {
   id: string;
@@ -29,6 +30,7 @@ export interface CampaignScenario {
   regionIds: string[];
   summary: string;
   battleMapIds?: string[];
+  battleMapLinks?: ScenarioBattleMapLink[];
   locations: ScenarioLocation[];
   npcs: ScenarioNpc[];
   enemies: ScenarioEnemy[];
@@ -47,22 +49,66 @@ const CALDRAN_CAPTIVITY: CampaignScenario = {
   baseMapId: 'atlas-map-caldran',
   regionIds: ['region-caldran', 'region-caldran-salt-ledge'],
   battleMapIds: [
-    'map-fa9766bb367fafda', // Док3
-    'map-81d76919956ba45e', // Доки
-    'map-6d7cf8bda1e81095', // Склад у дока
-    'map-0ac51070eb7acede', // Нападение на караван
-    'map-32c8501fd2fdbee8', // Большая дорога
-    'map-f2b75cd321075a53', // Большая дорога у реки
-    'map-edcc5ca4dd0a6b59', // Дорога у леса
-    'map-e7cc886c4cb388d2', // Лесная тропа
-    'map-3c1d0bd78a70c6d7', // Ворота
-    'map-f809817d79e114bb', // Каменоломня
-    'map-1ab915d021582a57', // Внутри шахты
-    'map-829e34d98e8afb4e', // Глубокие шахты
-    'map-2191330aadc5bd0f', // Логово
-    'map-787954779321e4a3', // Логово 1
-    'map-c8bed6f369735dda', // Лесная развилка
-    'map-9637cbb477fc1ed1', // Окраина руин
+    'caldran-l01-a',
+    'caldran-l01-b',
+    'caldran-l01-c',
+    'caldran-l02-a',
+    'caldran-l02-b',
+    'caldran-l02-c',
+    'caldran-l03-a',
+    'caldran-l03-b',
+    'caldran-l03-c',
+    'caldran-l04-a',
+    'caldran-l04-b',
+    'caldran-l04-c',
+    'caldran-l05-a',
+    'caldran-l05-b',
+    'caldran-l05-c',
+    'caldran-l06-a',
+    'caldran-l06-b',
+    'caldran-l06-c',
+    'caldran-l07-a',
+    'caldran-l08-a',
+    'caldran-l09-a',
+    'caldran-l10-a',
+    'caldran-l11-a',
+    'caldran-l12-a',
+    'caldran-l13-a',
+    'caldran-l14-a',
+    'caldran-l15-a',
+    'caldran-l16-a',
+    'caldran-l17-a',
+  ],
+  battleMapLinks: [
+    { battleMapId: 'caldran-l01-a', locationKey: 'L01' },
+    { battleMapId: 'caldran-l01-b', locationKey: 'L01' },
+    { battleMapId: 'caldran-l01-c', locationKey: 'L01' },
+    { battleMapId: 'caldran-l02-a', locationKey: 'L02' },
+    { battleMapId: 'caldran-l02-b', locationKey: 'L02' },
+    { battleMapId: 'caldran-l02-c', locationKey: 'L02' },
+    { battleMapId: 'caldran-l03-a', locationKey: 'L03' },
+    { battleMapId: 'caldran-l03-b', locationKey: 'L03' },
+    { battleMapId: 'caldran-l03-c', locationKey: 'L03' },
+    { battleMapId: 'caldran-l04-a', locationKey: 'L04' },
+    { battleMapId: 'caldran-l04-b', locationKey: 'L04' },
+    { battleMapId: 'caldran-l04-c', locationKey: 'L04' },
+    { battleMapId: 'caldran-l05-a', locationKey: 'L05' },
+    { battleMapId: 'caldran-l05-b', locationKey: 'L05' },
+    { battleMapId: 'caldran-l05-c', locationKey: 'L05' },
+    { battleMapId: 'caldran-l06-a', locationKey: 'L06' },
+    { battleMapId: 'caldran-l06-b', locationKey: 'L06' },
+    { battleMapId: 'caldran-l06-c', locationKey: 'L06' },
+    { battleMapId: 'caldran-l07-a', locationKey: 'L07' },
+    { battleMapId: 'caldran-l08-a', locationKey: 'L08' },
+    { battleMapId: 'caldran-l09-a', locationKey: 'L09' },
+    { battleMapId: 'caldran-l10-a', locationKey: 'L10' },
+    { battleMapId: 'caldran-l11-a', locationKey: 'L11' },
+    { battleMapId: 'caldran-l12-a', locationKey: 'L12' },
+    { battleMapId: 'caldran-l13-a', locationKey: 'L13' },
+    { battleMapId: 'caldran-l14-a', locationKey: 'L14' },
+    { battleMapId: 'caldran-l15-a', locationKey: 'L15' },
+    { battleMapId: 'caldran-l16-a', locationKey: 'L16' },
+    { battleMapId: 'caldran-l17-a', locationKey: 'L17' },
   ],
   summary:
     'Исторический ваншот: пленные талассийцы проходят путь от Солёного Уступа вглубь Кальдрана — через дома, ремесло, допрос и право на общее испытание в Нижних Землях, к Старым Камням Вирма и возвращению по воздуху. Пленение силой, но свобода — по делу.',
@@ -242,6 +288,12 @@ const CALDRAN_CAPTIVITY: CampaignScenario = {
     { title: 'Облачный скат', ac: 14, hp: 36, description: 'Планирующий налёт +5 (9; 1к10+4); сбивает с седла (Ловкость DC 13).', dmNotes: 'Воздушная тварь над Камнями Вирма. L15, L16.', locationKeys: ['L15', 'L16'], image: `${ART}/enemy/cloud-ray.jpg` },
     { title: 'Буревой змей', ac: 15, hp: 52, description: 'Укус +6 (9; 1к10+4 молнией); хвост +5 (7; 1к8+3). Статический след 5–6: линия 20 фт., Ловкость DC 14, 9 (1к10+4) молнией.', dmNotes: 'Длинное крылатое тело без лап, синее свечение. Небо над Кальдраном.', locationKeys: ['L15', 'L16'], image: `${ART}/enemy/storm-serpent.png` },
     { title: 'Страж Камней Договора', ac: 17, hp: 60, description: 'Каменное крыло +6 (10; 1к12+4); знак +6 (8; 1к10+3). Не атакует носителя признанной печати.', dmNotes: 'Фраза договора останавливает на раунд. Четырёхкрылый каменный силуэт из разных пород.', locationKeys: ['L15'], image: `${ART}/enemy/treaty-stones-guardian.png` },
+    { title: 'Кальдранский причальный страж', ac: 13, hp: 18, description: 'Копьё +4 (6; 1к8+2); щит +4 (4; 1к6+1). Держит линию пленных и зовёт цепника колоколом.', dmNotes: 'Не главный противник, а лицо порядка Солёных Гаваней. Использовать в L01–L02 для давления и контроля толпы.', locationKeys: ['L01', 'L02'], image: `${ART}/enemy/caldran-pier-guard.png` },
+    { title: 'Отчаявшийся пленник', ac: 11, hp: 9, description: 'Импровизированный нож +3 (4; 1к4+2); бросок цепи +3 (3; 1к4+1), Ловкость DC 11 или цель теряет реакцию.', dmNotes: 'Паника при HP≤3: хватает заложника или бежит. Может стать союзником, если остановить без убийства. Осложнение, не главный бой.', locationKeys: ['L01', 'L02', 'L06'], image: `${ART}/enemy/desperate-prisoner.png` },
+    { title: 'Рой соляных чаек', ac: 12, hp: 24, description: 'Клювы и когти +4 (7; 2к4+2). При попадании Ловкость DC 12 или цель роняет мелкий предмет/провизию.', dmNotes: 'Шумит, пугает пленных и выдаёт скрытность. Хорошо работает как помеха при бегстве или спасении раненых.', locationKeys: ['L01', 'L02'], image: `${ART}/enemy/salt-gulls-swarm.png` },
+    { title: 'Скальный падальщик', ac: 13, hp: 22, description: 'Клюв +5 (8; 1к10+3); когти +5 (6; 1к8+2). Преимущество по раненой цели у края уступа.', dmNotes: 'Сидит на цепных вышках и ждёт падения. Использовать на L04 как угроза высоты, а не честный дуэлянт.', locationKeys: ['L04', 'L14'], image: `${ART}/enemy/rocky-scavenger.png` },
+    { title: 'Бесприютный налётчик', ac: 13, hp: 27, description: 'Копьё +4 (6; 1к8+2); праща +4 (5; 1к6+2). После атаки уходит за укрытие или в туман.', dmNotes: 'Выживший нижних земель, не солдат дома. Может торговаться едой/информацией, если бой остановлен.', locationKeys: ['L11', 'L14'], image: `${ART}/enemy/homeless-raider.png` },
+    { title: 'Сломанный клятвенный страж', ac: 16, hp: 45, description: 'Каменный удар +5 (9; 1к10+4); треснувшая печать +5 (7; 1к8+3 некротического).', dmNotes: 'Старая защита крепости, сбившаяся с клятвы. Фраза старого приказа даёт раунд паузы или преимущество на проверку.', locationKeys: ['L12', 'L17'], image: `${ART}/enemy/broken-oathbound-sentinel.png` },
   ],
   quests: [
     { title: 'S00a. Талассийская флотилия до поражения', locationKey: 'L01', status: 'active', image: `${ART}/flotilla/01-talassian-flotilla-before-defeat.png`, description: 'Игроки видят флот до катастрофы: стройные талассийские корабли, поднятые паруса, сигнальные флаги и уверенность команды перед входом в цепной фарватер Солёного Уступа.', dmNotes: 'Нулевая сцена для показа игрокам перед боем. Использовать как контраст: море ещё принадлежит героям, порядок флота цел, поражение ещё не принято.' },
