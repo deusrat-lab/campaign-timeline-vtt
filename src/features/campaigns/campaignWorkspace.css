@@ -112,9 +112,23 @@
 .ucw-token-card-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; margin-bottom: 8px; }
 .ucw-token-card-head strong { display: block; color: var(--gold-soft); }
 .ucw-token-card-head small { display: block; color: var(--fg-dim); }
+.ucw-stat-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .ucw-token-source { margin-top: 12px; border-top: 1px solid var(--border-soft); padding-top: 8px; }
 .ucw-token-source h4 { margin: 8px 0 4px; color: var(--gold-soft); }
 .ucw-token-source p { margin: 0 0 6px; color: var(--fg); line-height: 1.35; }
+.ucw-battle-side-grid { display: grid; gap: 10px; }
+.ucw-token-row {
+  width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 7px 9px; margin-bottom: 5px; border-radius: 7px; border: 1px solid var(--border-soft);
+  background: var(--bg-card); color: inherit; text-align: left; font: inherit; cursor: pointer;
+}
+.ucw-token-row.side-enemy { border-left: 4px solid var(--danger); }
+.ucw-token-row.side-player { border-left: 4px solid #4f7fd6; }
+.ucw-token-row.side-ally { border-left: 4px solid var(--green); }
+.ucw-token-row.side-neutral { border-left: 4px solid var(--amber); }
+.ucw-token-row.selected { border-color: var(--gold-dim); background: rgba(192,138,46,0.12); }
+.ucw-token-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ucw-token-row small { flex: 0 0 auto; color: var(--fg-dim); font-size: 0.72rem; }
 
 .ucw-empty-note { color: var(--fg-faint); font-style: italic; font-size: 0.9rem; margin: 6px 0 0; }
 
@@ -170,6 +184,15 @@
 .ucw-btoken.selected { outline: 2px solid var(--gold); outline-offset: 2px; }
 .ucw-btoken .btoken-init { font-size: 0.72rem; font-weight: 700; color: #16140f; line-height: 1; }
 .ucw-btoken .btoken-hp { position: absolute; bottom: -14px; font-size: 0.62rem; color: var(--fg); background: rgba(9,8,7,0.82); border: 1px solid var(--border-soft); border-radius: 4px; padding: 0 3px; white-space: nowrap; }
+.ucw-cell-range { fill: rgba(63, 148, 255, 0.12); stroke: rgba(63, 148, 255, 0.18); stroke-width: 0.18; }
+.ucw-route-line { stroke: #6ee7b7; stroke-width: 0.45; stroke-linecap: round; stroke-dasharray: 1.1 0.8; vector-effect: non-scaling-stroke; }
+.ucw-route-line.bad { stroke: #ef4444; }
+.ucw-route-hud {
+  position: absolute; left: 14px; bottom: 14px; z-index: 22; pointer-events: none;
+  background: rgba(9,8,7,0.9); border: 1px solid var(--gold); color: var(--gold-soft);
+  border-radius: 6px; padding: 5px 9px; font-size: 0.9rem; font-weight: 700;
+}
+.ucw-route-hud.too-far, .ucw-route-hud.blocked, .ucw-route-hud.occupied { border-color: var(--danger); color: #ffb6ae; }
 
 /* Initiative order rows (battle panel) — highest on top, colored by side. */
 .ucw-init-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--border-soft); border-left: 4px solid var(--fg-faint); margin-bottom: 4px; cursor: pointer; }
