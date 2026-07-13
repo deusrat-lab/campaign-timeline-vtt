@@ -13,6 +13,27 @@ import { CAMPAIGN_SCENARIOS } from './campaignScenarios';
 
 const norm = (s: string) => s.trim().toLowerCase();
 const hasDamageDice = (s?: string): boolean => !!s && /(?:\d+[кd]\d+|\d+;\s*\d+к\d+)/i.test(s);
+const OBSOLETE_ENEMY_IMAGE_NEEDLES: Record<string, string[]> = {
+  'Рой прибрежных скребней': ['enemy/cliff-crab.jpg'],
+  'Канатный клещ': ['enemy/cave-scrapers-swarm.jpg'],
+  'Камнерогий баран': ['enemy/stonebeak.jpg'],
+  'Канальный хищник': ['enemy/salt-ray.jpg'],
+  'Ветропыльный шакал': ['enemy/plateau-wolf.jpg'],
+  'Железоедный слизень': ['enemy/slag-crawler.jpg'],
+  'Рой кузнечных клещей': ['enemy/cave-scrapers-swarm.jpg'],
+  'Дымная моль': ['enemy/moth-of-quiet-sleep.jpg'],
+  'Восковой жук-печатник': ['enemy/ink-guardian.jpg'],
+  'Террасный камнепёс': ['enemy/oathbound-gargoyle-guardian.jpg'],
+  'Бескрылый дракончик': ['enemy/young-wyvern.jpg'],
+  'Буревой змей': ['enemy/cloud-ray.jpg'],
+  'Страж Камней Договора': ['enemy/treaty-keeper-winged-bone.jpg'],
+};
+
+const shouldReplaceScenarioEnemyImage = (title: string, currentSrc?: string, nextSrc?: string): boolean => {
+  if (!currentSrc || !nextSrc || currentSrc === nextSrc) return false;
+  if (currentSrc.includes('/scenarios/caldran-captivity/house/forces/')) return true;
+  return (OBSOLETE_ENEMY_IMAGE_NEEDLES[title] ?? []).some((needle) => currentSrc.includes(needle));
+};
 
 /** The scenario whose base map matches this campaign (used for the upgrade). */
 export function scenarioForCampaign(data: Pick<UserCampaignData, 'baseMapId'>): CampaignScenario | undefined {
@@ -34,6 +55,7 @@ export function mergeScenarioIntoData(data: UserCampaignData, scenario: Campaign
     imagesAttached += 1;
     return id;
   };
+  const imageSrcById = (imageId?: string): string | undefined => images.find((im) => im.id === imageId)?.src;
 
   const added = { locations: 0, npcs: 0, enemies: 0, factions: 0 };
 
@@ -79,7 +101,7 @@ export function mergeScenarioIntoData(data: UserCampaignData, scenario: Campaign
     const locIds = (se.locationKeys ?? []).map((k) => keyToLocId[k]).filter(Boolean) as string[];
     const ex = enemies.find((e) => norm(e.title) === norm(se.title));
     if (ex) {
-      if (!ex.imageId && se.image) ex.imageId = mkImage(se.title, se.image);
+      if ((!ex.imageId || shouldReplaceScenarioEnemyImage(se.title, imageSrcById(ex.imageId), se.image)) && se.image) ex.imageId = mkImage(se.title, se.image);
       if ((!ex.locationIds || ex.locationIds.length === 0) && locIds.length) ex.locationIds = locIds;
       if (ex.ac == null && se.ac != null) ex.ac = se.ac;
       if (ex.hp == null && se.hp != null) ex.hp = se.hp;
