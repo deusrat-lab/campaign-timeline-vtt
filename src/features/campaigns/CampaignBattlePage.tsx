@@ -347,7 +347,7 @@ export function CampaignBattlePage() {
     e.stopPropagation();
     const tok = board.tokens.find((t) => t.id === id);
     if (!tok) return;
-    if (!isPlayer || tok.side === 'player' || tok.side === 'ally') setSelected(id);
+    setSelected(id);
   };
 
   const selTok = board.tokens.find((t) => t.id === selected);
@@ -364,7 +364,8 @@ export function CampaignBattlePage() {
     : ordered[0]?.id;
   const currentToken = board.tokens.find((t) => t.id === currentId);
   const selectedCell = selTok ? cellAt(selTok.x, selTok.y) : null;
-  const selectedCanAct = !!selTok && !isPlayer && selTok.id === currentId && terrainMode === 'off';
+  const selectedCanAct = !!selTok && selTok.id === currentId && terrainMode === 'off' && (!isPlayer || selTok.side === 'player' || selTok.side === 'ally');
+  const canPassTurn = !!currentToken && (!isPlayer || currentToken.side === 'player' || currentToken.side === 'ally');
   const route = selTok && selectedCell && hoverCell && cellKey(selectedCell) !== cellKey(hoverCell) && selectedCanAct ? findRoute(selTok, hoverCell) : null;
   const selectedRouteFeet = route?.feet ?? 0;
   const placeEnemy = (enemy: typeof data.enemies[number]) => setPlacing({
@@ -393,6 +394,7 @@ export function CampaignBattlePage() {
     return { ...b, tokens, currentTurnTokenId: first?.id };
   });
   const nextTurn = () => {
+    if (!canPassTurn) return;
     if (!ordered.length) return;
     const idx = Math.max(0, ordered.findIndex((token) => token.id === currentId));
     const next = ordered[(idx + 1) % ordered.length];
@@ -443,7 +445,7 @@ export function CampaignBattlePage() {
               {isPresented ? '● Показано игрокам' : '▶ Показать игрокам'}
             </button>
           )}
-          {isPlayer && <span className="ucw-chip">Режим игрока — только просмотр</span>}
+          {isPlayer && <span className="ucw-chip">Режим игрока</span>}
         </div>
       </div>
 
@@ -454,7 +456,7 @@ export function CampaignBattlePage() {
         <button className="ucw-tbtn" onClick={fit}>По размеру экрана</button>
         <span className="sep" />
         <span className="atlas-sub" style={{ margin: 0 }}>Раунд {board.round ?? 1}</span>
-        {!isPlayer && <button className="ucw-tbtn" disabled={!ordered.length} onClick={nextTurn}>Закончить ход</button>}
+        <button className="ucw-tbtn" disabled={!ordered.length || !canPassTurn} onClick={nextTurn}>Закончить ход</button>
         {!isPlayer && <button className="ucw-tbtn" onClick={() => patchBoard((b) => ({ ...b, round: (b.round ?? 1) + 1 }))}>+ раунд</button>}
         {!isPlayer && <button className="ucw-tbtn" onClick={() => { if (window.confirm('Убрать все токены с поля? Террейн останется.')) { patchBoard((b) => ({ ...b, tokens: [], currentTurnTokenId: undefined })); setSelected(null); setPostMovePrompt(null); } }}>Очистить токены</button>}
         {!isPlayer && <button className="ucw-tbtn danger" onClick={finishBattle}>Закончить бой</button>}
@@ -517,7 +519,7 @@ export function CampaignBattlePage() {
               <div className="ucw-markers">
                 {board.tokens.map((t) => (
                   <div key={t.id} className={`ucw-btoken side-${t.side}${selected === t.id ? ' selected' : ''}${t.id === currentId ? ' current' : ''}`} style={{ left: `${t.x}%`, top: `${t.y}%` }}
-                    onPointerDown={(e) => dragToken(e, t.id)} onClick={(e) => { e.stopPropagation(); if (!isPlayer || t.side === 'player' || t.side === 'ally') setSelected(t.id); }} title={t.name}>
+                    onPointerDown={(e) => dragToken(e, t.id)} onClick={(e) => { e.stopPropagation(); setSelected(t.id); }} title={t.name}>
                     <span className="btoken-init">{t.name.slice(0, 2)}</span>
                     {(t.currentHp != null) && <span className="btoken-hp">{t.currentHp}{t.maxHp ? `/${t.maxHp}` : ''}</span>}
                   </div>
@@ -551,7 +553,7 @@ export function CampaignBattlePage() {
               {!isPlayer && ordered.length > 0 && <button className="ucw-tbtn" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={rollAllInitiative}>🎲 Бросить всем</button>}
             </div>
             {ordered.length === 0 ? <p className="ucw-empty-note">Пока пусто.</p> : ordered.map((t) => (
-              <div key={t.id} className={`ucw-init-row side-${t.side}${selected === t.id ? ' selected' : ''}${t.id === currentId ? ' current' : ''}`} onClick={() => !isPlayer && setSelected(t.id)}>
+              <div key={t.id} className={`ucw-init-row side-${t.side}${selected === t.id ? ' selected' : ''}${t.id === currentId ? ' current' : ''}`} onClick={() => setSelected(t.id)}>
                 {!isPlayer
                   ? <input className="ucw-init-input" type="number" value={t.initiative ?? ''} onClick={(e) => e.stopPropagation()} onChange={(e) => setInit(t.id, e.target.value === '' ? undefined : Number(e.target.value))} title="Инициатива" />
                   : <span className="ucw-init-badge">{t.initiative ?? '—'}</span>}
@@ -562,7 +564,7 @@ export function CampaignBattlePage() {
             ))}
           </div>
 
-          {selTok && (!isPlayer || selTok.side === 'player' || selTok.side === 'ally') && (
+          {selTok && (
             <div className="ucw-card ucw-token-card">
               <div className="ucw-token-card-head">
                 {selectedImage ? <img className="ucw-row-thumb large" src={selectedImage} alt="" /> : <span className="ucw-row-thumb large fallback">{selTok.name.slice(0, 2)}</span>}
