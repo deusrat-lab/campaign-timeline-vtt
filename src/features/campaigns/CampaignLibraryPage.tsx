@@ -19,6 +19,15 @@ const KIND_LABEL: Record<Kind, string> = {
 const KIND_ENTITY: Record<string, CampaignEntityType> = { locations: 'location', npc: 'npc', quests: 'quest', enemies: 'enemy', players: 'party', factions: 'faction' };
 const CREATE_LABEL: Record<LibraryKind, string> = { locations: 'Локация', npc: 'NPC', quests: 'Квест', enemies: 'Враг', players: 'Персонаж', factions: 'Фракция' };
 
+function orderFromTitle(title?: string): number {
+  const match = title?.match(/^\s*([A-ZА-Я]{0,2})(\d{1,3})(?:[\.\-]|$)/i);
+  return match ? Number(match[2]) : 9999;
+}
+
+function alphaKey(title?: string): string {
+  return (title ?? '').toLocaleLowerCase('ru');
+}
+
 export function CampaignLibraryPage() {
   const { campaignId, kind } = useParams<{ campaignId: string; kind: Kind }>();
   const navigate = useNavigate();
@@ -29,6 +38,10 @@ export function CampaignLibraryPage() {
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [locFilter, setLocFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [tagFilter, setTagFilter] = useState('all');
+  const [imageFilter, setImageFilter] = useState('all');
+  const [sortFilter, setSortFilter] = useState('route');
 
   const data = campaignId ? store.getData(campaignId) : null;
   const runtime = campaignId ? store.getRuntime(campaignId) : null;
@@ -72,10 +85,68 @@ export function CampaignLibraryPage() {
     let list = buildListItems(k as LibraryKind, data, vmOpts);
     if (isPlayer) list = list.filter((it) => revealed.has(it.id)); // player: only revealed
     if (k === 'npc' && roleFilter !== 'all') list = list.filter((it) => data.npcs.find((n) => n.id === it.id)?.role === roleFilter);
-    if (k === 'npc' && locFilter !== 'all') list = list.filter((it) => data.npcs.find((n) => n.id === it.id)?.locationId === locFilter);
+    if (locFilter !== 'all') {
+      list = list.filter((it) => {
+        if (k === 'locations') return it.id === locFilter;
+        if (k === 'npc') return data.npcs.find((n) => n.id === it.id)?.locationId === locFilter;
+        if (k === 'quests') return data.quests.find((quest) => quest.id === it.id)?.locationId === locFilter;
+        if (k === 'enemies') return data.enemies.find((enemy) => enemy.id === it.id)?.locationIds?.includes(locFilter);
+        return true;
+      });
+    }
+    if (k === 'quests' && statusFilter !== 'all') list = list.filter((it) => data.quests.find((quest) => quest.id === it.id)?.status === statusFilter);
+    if (tagFilter !== 'all') {
+      list = list.filter((it) => {
+        const tags =
+          k === 'locations' ? data.locations.find((entity) => entity.id === it.id)?.tags :
+          k === 'npc' ? data.npcs.find((entity) => entity.id === it.id)?.tags :
+          k === 'quests' ? data.quests.find((entity) => entity.id === it.id)?.tags :
+          k === 'enemies' ? data.enemies.find((entity) => entity.id === it.id)?.tags :
+          k === 'factions' ? data.factions?.find((entity) => entity.id === it.id)?.attitude ? [data.factions.find((entity) => entity.id === it.id)!.attitude!] : [] :
+          [];
+        return tags?.includes(tagFilter);
+      });
+    }
+    if (imageFilter !== 'all') {
+      list = list.filter((it) => imageFilter === 'with' ? !!it.imageUrl : !it.imageUrl);
+    }
+    const locRank = (id?: string) => {
+      const loc = id ? data.locations.find((entity) => entity.id === id) : undefined;
+      return [orderFromTitle(loc?.title), alphaKey(loc?.title)] as const;
+    };
+    const entityRank = (id: string) => {
+      if (k === 'locations') {
+        const loc = data.locations.find((entity) => entity.id === id);
+        return [orderFromTitle(loc?.title), alphaKey(loc?.title), 0] as const;
+      }
+      if (k === 'quests') {
+        const quest = data.quests.find((entity) => entity.id === id);
+        const [rank, locTitle] = locRank(quest?.locationId);
+        return [rank, locTitle, orderFromTitle(quest?.title)] as const;
+      }
+      if (k === 'npc') {
+        const npc = data.npcs.find((entity) => entity.id === id);
+        const [rank, locTitle] = locRank(npc?.locationId);
+        return [rank, locTitle, orderFromTitle(npc?.name)] as const;
+      }
+      if (k === 'enemies') {
+        const enemy = data.enemies.find((entity) => entity.id === id);
+        const locRanks = (enemy?.locationIds ?? []).map((locationId) => locRank(locationId));
+        const first = locRanks.sort((a, b) => a[0] - b[0] || a[1].localeCompare(b[1], 'ru'))[0] ?? [9999, ''] as const;
+        return [first[0], first[1], orderFromTitle(enemy?.title)] as const;
+      }
+      return [9999, '', 9999] as const;
+    };
+    list = [...list].sort((a, b) => {
+      if (sortFilter === 'name') return a.title.localeCompare(b.title, 'ru');
+      if (sortFilter === 'image') return Number(!!b.imageUrl) - Number(!!a.imageUrl) || a.title.localeCompare(b.title, 'ru');
+      const ar = entityRank(a.id);
+      const br = entityRank(b.id);
+      return ar[0] - br[0] || ar[1].localeCompare(br[1], 'ru') || ar[2] - br[2] || a.title.localeCompare(b.title, 'ru');
+    });
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, k, isEntityKind, vmOpts, isPlayer, runtime?.revealedToPlayers, roleFilter, locFilter]);
+  }, [data, k, isEntityKind, vmOpts, isPlayer, runtime?.revealedToPlayers, roleFilter, locFilter, statusFilter, tagFilter, imageFilter, sortFilter]);
 
   if (!campaignId || !data || !runtime || registryEntry?.protected) {
     return (
@@ -100,10 +171,21 @@ export function CampaignLibraryPage() {
     if (id) { setSelectedId(id); setEditOpen({ type: KIND_ENTITY[k], id }); }
   };
 
-  // NPC filters (role, location) — same idea as the main campaign's library.
-  const filters: FilterConfig[] | undefined = k === 'npc' ? [
-    { key: 'role', value: roleFilter, onChange: setRoleFilter, options: [{ id: 'all', name: 'Все роли' }, ...Array.from(new Set(data.npcs.map((n) => n.role).filter(Boolean) as string[])).sort().map((r) => ({ id: r, name: r }))] },
-    { key: 'loc', value: locFilter, onChange: setLocFilter, options: [{ id: 'all', name: 'Все локации' }, ...data.locations.map((l) => ({ id: l.id, name: l.title }))] },
+  const orderedLocations = [...data.locations].sort((a, b) => orderFromTitle(a.title) - orderFromTitle(b.title) || a.title.localeCompare(b.title, 'ru'));
+  const tagOptions = Array.from(new Set([
+    ...(k === 'locations' ? data.locations.flatMap((entity) => entity.tags ?? []) : []),
+    ...(k === 'npc' ? data.npcs.flatMap((entity) => entity.tags ?? []) : []),
+    ...(k === 'quests' ? data.quests.flatMap((entity) => entity.tags ?? []) : []),
+    ...(k === 'enemies' ? data.enemies.flatMap((entity) => entity.tags ?? []) : []),
+    ...(k === 'factions' ? (data.factions ?? []).map((entity) => entity.attitude).filter(Boolean) as string[] : []),
+  ])).sort((a, b) => a.localeCompare(b, 'ru'));
+  const filters: FilterConfig[] | undefined = isEntityKind ? [
+    { key: 'sort', value: sortFilter, onChange: setSortFilter, options: [{ id: 'route', name: 'Сортировка: порядок локаций' }, { id: 'name', name: 'Сортировка: имя А-Я' }, { id: 'image', name: 'Сортировка: сначала с картинкой' }] },
+    ...(k === 'npc' ? [{ key: 'role', value: roleFilter, onChange: setRoleFilter, options: [{ id: 'all', name: 'Роль: все' }, ...Array.from(new Set(data.npcs.map((n) => n.role).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, 'ru')).map((r) => ({ id: r, name: r }))] }] : []),
+    ...(['locations', 'npc', 'quests', 'enemies'].includes(k) ? [{ key: 'loc', value: locFilter, onChange: setLocFilter, options: [{ id: 'all', name: 'Локация: все' }, ...orderedLocations.map((l) => ({ id: l.id, name: l.title }))] }] : []),
+    ...(k === 'quests' ? [{ key: 'status', value: statusFilter, onChange: setStatusFilter, options: [{ id: 'all', name: 'Статус: все' }, { id: 'notStarted', name: 'notStarted' }, { id: 'active', name: 'active' }, { id: 'completed', name: 'completed' }, { id: 'failed', name: 'failed' }, { id: 'hidden', name: 'hidden' }] }] : []),
+    ...(tagOptions.length ? [{ key: 'tag', value: tagFilter, onChange: setTagFilter, options: [{ id: 'all', name: 'Тег: все' }, ...tagOptions.map((tag) => ({ id: tag, name: tag }))] }] : []),
+    { key: 'image', value: imageFilter, onChange: setImageFilter, options: [{ id: 'all', name: 'Визуал: все' }, { id: 'with', name: 'С картинкой' }, { id: 'missing', name: 'Без картинки' }] },
   ] : undefined;
 
   const type = isEntityKind ? KIND_ENTITY[k] : undefined;

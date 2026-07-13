@@ -56,6 +56,18 @@ function DmOnlyRoute({ children }: { children: ReactElement }) {
   return children;
 }
 
+function UserCampaignDmRoute({ children }: { children: ReactElement }) {
+  const { campaignId } = useParams<{ campaignId: string }>();
+  const location = useLocation();
+  const asPlayer = new URLSearchParams(location.search).get('as') === 'player';
+  if (asPlayer) return <Navigate to={`/campaigns/${campaignId ?? ''}/map?as=player`} replace />;
+  return <DmOnlyRoute>{children}</DmOnlyRoute>;
+}
+
+function UserCampaignPlayerCapableRoute({ children }: { children: ReactElement }) {
+  return <DmOnlyRoute>{children}</DmOnlyRoute>;
+}
+
 function PlayerWorkspaceRoute() {
   const store = useCampaignStore();
   useEffect(() => {
@@ -124,12 +136,12 @@ function AppShell() {
             <Route path="/atlas/maps/:mapId" element={<DmOnlyRoute><AtlasMapWorkspace /></DmOnlyRoute>} />
             <Route path="/campaigns" element={<DmOnlyRoute><CampaignsPage /></DmOnlyRoute>} />
             <Route path="/campaigns/new" element={<DmOnlyRoute><NewCampaignWizard /></DmOnlyRoute>} />
-            <Route path="/campaigns/:campaignId/map" element={<DmOnlyRoute><IsolatedCampaignMapWorkspace /></DmOnlyRoute>} />
-            <Route path="/campaigns/:campaignId/library/battle-maps" element={<DmOnlyRoute><CampaignBattleMapsPage /></DmOnlyRoute>} />
-            <Route path="/campaigns/:campaignId/library/bestiary" element={<DmOnlyRoute><CampaignBestiaryPage /></DmOnlyRoute>} />
-            <Route path="/campaigns/:campaignId/library/:kind" element={<DmOnlyRoute><CampaignLibraryPage /></DmOnlyRoute>} />
-            <Route path="/campaigns/:campaignId/battle/:mapId" element={<DmOnlyRoute><CampaignBattlePage /></DmOnlyRoute>} />
-            <Route path="/campaigns/:campaignId" element={<DmOnlyRoute><CampaignEntryRedirect /></DmOnlyRoute>} />
+            <Route path="/campaigns/:campaignId/map" element={<UserCampaignPlayerCapableRoute><IsolatedCampaignMapWorkspace /></UserCampaignPlayerCapableRoute>} />
+            <Route path="/campaigns/:campaignId/library/battle-maps" element={<UserCampaignDmRoute><CampaignBattleMapsPage /></UserCampaignDmRoute>} />
+            <Route path="/campaigns/:campaignId/library/bestiary" element={<UserCampaignDmRoute><CampaignBestiaryPage /></UserCampaignDmRoute>} />
+            <Route path="/campaigns/:campaignId/library/:kind" element={<UserCampaignDmRoute><CampaignLibraryPage /></UserCampaignDmRoute>} />
+            <Route path="/campaigns/:campaignId/battle/:mapId" element={<UserCampaignPlayerCapableRoute><CampaignBattlePage /></UserCampaignPlayerCapableRoute>} />
+            <Route path="/campaigns/:campaignId" element={<UserCampaignDmRoute><CampaignEntryRedirect /></UserCampaignDmRoute>} />
           </Routes>
         </main>
       </div>

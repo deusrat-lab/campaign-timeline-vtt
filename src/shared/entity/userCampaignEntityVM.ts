@@ -31,6 +31,14 @@ function locName(data: UserCampaignData, id?: string): string | undefined {
   return id ? data.locations.find((l) => l.id === id)?.title : undefined;
 }
 
+function locImageId(data: UserCampaignData, id?: string): string | undefined {
+  return id ? data.locations.find((l) => l.id === id)?.imageId : undefined;
+}
+
+function firstLocImageId(data: UserCampaignData, ids?: string[]): string | undefined {
+  return ids?.map((id) => locImageId(data, id)).find(Boolean);
+}
+
 function locRelation(data: UserCampaignData, o: VMOpts, id: string): EntityRelationLink | undefined {
   const l = data.locations.find((x) => x.id === id);
   if (!l) return undefined;
@@ -49,9 +57,9 @@ export function buildListItems(kind: LibraryKind, data: UserCampaignData, o: VMO
     ({ id, title, subtitle, imageUrl: o.imageUrl(imageId), placed: o.isPlaced(et, id), revealed: o.isRevealed(id) });
   switch (kind) {
     case 'locations': return data.locations.filter((l) => o.match(l.title)).map((l) => wrap(l.id, l.title, l.tags?.join(' · '), l.imageId));
-    case 'npc': return data.npcs.filter((n) => o.match(n.name)).map((n) => wrap(n.id, n.name, [n.role, locName(data, n.locationId)].filter(Boolean).join(' · '), n.imageId));
-    case 'quests': return data.quests.filter((q) => o.match(q.title) && (!o.isPlayer || q.status !== 'hidden')).map((q) => wrap(q.id, q.title, q.status, q.imageId));
-    case 'enemies': return data.enemies.filter((e) => o.match(e.title)).map((e) => wrap(e.id, e.title, e.hp ? `HP ${e.hp}` : e.baseMonster, e.imageId));
+    case 'npc': return data.npcs.filter((n) => o.match(n.name)).map((n) => wrap(n.id, n.name, [n.role, locName(data, n.locationId)].filter(Boolean).join(' · '), n.imageId ?? locImageId(data, n.locationId)));
+    case 'quests': return data.quests.filter((q) => o.match(q.title) && (!o.isPlayer || q.status !== 'hidden')).map((q) => wrap(q.id, q.title, q.status, q.imageId ?? locImageId(data, q.locationId)));
+    case 'enemies': return data.enemies.filter((e) => o.match(e.title)).map((e) => wrap(e.id, e.title, e.hp ? `HP ${e.hp}` : e.baseMonster, e.imageId ?? firstLocImageId(data, e.locationIds)));
     case 'players': return (data.party ?? []).filter((p) => o.match(p.name)).map((p) => wrap(p.id, p.name, [p.class, p.level ? `ур. ${p.level}` : ''].filter(Boolean).join(' · ')));
     case 'factions': return (data.factions ?? []).filter((f) => o.match(f.name)).map((f) => wrap(f.id, f.name, [f.role, f.attitude].filter(Boolean).join(' · '), f.imageId));
   }
@@ -86,7 +94,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
             id: n.id,
             label: n.name,
             subtitle: n.role,
-            imageUrl: o.imageUrl(n.imageId),
+            imageUrl: o.imageUrl(n.imageId ?? locImageId(data, n.locationId)),
             onOpen: () => o.onOpen('npc', n.id),
           })),
         },
@@ -109,7 +117,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
             id: e.id,
             label: e.title,
             subtitle: [e.baseMonster, e.ac != null ? `AC ${e.ac}` : '', e.hp != null ? `HP ${e.hp}` : ''].filter(Boolean).join(' · '),
-            imageUrl: o.imageUrl(e.imageId),
+            imageUrl: o.imageUrl(e.imageId ?? firstLocImageId(data, e.locationIds)),
             onOpen: () => o.onOpen('enemies', e.id),
           })),
         },
@@ -126,7 +134,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
     const quests = data.quests.filter((q) => q.npcIds?.includes(n.id) && (!o.isPlayer || (q.status !== 'hidden' && o.isRevealed(q.id))));
     const location = n.locationId && (!o.isPlayer || o.isRevealed(n.locationId)) ? locRelation(data, o, n.locationId) : undefined;
     return {
-      ...base(n.name), subtitle: n.role, imageUrl: o.imageUrl(n.imageId), description: n.description, dmNotes: n.dmNotes, tags: n.tags,
+      ...base(n.name), subtitle: n.role, imageUrl: o.imageUrl(n.imageId ?? locImageId(data, n.locationId)), description: n.description, dmNotes: n.dmNotes, tags: n.tags,
       fields: [{ label: 'Локация', value: locName(data, n.locationId) ?? '—' }],
       relations: [
         { key: 'loc', label: 'Локация', items: location ? [location] : [] },
@@ -138,7 +146,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
             label: q.title,
             subtitle: q.status,
             meta: locName(data, q.locationId),
-            imageUrl: o.imageUrl(q.imageId),
+            imageUrl: o.imageUrl(q.imageId ?? locImageId(data, q.locationId)),
             onOpen: () => o.onOpen('quests', q.id),
           })),
         },
@@ -151,7 +159,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
     const location = q.locationId && (!o.isPlayer || o.isRevealed(q.locationId)) ? locRelation(data, o, q.locationId) : undefined;
     return {
       ...base(q.title), subtitle: q.status, description: q.description, dmNotes: q.dmNotes, tags: q.tags,
-      imageUrl: o.imageUrl(q.imageId),
+      imageUrl: o.imageUrl(q.imageId ?? locImageId(data, q.locationId)),
       fields: [{ label: 'Статус', value: q.status }, { label: 'Локация', value: locName(data, q.locationId) ?? '—' }],
       relations: [
         { key: 'loc', label: 'Локация', items: location ? [location] : [] },
@@ -162,7 +170,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
             id: n.id,
             label: n.name,
             subtitle: n.role,
-            imageUrl: o.imageUrl(n.imageId),
+            imageUrl: o.imageUrl(n.imageId ?? locImageId(data, n.locationId)),
             onOpen: () => o.onOpen('npc', n.id),
           })),
         },
@@ -173,7 +181,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
     const e = data.enemies.find((x) => x.id === id); if (!e) return null;
     const locs = (e.locationIds ?? []).filter((lid) => !o.isPlayer || o.isRevealed(lid)).map((lid) => data.locations.find((l) => l.id === lid)).filter(Boolean) as typeof data.locations;
     return {
-      ...base(e.title), subtitle: e.baseMonster, imageUrl: o.imageUrl(e.imageId), description: e.description, dmNotes: e.tactics, tags: e.tags,
+      ...base(e.title), subtitle: e.baseMonster, imageUrl: o.imageUrl(e.imageId ?? firstLocImageId(data, e.locationIds)), description: e.description, dmNotes: e.tactics, tags: e.tags,
       fields: [{ label: 'AC', value: String(e.ac ?? '—') }, { label: 'HP', value: String(e.hp ?? '—') }],
       relations: [{
         key: 'locs',

@@ -53,13 +53,8 @@ export function NavRail() {
     // full-screen player experience as the main campaign's «Открыть Observer».
     if (asPlayer) return null;
     const isPlayerView = userStore.getRuntime(campaignId).mode === 'playerView';
-    const cItems: RailItem[] = isPlayerView ? [
-      { key: 'home', label: 'Дом мира', icon: '🌍', to: '/' },
-      { key: 'c-map', label: 'Карта', icon: '🗺', to: `/campaigns/${campaignId}/map` },
-      { key: 'c-locations', label: 'Локации', icon: '⌂', to: `/campaigns/${campaignId}/library/locations` },
-      { key: 'c-npc', label: 'NPC', icon: '🧑', to: `/campaigns/${campaignId}/library/npc` },
-      { key: 'c-quests', label: 'Квесты', icon: '📜', to: `/campaigns/${campaignId}/library/quests` },
-    ] : [
+    if (isPlayerView) return null;
+    const cItems: RailItem[] = [
       { key: 'home', label: 'Дом мира', icon: '🌍', to: '/' },
       { key: 'campaigns', label: 'Кампании', icon: '🎲', to: '/campaigns' },
       { key: 'c-map', label: 'Карта', icon: '🗺', to: `/campaigns/${campaignId}/map` },

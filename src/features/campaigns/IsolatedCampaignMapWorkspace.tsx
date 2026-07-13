@@ -358,8 +358,14 @@ export function IsolatedCampaignMapWorkspace() {
       {/* Header */}
       <div className="ucw-header">
         <div className="ucw-title">
-          <button className="atlas-back-link" style={{ margin: 0 }} onClick={() => navigate('/')}>← Дом мира</button>
-          <span className="atlas-crumb-sep">→</span>
+          {asPlayer ? (
+            <span className="ucw-chip">Карта игрока</span>
+          ) : (
+            <>
+              <button className="atlas-back-link" style={{ margin: 0 }} onClick={() => navigate('/')}>← Дом мира</button>
+              <span className="atlas-crumb-sep">→</span>
+            </>
+          )}
           <strong>{data.title}</strong>
           <span className="ucw-chip">{USER_CAMPAIGN_TYPE_LABELS[data.type]} · изолирован</span>
         </div>

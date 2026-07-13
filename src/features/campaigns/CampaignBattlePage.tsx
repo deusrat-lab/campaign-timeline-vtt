@@ -138,6 +138,15 @@ export function CampaignBattlePage() {
     );
   }
 
+  if (asPlayer && !isPresented) {
+    return (
+      <div className="ucw-lib-page">
+        <button className="atlas-back-link" onClick={() => navigate(`/campaigns/${campaignId}/map?as=player`)}>← Карта</button>
+        <p className="atlas-empty">Бой не открыт мастером.</p>
+      </div>
+    );
+  }
+
   const imgUrl = isCustom
     ? (variant === 'night' && customMap?.nightImage ? customMap.nightImage : customMap?.dayImage)
     : battleMapImageUrl(map, variant);
@@ -396,7 +405,13 @@ export function CampaignBattlePage() {
     <div className="ucw" ref={rootRef} style={shellHeight ? { height: shellHeight } : undefined}>
       <div className="ucw-header">
         <div className="ucw-title">
-          <button className="atlas-back-link" style={{ margin: 0 }} onClick={() => navigate(`/campaigns/${campaignId}/library/battle-maps`)}>← Карты боя</button>
+          <button
+            className="atlas-back-link"
+            style={{ margin: 0 }}
+            onClick={() => navigate(asPlayer ? `/campaigns/${campaignId}/map?as=player` : `/campaigns/${campaignId}/library/battle-maps`)}
+          >
+            ← {asPlayer ? 'Карта' : 'Карты боя'}
+          </button>
           <span className="atlas-crumb-sep">→</span>
           <strong>{title}</strong>
           <span className="ucw-chip">{isCustom ? 'Своё поле · изолирован' : 'Бой · изолирован'}</span>

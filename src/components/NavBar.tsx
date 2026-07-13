@@ -88,11 +88,12 @@ export function NavBar() {
   const store = useCampaignStore();
   const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const observerLocked = location.pathname === '/observer';
   // Inside a user campaign (or its map), hide all main-campaign controls (arc
   // toggles, DM/Player mode, Observer, export/import, party) — they belong to
   // the protected main campaign and must not bleed into another context.
   const inUserCampaign = /^\/campaigns\/(?!new(?:$|\/))[^/]+/.test(location.pathname);
+  const userCampaignPlayerLocked = inUserCampaign && new URLSearchParams(location.search).get('as') === 'player';
+  const observerLocked = location.pathname === '/observer' || userCampaignPlayerLocked;
 
   const currentLocation =
     data && store.party.currentLocationStateId ? getLocationState(data, store.party.currentLocationStateId) : undefined;
@@ -159,9 +160,15 @@ export function NavBar() {
       {store.mode === 'dm-edit' && <div className="edit-mode-banner">РЕЖИМ РЕДАКТИРОВАНИЯ (DM EDIT MODE)</div>}
       <nav className="navbar">
         <div className="navbar-left">
-          <Link to="/" className="brand">
-            <span className="brand-mark">⟡</span> Campaign Timeline VTT
-          </Link>
+          {observerLocked ? (
+            <span className="brand" aria-current="page">
+              <span className="brand-mark">⟡</span> Campaign Timeline VTT
+            </span>
+          ) : (
+            <Link to="/" className="brand">
+              <span className="brand-mark">⟡</span> Campaign Timeline VTT
+            </Link>
+          )}
           {!observerLocked && store.mode !== 'player-view' && (
             <>
               <Link to="/home" className="navbar-text-link" title="Стартовый экран: карта мира, кампании, атлас">🏠 Дом мира</Link>
@@ -224,7 +231,7 @@ export function NavBar() {
           )}
         </div>
         <div className="navbar-right">
-          {((!inUserCampaign && store.mode !== 'player-view' && !observerLocked) || inUserCampaign) && API_BASE_URL && <DmSyncIndicator />}
+          {((!inUserCampaign && store.mode !== 'player-view' && !observerLocked) || (inUserCampaign && !userCampaignPlayerLocked)) && API_BASE_URL && <DmSyncIndicator />}
           {!inUserCampaign && store.mode === 'dm-edit' && store.saveStatus !== 'idle' && (
             <span className={`save-status save-status-${store.saveStatus}`}>
               {store.saveStatus === 'saved' ? 'Сохранено' : 'Ошибка сохранения'}
