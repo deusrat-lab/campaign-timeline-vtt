@@ -566,6 +566,13 @@ export function EmbeddedBattleOverlay({
     setPostMovePrompt(null);
   }
 
+  function rollAllInitiative() {
+    const combatants = battle.combatants.map((combatant) => ({ ...combatant, initiative: 1 + Math.floor(Math.random() * 20) }));
+    const first = sortedCombatants(combatants)[0];
+    store.updateActiveBattle({ combatants, currentTurnCombatantId: first?.id ?? battle.currentTurnCombatantId });
+    if (first) setSelectedId(first.id);
+  }
+
   function moveSelectedTo(cell: BattleCell, force = false) {
     if (!selected || selected.row === undefined || selected.column === undefined) return;
     if (isPlayerView && selected.side !== 'player') return;
@@ -627,6 +634,7 @@ export function EmbeddedBattleOverlay({
     const tokenImgSrc = tokenSrcForCombatant(combatant) ?? imageForId(images, combatant.imageId);
     const portraitSrc = sourceEnemy ? imageForId(images, sourceEnemy.image) : imageForId(images, sourcePlayer?.image ?? combatant.imageId);
     const enemyPlayerView = isPlayerView && combatant.side === 'enemy';
+    const playerViewCardOnly = isPlayerView && !compact;
     return (
       <article key={combatant.id} className={`battle-combat-card${isCurrent ? ' battle-combat-card--current' : ''}`} onClick={() => setSelectedId(combatant.id)}>
         <div className="battle-combat-card__head">
@@ -636,7 +644,12 @@ export function EmbeddedBattleOverlay({
             <span>{combatant.side === 'enemy' ? 'враг' : sourcePlayer?.class ?? 'игрок'}</span>
           </div>
         </div>
-        {!enemyPlayerView && (
+        {playerViewCardOnly && (
+          <>
+            {(portraitSrc ?? tokenImgSrc) ? <img className="battle-enemy-full-card__image" src={portraitSrc ?? tokenImgSrc} alt={combatant.name} /> : <span className="battle-token-fallback battle-token-fallback--large">{combatant.name[0]}</span>}
+          </>
+        )}
+        {!enemyPlayerView && !playerViewCardOnly && (
           <div className="battle-stat-grid">
             <label>Иниц.<input type="number" value={combatant.initiative ?? ''} disabled={isPlayerView} onChange={(e) => store.updateActiveBattleCombatant(combatant.id, { initiative: e.target.value === '' ? undefined : Number(e.target.value) })} /></label>
             <label>HP<input type="number" value={combatant.currentHp} disabled={!canEdit} onChange={(e) => store.updateActiveBattleCombatant(combatant.id, { currentHp: Number(e.target.value) || 0 })} /></label>
@@ -645,7 +658,7 @@ export function EmbeddedBattleOverlay({
             <label>Скор.<input type="number" value={combatant.speedFeet ?? DEFAULT_SPEED_FEET} disabled={!canEdit} onChange={(e) => store.updateActiveBattleCombatant(combatant.id, { speedFeet: Math.max(5, Number(e.target.value) || DEFAULT_SPEED_FEET) })} /></label>
           </div>
         )}
-        {canEdit && <div className="battle-hp-actions">{[-5, -1, 1, 5].map((delta) => <button key={delta} type="button" onClick={(e) => { e.stopPropagation(); store.updateActiveBattleCombatant(combatant.id, { currentHp: hpDelta(combatant.currentHp, delta, combatant.maxHp) }); }}>{delta > 0 ? `+${delta}` : delta}</button>)}</div>}
+        {canEdit && !playerViewCardOnly && <div className="battle-hp-actions">{[-5, -1, 1, 5].map((delta) => <button key={delta} type="button" onClick={(e) => { e.stopPropagation(); store.updateActiveBattleCombatant(combatant.id, { currentHp: hpDelta(combatant.currentHp, delta, combatant.maxHp) }); }}>{delta > 0 ? `+${delta}` : delta}</button>)}</div>}
         {!compact && sourceEnemy && !isPlayerView && (
           <div className="battle-enemy-full-card">
             {portraitSrc && <img className="battle-enemy-full-card__image" src={portraitSrc} alt={sourceEnemy.name} />}
@@ -656,12 +669,6 @@ export function EmbeddedBattleOverlay({
             {sourceEnemy.tactics && <><h4>Тактика</h4><p>{sourceEnemy.tactics}</p></>}
             {sourceEnemy.dmNotes && <p className="muted">DM: {sourceEnemy.dmNotes}</p>}
           </div>
-        )}
-        {!compact && sourceEnemy && isPlayerView && (
-          <>
-            {portraitSrc && <img className="battle-enemy-full-card__image" src={portraitSrc} alt={sourceEnemy.name} />}
-            <p className="muted">{sourceEnemy.lore ?? sourceEnemy.role ?? 'Враг'}</p>
-          </>
         )}
       </article>
     );
@@ -709,6 +716,9 @@ export function EmbeddedBattleOverlay({
               <button type="button" disabled={!canPassTurn} onClick={nextTurn}>
                 {canPassTurn ? 'Следующий ход' : 'Ход ДМ'}
               </button>
+              {!isPlayerView && battle.combatants.length > 0 && (
+                <button type="button" onClick={rollAllInitiative}>🎲 Бросить всем</button>
+              )}
             {!isPlayerView && (
               <button type="button" className="btn-danger" onClick={store.endActiveBattle}>Закончить бой</button>
             )}

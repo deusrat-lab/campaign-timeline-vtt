@@ -1,17 +1,20 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import '../world-atlas/atlasLayer.css';
 import './campaignWorkspace.css';
 import { getCampaignById } from '../../data/campaignModules';
 import { useUserCampaigns } from '../../state/userCampaignStore';
+import { scenarioForCampaign } from '../../data/scenarioMerge';
 import { getBattleMapCatalog, getBattleMapById, battleMapImageUrl, battleMapVariantTypes, BATTLE_VARIANT_LABEL } from '../../data/battleMapCatalog';
 import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
 import type { CampaignBattleToken, BattleTokenSide, CampaignBattleBoard } from '../../types/userCampaign';
 
+const norm = (s: string) => s.trim().toLowerCase();
 
 export function CampaignBattlePage() {
   const { campaignId, mapId } = useParams<{ campaignId: string; mapId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const store = useUserCampaigns();
   const [catalog, setCatalog] = useState<BattleMapManifestEntry[] | null>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -31,7 +34,8 @@ export function CampaignBattlePage() {
     ?? (runtime?.battleBoard && runtime.battleBoard.mapId === mapId ? runtime.battleBoard : emptyBoard);
   // Player view = read-only board (see what the DM set up, edit nothing). The
   // DM can flip to Player View to preview exactly what players get.
-  const isPlayer = runtime?.mode === 'playerView';
+  const asPlayer = searchParams.get('as') === 'player';
+  const isPlayer = runtime?.mode === 'playerView' || asPlayer;
   const isPresented = !!mapId && runtime?.presentedBattle?.mapId === mapId;
   // Custom field (`custom-<id>`) or a shared-catalog map.
   const isCustom = !!mapId && mapId.startsWith('custom-');
@@ -46,7 +50,7 @@ export function CampaignBattlePage() {
 
   const [zoom, setZoom] = useState(board.view?.zoom ?? 1);
   const [pan, setPan] = useState({ x: board.view?.panX ?? 0, y: board.view?.panY ?? 0 });
-  const [placing, setPlacing] = useState<{ side: BattleTokenSide; name: string; ac?: number; hp?: number } | null>(null);
+  const [placing, setPlacing] = useState<{ side: BattleTokenSide; name: string; ac?: number; hp?: number; sourceEnemyId?: string; sourcePlayerId?: string; imageId?: string } | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [fitted, setFitted] = useState(false);
   const [terrainMode, setTerrainMode] = useState<'off' | 'blocked' | 'difficult' | 'erase'>('off');
@@ -127,6 +131,16 @@ export function CampaignBattlePage() {
   const imgUrl = isCustom
     ? (variant === 'night' && customMap?.nightImage ? customMap.nightImage : customMap?.dayImage)
     : battleMapImageUrl(map, variant);
+  const scenario = scenarioForCampaign(data);
+  const battleLocationKey = scenario?.battleMapLinks?.find((link) => link.battleMapId === mapId)?.locationKey;
+  const battleScenarioLocation = battleLocationKey ? scenario?.locations.find((loc) => loc.key === battleLocationKey) : undefined;
+  const battleLocation = battleScenarioLocation
+    ? data.locations.find((loc) => norm(loc.title) === norm(battleScenarioLocation.title))
+    : undefined;
+  const battleLocationIds = new Set(battleLocation ? [battleLocation.id] : []);
+  const locationEnemies = data.enemies.filter((enemy) => (enemy.locationIds ?? []).some((id) => battleLocationIds.has(id)));
+  const otherEnemies = data.enemies.filter((enemy) => !locationEnemies.some((local) => local.id === enemy.id));
+  const imageSrcById = (imageId?: string) => imageId ? data.images.find((image) => image.id === imageId)?.src : undefined;
 
   const clientToPct = (cx: number, cy: number) => {
     const img = imgRef.current; if (!img) return { x: 50, y: 50 };
@@ -220,7 +234,19 @@ export function CampaignBattlePage() {
     if (!d.moved && placing) {
       const raw = clientToPct(e.clientX, e.clientY);
       const pct = snapPct(raw.x, raw.y);
-      const tok: CampaignBattleToken = { id: `tok-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`, name: placing.name, side: placing.side, x: pct.x, y: pct.y, ac: placing.ac, currentHp: placing.hp, maxHp: placing.hp };
+      const tok: CampaignBattleToken = {
+        id: `tok-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+        name: placing.name,
+        side: placing.side,
+        sourceEnemyId: placing.sourceEnemyId,
+        sourcePlayerId: placing.sourcePlayerId,
+        imageId: placing.imageId,
+        x: pct.x,
+        y: pct.y,
+        ac: placing.ac,
+        currentHp: placing.hp,
+        maxHp: placing.hp,
+      };
       patchBoard((b) => ({ ...b, tokens: [...b.tokens, tok] }));
       setPlacing(null);
     } else if (d.moved) {
@@ -256,6 +282,28 @@ export function CampaignBattlePage() {
   };
 
   const selTok = board.tokens.find((t) => t.id === selected);
+  const selectedEnemy = selTok?.sourceEnemyId
+    ? data.enemies.find((enemy) => enemy.id === selTok.sourceEnemyId)
+    : data.enemies.find((enemy) => selTok && norm(enemy.title) === norm(selTok.name));
+  const selectedPlayer = selTok?.sourcePlayerId
+    ? (data.party ?? []).find((player) => player.id === selTok.sourcePlayerId)
+    : (data.party ?? []).find((player) => selTok && norm(player.name) === norm(selTok.name));
+  const selectedImage = imageSrcById(selectedEnemy?.imageId ?? selTok?.imageId);
+  const placeEnemy = (enemy: typeof data.enemies[number]) => setPlacing({
+    side: 'enemy',
+    name: enemy.title,
+    ac: enemy.ac,
+    hp: enemy.hp,
+    sourceEnemyId: enemy.id,
+    imageId: enemy.imageId,
+  });
+  const placePlayer = (player: NonNullable<typeof data.party>[number]) => setPlacing({
+    side: 'player',
+    name: player.name,
+    ac: player.ac,
+    hp: player.hp ?? player.maxHp,
+    sourcePlayerId: player.id,
+  });
   // Initiative order — highest acts first (undefined sorts last), same rule as
   // the main campaign's battle. Rendered at the TOP of the panel.
   const ordered = [...board.tokens].sort((a, b) => (b.initiative ?? -999) - (a.initiative ?? -999) || a.name.localeCompare(b.name, 'ru'));
@@ -398,22 +446,61 @@ export function CampaignBattlePage() {
             </div>
           )}
 
-          {!isPlayer && (
+          {!isPlayer && (data.party ?? []).length > 0 && (
             <div className="ucw-lib-group">
-              <div className="label">Враги кампании</div>
-              {data.enemies.length === 0 ? <p className="ucw-empty-note">Нет врагов. Добавьте их в разделе «Враги».</p> : data.enemies.map((e) => (
-                <div key={e.id} className="ucw-entity-row">
-                  <span>{e.title}{e.hp ? ` · HP ${e.hp}` : ''}</span>
+              <div className="label">Игроки партии</div>
+              {(data.party ?? []).map((player) => (
+                <div key={player.id} className="ucw-entity-row">
+                  <span>{player.name}{player.hp ?? player.maxHp ? ` · HP ${player.hp ?? player.maxHp}` : ''}</span>
                   <div className="row-actions">
-                    <button onClick={() => setPlacing({ side: 'enemy', name: e.title, ac: e.ac, hp: e.hp })}>{placing?.name === e.title ? '…клик' : 'На поле'}</button>
+                    <button onClick={() => placePlayer(player)}>{placing?.sourcePlayerId === player.id ? '…клик' : 'На поле'}</button>
                   </div>
                 </div>
               ))}
             </div>
           )}
 
+          {!isPlayer && (
+            <div className="ucw-lib-group">
+              <div className="label">{battleLocation ? `Враги локации: ${battleLocation.title}` : 'Враги локации'}</div>
+              {locationEnemies.length === 0 ? <p className="ucw-empty-note">Для этой карты нет связанных врагов.</p> : locationEnemies.map((e) => (
+                <div key={e.id} className="ucw-entity-row priority">
+                  {imageSrcById(e.imageId) ? <img className="ucw-row-thumb" src={imageSrcById(e.imageId)} alt="" /> : <span className="ucw-row-thumb fallback">{e.title.slice(0, 2)}</span>}
+                  <span>{e.title}{e.hp ? ` · HP ${e.hp}` : ''}</span>
+                  <div className="row-actions">
+                    <button onClick={() => placeEnemy(e)}>{placing?.sourceEnemyId === e.id ? '…клик' : 'На поле'}</button>
+                  </div>
+                </div>
+              ))}
+              <div className="label" style={{ marginTop: 10 }}>Остальные враги кампании</div>
+              {data.enemies.length === 0 ? <p className="ucw-empty-note">Нет врагов. Добавьте их в разделе «Враги».</p> : otherEnemies.map((e) => (
+                <div key={e.id} className="ucw-entity-row">
+                  {imageSrcById(e.imageId) ? <img className="ucw-row-thumb" src={imageSrcById(e.imageId)} alt="" /> : <span className="ucw-row-thumb fallback">{e.title.slice(0, 2)}</span>}
+                  <span>{e.title}{e.hp ? ` · HP ${e.hp}` : ''}</span>
+                  <div className="row-actions">
+                    <button onClick={() => placeEnemy(e)}>{placing?.sourceEnemyId === e.id ? '…клик' : 'На поле'}</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {isPlayer && selTok && (
+            <div className="ucw-card ucw-token-card">
+              <h3>{selectedEnemy?.title ?? selectedPlayer?.name ?? selTok.name}</h3>
+              {selectedImage ? <img className="ucw-token-card-image" src={selectedImage} alt="" /> : <div className="ucw-token-card-fallback">{selTok.name.slice(0, 2)}</div>}
+            </div>
+          )}
+
           {!isPlayer && selTok && (
             <div className="ucw-card" style={{ marginTop: 12 }}>
+              <div className="ucw-token-card-head">
+                {selectedImage ? <img className="ucw-row-thumb large" src={selectedImage} alt="" /> : <span className="ucw-row-thumb large fallback">{selTok.name.slice(0, 2)}</span>}
+                <div>
+                  <strong>{selectedEnemy?.title ?? selectedPlayer?.name ?? selTok.name}</strong>
+                  <small>{selectedEnemy ? 'Карточка врага' : selectedPlayer ? 'Карточка игрока' : 'Свободный токен'}</small>
+                </div>
+              </div>
               <label>Имя</label>
               <input value={selTok.name} onChange={(e) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, name: e.target.value } : t) }))} />
               <div style={{ display: 'flex', gap: 8 }}>
@@ -426,6 +513,12 @@ export function CampaignBattlePage() {
                 <button className="atlas-btn ghost small" onClick={() => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, currentHp: (t.currentHp ?? 0) + 5 } : t) }))}>+5 HP</button>
                 <button className="atlas-btn danger small" onClick={() => { patchBoard((b) => ({ ...b, tokens: b.tokens.filter((t) => t.id !== selTok.id) })); setSelected(null); }}>Убрать</button>
               </div>
+              {selectedEnemy && (
+                <div className="ucw-token-source">
+                  {selectedEnemy.description && <><h4>Описание</h4><p>{selectedEnemy.description}</p></>}
+                  {selectedEnemy.tactics && <><h4>DM</h4><p>{selectedEnemy.tactics}</p></>}
+                </div>
+              )}
             </div>
           )}
         </aside>

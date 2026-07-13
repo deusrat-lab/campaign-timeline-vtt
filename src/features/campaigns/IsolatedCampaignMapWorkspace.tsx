@@ -397,7 +397,7 @@ export function IsolatedCampaignMapWorkspace() {
         <button
           type="button"
           className="ucw-battle-banner"
-          onClick={() => navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(runtime.presentedBattle!.mapId)}`)}
+          onClick={() => navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(runtime.presentedBattle!.mapId)}${asPlayer ? '?as=player' : ''}`)}
         >
           ▶ Мастер открыл бой — нажмите, чтобы перейти на поле боя
         </button>

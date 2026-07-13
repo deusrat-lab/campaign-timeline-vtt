@@ -87,7 +87,11 @@
 .ucw-lib-group { margin-top: 14px; }
 .ucw-lib-group > .label { color: var(--fg-faint); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
 .ucw-entity-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 9px; background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 8px; margin-bottom: 6px; font-size: 0.88rem; }
+.ucw-entity-row.priority { border-color: rgba(192,138,46,0.46); background: rgba(192,138,46,0.09); }
 .ucw-entity-row.selected { border-color: var(--gold); }
+.ucw-row-thumb { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border-soft); background: rgba(9,8,7,0.8); }
+.ucw-row-thumb.large { width: 48px; height: 48px; }
+.ucw-row-thumb.fallback { display: grid; place-items: center; color: var(--gold-soft); font-weight: 700; font-size: 0.78rem; }
 .ucw-entity-row .row-actions { display: flex; gap: 4px; flex-shrink: 0; }
 .ucw-entity-row button { background: none; border: 1px solid var(--border-soft); color: var(--fg-dim); border-radius: 6px; padding: 2px 7px; font: inherit; font-size: 0.75rem; cursor: pointer; }
 .ucw-entity-row button:hover { border-color: var(--gold-dim); color: var(--gold-soft); }
@@ -101,6 +105,16 @@
 }
 .ucw-card textarea { min-height: 60px; resize: vertical; }
 .ucw-card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.ucw-token-card { margin-top: 12px; }
+.ucw-token-card h3 { margin: 0 0 8px; color: var(--gold-soft); font-family: var(--font-heading); }
+.ucw-token-card-image { width: 100%; max-height: 360px; object-fit: contain; border: 1px solid var(--border-soft); border-radius: 8px; background: rgba(0,0,0,0.32); }
+.ucw-token-card-fallback { display: grid; place-items: center; min-height: 180px; border: 1px solid var(--border-soft); border-radius: 8px; color: var(--gold-soft); font-size: 2rem; font-weight: 800; }
+.ucw-token-card-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; margin-bottom: 8px; }
+.ucw-token-card-head strong { display: block; color: var(--gold-soft); }
+.ucw-token-card-head small { display: block; color: var(--fg-dim); }
+.ucw-token-source { margin-top: 12px; border-top: 1px solid var(--border-soft); padding-top: 8px; }
+.ucw-token-source h4 { margin: 8px 0 4px; color: var(--gold-soft); }
+.ucw-token-source p { margin: 0 0 6px; color: var(--fg); line-height: 1.35; }
 
 .ucw-empty-note { color: var(--fg-faint); font-style: italic; font-size: 0.9rem; margin: 6px 0 0; }
 

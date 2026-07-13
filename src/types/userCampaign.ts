@@ -171,6 +171,9 @@ export interface CampaignBattleToken {
   id: string;
   name: string;
   side: BattleTokenSide;
+  sourceEnemyId?: string;
+  sourcePlayerId?: string;
+  imageId?: string;
   x: number; // % of battle-map image
   y: number;
   currentHp?: number;

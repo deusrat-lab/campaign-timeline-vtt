@@ -2241,6 +2241,13 @@ a:hover {
   color: var(--gold);
 }
 
+.battle-token-fallback--large {
+  width: 100%;
+  height: 220px;
+  border-radius: 7px;
+  font-size: 2rem;
+}
+
 .battle-combat-card__head span {
   display: block;
   color: var(--fg-dim);
