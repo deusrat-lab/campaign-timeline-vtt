@@ -78,15 +78,16 @@
 }
 
 .ucw-library {
-  width: 340px; flex-shrink: 0; overflow: auto; padding: 14px 16px;
+  width: 340px; flex-shrink: 0; overflow-y: auto; overflow-x: hidden; padding: 14px 16px; box-sizing: border-box;
   border-left: 1px solid var(--border-soft); background: var(--bg-card);
 }
+.ucw-library * { box-sizing: border-box; max-width: 100%; }
 .ucw-lib-heading { font-family: var(--font-heading); color: var(--gold-soft); font-size: 1.05rem; margin: 0 0 4px; }
 .ucw-add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0; }
 .ucw-add-grid .atlas-btn { width: 100%; }
 .ucw-lib-group { margin-top: 14px; }
 .ucw-lib-group > .label { color: var(--fg-faint); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
-.ucw-entity-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 9px; background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 8px; margin-bottom: 6px; font-size: 0.88rem; }
+.ucw-entity-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-width: 0; padding: 7px 9px; background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 8px; margin-bottom: 6px; font-size: 0.88rem; }
 .ucw-entity-row.priority { border-color: rgba(192,138,46,0.46); background: rgba(192,138,46,0.09); }
 .ucw-entity-row.selected { border-color: var(--gold); }
 .ucw-row-thumb { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border-soft); background: rgba(9,8,7,0.8); }
@@ -108,17 +109,21 @@
 .ucw-token-card { margin-top: 12px; }
 .ucw-token-card h3 { margin: 0 0 8px; color: var(--gold-soft); font-family: var(--font-heading); }
 .ucw-token-card-image { width: 100%; max-height: 360px; object-fit: contain; border: 1px solid var(--border-soft); border-radius: 8px; background: rgba(0,0,0,0.32); }
+.ucw-token-card-image.compact { max-height: 180px; }
 .ucw-token-card-fallback { display: grid; place-items: center; min-height: 180px; border: 1px solid var(--border-soft); border-radius: 8px; color: var(--gold-soft); font-size: 2rem; font-weight: 800; }
+.ucw-token-card-fallback.compact { min-height: 96px; }
 .ucw-token-card-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; margin-bottom: 8px; }
 .ucw-token-card-head strong { display: block; color: var(--gold-soft); }
 .ucw-token-card-head small { display: block; color: var(--fg-dim); }
+.ucw-player-hp-panel { margin-top: 10px; border-top: 1px solid var(--border-soft); padding-top: 10px; }
+.ucw-player-hp-value { color: var(--gold-soft); font-weight: 800; margin-bottom: 8px; }
 .ucw-stat-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .ucw-token-source { margin-top: 12px; border-top: 1px solid var(--border-soft); padding-top: 8px; }
 .ucw-token-source h4 { margin: 8px 0 4px; color: var(--gold-soft); }
 .ucw-token-source p { margin: 0 0 6px; color: var(--fg); line-height: 1.35; }
 .ucw-battle-side-grid { display: grid; gap: 10px; }
 .ucw-token-row {
-  width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  width: 100%; min-width: 0; display: flex; justify-content: space-between; align-items: center; gap: 8px;
   padding: 7px 9px; margin-bottom: 5px; border-radius: 7px; border: 1px solid var(--border-soft);
   background: var(--bg-card); color: inherit; text-align: left; font: inherit; cursor: pointer;
 }
@@ -128,7 +133,7 @@
 .ucw-token-row.side-neutral { border-left: 4px solid var(--amber); }
 .ucw-token-row.selected { border-color: var(--gold-dim); background: rgba(192,138,46,0.12); }
 .ucw-token-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ucw-token-row small { flex: 0 0 auto; color: var(--fg-dim); font-size: 0.72rem; }
+.ucw-token-row small { flex: 0 1 auto; min-width: 0; color: var(--fg-dim); font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .ucw-empty-note { color: var(--fg-faint); font-style: italic; font-size: 0.9rem; margin: 6px 0 0; }
 
@@ -184,7 +189,14 @@
 .ucw-btoken.side-neutral { background: var(--amber); }
 .ucw-btoken.selected { outline: 2px solid var(--gold); outline-offset: 2px; }
 .ucw-btoken.current { box-shadow: 0 0 0 3px rgba(244, 204, 92, 0.38), 0 4px 10px rgba(0,0,0,0.7); }
+.ucw-btoken .btoken-img { position: absolute; inset: 2px; width: calc(100% - 4px); height: calc(100% - 4px); object-fit: cover; border-radius: 50%; pointer-events: none; }
 .ucw-btoken .btoken-init { font-size: 0.72rem; font-weight: 700; color: #16140f; line-height: 1; }
+.ucw-btoken .btoken-name {
+  position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+  max-width: 52px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--fg); background: rgba(9,8,7,0.82); border: 1px solid var(--border-soft);
+  border-radius: 4px; padding: 0 3px; font-size: 0.58rem; font-weight: 800; line-height: 1.25;
+}
 .ucw-btoken .btoken-hp { position: absolute; bottom: -14px; font-size: 0.62rem; color: var(--fg); background: rgba(9,8,7,0.82); border: 1px solid var(--border-soft); border-radius: 4px; padding: 0 3px; white-space: nowrap; }
 .ucw-cell-range { fill: rgba(63, 148, 255, 0.12); stroke: rgba(63, 148, 255, 0.18); stroke-width: 0.18; }
 .ucw-route-line {
@@ -221,6 +233,7 @@
 
 /* Initiative order rows (battle panel) — highest on top, colored by side. */
 .ucw-init-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--border-soft); border-left: 4px solid var(--fg-faint); margin-bottom: 4px; cursor: pointer; }
+.ucw-init-row { min-width: 0; }
 .ucw-init-row.side-enemy { border-left-color: var(--danger); }
 .ucw-init-row.side-player { border-left-color: #4f7fd6; }
 .ucw-init-row.side-ally { border-left-color: var(--green); }

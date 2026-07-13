@@ -358,13 +358,14 @@ export function CampaignBattlePage() {
     ? (data.party ?? []).find((player) => player.id === selTok.sourcePlayerId)
     : (data.party ?? []).find((player) => selTok && norm(player.name) === norm(selTok.name));
   const selectedImage = imageSrcById(selectedEnemy?.imageId ?? selTok?.imageId);
+  const selectedIsPlayerControlled = !!selTok && (selTok.side === 'player' || selTok.side === 'ally');
   const ordered = [...board.tokens].sort((a, b) => (b.initiative ?? -999) - (a.initiative ?? -999) || a.name.localeCompare(b.name, 'ru'));
   const currentId = board.currentTurnTokenId && board.tokens.some((t) => t.id === board.currentTurnTokenId)
     ? board.currentTurnTokenId
     : ordered[0]?.id;
   const currentToken = board.tokens.find((t) => t.id === currentId);
   const selectedCell = selTok ? cellAt(selTok.x, selTok.y) : null;
-  const selectedCanAct = !!selTok && selTok.id === currentId && terrainMode === 'off' && (!isPlayer || selTok.side === 'player' || selTok.side === 'ally');
+  const selectedCanAct = !!selTok && selTok.id === currentId && terrainMode === 'off' && (!isPlayer || selectedIsPlayerControlled);
   const canPassTurn = !!currentToken && (!isPlayer || currentToken.side === 'player' || currentToken.side === 'ally');
   const route = selTok && selectedCell && hoverCell && cellKey(selectedCell) !== cellKey(hoverCell) && selectedCanAct ? findRoute(selTok, hoverCell) : null;
   const selectedRouteFeet = route?.feet ?? 0;
@@ -385,6 +386,24 @@ export function CampaignBattlePage() {
   });
   const fieldPlayers = board.tokens.filter((t) => t.side === 'player' || t.side === 'ally');
   const fieldEnemies = board.tokens.filter((t) => t.side === 'enemy' || t.side === 'neutral');
+  const tokenImage = (token: CampaignBattleToken) => {
+    const enemy = token.sourceEnemyId
+      ? data.enemies.find((e) => e.id === token.sourceEnemyId)
+      : data.enemies.find((e) => norm(e.title) === norm(token.name));
+    return imageSrcById(token.imageId ?? enemy?.imageId);
+  };
+  const tokenShortLabel = (token: CampaignBattleToken, index: number) => {
+    if (token.side === 'player') {
+      const sameSideIndex = board.tokens.filter((t) => t.side === token.side).findIndex((t) => t.id === token.id);
+      return `И${sameSideIndex + 1}`;
+    }
+    if (token.side === 'ally') return 'С';
+    if (token.side === 'neutral') return 'Н';
+    const words = token.name.replace(/[«»"']/g, '').split(/\s+/).filter(Boolean);
+    const base = (words[0]?.[0] ?? 'В') + (words[1]?.[0] ?? '');
+    const duplicateIndex = board.tokens.filter((t) => t.side === token.side && t.name === token.name).findIndex((t) => t.id === token.id);
+    return `${base.toUpperCase()}${duplicateIndex > 0 ? duplicateIndex + 1 : ''}`.slice(0, 3) || String(index + 1);
+  };
   const setInit = (id: string, v: number | undefined) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === id ? { ...t, initiative: v } : t) }));
   const rollAllInitiative = () => patchBoard((b) => {
     const tokens = b.tokens.map((t) => ({ ...t, initiative: 1 + Math.floor(Math.random() * 20) }));
@@ -517,22 +536,27 @@ export function CampaignBattlePage() {
                 </svg>
               )}
               <div className="ucw-markers">
-                {board.tokens.map((t) => (
+                {board.tokens.map((t, index) => {
+                  const img = tokenImage(t);
+                  const label = tokenShortLabel(t, index);
+                  return (
                   <div key={t.id} className={`ucw-btoken side-${t.side}${selected === t.id ? ' selected' : ''}${t.id === currentId ? ' current' : ''}`} style={{ left: `${t.x}%`, top: `${t.y}%` }}
                     onPointerDown={(e) => dragToken(e, t.id)} onClick={(e) => { e.stopPropagation(); setSelected(t.id); }} title={t.name}>
-                    <span className="btoken-init">{t.name.slice(0, 2)}</span>
+                    {img ? <img className="btoken-img" src={img} alt="" /> : <span className="btoken-init">{label}</span>}
+                    <span className="btoken-name">{label}</span>
                     {(t.currentHp != null) && <span className="btoken-hp">{t.currentHp}{t.maxHp ? `/${t.maxHp}` : ''}</span>}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
           {route && <div className={`ucw-route-hud ${route.status}`}>{route.status === 'valid' ? `Маршрут: ${selectedRouteFeet} фт` : route.status === 'too-far' ? `Недостаточно движения: ${selectedRouteFeet} фт` : 'Маршрут недоступен'}</div>}
           {postMovePrompt && postMovePrompt.id === selTok?.id && (
-            <div className="ucw-next-turn-popover">
+            <div className="ucw-next-turn-popover" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
               <strong>{postMovePrompt.name} сделал ход</strong>
               <span>Можно передать ход следующему участнику.</span>
-              <button type="button" className="atlas-btn small" onClick={nextTurn}>Следующий юнит</button>
+              <button type="button" className="atlas-btn small" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); nextTurn(); }}>Следующий юнит</button>
             </div>
           )}
           <div className="ucw-legend">
@@ -574,7 +598,33 @@ export function CampaignBattlePage() {
                 </div>
               </div>
               {isPlayer ? (
-                selectedImage ? <img className="ucw-token-card-image" src={selectedImage} alt="" /> : <div className="ucw-token-card-fallback">{selTok.name.slice(0, 2)}</div>
+                selectedIsPlayerControlled ? (
+                  <>
+                    {selectedImage ? <img className="ucw-token-card-image compact" src={selectedImage} alt="" /> : <div className="ucw-token-card-fallback compact">{selTok.name.slice(0, 2)}</div>}
+                    <div className="ucw-player-hp-panel">
+                      <div className="ucw-player-hp-value">HP {selTok.currentHp ?? 0}{selTok.maxHp != null ? ` / ${selTok.maxHp}` : ''}</div>
+                      <div className="ucw-card-actions">
+                        {[-5, -1, 1, 5].map((delta) => (
+                          <button
+                            key={delta}
+                            className="atlas-btn ghost small"
+                            onClick={() => patchBoard((b) => ({
+                              ...b,
+                              tokens: b.tokens.map((t) => t.id === selTok.id ? {
+                                ...t,
+                                currentHp: Math.max(0, Math.min(Math.max(t.maxHp ?? 0, (t.currentHp ?? 0) + delta), (t.currentHp ?? 0) + delta)),
+                              } : t),
+                            }))}
+                          >
+                            {delta > 0 ? `+${delta}` : delta} HP
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  selectedImage ? <img className="ucw-token-card-image" src={selectedImage} alt="" /> : <div className="ucw-token-card-fallback">{selTok.name.slice(0, 2)}</div>
+                )
               ) : (
                 <>
                   <label>Имя</label>
@@ -629,9 +679,9 @@ export function CampaignBattlePage() {
           )}
           {!isPlayer && (
             <div className="ucw-add-grid">
-              <button className="atlas-btn small" onClick={() => setPlacing({ side: 'player', name: 'Игрок' })}>+ Игрок</button>
-              <button className="atlas-btn small" onClick={() => setPlacing({ side: 'ally', name: 'Союзник' })}>+ Союзник</button>
-              <button className="atlas-btn small" onClick={() => setPlacing({ side: 'neutral', name: 'Нейтрал' })}>+ Нейтрал</button>
+              <button className="atlas-btn small" onClick={() => setPlacing({ side: 'player', name: `Игрок ${fieldPlayers.filter((t) => t.side === 'player').length + 1}` })}>+ Игрок</button>
+              <button className="atlas-btn small" onClick={() => setPlacing({ side: 'ally', name: `Союзник ${fieldPlayers.filter((t) => t.side === 'ally').length + 1}` })}>+ Союзник</button>
+              <button className="atlas-btn small" onClick={() => setPlacing({ side: 'neutral', name: `Нейтрал ${fieldEnemies.filter((t) => t.side === 'neutral').length + 1}` })}>+ Нейтрал</button>
               <button className="atlas-btn small" onClick={() => { const n = window.prompt('Имя токена:'); if (n) setPlacing({ side: 'enemy', name: n }); }}>+ Свой</button>
             </div>
           )}
