@@ -128,17 +128,26 @@ export function CampaignBattlePage() {
 
   const fit = () => {
     const vp = viewportRef.current, img = imgRef.current;
-    if (!vp || !img || !img.naturalWidth || vp.clientWidth < 2 || vp.clientHeight < 2) return;
+    if (!vp || !img || !img.naturalWidth || vp.clientWidth < 2 || vp.clientHeight < 2) return false;
     const z = Math.min(vp.clientWidth / img.naturalWidth, vp.clientHeight / img.naturalHeight) * 0.98;
     setZoom(z);
     setPan({ x: (vp.clientWidth - img.naturalWidth * z) / 2, y: (vp.clientHeight - img.naturalHeight * z) / 2 });
+    return true;
   };
   useEffect(() => {
     if (fitted) return;
-    const t = setTimeout(() => { fit(); setFitted(true); }, 200);
-    return () => clearTimeout(t);
+    const tryFit = () => { if (fit()) setFitted(true); };
+    const raf = requestAnimationFrame(() => requestAnimationFrame(tryFit));
+    const t1 = setTimeout(tryFit, 180);
+    const t2 = setTimeout(tryFit, 420);
+    return () => { cancelAnimationFrame(raf); clearTimeout(t1); clearTimeout(t2); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fitted, variant, map?.id]);
+  }, [fitted, variant, map?.id, customMap?.id, shellHeight]);
+
+  useEffect(() => {
+    const isPhone = window.matchMedia?.('(max-width: 640px)').matches;
+    if (isPhone) setFitted(false);
+  }, [mapId, variant]);
 
   // Declared before the early return below so hook order stays stable when the
   // campaign hydrates from the server (data null → present).
@@ -531,7 +540,7 @@ export function CampaignBattlePage() {
         <button className="ucw-tbtn" onClick={() => setZoom((z) => Math.min(6, z * 1.2))}>+</button>
         <button className="ucw-tbtn" onClick={() => setZoom((z) => Math.max(0.15, z / 1.2))}>−</button>
         <span className="ucw-zoomreadout">{Math.round(zoom * 100)}%</span>
-        <button className="ucw-tbtn" onClick={fit}>По размеру экрана</button>
+        <button className="ucw-tbtn" onClick={() => { if (fit()) setFitted(true); }}>По размеру экрана</button>
         <span className="sep" />
         <span className="atlas-sub" style={{ margin: 0 }}>Раунд {board.round ?? 1}</span>
         <button className="ucw-tbtn" disabled={!ordered.length || !canPassTurn} onClick={nextTurn}>Закончить ход</button>
@@ -563,7 +572,7 @@ export function CampaignBattlePage() {
         <div className={`ucw-viewport${placing || terrainMode !== 'off' ? ' placing' : ''}`} ref={viewportRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onPointerLeave={() => setHoverCell(null)} onWheel={onWheel}>
           <div className="ucw-world" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
             <div className="ucw-mapstack">
-              {imgUrl && <img ref={imgRef} className="ucw-mapimg" src={imgUrl} alt={title} draggable={false} onLoad={(e) => { const im = e.currentTarget; setNatural({ w: im.naturalWidth, h: im.naturalHeight }); if (!fitted) { fit(); setFitted(true); } }} />}
+              {imgUrl && <img ref={imgRef} className="ucw-mapimg" src={imgUrl} alt={title} draggable={false} onLoad={(e) => { const im = e.currentTarget; setNatural({ w: im.naturalWidth, h: im.naturalHeight }); if (!fitted && fit()) setFitted(true); }} />}
               {/* grid + terrain overlay */}
               {board.showGrid && (
                 <svg className="ucw-overlay-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
