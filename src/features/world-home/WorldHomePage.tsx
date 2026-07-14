@@ -63,13 +63,13 @@ export function WorldHomePage() {
             <div key={s.id} className="atlas-card" style={{ cursor: 'default' }}>
               <div className="atlas-badges">
                 <span className="atlas-badge type-badge">{USER_CAMPAIGN_TYPE_LABELS[s.type]}</span>
-                <span className="atlas-badge">{s.locations.length} лок · {s.npcs.length} NPC · {s.enemies.length} врагов</span>
+                <span className="atlas-badge">{s.locations.length} лок · {s.npcs.length} NPC · {s.enemies.length} врагов · {s.players?.length ?? 0} игроков</span>
               </div>
               <h3>{s.title}</h3>
               <p>{s.summary}</p>
               <div style={{ marginTop: 'auto' }}>
                 <button className="atlas-btn small" onClick={() => {
-                  const id = store.createCampaign({ title: s.title, type: s.type, baseMapId: s.baseMapId, regionIds: s.regionIds, seed: { locations: s.locations, npcs: s.npcs, enemies: s.enemies, factions: s.factions, quests: s.quests } });
+                  const id = store.createCampaign({ title: s.title, type: s.type, baseMapId: s.baseMapId, regionIds: s.regionIds, seed: { locations: s.locations, npcs: s.npcs, enemies: s.enemies, factions: s.factions, quests: s.quests, players: s.players } });
                   navigate(`/campaigns/${id}/map`);
                 }}>Создать этот ваншот</button>
               </div>

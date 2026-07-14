@@ -19,9 +19,25 @@ export interface CampaignPlayer {
   playerName?: string;   // the real player behind the character
   class?: string;
   level?: number;
+  imageId?: string;
   ac?: number;
   hp?: number;
   maxHp?: number;
+  speedFeet?: number;
+  proficiencyBonus?: number;
+  str?: number;
+  dex?: number;
+  con?: number;
+  int?: number;
+  wis?: number;
+  cha?: number;
+  attacks?: string;
+  features?: string;
+  inventory?: string;
+  equipmentState?: string;
+  conditions?: string;
+  publicNotes?: string;
+  characterSheetUrl?: string;
   description?: string;
   dmNotes?: string;
 }

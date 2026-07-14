@@ -166,7 +166,26 @@ export function CampaignLibraryPage() {
     else if (k === 'npc') id = store.addNpc(campaignId, { name: 'Новый NPC' });
     else if (k === 'quests') id = store.addQuest(campaignId, { title: 'Новый квест', status: 'notStarted' });
     else if (k === 'enemies') id = store.addEnemy(campaignId, { title: 'Новый враг' });
-    else if (k === 'players') id = store.addPlayer(campaignId, { name: 'Новый персонаж' });
+    else if (k === 'players') id = store.addPlayer(campaignId, {
+      name: 'Новый персонаж',
+      level: 1,
+      ac: 10,
+      hp: 10,
+      maxHp: 10,
+      speedFeet: 30,
+      proficiencyBonus: 2,
+      str: 10,
+      dex: 10,
+      con: 10,
+      int: 10,
+      wis: 10,
+      cha: 10,
+      equipmentState: 'Черновик',
+      attacks: '',
+      features: '',
+      inventory: '',
+      conditions: '',
+    });
     else if (k === 'factions') id = store.addFaction(campaignId, { name: 'Новая фракция', attitude: 'neutral' });
     if (id) { setSelectedId(id); setEditOpen({ type: KIND_ENTITY[k], id }); }
   };

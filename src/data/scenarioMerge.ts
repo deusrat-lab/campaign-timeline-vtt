@@ -7,7 +7,7 @@
  * aren't present yet — it never deletes or overwrites the DM's existing content.
  * Safe to run repeatedly as the scenario grows over time.
  */
-import type { UserCampaignData, CampaignImage } from '../types/userCampaign';
+import type { UserCampaignData, CampaignImage, CampaignPlayer } from '../types/userCampaign';
 import type { CampaignScenario } from './campaignScenarios';
 import { CAMPAIGN_SCENARIOS } from './campaignScenarios';
 
@@ -40,7 +40,17 @@ export function scenarioForCampaign(data: Pick<UserCampaignData, 'baseMapId'>): 
   return CAMPAIGN_SCENARIOS.find((s) => s.baseMapId === data.baseMapId);
 }
 
-export interface MergeResult { data: UserCampaignData; added: { locations: number; npcs: number; enemies: number; factions: number }; imagesAttached: number }
+export interface MergeResult { data: UserCampaignData; added: { locations: number; npcs: number; enemies: number; factions: number; players: number }; imagesAttached: number }
+
+const fillMissingPlayerFields = (target: CampaignPlayer, source: Omit<CampaignPlayer, 'id'>) => {
+  const next = target as CampaignPlayer & Record<string, unknown>;
+  const src = source as Record<string, unknown>;
+  for (const key of Object.keys(src)) {
+    if (key === 'name') continue;
+    const current = next[key];
+    if (current == null || current === '' || (Array.isArray(current) && current.length === 0)) next[key] = src[key];
+  }
+};
 
 export function mergeScenarioIntoData(data: UserCampaignData, scenario: CampaignScenario, uid: (p: string) => string): MergeResult {
   const images: CampaignImage[] = [...data.images];
@@ -57,7 +67,7 @@ export function mergeScenarioIntoData(data: UserCampaignData, scenario: Campaign
   };
   const imageSrcById = (imageId?: string): string | undefined => images.find((im) => im.id === imageId)?.src;
 
-  const added = { locations: 0, npcs: 0, enemies: 0, factions: 0 };
+  const added = { locations: 0, npcs: 0, enemies: 0, factions: 0, players: 0 };
 
   // ── Locations (match by title) — build scenario key → resulting id map ──
   const locations = [...data.locations];
@@ -128,6 +138,18 @@ export function mergeScenarioIntoData(data: UserCampaignData, scenario: Campaign
     }
   }
 
+  // ── Party / player character sheets (match by name) ──
+  const party = [...(data.party ?? [])];
+  for (const sp of scenario.players ?? []) {
+    const ex = party.find((p) => norm(p.name) === norm(sp.name));
+    if (ex) {
+      fillMissingPlayerFields(ex, sp);
+    } else {
+      party.push({ ...sp, id: uid('pc') });
+      added.players += 1;
+    }
+  }
+
   // ── Quests (scenes / encounter packs — match by title) ──
   const quests = [...data.quests];
   for (const sq of scenario.quests) {
@@ -172,5 +194,5 @@ export function mergeScenarioIntoData(data: UserCampaignData, scenario: Campaign
   // if it exists, but leave every custom/manual route untouched.
   const routes = data.routes.filter((r) => !(r.mapId === scenario.baseMapId && norm(r.title) === norm('Маршрут: Цена имени')));
 
-  return { data: { ...data, locations, npcs, enemies, factions, quests, images, mapPlacements, routes }, added, imagesAttached };
+  return { data: { ...data, locations, npcs, enemies, factions, quests, party, images, mapPlacements, routes }, added, imagesAttached };
 }

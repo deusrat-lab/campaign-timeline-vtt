@@ -30,6 +30,15 @@ const LIBKIND_TO_ENTITY: Record<LibraryKind, CampaignEntityType> = {
   factions: 'faction',
 };
 
+const ABILITY_FIELDS = [
+  ['str', 'СИЛ'],
+  ['dex', 'ЛОВ'],
+  ['con', 'ТЕЛ'],
+  ['int', 'ИНТ'],
+  ['wis', 'МДР'],
+  ['cha', 'ХАР'],
+] as const;
+
 /**
  * Entity card modal — parity with the main campaign's cards. Shows a user
  * campaign entity (location/NPC/quest/enemy) as a full card with view + inline
@@ -234,7 +243,37 @@ export function CampaignEntityCard({
                 <div style={{ flex: 1 }}><label>AC</label>{ro ? <p>{player.ac ?? '—'}</p> : <input type="number" value={player.ac ?? ''} onChange={(e) => upd({ ac: Number(e.target.value) })} />}</div>
                 <div style={{ flex: 1 }}><label>HP</label>{ro ? <p>{player.hp ?? '—'}</p> : <input type="number" value={player.hp ?? ''} onChange={(e) => upd({ hp: Number(e.target.value) })} />}</div>
                 <div style={{ flex: 1 }}><label>Макс HP</label>{ro ? <p>{player.maxHp ?? '—'}</p> : <input type="number" value={player.maxHp ?? ''} onChange={(e) => upd({ maxHp: Number(e.target.value) })} />}</div>
+                <div style={{ flex: 1 }}><label>Скор.</label>{ro ? <p>{player.speedFeet ?? '—'}</p> : <input type="number" value={player.speedFeet ?? ''} onChange={(e) => upd({ speedFeet: Number(e.target.value) })} />}</div>
+                <div style={{ flex: 1 }}><label>Мастерство</label>{ro ? <p>{player.proficiencyBonus ?? '—'}</p> : <input type="number" value={player.proficiencyBonus ?? ''} onChange={(e) => upd({ proficiencyBonus: Number(e.target.value) })} />}</div>
               </div>
+              <div className="ucw-ability-grid">
+                {ABILITY_FIELDS.map(([key, label]) => (
+                  <div key={key}>
+                    <label>{label}</label>
+                    {ro
+                      ? <p>{player[key] ?? '—'}</p>
+                      : <input type="number" value={player[key] ?? ''} onChange={(e) => upd({ [key]: Number(e.target.value) })} />}
+                  </div>
+                ))}
+              </div>
+              <label>Ссылка на лист</label>
+              {ro ? (
+                player.characterSheetUrl
+                  ? <p><a href={player.characterSheetUrl} target="_blank" rel="noreferrer">{player.characterSheetUrl}</a></p>
+                  : <p>—</p>
+              ) : <input value={player.characterSheetUrl ?? ''} onChange={(e) => upd({ characterSheetUrl: e.target.value })} placeholder="https://longstoryshort.app/characters/..." />}
+              <label>Состояние снаряжения</label>
+              {ro ? <p style={{ whiteSpace: 'pre-wrap' }}>{player.equipmentState || '—'}</p> : <textarea value={player.equipmentState ?? ''} onChange={(e) => upd({ equipmentState: e.target.value })} />}
+              <label>Атаки / действия</label>
+              {ro ? <p style={{ whiteSpace: 'pre-wrap' }}>{player.attacks || '—'}</p> : <textarea value={player.attacks ?? ''} onChange={(e) => upd({ attacks: e.target.value })} />}
+              <label>Особенности / навыки / ресурсы</label>
+              {ro ? <p style={{ whiteSpace: 'pre-wrap' }}>{player.features || '—'}</p> : <textarea value={player.features ?? ''} onChange={(e) => upd({ features: e.target.value })} />}
+              <label>Инвентарь</label>
+              {ro ? <p style={{ whiteSpace: 'pre-wrap' }}>{player.inventory || '—'}</p> : <textarea value={player.inventory ?? ''} onChange={(e) => upd({ inventory: e.target.value })} />}
+              <label>Состояния / эффекты</label>
+              {ro ? <p style={{ whiteSpace: 'pre-wrap' }}>{player.conditions || '—'}</p> : <textarea value={player.conditions ?? ''} onChange={(e) => upd({ conditions: e.target.value })} />}
+              <label>Заметки игрокам</label>
+              {ro ? <p style={{ whiteSpace: 'pre-wrap' }}>{player.publicNotes || '—'}</p> : <textarea value={player.publicNotes ?? ''} onChange={(e) => upd({ publicNotes: e.target.value })} />}
             </>
           )}
 

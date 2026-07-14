@@ -198,9 +198,33 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
   }
   if (kind === 'players') {
     const p = (data.party ?? []).find((x) => x.id === id); if (!p) return null;
+    const stats = [
+      ['СИЛ', p.str],
+      ['ЛОВ', p.dex],
+      ['ТЕЛ', p.con],
+      ['ИНТ', p.int],
+      ['МДР', p.wis],
+      ['ХАР', p.cha],
+    ].map(([label, value]) => `${label} ${value ?? '—'}`).join(' · ');
     return {
-      ...base(p.name), subtitle: [p.class, p.level ? `ур. ${p.level}` : ''].filter(Boolean).join(' · '), description: p.description, dmNotes: p.dmNotes,
-      fields: [{ label: 'Игрок', value: p.playerName ?? '—' }, { label: 'AC', value: String(p.ac ?? '—') }, { label: 'HP', value: p.hp != null ? `${p.hp}${p.maxHp ? '/' + p.maxHp : ''}` : '—' }],
+      ...base(p.name),
+      subtitle: [p.class, p.level ? `ур. ${p.level}` : '', p.equipmentState].filter(Boolean).join(' · '),
+      description: [p.description, p.publicNotes].filter(Boolean).join('\n\n'),
+      dmNotes: p.dmNotes,
+      fields: [
+        { label: 'Игрок', value: p.playerName ?? '—' },
+        { label: 'AC', value: String(p.ac ?? '—') },
+        { label: 'HP', value: p.hp != null ? `${p.hp}${p.maxHp ? '/' + p.maxHp : ''}` : '—' },
+        { label: 'Скорость', value: p.speedFeet != null ? `${p.speedFeet} фт` : '—' },
+        { label: 'Мастерство', value: String(p.proficiencyBonus ?? '—') },
+        { label: 'Характеристики', value: stats },
+        { label: 'Снаряжение', value: p.equipmentState ?? '—' },
+        { label: 'Атаки', value: p.attacks ?? '—' },
+        { label: 'Особенности', value: p.features ?? '—' },
+        { label: 'Инвентарь', value: p.inventory ?? '—' },
+        { label: 'Состояния', value: p.conditions ?? '—' },
+        { label: 'Лист', value: p.characterSheetUrl ?? '—' },
+      ],
     };
   }
   if (kind === 'factions') {

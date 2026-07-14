@@ -52,7 +52,7 @@ export function CampaignBattlePage() {
 
   const [zoom, setZoom] = useState(board.view?.zoom ?? 1);
   const [pan, setPan] = useState({ x: board.view?.panX ?? 0, y: board.view?.panY ?? 0 });
-  const [placing, setPlacing] = useState<{ side: BattleTokenSide; name: string; ac?: number; hp?: number; sourceEnemyId?: string; sourcePlayerId?: string; imageId?: string } | null>(null);
+  const [placing, setPlacing] = useState<{ side: BattleTokenSide; name: string; ac?: number; hp?: number; speedFeet?: number; sourceEnemyId?: string; sourcePlayerId?: string; imageId?: string } | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [fitted, setFitted] = useState(false);
   const [terrainMode, setTerrainMode] = useState<'off' | 'blocked' | 'difficult' | 'erase'>('off');
@@ -325,7 +325,7 @@ export function CampaignBattlePage() {
         ac: placing.ac,
         currentHp: placing.hp,
         maxHp: placing.hp,
-        speedFeet: DEFAULT_SPEED_FEET,
+        speedFeet: placing.speedFeet ?? DEFAULT_SPEED_FEET,
       };
       patchBoard((b) => ({ ...b, tokens: [...b.tokens, tok], currentTurnTokenId: b.currentTurnTokenId ?? tok.id }));
       setSelected(tok.id);
@@ -357,7 +357,7 @@ export function CampaignBattlePage() {
   const selectedPlayer = selTok?.sourcePlayerId
     ? (data.party ?? []).find((player) => player.id === selTok.sourcePlayerId)
     : (data.party ?? []).find((player) => selTok && norm(player.name) === norm(selTok.name));
-  const selectedImage = imageSrcById(selectedEnemy?.imageId ?? selTok?.imageId);
+  const selectedImage = imageSrcById(selectedEnemy?.imageId ?? selectedPlayer?.imageId ?? selTok?.imageId);
   const selectedIsPlayerControlled = !!selTok && (selTok.side === 'player' || selTok.side === 'ally');
   const ordered = [...board.tokens].sort((a, b) => (b.initiative ?? -999) - (a.initiative ?? -999) || a.name.localeCompare(b.name, 'ru'));
   const currentId = board.currentTurnTokenId && board.tokens.some((t) => t.id === board.currentTurnTokenId)
@@ -382,7 +382,9 @@ export function CampaignBattlePage() {
     name: player.name,
     ac: player.ac,
     hp: player.hp ?? player.maxHp,
+    speedFeet: player.speedFeet ?? DEFAULT_SPEED_FEET,
     sourcePlayerId: player.id,
+    imageId: player.imageId,
   });
   const fieldPlayers = board.tokens.filter((t) => t.side === 'player' || t.side === 'ally');
   const fieldEnemies = board.tokens.filter((t) => t.side === 'enemy' || t.side === 'neutral');
@@ -390,7 +392,10 @@ export function CampaignBattlePage() {
     const enemy = token.sourceEnemyId
       ? data.enemies.find((e) => e.id === token.sourceEnemyId)
       : data.enemies.find((e) => norm(e.title) === norm(token.name));
-    return imageSrcById(token.imageId ?? enemy?.imageId);
+    const player = token.sourcePlayerId
+      ? (data.party ?? []).find((p) => p.id === token.sourcePlayerId)
+      : (data.party ?? []).find((p) => norm(p.name) === norm(token.name));
+    return imageSrcById(token.imageId ?? enemy?.imageId ?? player?.imageId);
   };
   const tokenShortLabel = (token: CampaignBattleToken, index: number) => {
     if (token.side === 'player') {
@@ -646,6 +651,30 @@ export function CampaignBattlePage() {
                       {selectedEnemy.tactics && <><h4>DM</h4><p>{selectedEnemy.tactics}</p></>}
                     </div>
                   )}
+                  {selectedPlayer && (
+                    <div className="ucw-token-source">
+                      <h4>Лист персонажа</h4>
+                      <div className="ucw-sheet-grid">
+                        <span>Класс: {selectedPlayer.class || '—'}</span>
+                        <span>Ур.: {selectedPlayer.level ?? '—'}</span>
+                        <span>Мастерство: {selectedPlayer.proficiencyBonus ?? '—'}</span>
+                        <span>Скор.: {selectedPlayer.speedFeet ?? selTok.speedFeet ?? DEFAULT_SPEED_FEET} фт</span>
+                      </div>
+                      <div className="ucw-ability-grid compact">
+                        <span>СИЛ {selectedPlayer.str ?? '—'}</span>
+                        <span>ЛОВ {selectedPlayer.dex ?? '—'}</span>
+                        <span>ТЕЛ {selectedPlayer.con ?? '—'}</span>
+                        <span>ИНТ {selectedPlayer.int ?? '—'}</span>
+                        <span>МДР {selectedPlayer.wis ?? '—'}</span>
+                        <span>ХАР {selectedPlayer.cha ?? '—'}</span>
+                      </div>
+                      {selectedPlayer.equipmentState && <><h4>Снаряжение</h4><p>{selectedPlayer.equipmentState}</p></>}
+                      {selectedPlayer.attacks && <><h4>Атаки</h4><p>{selectedPlayer.attacks}</p></>}
+                      {selectedPlayer.features && <><h4>Особенности</h4><p>{selectedPlayer.features}</p></>}
+                      {selectedPlayer.inventory && <><h4>Инвентарь</h4><p>{selectedPlayer.inventory}</p></>}
+                      {selectedPlayer.conditions && <><h4>Состояния</h4><p>{selectedPlayer.conditions}</p></>}
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -657,7 +686,7 @@ export function CampaignBattlePage() {
               {fieldPlayers.length === 0 ? <p className="ucw-empty-note">Пока нет.</p> : fieldPlayers.map((t) => (
                 <button key={t.id} type="button" className={`ucw-token-row side-${t.side}${selected === t.id ? ' selected' : ''}`} onClick={() => setSelected(t.id)}>
                   <span>{t.name}</span>
-                  <small>{t.currentHp != null ? `HP ${t.currentHp}${t.maxHp ? `/${t.maxHp}` : ''} · ` : ''}{t.speedFeet ?? DEFAULT_SPEED_FEET} фт</small>
+                  <small>{t.ac != null ? `AC ${t.ac} · ` : ''}{t.currentHp != null ? `HP ${t.currentHp}${t.maxHp ? `/${t.maxHp}` : ''} · ` : ''}{t.speedFeet ?? DEFAULT_SPEED_FEET} фт</small>
                 </button>
               ))}
             </div>
@@ -667,7 +696,7 @@ export function CampaignBattlePage() {
                 {fieldEnemies.length === 0 ? <p className="ucw-empty-note">Пока нет.</p> : fieldEnemies.map((t) => (
                   <button key={t.id} type="button" className={`ucw-token-row side-${t.side}${selected === t.id ? ' selected' : ''}`} onClick={() => setSelected(t.id)}>
                     <span>{t.name}</span>
-                    <small>{t.currentHp != null ? `HP ${t.currentHp}${t.maxHp ? `/${t.maxHp}` : ''} · ` : ''}{t.speedFeet ?? DEFAULT_SPEED_FEET} фт</small>
+                    <small>{t.ac != null ? `AC ${t.ac} · ` : ''}{t.currentHp != null ? `HP ${t.currentHp}${t.maxHp ? `/${t.maxHp}` : ''} · ` : ''}{t.speedFeet ?? DEFAULT_SPEED_FEET} фт</small>
                   </button>
                 ))}
               </div>

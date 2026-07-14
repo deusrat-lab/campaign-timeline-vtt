@@ -62,6 +62,7 @@ export interface CampaignSeed {
   enemies?: Array<{ title: string; ac?: number; hp?: number; description?: string; dmNotes?: string; image?: string; locationKeys?: string[] }>;
   factions?: Array<{ name: string; role?: string; description?: string; image?: string }>;
   quests?: Array<{ title: string; description?: string; dmNotes?: string; locationKey?: string; status?: string; image?: string }>;
+  players?: Array<Omit<CampaignPlayer, 'id'>>;
   images?: Array<{ title: string; src: string; playerSafe?: boolean }>;
 }
 
@@ -74,6 +75,7 @@ function emptyData(campaignId: string, title: string, type: UserCampaignType, ba
   const npcSrc = seed?.npcs ?? preset?.npcs ?? [];
   const enemySrc = seed?.enemies ?? [];
   const factionSrc = seed?.factions ?? preset?.factions ?? [];
+  const playerSrc = seed?.players ?? [];
   // Seeded art (scenario portraits / location images) becomes CampaignImage
   // records referenced by imageId, so the cards show pictures.
   const images: CampaignImage[] = [];
@@ -97,13 +99,14 @@ function emptyData(campaignId: string, title: string, type: UserCampaignType, ba
   const factions: CampaignFaction[] = factionSrc.map((f, i) => ({ id: rid('fac', i), name: f.name, role: f.role, description: f.description, attitude: 'neutral' as const, imageId: mkImage(f.name, (f as { image?: string }).image) }));
   const questSrc = seed?.quests ?? [];
   const quests: CampaignQuest[] = questSrc.map((q, i) => ({ id: rid('qst', i), title: q.title, status: (q.status as CampaignQuest['status']) ?? 'notStarted', description: q.description, dmNotes: q.dmNotes, locationId: locKeyToId[q.locationKey ?? ''], imageId: mkImage(q.title, q.image) }));
+  const party: CampaignPlayer[] = playerSrc.map((p, i) => ({ ...p, id: rid('pc', i) }));
   for (const extra of seed?.images ?? []) {
     images.push({ id: rid('img', images.length), title: extra.title, src: extra.src, playerSafe: extra.playerSafe });
   }
   return {
     campaignId, title, type, baseMapId,
     mapIds: [baseMapId], regionIds,
-    locations, npcs, quests, enemies, factions, images, routes: [], zones: [], notes: [], mapPlacements: [],
+    locations, npcs, quests, enemies, factions, images, routes: [], zones: [], notes: [], party, mapPlacements: [],
   };
 }
 
@@ -144,7 +147,7 @@ interface UserCampaignValue {
   /** Non-destructively upsert the matching scenario template into a campaign
    * (fill missing images/relations, add new cards). Returns a summary, or null
    * if no scenario matches the campaign's base map. */
-  upgradeFromScenario: (id: string) => { added: { locations: number; npcs: number; enemies: number; factions: number }; imagesAttached: number } | null;
+  upgradeFromScenario: (id: string) => { added: { locations: number; npcs: number; enemies: number; factions: number; players: number }; imagesAttached: number } | null;
 
   addLocation: (id: string, loc: Omit<CampaignLocation, 'id'>) => string;
   addNpc: (id: string, npc: Omit<CampaignNpc, 'id'>) => string;

@@ -117,6 +117,43 @@
 .ucw-token-card-head small { display: block; color: var(--fg-dim); }
 .ucw-player-hp-panel { margin-top: 10px; border-top: 1px solid var(--border-soft); padding-top: 10px; }
 .ucw-player-hp-value { color: var(--gold-soft); font-weight: 800; margin-bottom: 8px; }
+.ucw-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 6px;
+  margin: 8px 0;
+  color: var(--fg);
+}
+.ucw-sheet-grid span,
+.ucw-ability-grid span,
+.ucw-ability-grid > div {
+  min-width: 0;
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 6px 8px;
+}
+.ucw-ability-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(52px, 1fr));
+  gap: 6px;
+  margin: 8px 0;
+}
+.ucw-ability-grid.compact {
+  grid-template-columns: repeat(3, minmax(64px, 1fr));
+}
+.ucw-ability-grid label {
+  display: block;
+  margin: 0 0 4px;
+}
+.ucw-ability-grid p {
+  margin: 0;
+  color: var(--gold-soft);
+  font-weight: 800;
+}
+.ucw-ability-grid input {
+  width: 100%;
+}
 .ucw-stat-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .ucw-token-source { margin-top: 12px; border-top: 1px solid var(--border-soft); padding-top: 8px; }
 .ucw-token-source h4 { margin: 8px 0 4px; color: var(--gold-soft); }
