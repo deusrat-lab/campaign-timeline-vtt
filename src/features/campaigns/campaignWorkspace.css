@@ -204,6 +204,155 @@
   .ucw-viewport { min-height: 48vh; }
 }
 
+@media (max-width: 640px) {
+  .ucw {
+    min-height: calc(100dvh - 56px);
+    overflow: hidden;
+  }
+
+  .ucw-header {
+    padding: 7px 9px;
+    gap: 6px;
+    align-items: stretch;
+  }
+
+  .ucw-title {
+    width: 100%;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .ucw-title strong {
+    flex: 1 1 100%;
+    min-width: 0;
+    font-size: 1rem;
+    line-height: 1.15;
+    overflow-wrap: break-word;
+  }
+
+  .ucw-title .atlas-back-link,
+  .ucw-title .atlas-crumb-sep,
+  .ucw-chip {
+    flex: 0 0 auto;
+  }
+
+  .ucw-chip {
+    font-size: 0.62rem;
+    letter-spacing: 0.03em;
+    padding: 1px 7px;
+  }
+
+  .ucw-header-actions {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 6px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .ucw-header-actions::-webkit-scrollbar,
+  .ucw-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ucw-header-actions > *,
+  .ucw-toolbar > * {
+    flex: 0 0 auto;
+  }
+
+  .ucw-segmented button,
+  .ucw-tbtn {
+    min-height: 36px;
+    padding: 7px 10px;
+    font-size: 0.82rem;
+  }
+
+  .ucw-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 6px;
+    padding: 6px 9px;
+    min-height: 50px;
+    scrollbar-width: none;
+  }
+
+  .ucw-toolbar .sep {
+    height: 28px;
+    margin: 0 2px;
+  }
+
+  .ucw-toolbar label,
+  .ucw-toolbar .atlas-sub {
+    white-space: nowrap;
+  }
+
+  .ucw-search {
+    min-width: min(210px, 64vw);
+  }
+
+  .ucw-body {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .ucw-viewport {
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+
+  .ucw-library {
+    flex: 0 0 auto;
+    max-height: min(34dvh, 260px);
+    padding: 10px 11px calc(10px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+
+  .ucw-legend {
+    right: 8px;
+    bottom: 8px;
+    padding: 6px 8px;
+    font-size: 0.7rem;
+  }
+
+  .ucw-route-hud {
+    left: 8px;
+    bottom: 8px;
+    font-size: 0.78rem;
+  }
+
+  .ucw-next-turn-popover {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+  }
+
+  .ucw-lib-page {
+    padding: 12px 10px calc(72px + env(safe-area-inset-bottom));
+  }
+
+  .ucw-lib-page-head {
+    align-items: stretch;
+  }
+
+  .ucw-lib-page-head h1 {
+    font-size: 1.2rem;
+    line-height: 1.15;
+  }
+
+  .ucw-cardgrid {
+    grid-template-columns: 1fr;
+  }
+
+  .ucw-entity-row {
+    align-items: flex-start;
+  }
+}
+
 /* ── Entity card modal (parity with main-campaign cards) ─────────────── */
 .ucw-modal-overlay {
   position: fixed; inset: 0; background: rgba(6,5,4,0.66); z-index: 60;

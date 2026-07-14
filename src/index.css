@@ -2705,17 +2705,62 @@ a:hover {
   }
 
   .navbar {
-    padding: 0.5rem 0.6rem;
+    padding: 0.38rem 0.5rem;
+    gap: 0.35rem;
+    align-items: stretch;
+  }
+
+  .navbar-left,
+  .navbar-center,
+  .navbar-right {
+    width: 100%;
+    min-width: 0;
     gap: 0.4rem;
   }
 
-  .navbar-center,
+  .navbar-left {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .navbar-left::-webkit-scrollbar,
+  .navbar-right::-webkit-scrollbar {
+    display: none;
+  }
+
+  .navbar-center {
+    display: none;
+  }
+
   .navbar-right {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding-bottom: 2px;
+    scrollbar-width: none;
   }
 
   .navbar-right .navbar-menu {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .brand {
+    font-size: 0.82rem;
+  }
+
+  .navbar-left a:not(.brand),
+  .navbar-text-link,
+  .sync-indicator {
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
+  .navbar-avatar {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
   }
 
   .segmented-option {
