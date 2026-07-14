@@ -77,7 +77,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
     const images = data.images.filter((im) => im.id === l.imageId);
     const battleMaps = o.battleMapsForLocation?.(l.id) ?? [];
     return {
-      ...base(l.title), subtitle: undefined, imageUrl: o.imageUrl(l.imageId), description: l.description,
+      ...base(l.title), subtitle: undefined, imageUrl: o.imageUrl(l.imageId), description: o.isPlayer ? (l.playerSafeDescription || l.description) : l.description,
       dmNotes: l.dmNotes, tags: l.tags,
       counters: [
         { key: 'npc', label: 'NPC', value: npcs.length },
@@ -134,7 +134,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
     const quests = data.quests.filter((q) => q.npcIds?.includes(n.id) && (!o.isPlayer || (q.status !== 'hidden' && o.isRevealed(q.id))));
     const location = n.locationId && (!o.isPlayer || o.isRevealed(n.locationId)) ? locRelation(data, o, n.locationId) : undefined;
     return {
-      ...base(n.name), subtitle: n.role, imageUrl: o.imageUrl(n.imageId ?? locImageId(data, n.locationId)), description: n.description, dmNotes: n.dmNotes, tags: n.tags,
+      ...base(n.name), subtitle: n.role, imageUrl: o.imageUrl(n.imageId ?? locImageId(data, n.locationId)), description: o.isPlayer ? (n.playerSafeDescription || n.description) : n.description, dmNotes: n.dmNotes, tags: n.tags,
       fields: [{ label: 'Локация', value: locName(data, n.locationId) ?? '—' }],
       relations: [
         { key: 'loc', label: 'Локация', items: location ? [location] : [] },
@@ -158,7 +158,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
     const npcs = data.npcs.filter((n) => q.npcIds?.includes(n.id) && (!o.isPlayer || o.isRevealed(n.id)));
     const location = q.locationId && (!o.isPlayer || o.isRevealed(q.locationId)) ? locRelation(data, o, q.locationId) : undefined;
     return {
-      ...base(q.title), subtitle: q.status, description: q.description, dmNotes: q.dmNotes, tags: q.tags,
+      ...base(q.title), subtitle: q.status, description: o.isPlayer ? (q.playerSafeDescription || q.description) : q.description, dmNotes: q.dmNotes, tags: q.tags,
       imageUrl: o.imageUrl(q.imageId ?? locImageId(data, q.locationId)),
       fields: [{ label: 'Статус', value: q.status }, { label: 'Локация', value: locName(data, q.locationId) ?? '—' }],
       relations: [

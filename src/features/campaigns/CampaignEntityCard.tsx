@@ -7,6 +7,7 @@ import { buildDetail, type LibraryKind } from '../../shared/entity/userCampaignE
 import { getBattleMapCatalog, battleMapImageUrl } from '../../data/battleMapCatalog';
 import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
 import { scenarioForCampaign } from '../../data/scenarioMerge';
+import { isEntityPlayerVisible, playerSafeImageSrc } from './playerSafe';
 
 const TYPE_LABEL: Record<string, string> = {
   location: 'Локация', npc: 'NPC', quest: 'Квест', enemy: 'Враг', image: 'Картинка', party: 'Игрок', faction: 'Фракция',
@@ -100,10 +101,12 @@ export function CampaignEntityCard({
 
   const currentKind = ENTITY_TO_LIBKIND[current.type];
   const detailVm = useMemo(() => (data && currentKind) ? buildDetail(currentKind, current.id, data, {
-    imageUrl: (imageId?: string) => (imageId ? data.images.find((im) => im.id === imageId)?.src : undefined),
+    imageUrl: (imageId?: string) => playerSafeImageSrc(data, imageId, isPlayer),
     onOpen: (kind, nextId) => {
+      const nextType = LIBKIND_TO_ENTITY[kind];
+      if (isPlayer && !isEntityPlayerVisible(data, store.getRuntime(campaignId), nextType, nextId)) return;
       setEditingFor(null);
-      setStackState({ originKey, items: [...stack, { type: LIBKIND_TO_ENTITY[kind], id: nextId }] });
+      setStackState({ originKey, items: [...stack, { type: nextType, id: nextId }] });
     },
     isPlaced: (entityType, entityId) => data.mapPlacements.some((mp) => mp.entityType === entityType && mp.entityId === entityId),
     isRevealed: (entityId) => store.isRevealed(campaignId, entityId),
@@ -124,7 +127,7 @@ export function CampaignEntityCard({
             label: map?.title ?? link.battleMapId,
             subtitle: map?.gridSizeLabel ?? map?.mapSize ?? 'Карта боя',
             imageUrl: map ? battleMapImageUrl(map, 'day') : undefined,
-            onOpen: () => navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(link.battleMapId)}`),
+            onOpen: () => navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(link.battleMapId)}?returnTo=${encodeURIComponent(`/campaigns/${campaignId}/map`)}`),
           };
         });
     },

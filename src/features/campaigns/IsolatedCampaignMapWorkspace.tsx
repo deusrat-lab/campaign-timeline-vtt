@@ -11,6 +11,7 @@ import { CampaignEntityCard } from './CampaignEntityCard';
 import '../../shared/entity/sharedEntity.css';
 import { RichEntityDetail } from '../../shared/entity/RichEntityDetail';
 import { buildDetail, type LibraryKind } from '../../shared/entity/userCampaignEntityVM';
+import { isCampaignPlayerSession, isEntityPlayerVisible, isPlacementPlayerVisible, markCampaignPlayerSession, playerSafeImageSrc } from './playerSafe';
 
 /** CampaignEntityType → shared library kind (for the neutral VM mapper). */
 const ENTITY_TO_LIBKIND: Partial<Record<CampaignEntityType, LibraryKind>> = {
@@ -58,20 +59,20 @@ export function IsolatedCampaignMapWorkspace() {
   const [editing, setEditing] = useState<{ type: CampaignEntityType; id: string } | null>(null);
   const [search, setSearch] = useState('');
   const [layers, setLayers] = useState({ objects: true, routes: true, zones: true });
-  const [battleOverlayOpen, setBattleOverlayOpen] = useState(false);
 
   // `?as=player` forces a player-safe view locally (for opening a dedicated
   // player tab), independent of the shared runtime.mode — so the DM can keep
   // editing in their own tab while a player tab shows only revealed content.
-  const asPlayer = searchParams.get('as') === 'player';
+  const asPlayer = searchParams.get('as') === 'player' || isCampaignPlayerSession(campaignId);
   const mode: UserCampaignMode = asPlayer ? 'playerView' : (runtime?.mode ?? 'dmView');
   const isEdit = mode === 'dmEdit';
   const isPlayer = mode === 'playerView';
 
   useEffect(() => {
-    if (isPlayer && runtime?.presentedBattle?.mapId) setBattleOverlayOpen(true);
-    else setBattleOverlayOpen(false);
-  }, [isPlayer, runtime?.presentedBattle?.mapId]);
+    if (asPlayer && campaignId) markCampaignPlayerSession(campaignId);
+  }, [asPlayer, campaignId]);
+
+  const battleOverlayOpen = isPlayer && !!runtime?.presentedBattle?.mapId;
 
   const persistView = useCallback((z: number, p: { x: number; y: number }) => {
     if (!campaignId) return;
@@ -108,7 +109,9 @@ export function IsolatedCampaignMapWorkspace() {
   // Keep the latest fit fn in a ref so the observer effect below doesn't depend
   // on its identity (which changes when the store re-renders).
   const fitRef = useRef(fitToScreen);
-  fitRef.current = fitToScreen;
+  useEffect(() => {
+    fitRef.current = fitToScreen;
+  }, [fitToScreen]);
 
   // Fit the map after the flex layout settles. The viewport height arrives in
   // stages after first paint (the reason the map used to end up at ~15%/34%),
@@ -136,7 +139,7 @@ export function IsolatedCampaignMapWorkspace() {
       : t === 'quest' ? data.quests.find((q) => q.id === eid)?.title
       : t === 'enemy' ? data.enemies.find((e) => e.id === eid)?.title
       : undefined;
-    if (label) setPlacing({ entityType: t as CampaignEntityType, entityId: eid, label });
+    if (label) queueMicrotask(() => setPlacing({ entityType: t as CampaignEntityType, entityId: eid, label }));
     const next = new URLSearchParams(searchParams);
     next.delete('place');
     setSearchParams(next, { replace: true });
@@ -311,9 +314,8 @@ export function IsolatedCampaignMapWorkspace() {
   };
 
   // ── data views (respect Player View) ────────────────────────────────
-  const revealedEntityIds = new Set(runtime.revealedToPlayers ?? []);
-  const isPlacementPlayerVisible = (mp: { entityId: string; visibleToPlayers?: boolean }) => mp.visibleToPlayers || revealedEntityIds.has(mp.entityId);
-  const visiblePlacements = data.mapPlacements.filter((mp) => mp.mapId === runtime.activeMapId && (!isPlayer || isPlacementPlayerVisible(mp)));
+  const canOpenForPlayer = (entityType: CampaignEntityType, entityId: string) => isEntityPlayerVisible(data, runtime, entityType, entityId);
+  const visiblePlacements = data.mapPlacements.filter((mp) => mp.mapId === runtime.activeMapId && (!isPlayer || isPlacementPlayerVisible(mp, runtime)));
   const visibleRoutes = data.routes.filter((r) => r.mapId === runtime.activeMapId && (!isPlayer || r.visibleToPlayers));
   const visibleZones = data.zones.filter((z) => z.mapId === runtime.activeMapId && (!isPlayer || z.visibleToPlayers));
   const hasParty = data.mapPlacements.some((mp) => mp.entityType === 'party' && mp.mapId === runtime.activeMapId);
@@ -414,8 +416,7 @@ export function IsolatedCampaignMapWorkspace() {
           type="button"
           className="ucw-battle-banner"
           onClick={() => {
-            if (asPlayer) setBattleOverlayOpen(true);
-            else navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(runtime.presentedBattle!.mapId)}`);
+            if (!asPlayer) navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(runtime.presentedBattle!.mapId)}?returnTo=${encodeURIComponent(`/campaigns/${campaignId}/map`)}`);
           }}
         >
           ▶ Мастер открыл бой — нажмите, чтобы открыть поле боя
@@ -571,10 +572,14 @@ export function IsolatedCampaignMapWorkspace() {
                     return (
                       <div
                         key={mp.id}
-                        className={`ucw-marker${isEdit ? ' edit' : ''}${isSel ? ' selected' : ''}${!isPlacementPlayerVisible(mp) ? ' hidden-pin' : ''}`}
+                        className={`ucw-marker${isEdit ? ' edit' : ''}${isSel ? ' selected' : ''}${!isPlacementPlayerVisible(mp, runtime) ? ' hidden-pin' : ''}`}
                         style={{ left: `${mp.x}%`, top: `${mp.y}%` }}
                         onMouseDown={(e) => startMarkerDrag(e, mp.id)}
-                        onClick={(e) => { e.stopPropagation(); setSelected({ type: mp.entityType, id: mp.entityId }); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isPlayer && !canOpenForPlayer(mp.entityType, mp.entityId)) return;
+                          setSelected({ type: mp.entityType, id: mp.entityId });
+                        }}
                         title={entityLabel(mp.entityType, mp.entityId)}
                       >
                         <div className={`ucw-pin ${mp.entityType}`}><span>{PIN_ICON[mp.entityType] ?? '●'}</span></div>
@@ -599,7 +604,7 @@ export function IsolatedCampaignMapWorkspace() {
         <aside className="ucw-library">
           {(() => {
             const libKind = selected ? ENTITY_TO_LIBKIND[selected.type] : undefined;
-            if (!selected || !libKind) {
+            if (!selected || !libKind || (isPlayer && !canOpenForPlayer(selected.type, selected.id))) {
               return (
                 <LibraryPanel
                   campaignId={campaignId}
@@ -615,8 +620,12 @@ export function IsolatedCampaignMapWorkspace() {
             }
             const revealed = new Set(runtime.revealedToPlayers ?? []);
             const vm = buildDetail(libKind, selected.id, data, {
-              imageUrl: (imageId?: string) => (imageId ? data.images.find((im) => im.id === imageId)?.src : undefined),
-              onOpen: (_k, id) => { const t = data.locations.some((l) => l.id === id) ? 'location' : data.npcs.some((n) => n.id === id) ? 'npc' : data.quests.some((q) => q.id === id) ? 'quest' : 'enemy'; setSelected({ type: t as CampaignEntityType, id }); },
+              imageUrl: (imageId?: string) => playerSafeImageSrc(data, imageId, isPlayer),
+              onOpen: (_k, id) => {
+                const t = data.locations.some((l) => l.id === id) ? 'location' : data.npcs.some((n) => n.id === id) ? 'npc' : data.quests.some((q) => q.id === id) ? 'quest' : 'enemy';
+                if (isPlayer && !canOpenForPlayer(t as CampaignEntityType, id)) return;
+                setSelected({ type: t as CampaignEntityType, id });
+              },
               isPlaced: (et, id) => data.mapPlacements.some((mp) => mp.entityType === et && mp.entityId === id),
               isRevealed: (id) => revealed.has(id),
               match: () => true,

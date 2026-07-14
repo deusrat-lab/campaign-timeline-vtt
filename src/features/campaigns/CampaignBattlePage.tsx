@@ -10,6 +10,7 @@ import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
 import type { CampaignBattleToken, BattleTokenSide, CampaignBattleBoard } from '../../types/userCampaign';
 import { patchBattleBoardRemote } from '../../state/userCampaignSync';
 import { ImageLightbox } from '../embedded-dm-companion/ImageLightbox';
+import { isCampaignPlayerSession, markCampaignPlayerSession } from './playerSafe';
 
 const norm = (s: string) => s.trim().toLowerCase();
 const FEET_PER_CELL = 5;
@@ -38,7 +39,7 @@ export function CampaignBattlePage() {
     ?? (runtime?.battleBoard && runtime.battleBoard.mapId === mapId ? runtime.battleBoard : emptyBoard);
   // Player view = read-only board (see what the DM set up, edit nothing). The
   // DM can flip to Player View to preview exactly what players get.
-  const asPlayer = searchParams.get('as') === 'player';
+  const asPlayer = searchParams.get('as') === 'player' || isCampaignPlayerSession(campaignId);
   const isPlayer = runtime?.mode === 'playerView' || asPlayer;
   const isPresented = !!mapId && runtime?.presentedBattle?.mapId === mapId;
   // Custom field (`custom-<id>`) or a shared-catalog map.
@@ -72,6 +73,10 @@ export function CampaignBattlePage() {
   const [shellHeight, setShellHeight] = useState<number>();
 
   useEffect(() => { getBattleMapCatalog().then(setCatalog); }, []);
+
+  useEffect(() => {
+    if (asPlayer && campaignId) markCampaignPlayerSession(campaignId);
+  }, [asPlayer, campaignId]);
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -141,12 +146,11 @@ export function CampaignBattlePage() {
     const t1 = setTimeout(tryFit, 180);
     const t2 = setTimeout(tryFit, 420);
     return () => { cancelAnimationFrame(raf); clearTimeout(t1); clearTimeout(t2); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitted, variant, map?.id, customMap?.id, shellHeight]);
 
   useEffect(() => {
     const isPhone = window.matchMedia?.('(max-width: 640px)').matches;
-    if (isPhone) setFitted(false);
+    if (isPhone) queueMicrotask(() => setFitted(false));
   }, [mapId, variant]);
 
   // Declared before the early return below so hook order stays stable when the
@@ -269,7 +273,7 @@ export function CampaignBattlePage() {
     return { status: cost <= speedCells ? 'valid' as const : 'too-far' as const, cells, cost, feet: cost * FEET_PER_CELL };
   };
   const snapPct = (pctX: number, pctY: number) => {
-    if (!board.showGrid) return { x: pctX, y: pctY };
+    if (!board.showGrid || board.snap === false) return { x: pctX, y: pctY };
     const { col, row } = cellAt(pctX, pctY);
     return { x: (col + 0.5) * cellW, y: (row + 0.5) * cellH };
   };
@@ -489,7 +493,9 @@ export function CampaignBattlePage() {
     store.updateRuntime(campaignId, (p) => ({ ...p, presentedBattle: p.presentedBattle?.mapId === mapId ? null : p.presentedBattle, presentedCard: null }));
     setSelected(null);
     setPostMovePrompt(null);
-    if (window.history.length > 1) navigate(-1);
+    const returnTo = searchParams.get('returnTo');
+    if (returnTo && returnTo.startsWith(`/campaigns/${campaignId}/`)) navigate(returnTo);
+    else if (window.history.length > 1) navigate(-1);
     else navigate(`/campaigns/${campaignId}/map`);
   };
 

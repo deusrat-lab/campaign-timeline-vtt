@@ -369,10 +369,20 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
       const reveal = !set.has(entityId);
       if (reveal) set.add(entityId); else set.delete(entityId);
       const current = readJson<UserCampaignData>(dataKey(id));
-      if (current?.mapPlacements.some((mp) => mp.entityId === entityId)) {
+      if (current) {
+        const imageId =
+          current.locations.find((e) => e.id === entityId)?.imageId ??
+          current.npcs.find((e) => e.id === entityId)?.imageId ??
+          current.quests.find((e) => e.id === entityId)?.imageId ??
+          current.enemies.find((e) => e.id === entityId)?.imageId ??
+          current.factions?.find((e) => e.id === entityId)?.imageId ??
+          current.party?.find((e) => e.id === entityId)?.imageId;
         const nextData = {
           ...current,
           mapPlacements: current.mapPlacements.map((mp) => (mp.entityId === entityId ? { ...mp, visibleToPlayers: reveal } : mp)),
+          images: reveal && imageId
+            ? current.images.map((im) => (im.id === imageId ? { ...im, playerSafe: true } : im))
+            : current.images,
         };
         writeJson(dataKey(id), nextData);
         setDataCache((prevData) => ({ ...prevData, [id]: nextData }));

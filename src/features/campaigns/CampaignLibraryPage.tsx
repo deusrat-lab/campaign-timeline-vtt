@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import '../world-atlas/atlasLayer.css';
 import './campaignWorkspace.css';
@@ -10,6 +10,7 @@ import { CampaignEntityCard } from './CampaignEntityCard';
 import { RichEntityLibrary } from '../../shared/entity/RichEntityLibrary';
 import { buildListItems, buildDetail, type LibraryKind } from '../../shared/entity/userCampaignEntityVM';
 import type { EntityKind, FilterConfig } from '../../shared/entity/types';
+import { isCampaignPlayerSession, isEntityPlayerVisible, markCampaignPlayerSession, playerSafeImageSrc } from './playerSafe';
 
 type Kind = LibraryKind | 'images' | 'notes';
 
@@ -20,7 +21,7 @@ const KIND_ENTITY: Record<string, CampaignEntityType> = { locations: 'location',
 const CREATE_LABEL: Record<LibraryKind, string> = { locations: 'Локация', npc: 'NPC', quests: 'Квест', enemies: 'Враг', players: 'Персонаж', factions: 'Фракция' };
 
 function orderFromTitle(title?: string): number {
-  const match = title?.match(/^\s*([A-ZА-Я]{0,2})(\d{1,3})(?:[\.\-]|$)/i);
+  const match = title?.match(/^\s*([A-ZА-Я]{0,2})(\d{1,3})(?:[.-]|$)/i);
   return match ? Number(match[2]) : 9999;
 }
 
@@ -49,7 +50,7 @@ export function CampaignLibraryPage() {
 
   const k = (kind && KIND_LABEL[kind] ? kind : 'locations') as Kind;
   const isEntityKind = k !== 'images' && k !== 'notes';
-  const asPlayer = searchParams.get('as') === 'player';
+  const asPlayer = searchParams.get('as') === 'player' || isCampaignPlayerSession(campaignId);
   const mode: UserCampaignMode = asPlayer ? 'playerView' : (runtime?.mode ?? 'dmView');
   const isEdit = mode === 'dmEdit';
   const isPlayer = mode === 'playerView';
@@ -70,11 +71,20 @@ export function CampaignLibraryPage() {
   const q = query.trim().toLowerCase();
   const revealed = new Set(runtime?.revealedToPlayers ?? []);
 
+  useEffect(() => {
+    if (asPlayer && campaignId) markCampaignPlayerSession(campaignId);
+  }, [asPlayer, campaignId]);
+
   // Neutral view-models for the shared rich library (hook order stable —
   // computed before the early return; null-safe).
   const vmOpts = useMemo(() => ({
-    imageUrl: (imageId?: string) => (imageId && data ? data.images.find((im) => im.id === imageId)?.src : undefined),
-    onOpen: (nk: LibraryKind, id: string) => { setSelectedId(id); navigate(`/campaigns/${campaignId}/library/${nk}?sel=${id}`); },
+    imageUrl: (imageId?: string) => data ? playerSafeImageSrc(data, imageId, isPlayer) : undefined,
+    onOpen: (nk: LibraryKind, id: string) => {
+      const et = KIND_ENTITY[nk];
+      if (isPlayer && data && et !== 'party' && !isEntityPlayerVisible(data, runtime, et, id)) return;
+      setSelectedId(id);
+      navigate(`/campaigns/${campaignId}/library/${nk}${asPlayer ? '?as=player' : ''}`);
+    },
     isPlaced: (et: EntityKind, id: string) => !!data?.mapPlacements.some((mp) => mp.entityType === et && mp.entityId === id),
     isRevealed: (id: string) => revealed.has(id),
     match: (s: string) => !q || s.toLowerCase().includes(q),
@@ -85,7 +95,7 @@ export function CampaignLibraryPage() {
   const items = useMemo(() => {
     if (!data || !isEntityKind) return [];
     let list = buildListItems(k as LibraryKind, data, vmOpts);
-    if (isPlayer && k !== 'players') list = list.filter((it) => revealed.has(it.id)); // player: only revealed, except own character sheets
+    if (isPlayer && k !== 'players') list = list.filter((it) => isEntityPlayerVisible(data, runtime, KIND_ENTITY[k], it.id)); // player: only revealed/placed/presented, except own character sheets
     if (k === 'npc' && roleFilter !== 'all') list = list.filter((it) => data.npcs.find((n) => n.id === it.id)?.role === roleFilter);
     if (locFilter !== 'all') {
       list = list.filter((it) => {

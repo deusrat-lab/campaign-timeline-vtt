@@ -166,7 +166,7 @@ export function CampaignBattleMapsPage() {
         Готовые поля боя, отфильтрованные под выбранную кампанию, + свои поля из любой картинки — с сеткой, террейном и день/ночь.
       </p>
 
-      <CustomFieldCreator campaignId={campaignId} onCreated={(mid) => navigate(`/campaigns/${campaignId}/battle/${mid}`)} />
+      <CustomFieldCreator campaignId={campaignId} onCreated={(mid) => navigate(`/campaigns/${campaignId}/battle/${mid}?returnTo=${encodeURIComponent(`/campaigns/${campaignId}/library/battle-maps`)}`)} />
 
       {(data.customBattleMaps ?? []).length > 0 && (
         <div className="atlas-section" style={{ marginTop: 0 }}>
@@ -178,7 +178,7 @@ export function CampaignBattleMapsPage() {
                 <h3>{m.title}</h3>
                 <span className="meta">сетка {m.rows ? `${m.columns}×${m.rows}` : `${m.columns} клеток`}{m.nightImage ? ' · день/ночь' : ''}</span>
                 <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                  <button className="atlas-btn small" onClick={() => navigate(`/campaigns/${campaignId}/battle/custom-${m.id}`)}>Открыть бой</button>
+                  <button className="atlas-btn small" onClick={() => navigate(`/campaigns/${campaignId}/battle/custom-${m.id}?returnTo=${encodeURIComponent(`/campaigns/${campaignId}/library/battle-maps`)}`)}>Открыть бой</button>
                   <button className="atlas-btn danger small" onClick={() => { if (window.confirm(`Удалить поле «${m.title}»?`)) store.removeCustomBattleMap(campaignId, m.id); }}>Удалить</button>
                 </div>
               </div>
@@ -207,7 +207,7 @@ export function CampaignBattleMapsPage() {
             const preview = battleMapImageUrl(m, 'day');
             const variants = (m.variants ?? []).map((v) => v.type ?? 'default');
             return (
-              <button key={m.id} type="button" className="ucw-ecard" onClick={() => navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(m.id)}`)}>
+              <button key={m.id} type="button" className="ucw-ecard" onClick={() => navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(m.id)}?returnTo=${encodeURIComponent(`/campaigns/${campaignId}/library/battle-maps`)}`)}>
                 {preview && <img className="atlas-map-img" src={preview} alt={m.title} loading="lazy" style={{ maxHeight: 150, objectFit: 'cover' }} />}
                 <h3>{m.title}</h3>
                 <span className="meta">{[m.gridSizeLabel ?? m.mapSize, ...(m.groupLabels ?? [])].filter(Boolean).join(' · ')}</span>

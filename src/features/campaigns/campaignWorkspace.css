@@ -310,9 +310,10 @@
 
   .ucw-library {
     flex: 0 0 auto;
-    max-height: min(28dvh, 220px);
+    max-height: min(34dvh, 280px);
     padding: 10px 11px calc(10px + env(safe-area-inset-bottom));
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .ucw-legend {
@@ -354,6 +355,52 @@
 
   .ucw-entity-row {
     align-items: flex-start;
+  }
+
+  .ucw-lib-heading {
+    font-size: 0.98rem;
+    position: sticky;
+    top: -10px;
+    z-index: 2;
+    padding: 4px 0 6px;
+    background: var(--bg-card);
+  }
+
+  .ucw-token-card {
+    margin-top: 8px;
+  }
+
+  .ucw-token-card-image {
+    max-height: 42dvh;
+  }
+
+  .ucw-token-card-image.compact {
+    max-height: 22dvh;
+  }
+
+  .ucw-stat-row,
+  .ucw-add-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ucw-battle-side-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ucw-init-name,
+  .ucw-token-row span {
+    white-space: normal;
+    line-height: 1.15;
+  }
+
+  .ucw-init-hp,
+  .ucw-token-row small {
+    white-space: nowrap;
+  }
+
+  .ucw-battle-banner {
+    padding: 9px 10px;
+    font-size: 0.9rem;
   }
 }
 
@@ -471,6 +518,7 @@
 @media (pointer: coarse) {
   .ucw-btoken { width: 44px; height: 44px; }
   .ucw-btoken .btoken-init { font-size: 0.85rem; }
+  .ucw-btoken .btoken-name { top: -19px; max-width: 68px; font-size: 0.68rem; }
   .ucw-btoken .btoken-hp { bottom: -16px; font-size: 0.7rem; padding: 1px 5px; }
   .ucw-toolbar .ucw-tbtn { padding: 9px 13px; font-size: 0.95rem; }
   .ucw-measure { font-size: 1rem; padding: 5px 10px; }
