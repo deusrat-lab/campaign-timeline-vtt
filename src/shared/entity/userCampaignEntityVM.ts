@@ -22,6 +22,9 @@ export interface VMOpts {
   onOpen: (kind: LibraryKind, id: string) => void;
   isPlaced: (entityType: EntityKind, id: string) => boolean;
   isRevealed: (id: string) => boolean;
+  isPresenting?: (entityType: EntityKind, id: string) => boolean;
+  onPresent?: (entityType: EntityKind, id: string) => void;
+  onToggleReveal?: (id: string) => void;
   match: (s: string) => boolean; // search predicate
   isPlayer: boolean;
   battleMapsForLocation?: (locationId: string) => EntityRelationLink[];
@@ -48,6 +51,10 @@ function locRelation(data: UserCampaignData, o: VMOpts, id: string): EntityRelat
     subtitle: l.tags?.join(' · '),
     imageUrl: o.imageUrl(l.imageId),
     onOpen: () => o.onOpen('locations', l.id),
+    revealed: o.isRevealed(l.id),
+    presenting: o.isPresenting?.('location', l.id),
+    onToggleReveal: !o.isPlayer && o.onToggleReveal ? () => o.onToggleReveal?.(l.id) : undefined,
+    onPresent: !o.isPlayer && o.onPresent ? () => o.onPresent?.('location', l.id) : undefined,
   };
 }
 
@@ -96,6 +103,10 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
             subtitle: n.role,
             imageUrl: o.imageUrl(n.imageId ?? locImageId(data, n.locationId)),
             onOpen: () => o.onOpen('npc', n.id),
+            revealed: o.isRevealed(n.id),
+            presenting: o.isPresenting?.('npc', n.id),
+            onToggleReveal: !o.isPlayer && o.onToggleReveal ? () => o.onToggleReveal?.(n.id) : undefined,
+            onPresent: !o.isPlayer && o.onPresent ? () => o.onPresent?.('npc', n.id) : undefined,
           })),
         },
         {
@@ -108,6 +119,10 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
             meta: locName(data, q.locationId),
             imageUrl: o.imageUrl(q.imageId),
             onOpen: () => o.onOpen('quests', q.id),
+            revealed: o.isRevealed(q.id),
+            presenting: o.isPresenting?.('quest', q.id),
+            onToggleReveal: !o.isPlayer && o.onToggleReveal ? () => o.onToggleReveal?.(q.id) : undefined,
+            onPresent: !o.isPlayer && o.onPresent ? () => o.onPresent?.('quest', q.id) : undefined,
           })),
         },
         {
@@ -119,6 +134,10 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
             subtitle: [e.baseMonster, e.ac != null ? `AC ${e.ac}` : '', e.hp != null ? `HP ${e.hp}` : ''].filter(Boolean).join(' · '),
             imageUrl: o.imageUrl(e.imageId ?? firstLocImageId(data, e.locationIds)),
             onOpen: () => o.onOpen('enemies', e.id),
+            revealed: o.isRevealed(e.id),
+            presenting: o.isPresenting?.('enemy', e.id),
+            onToggleReveal: !o.isPlayer && o.onToggleReveal ? () => o.onToggleReveal?.(e.id) : undefined,
+            onPresent: !o.isPlayer && o.onPresent ? () => o.onPresent?.('enemy', e.id) : undefined,
           })),
         },
         {
@@ -148,6 +167,10 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
             meta: locName(data, q.locationId),
             imageUrl: o.imageUrl(q.imageId ?? locImageId(data, q.locationId)),
             onOpen: () => o.onOpen('quests', q.id),
+            revealed: o.isRevealed(q.id),
+            presenting: o.isPresenting?.('quest', q.id),
+            onToggleReveal: !o.isPlayer && o.onToggleReveal ? () => o.onToggleReveal?.(q.id) : undefined,
+            onPresent: !o.isPlayer && o.onPresent ? () => o.onPresent?.('quest', q.id) : undefined,
           })),
         },
       ],
@@ -172,6 +195,10 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
             subtitle: n.role,
             imageUrl: o.imageUrl(n.imageId ?? locImageId(data, n.locationId)),
             onOpen: () => o.onOpen('npc', n.id),
+            revealed: o.isRevealed(n.id),
+            presenting: o.isPresenting?.('npc', n.id),
+            onToggleReveal: !o.isPlayer && o.onToggleReveal ? () => o.onToggleReveal?.(n.id) : undefined,
+            onPresent: !o.isPlayer && o.onPresent ? () => o.onPresent?.('npc', n.id) : undefined,
           })),
         },
       ],
@@ -192,6 +219,10 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
           subtitle: l.tags?.join(' · '),
           imageUrl: o.imageUrl(l.imageId),
           onOpen: () => o.onOpen('locations', l.id),
+          revealed: o.isRevealed(l.id),
+          presenting: o.isPresenting?.('location', l.id),
+          onToggleReveal: !o.isPlayer && o.onToggleReveal ? () => o.onToggleReveal?.(l.id) : undefined,
+          onPresent: !o.isPlayer && o.onPresent ? () => o.onPresent?.('location', l.id) : undefined,
         })),
       }],
     };

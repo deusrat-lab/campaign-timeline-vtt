@@ -635,6 +635,9 @@ export function IsolatedCampaignMapWorkspace() {
               },
               isPlaced: (et, id) => data.mapPlacements.some((mp) => mp.entityType === et && mp.entityId === id),
               isRevealed: (id) => revealed.has(id),
+              isPresenting: (et, id) => runtime.presentedCard?.entityType === et && runtime.presentedCard?.entityId === id,
+              onPresent: (et, id) => togglePresentedCard(et as CampaignEntityType, id),
+              onToggleReveal: (id) => store.toggleReveal(campaignId, id),
               match: () => true,
               isPlayer,
             });

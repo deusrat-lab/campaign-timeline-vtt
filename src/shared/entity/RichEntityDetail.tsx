@@ -48,12 +48,12 @@ export function RichEntityDetail({ vm, actions, isPlayer = false }: { vm: Entity
               {actions.onPlace && !actions.placed && <button className="atlas-btn ghost small" onClick={actions.onPlace}>Разместить на карте</button>}
               {actions.onPresent && (
                 <button className="atlas-btn ghost small" onClick={actions.onPresent}>
-                  {actions.presenting ? '🔴 Скрыть у игроков' : '📺 Показать игрокам'}
+                  {actions.presenting ? '🔴 Закрыть показ' : '📺 Показать поверх'}
                 </button>
               )}
               {actions.onToggleReveal && (
                 <button className="atlas-btn ghost small" onClick={actions.onToggleReveal}>
-                  {actions.revealed ? '👁 Показано игрокам' : '🚫 Показать игрокам'}
+                  {actions.revealed ? '👁 Видно в списках' : '🚫 Открыть в списках'}
                 </button>
               )}
               {actions.onDelete && <button className="atlas-btn danger small" onClick={actions.onDelete}>Удалить</button>}
@@ -98,18 +98,34 @@ export function RichEntityDetail({ vm, actions, isPlayer = false }: { vm: Entity
             {sec.items.length === 0 ? <p className="shared-muted">—</p> : (
               <div className="shared-rel-list">
                 {sec.items.map((it) => (
-                  <button key={it.id} type="button" className="shared-rel-chip" onClick={it.onOpen} disabled={!it.onOpen}>
-                    {it.imageUrl ? (
-                      <img className="shared-rel-thumb" src={it.imageUrl} alt="" />
-                    ) : (
-                      <EntityImage name={it.label} size={42} />
+                  <div key={it.id} className="shared-rel-item">
+                    <button type="button" className="shared-rel-chip" onClick={it.onOpen} disabled={!it.onOpen}>
+                      {it.imageUrl ? (
+                        <img className="shared-rel-thumb" src={it.imageUrl} alt="" />
+                      ) : (
+                        <EntityImage name={it.label} size={42} />
+                      )}
+                      <span className="shared-rel-main">
+                        <strong>{it.label}</strong>
+                        {it.subtitle && <span>{it.subtitle}</span>}
+                        {it.meta && <span>{it.meta}</span>}
+                      </span>
+                    </button>
+                    {!isPlayer && (it.onPresent || it.onToggleReveal) && (
+                      <div className="shared-rel-actions">
+                        {it.onPresent && (
+                          <button type="button" className={`shared-rel-action${it.presenting ? ' active' : ''}`} onClick={it.onPresent}>
+                            {it.presenting ? 'Закрыть показ' : 'Показать поверх'}
+                          </button>
+                        )}
+                        {it.onToggleReveal && (
+                          <button type="button" className={`shared-rel-action${it.revealed ? ' active' : ''}`} onClick={it.onToggleReveal}>
+                            {it.revealed ? 'Видно в списках' : 'Открыть в списках'}
+                          </button>
+                        )}
+                      </div>
                     )}
-                    <span className="shared-rel-main">
-                      <strong>{it.label}</strong>
-                      {it.subtitle && <span>{it.subtitle}</span>}
-                      {it.meta && <span>{it.meta}</span>}
-                    </span>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}

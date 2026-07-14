@@ -19,6 +19,10 @@ export interface EntityRelationLink {
   meta?: string;
   imageUrl?: string;
   onOpen?: () => void;
+  revealed?: boolean;
+  onToggleReveal?: () => void;
+  presenting?: boolean;
+  onPresent?: () => void;
 }
 
 export interface EntityRelationSection {

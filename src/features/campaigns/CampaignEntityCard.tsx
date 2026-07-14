@@ -110,6 +110,15 @@ export function CampaignEntityCard({
     },
     isPlaced: (entityType, entityId) => data.mapPlacements.some((mp) => mp.entityType === entityType && mp.entityId === entityId),
     isRevealed: (entityId) => store.isRevealed(campaignId, entityId),
+    isPresenting: (entityType, entityId) => store.getRuntime(campaignId)?.presentedCard?.entityType === entityType && store.getRuntime(campaignId)?.presentedCard?.entityId === entityId,
+    onPresent: (entityType, entityId) => store.updateRuntime(campaignId, (prev) => ({
+      ...prev,
+      presentedBattle: null,
+      presentedCard: prev.presentedCard?.entityType === entityType && prev.presentedCard?.entityId === entityId
+        ? null
+        : { entityType: entityType as CampaignEntityType, entityId },
+    })),
+    onToggleReveal: (entityId) => store.toggleReveal(campaignId, entityId),
     match: () => true,
     isPlayer,
     battleMapsForLocation: (locationId) => {
@@ -334,7 +343,7 @@ export function CampaignEntityCard({
                   title={revealed ? 'Игроки видят эту карточку в библиотеке' : 'Скрыто от игроков'}
                   onClick={() => store.toggleReveal(campaignId, current.id)}
                 >
-                  {revealed ? '👁 Показано игрокам' : '🚫 Показать игрокам'}
+                  {revealed ? '👁 Видно в списках' : '🚫 Открыть в списках'}
                 </button>
                 {onPlaceOnMap && !placement && (
                   <button className="atlas-btn ghost small" onClick={() => { onPlaceOnMap(current.type, current.id); onClose(); }}>Поставить на карту</button>

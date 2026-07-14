@@ -85,6 +85,10 @@
 .ucw-lib-heading { font-family: var(--font-heading); color: var(--gold-soft); font-size: 1.05rem; margin: 0 0 4px; }
 .ucw-add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0; }
 .ucw-add-grid .atlas-btn { width: 100%; }
+.ucw-select {
+  grid-column: 1 / -1; width: 100%; background: var(--bg-card); border: 1px solid var(--border-soft);
+  color: var(--fg); border-radius: 7px; padding: 7px 9px; font: inherit; font-size: 0.86rem;
+}
 .ucw-lib-group { margin-top: 14px; }
 .ucw-lib-group > .label { color: var(--fg-faint); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
 .ucw-entity-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-width: 0; padding: 7px 9px; background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 8px; margin-bottom: 6px; font-size: 0.88rem; }

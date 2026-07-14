@@ -62,6 +62,8 @@ export function CampaignBattlePage() {
   const [hoverCell, setHoverCell] = useState<{ row: number; col: number } | null>(null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const [postMovePrompt, setPostMovePrompt] = useState<{ id: string; name: string } | null>(null);
+  const [teleportMode, setTeleportMode] = useState(false);
+  const [partyToPlaceId, setPartyToPlaceId] = useState('');
   const [lightboxImage, setLightboxImage] = useState<{ src: string; title: string } | null>(null);
   // Active touch/mouse pointers (id → viewport-local point) for pinch-zoom.
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
@@ -349,6 +351,8 @@ export function CampaignBattlePage() {
       const raw = clientToPctInside(e.clientX, e.clientY);
       if (!raw) return;
       const pct = snapPct(raw.x, raw.y);
+      const targetCell = cellAt(pct.x, pct.y);
+      if (terrainAt(targetCell) === 'blocked' || tokenAtCell(targetCell)) return;
       const tok: CampaignBattleToken = {
         id: `tok-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
         name: placing.name,
@@ -366,6 +370,16 @@ export function CampaignBattlePage() {
       patchBoard((b) => ({ ...b, tokens: [...b.tokens, tok], currentTurnTokenId: b.currentTurnTokenId ?? tok.id }));
       setSelected(tok.id);
       setPlacing(null);
+      setPartyToPlaceId('');
+    } else if (!d.moved && !placing && !isPlayer && teleportMode && selTok) {
+      const raw = clientToPctInside(e.clientX, e.clientY);
+      if (!raw) return;
+      const pct = snapPct(raw.x, raw.y);
+      const targetCell = cellAt(pct.x, pct.y);
+      if (terrainAt(targetCell) === 'blocked' || tokenAtCell(targetCell, selTok.id)) return;
+      patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, x: pct.x, y: pct.y } : t) }));
+      setTeleportMode(false);
+      setHoverCell(null);
     } else if (!d.moved && !placing && selTok && route?.status === 'valid' && selectedCanAct) {
       const center = cellCenterPct(route.cells[route.cells.length - 1]);
       patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, x: center.x, y: center.y } : t) }));
@@ -414,7 +428,7 @@ export function CampaignBattlePage() {
     : ordered[0]?.id;
   const currentToken = board.tokens.find((t) => t.id === currentId);
   const selectedCell = selTok ? cellAt(selTok.x, selTok.y) : null;
-  const selectedCanAct = !!selTok && selTok.id === currentId && terrainMode === 'off' && (!isPlayer || selectedIsPlayerControlled);
+  const selectedCanAct = !!selTok && selTok.id === currentId && terrainMode === 'off' && !teleportMode && (!isPlayer || selectedIsPlayerControlled);
   const canPassTurn = !!currentToken && (!isPlayer || currentToken.side === 'player' || currentToken.side === 'ally');
   const route = selTok && selectedCell && hoverCell && postMovePrompt?.id !== selTok.id && cellKey(selectedCell) !== cellKey(hoverCell) && selectedCanAct ? findRoute(selTok, hoverCell) : null;
   const selectedRouteFeet = route?.feet ?? 0;
@@ -437,6 +451,7 @@ export function CampaignBattlePage() {
   });
   const fieldPlayers = board.tokens.filter((t) => t.side === 'player' || t.side === 'ally');
   const fieldEnemies = board.tokens.filter((t) => t.side === 'enemy' || t.side === 'neutral');
+  const partyOptions = data.party ?? [];
   const fieldPlayerLabel = (token: CampaignBattleToken) => partyPlayerForToken(token)?.name ?? token.name;
   const tokenImage = (token: CampaignBattleToken) => {
     const enemy = token.sourceEnemyId
@@ -461,9 +476,8 @@ export function CampaignBattlePage() {
   };
   const setInit = (id: string, v: number | undefined) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === id ? { ...t, initiative: v } : t) }));
   const startPlacingNextPlayer = () => {
-    const usedIds = new Set(fieldPlayers.map((token) => token.sourcePlayerId).filter(Boolean));
-    const nextPlayer = (data.party ?? []).find((player) => !usedIds.has(player.id));
-    if (nextPlayer) placePlayer(nextPlayer);
+    const player = (data.party ?? []).find((p) => p.id === partyToPlaceId);
+    if (player) placePlayer(player);
     else setPlacing({ side: 'player', name: `Игрок ${fieldPlayers.filter((t) => t.side === 'player').length + 1}` });
   };
   const rollAllInitiative = () => patchBoard((b) => {
@@ -531,7 +545,7 @@ export function CampaignBattlePage() {
                 presentedCard: null,
               }))}
             >
-              {isPresented ? '● Показано игрокам' : '▶ Показать игрокам'}
+              {isPresented ? '● Бой открыт игрокам' : '▶ Открыть бой игрокам'}
             </button>
           )}
           {!observer && asPlayer && (
@@ -583,16 +597,16 @@ export function CampaignBattlePage() {
           <div className="ucw-world" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
             <div className="ucw-mapstack">
               {imgUrl && <img ref={imgRef} className="ucw-mapimg" src={imgUrl} alt={title} draggable={false} onLoad={(e) => { const im = e.currentTarget; setNatural({ w: im.naturalWidth, h: im.naturalHeight }); if (!fitted && fit()) setFitted(true); }} />}
-              {/* grid + terrain overlay */}
-              {board.showGrid && (
+              {/* grid + terrain + movement overlay */}
+              {(board.showGrid || terrainMode !== 'off' || Object.keys(board.terrain ?? {}).length > 0 || !!route || !!selTok) && (
                 <svg className="ucw-overlay-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                   {Object.entries(board.terrain ?? {}).map(([key, type]) => {
                     const [r, c] = key.split(',').map(Number);
                     return <rect key={key} x={c * cellW} y={r * cellH} width={cellW} height={cellH}
                       fill={type === 'blocked' ? 'rgba(179,65,58,0.45)' : 'rgba(192,138,46,0.4)'} stroke="none" />;
                   })}
-                  {Array.from({ length: columns + 1 }, (_, i) => <line key={`v${i}`} x1={i * cellW} y1={0} x2={i * cellW} y2={100} stroke="rgba(255,255,255,0.25)" strokeWidth={0.15} vectorEffect="non-scaling-stroke" style={{ strokeWidth: 1 } as React.CSSProperties} />)}
-                  {Array.from({ length: rows + 1 }, (_, i) => <line key={`h${i}`} x1={0} y1={i * cellH} x2={100} y2={i * cellH} stroke="rgba(255,255,255,0.25)" strokeWidth={0.15} vectorEffect="non-scaling-stroke" style={{ strokeWidth: 1 } as React.CSSProperties} />)}
+                  {board.showGrid && Array.from({ length: columns + 1 }, (_, i) => <line key={`v${i}`} x1={i * cellW} y1={0} x2={i * cellW} y2={100} stroke="rgba(255,255,255,0.25)" strokeWidth={0.15} vectorEffect="non-scaling-stroke" style={{ strokeWidth: 1 } as React.CSSProperties} />)}
+                  {board.showGrid && Array.from({ length: rows + 1 }, (_, i) => <line key={`h${i}`} x1={0} y1={i * cellH} x2={100} y2={i * cellH} stroke="rgba(255,255,255,0.25)" strokeWidth={0.15} vectorEffect="non-scaling-stroke" style={{ strokeWidth: 1 } as React.CSSProperties} />)}
                   {!placing && selTok && selectedCell && selectedCanAct && postMovePrompt?.id !== selTok.id && terrainMode === 'off' && Array.from({ length: Math.floor((selTok.speedFeet ?? selectedPlayer?.speedFeet ?? DEFAULT_SPEED_FEET) / FEET_PER_CELL) * 2 + 1 }).flatMap((_, ri) => {
                     const speedCells = Math.floor((selTok.speedFeet ?? selectedPlayer?.speedFeet ?? DEFAULT_SPEED_FEET) / FEET_PER_CELL);
                     const dr = ri - speedCells;
@@ -727,6 +741,7 @@ export function CampaignBattlePage() {
                     <div><label>Скор.</label><input type="number" value={selTok.speedFeet ?? selectedPlayer?.speedFeet ?? DEFAULT_SPEED_FEET} onChange={(e) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, speedFeet: Math.max(5, Number(e.target.value) || DEFAULT_SPEED_FEET) } : t) }))} /></div>
                   </div>
                   <div className="ucw-card-actions">
+                    <button className={`atlas-btn ghost small ${teleportMode ? 'active' : ''}`} onClick={() => setTeleportMode((v) => !v)}>{teleportMode ? 'Отменить телепорт' : 'Телепорт'}</button>
                     <button className="atlas-btn ghost small" onClick={() => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, currentHp: (t.currentHp ?? 0) - 5 } : t) }))}>−5 HP</button>
                     <button className="atlas-btn ghost small" onClick={() => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, currentHp: (t.currentHp ?? 0) + 5 } : t) }))}>+5 HP</button>
                     <button className="atlas-btn danger small" onClick={() => { patchBoard((b) => ({ ...b, tokens: b.tokens.filter((t) => t.id !== selTok.id) })); setSelected(null); }}>Убрать</button>
@@ -794,7 +809,18 @@ export function CampaignBattlePage() {
           )}
           {!isPlayer && (
             <div className="ucw-add-grid">
-              <button className="atlas-btn small" onClick={startPlacingNextPlayer}>+ Игрок</button>
+              <select
+                className="ucw-select"
+                value={partyToPlaceId}
+                onChange={(e) => setPartyToPlaceId(e.target.value)}
+                aria-label="Выбрать персонажа для поля боя"
+              >
+                <option value="">Игрок: свободный</option>
+                {partyOptions.map((player) => (
+                  <option key={player.id} value={player.id}>{player.name}</option>
+                ))}
+              </select>
+              <button className="atlas-btn small" onClick={startPlacingNextPlayer}>{partyToPlaceId ? 'Поставить игрока' : '+ Свободный игрок'}</button>
               <button className="atlas-btn small" onClick={() => setPlacing({ side: 'ally', name: `Союзник ${fieldPlayers.filter((t) => t.side === 'ally').length + 1}` })}>+ Союзник</button>
               <button className="atlas-btn small" onClick={() => setPlacing({ side: 'neutral', name: `Нейтрал ${fieldEnemies.filter((t) => t.side === 'neutral').length + 1}` })}>+ Нейтрал</button>
               <button className="atlas-btn small" onClick={() => { const n = window.prompt('Имя токена:'); if (n) setPlacing({ side: 'enemy', name: n }); }}>+ Свой</button>

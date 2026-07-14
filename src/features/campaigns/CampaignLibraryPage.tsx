@@ -84,6 +84,9 @@ export function CampaignLibraryPage() {
     },
     isPlaced: (et: EntityKind, id: string) => !!data?.mapPlacements.some((mp) => mp.entityType === et && mp.entityId === id),
     isRevealed: (id: string) => revealed.has(id),
+    isPresenting: (et: EntityKind, id: string) => runtime?.presentedCard?.entityType === et && runtime?.presentedCard?.entityId === id,
+    onPresent: (et: EntityKind, id: string) => togglePresentedCard(et as CampaignEntityType, id),
+    onToggleReveal: (id: string) => { if (campaignId) store.toggleReveal(campaignId, id); },
     match: (s: string) => !q || s.toLowerCase().includes(q),
     isPlayer,
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -333,7 +336,7 @@ function ImagesSection({ campaignId, canReveal, isPlayer }: { campaignId: string
                 images: prev.images.map((item) => (item.id === img.id ? { ...item, playerSafe: !item.playerSafe } : item)),
               }))}
             >
-              {img.playerSafe ? '👁 Показано игрокам' : '🚫 Показать игрокам'}
+              {img.playerSafe ? '👁 Картинка видна' : '🚫 Открыть картинку'}
             </button>
           )}
         </div>

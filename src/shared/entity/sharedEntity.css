@@ -43,17 +43,26 @@
 .shared-rel-head { display: flex; justify-content: space-between; align-items: center; }
 .shared-rel-count { font-size: 0.75rem; color: var(--fg-faint); border: 1px solid var(--border-soft); border-radius: 999px; padding: 0 7px; }
 .shared-rel-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px; }
+.shared-rel-item { min-width: 0; background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 7px; overflow: hidden; }
 .shared-rel-chip {
   display: flex; align-items: center; gap: 9px; min-width: 0; width: 100%; min-height: 58px;
-  font-size: 0.8rem; color: var(--fg); text-align: left; background: var(--bg-card);
-  border: 1px solid var(--border-soft); border-radius: 7px; padding: 6px; cursor: pointer;
+  font-size: 0.8rem; color: var(--fg); text-align: left; background: transparent;
+  border: 0; border-radius: 0; padding: 6px; cursor: pointer;
 }
 .shared-rel-thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-soft); background: #050403; flex: 0 0 auto; }
 .shared-rel-main { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
 .shared-rel-main strong { color: var(--gold-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shared-rel-main span { color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.shared-rel-chip:hover:not(:disabled) { border-color: var(--gold-dim); }
+.shared-rel-chip:hover:not(:disabled) { background: rgba(192,138,46,0.08); }
 .shared-rel-chip:disabled { cursor: default; opacity: 0.8; }
+.shared-rel-item:hover { border-color: var(--gold-dim); }
+.shared-rel-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0 6px 6px; }
+.shared-rel-action {
+  min-height: 28px; border: 1px solid var(--border-soft); border-radius: 6px; background: rgba(14,12,9,0.9);
+  color: var(--fg-dim); font-weight: 700; font-size: 0.72rem; cursor: pointer;
+}
+.shared-rel-action:hover { border-color: var(--gold-dim); color: var(--gold-soft); }
+.shared-rel-action.active { border-color: var(--gold); background: rgba(192,138,46,0.18); color: var(--gold-soft); }
 .shared-muted { color: var(--fg-faint); }
 
 @media (max-width: 860px) { .shared-lib { grid-template-columns: 1fr; } }
