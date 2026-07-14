@@ -10,7 +10,6 @@ import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
 import type { CampaignBattleToken, BattleTokenSide, CampaignBattleBoard } from '../../types/userCampaign';
 import { patchBattleBoardRemote } from '../../state/userCampaignSync';
 import { ImageLightbox } from '../embedded-dm-companion/ImageLightbox';
-import { isCampaignPlayerSession, markCampaignPlayerSession } from './playerSafe';
 
 const norm = (s: string) => s.trim().toLowerCase();
 const FEET_PER_CELL = 5;
@@ -39,7 +38,8 @@ export function CampaignBattlePage() {
     ?? (runtime?.battleBoard && runtime.battleBoard.mapId === mapId ? runtime.battleBoard : emptyBoard);
   // Player view = read-only board (see what the DM set up, edit nothing). The
   // DM can flip to Player View to preview exactly what players get.
-  const asPlayer = searchParams.get('as') === 'player' || isCampaignPlayerSession(campaignId);
+  const observer = searchParams.get('observer') === '1';
+  const asPlayer = searchParams.get('as') === 'player' || observer;
   const isPlayer = runtime?.mode === 'playerView' || asPlayer;
   const isPresented = !!mapId && runtime?.presentedBattle?.mapId === mapId;
   // Custom field (`custom-<id>`) or a shared-catalog map.
@@ -73,10 +73,6 @@ export function CampaignBattlePage() {
   const [shellHeight, setShellHeight] = useState<number>();
 
   useEffect(() => { getBattleMapCatalog().then(setCatalog); }, []);
-
-  useEffect(() => {
-    if (asPlayer && campaignId) markCampaignPlayerSession(campaignId);
-  }, [asPlayer, campaignId]);
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -169,7 +165,7 @@ export function CampaignBattlePage() {
   if (asPlayer && !isPresented) {
     return (
       <div className="ucw-lib-page">
-        <button className="atlas-back-link" onClick={() => navigate(`/campaigns/${campaignId}/map?as=player`)}>← Карта</button>
+        <button className="atlas-back-link" onClick={() => navigate(`/campaigns/${campaignId}/map?as=player${observer ? '&observer=1' : ''}`)}>← Карта</button>
         <p className="atlas-empty">Бой не открыт мастером.</p>
       </div>
     );
@@ -506,7 +502,7 @@ export function CampaignBattlePage() {
           <button
             className="atlas-back-link"
             style={{ margin: 0 }}
-            onClick={() => navigate(asPlayer ? `/campaigns/${campaignId}/map?as=player` : `/campaigns/${campaignId}/library/battle-maps`)}
+            onClick={() => navigate(asPlayer ? `/campaigns/${campaignId}/map?as=player${observer ? '&observer=1' : ''}` : `/campaigns/${campaignId}/library/battle-maps`)}
           >
             ← {asPlayer ? 'Карта' : 'Карты боя'}
           </button>
@@ -536,6 +532,14 @@ export function CampaignBattlePage() {
               }))}
             >
               {isPresented ? '● Показано игрокам' : '▶ Показать игрокам'}
+            </button>
+          )}
+          {!observer && asPlayer && (
+            <button
+              className="ucw-tbtn"
+              onClick={() => navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(mapId ?? '')}`)}
+            >
+              Вернуться в DM
             </button>
           )}
           {isPlayer && <span className="ucw-chip">Режим игрока</span>}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import '../world-atlas/atlasLayer.css';
 import './campaignWorkspace.css';
@@ -10,7 +10,7 @@ import { CampaignEntityCard } from './CampaignEntityCard';
 import { RichEntityLibrary } from '../../shared/entity/RichEntityLibrary';
 import { buildListItems, buildDetail, type LibraryKind } from '../../shared/entity/userCampaignEntityVM';
 import type { EntityKind, FilterConfig } from '../../shared/entity/types';
-import { isCampaignPlayerSession, isEntityPlayerVisible, markCampaignPlayerSession, playerSafeImageSrc } from './playerSafe';
+import { isEntityPlayerVisible, playerSafeImageSrc } from './playerSafe';
 
 type Kind = LibraryKind | 'images' | 'notes';
 
@@ -50,7 +50,8 @@ export function CampaignLibraryPage() {
 
   const k = (kind && KIND_LABEL[kind] ? kind : 'locations') as Kind;
   const isEntityKind = k !== 'images' && k !== 'notes';
-  const asPlayer = searchParams.get('as') === 'player' || isCampaignPlayerSession(campaignId);
+  const observer = searchParams.get('observer') === '1';
+  const asPlayer = searchParams.get('as') === 'player' || observer;
   const mode: UserCampaignMode = asPlayer ? 'playerView' : (runtime?.mode ?? 'dmView');
   const isEdit = mode === 'dmEdit';
   const isPlayer = mode === 'playerView';
@@ -71,10 +72,6 @@ export function CampaignLibraryPage() {
   const q = query.trim().toLowerCase();
   const revealed = new Set(runtime?.revealedToPlayers ?? []);
 
-  useEffect(() => {
-    if (asPlayer && campaignId) markCampaignPlayerSession(campaignId);
-  }, [asPlayer, campaignId]);
-
   // Neutral view-models for the shared rich library (hook order stable —
   // computed before the early return; null-safe).
   const vmOpts = useMemo(() => ({
@@ -83,7 +80,7 @@ export function CampaignLibraryPage() {
       const et = KIND_ENTITY[nk];
       if (isPlayer && data && et !== 'party' && !isEntityPlayerVisible(data, runtime, et, id)) return;
       setSelectedId(id);
-      navigate(`/campaigns/${campaignId}/library/${nk}${asPlayer ? '?as=player' : ''}`);
+      navigate(`/campaigns/${campaignId}/library/${nk}${observer ? '?as=player&observer=1' : asPlayer ? '?as=player' : ''}`);
     },
     isPlaced: (et: EntityKind, id: string) => !!data?.mapPlacements.some((mp) => mp.entityType === et && mp.entityId === id),
     isRevealed: (id: string) => revealed.has(id),
@@ -225,19 +222,29 @@ export function CampaignLibraryPage() {
     <div className="ucw-lib-page entity-library-page--wide">
       <div className="ucw-lib-page-head">
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-          <button className="atlas-back-link" style={{ margin: 0 }} onClick={() => navigate(`/campaigns/${campaignId}/map${asPlayer ? '?as=player' : ''}`)}>← Карта</button>
+          <button className="atlas-back-link" style={{ margin: 0 }} onClick={() => navigate(`/campaigns/${campaignId}/map${observer ? '?as=player&observer=1' : asPlayer ? '?as=player' : ''}`)}>← Карта</button>
           <h1>{data.title} · {KIND_LABEL[k]}</h1>
         </div>
-        {asPlayer ? (
+        {observer ? (
           <span className="ucw-chip">Вид игрока</span>
         ) : (
-          <div className="ucw-segmented" role="group" aria-label="Режим">
-            {(['dmView', 'dmEdit', 'playerView'] as UserCampaignMode[]).map((m) => (
-              <button key={m} className={mode === m ? 'active' : ''} onClick={() => store.setMode(campaignId, m)}>
-                {m === 'dmView' ? 'DM View' : m === 'dmEdit' ? 'DM Edit' : 'Player View'}
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="ucw-segmented" role="group" aria-label="Режим">
+              {(['dmView', 'dmEdit', 'playerView'] as UserCampaignMode[]).map((m) => (
+                <button
+                  key={m}
+                  className={mode === m ? 'active' : ''}
+                  onClick={() => {
+                    if (asPlayer && m !== 'playerView') navigate(`/campaigns/${campaignId}/library/${k}`);
+                    store.setMode(campaignId, m);
+                  }}
+                >
+                  {m === 'dmView' ? 'DM View' : m === 'dmEdit' ? 'DM Edit' : 'Player View'}
+                </button>
+              ))}
+            </div>
+            {asPlayer && <button className="ucw-tbtn" onClick={() => navigate(`/campaigns/${campaignId}/library/${k}`)}>Вернуться в DM</button>}
+          </>
         )}
       </div>
 

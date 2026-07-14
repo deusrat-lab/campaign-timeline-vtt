@@ -24,7 +24,7 @@ import { CampaignBattleMapsPage } from './features/campaigns/CampaignBattleMapsP
 import { CampaignBestiaryPage } from './features/campaigns/CampaignBestiaryPage';
 import { CampaignBattlePage } from './features/campaigns/CampaignBattlePage';
 import { CampaignEntryRedirect } from './features/campaigns/CampaignEntryRedirect';
-import { canPlayerOpenCampaignPath, isCampaignPlayerSession, markCampaignPlayerSession } from './features/campaigns/playerSafe';
+import { canPlayerOpenCampaignPath } from './features/campaigns/playerSafe';
 
 /** Legacy /location/:id deep links now resolve inside the Map Workspace instead of a standalone page. */
 function LocationRedirect() {
@@ -60,37 +60,31 @@ function DmOnlyRoute({ children }: { children: ReactElement }) {
 function UserCampaignDmRoute({ children }: { children: ReactElement }) {
   const { campaignId } = useParams<{ campaignId: string }>();
   const location = useLocation();
-  const asPlayer = new URLSearchParams(location.search).get('as') === 'player';
-  const playerSession = isCampaignPlayerSession(campaignId);
-  if (asPlayer && campaignId) markCampaignPlayerSession(campaignId);
-  if (asPlayer || playerSession) return <Navigate to={`/campaigns/${campaignId ?? ''}/map?as=player`} replace />;
+  const observer = new URLSearchParams(location.search).get('observer') === '1';
+  if (observer) return <Navigate to={`/campaigns/${campaignId ?? ''}/map?as=player&observer=1`} replace />;
   return <DmOnlyRoute>{children}</DmOnlyRoute>;
 }
 
 function UserCampaignLibraryRoute({ children }: { children: ReactElement }) {
   const { campaignId, kind } = useParams<{ campaignId: string; kind: string }>();
   const location = useLocation();
-  const asPlayer = new URLSearchParams(location.search).get('as') === 'player';
-  const playerSession = isCampaignPlayerSession(campaignId);
-  const forcedPlayer = asPlayer || playerSession;
-  if (asPlayer && campaignId) markCampaignPlayerSession(campaignId);
+  const params = new URLSearchParams(location.search);
+  const observer = params.get('observer') === '1';
+  const asPlayer = params.get('as') === 'player' || observer;
   // Observer/player tabs may open and edit character sheets. Other campaign
   // libraries stay DM-only because they contain hidden notes and unrevealed
   // objects unless the page itself explicitly filters them.
-  if (forcedPlayer && !canPlayerOpenCampaignPath(kind)) return <Navigate to={`/campaigns/${campaignId ?? ''}/map?as=player`} replace />;
-  if (forcedPlayer && !asPlayer) return <Navigate to={`${location.pathname}?as=player`} replace />;
-  if (forcedPlayer) return children;
+  if (observer && !canPlayerOpenCampaignPath(kind)) return <Navigate to={`/campaigns/${campaignId ?? ''}/map?as=player&observer=1`} replace />;
+  if (observer && params.get('as') !== 'player') return <Navigate to={`${location.pathname}?as=player&observer=1`} replace />;
+  if (asPlayer) return children;
   return <DmOnlyRoute>{children}</DmOnlyRoute>;
 }
 
 function UserCampaignPlayerCapableRoute({ children }: { children: ReactElement }) {
-  const { campaignId } = useParams<{ campaignId: string }>();
   const location = useLocation();
-  const asPlayer = new URLSearchParams(location.search).get('as') === 'player';
-  const playerSession = isCampaignPlayerSession(campaignId);
-  if (asPlayer && campaignId) markCampaignPlayerSession(campaignId);
-  if (playerSession && !asPlayer) return <Navigate to={`${location.pathname}?as=player`} replace />;
-  if (asPlayer || playerSession) return children;
+  const params = new URLSearchParams(location.search);
+  const asPlayer = params.get('as') === 'player' || params.get('observer') === '1';
+  if (asPlayer) return children;
   return <DmOnlyRoute>{children}</DmOnlyRoute>;
 }
 
@@ -110,8 +104,7 @@ function AppShell() {
   const params = new URLSearchParams(location.search);
   const embedded = params.get('embedded') === '1';
   const campaignMatch = location.pathname.match(/^\/campaigns\/([^/]+)/);
-  const campaignPlayer =
-    !!campaignMatch && (params.get('as') === 'player' || isCampaignPlayerSession(campaignMatch[1]));
+  const campaignPlayer = !!campaignMatch && params.get('observer') === '1';
   if (location.pathname === '/observer') {
     return (
       <div className="app-shell app-shell--observer-player">

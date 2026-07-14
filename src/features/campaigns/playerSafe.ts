@@ -5,29 +5,6 @@ import type {
   UserCampaignRuntime,
 } from '../../types/userCampaign';
 
-const PLAYER_SESSION_PREFIX = 'dmCompanion.userCampaign.playerMode.';
-
-export function playerSessionKey(campaignId: string): string {
-  return `${PLAYER_SESSION_PREFIX}${campaignId}`;
-}
-
-export function markCampaignPlayerSession(campaignId: string): void {
-  try {
-    sessionStorage.setItem(playerSessionKey(campaignId), '1');
-  } catch {
-    /* sessionStorage can be unavailable in hardened browser modes */
-  }
-}
-
-export function isCampaignPlayerSession(campaignId?: string): boolean {
-  if (!campaignId) return false;
-  try {
-    return sessionStorage.getItem(playerSessionKey(campaignId)) === '1';
-  } catch {
-    return false;
-  }
-}
-
 export function revealedSet(runtime?: Pick<UserCampaignRuntime, 'revealedToPlayers'> | null): Set<string> {
   return new Set(runtime?.revealedToPlayers ?? []);
 }

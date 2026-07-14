@@ -11,7 +11,7 @@ import { CampaignEntityCard } from './CampaignEntityCard';
 import '../../shared/entity/sharedEntity.css';
 import { RichEntityDetail } from '../../shared/entity/RichEntityDetail';
 import { buildDetail, type LibraryKind } from '../../shared/entity/userCampaignEntityVM';
-import { isCampaignPlayerSession, isEntityPlayerVisible, isPlacementPlayerVisible, markCampaignPlayerSession, playerSafeImageSrc } from './playerSafe';
+import { isEntityPlayerVisible, isPlacementPlayerVisible, playerSafeImageSrc } from './playerSafe';
 
 /** CampaignEntityType → shared library kind (for the neutral VM mapper). */
 const ENTITY_TO_LIBKIND: Partial<Record<CampaignEntityType, LibraryKind>> = {
@@ -60,17 +60,14 @@ export function IsolatedCampaignMapWorkspace() {
   const [search, setSearch] = useState('');
   const [layers, setLayers] = useState({ objects: true, routes: true, zones: true });
 
-  // `?as=player` forces a player-safe view locally (for opening a dedicated
-  // player tab), independent of the shared runtime.mode — so the DM can keep
-  // editing in their own tab while a player tab shows only revealed content.
-  const asPlayer = searchParams.get('as') === 'player' || isCampaignPlayerSession(campaignId);
+  // `?as=player` is a player-safe rendering mode. `observer=1` is the locked
+  // player-facing tab; plain Player View remains a DM preview that can return
+  // to DM View from the segmented control.
+  const observer = searchParams.get('observer') === '1';
+  const asPlayer = searchParams.get('as') === 'player' || observer;
   const mode: UserCampaignMode = asPlayer ? 'playerView' : (runtime?.mode ?? 'dmView');
   const isEdit = mode === 'dmEdit';
   const isPlayer = mode === 'playerView';
-
-  useEffect(() => {
-    if (asPlayer && campaignId) markCampaignPlayerSession(campaignId);
-  }, [asPlayer, campaignId]);
 
   const battleOverlayOpen = isPlayer && !!runtime?.presentedBattle?.mapId;
 
@@ -338,7 +335,16 @@ export function IsolatedCampaignMapWorkspace() {
     return 'Объект';
   };
 
-  const setMode = (m: UserCampaignMode) => store.setMode(campaignId, m);
+  const exitPlayerPreview = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('as');
+    next.delete('observer');
+    setSearchParams(next, { replace: true });
+  };
+  const setMode = (m: UserCampaignMode) => {
+    if (!observer && asPlayer && m !== 'playerView') exitPlayerPreview();
+    store.setMode(campaignId, m);
+  };
 
 
   const exportCampaign = () => {
@@ -367,7 +373,7 @@ export function IsolatedCampaignMapWorkspace() {
       {/* Header */}
       <div className="ucw-header">
         <div className="ucw-title">
-          {asPlayer ? (
+          {observer ? (
             <span className="ucw-chip">Карта игрока</span>
           ) : (
             <>
@@ -379,9 +385,9 @@ export function IsolatedCampaignMapWorkspace() {
           <span className="ucw-chip">{USER_CAMPAIGN_TYPE_LABELS[data.type]} · изолирован</span>
         </div>
         <div className="ucw-header-actions">
-          {asPlayer ? (
+          {observer ? (
             <>
-              <button className="ucw-tbtn" onClick={() => navigate(`/campaigns/${campaignId}/library/players?as=player`)}>Листы персонажей</button>
+              <button className="ucw-tbtn" onClick={() => navigate(`/campaigns/${campaignId}/library/players?as=player&observer=1`)}>Листы персонажей</button>
               <span className="ucw-chip">Вид игрока — только раскрытое Мастером</span>
             </>
           ) : (
@@ -393,7 +399,8 @@ export function IsolatedCampaignMapWorkspace() {
                   </button>
                 ))}
               </div>
-              <button className="ucw-tbtn" title="Открыть Observer — чистый вид игрока в отдельной вкладке (можно показать/дать игрокам)" onClick={() => { const u = new URL(window.location.href); u.searchParams.set('as', 'player'); window.open(u.toString(), '_blank', 'noopener'); }}>Открыть Observer</button>
+              {!observer && asPlayer && <button className="ucw-tbtn" onClick={exitPlayerPreview}>Вернуться в DM</button>}
+              <button className="ucw-tbtn" title="Открыть Observer — чистый вид игрока в отдельной вкладке (можно показать/дать игрокам)" onClick={() => { const u = new URL(window.location.href); u.searchParams.set('as', 'player'); u.searchParams.set('observer', '1'); window.open(u.toString(), '_blank', 'noopener'); }}>Открыть Observer</button>
               <button className="ucw-tbtn ucw-mobile-secondary" title="Безопасно до-насеять карточки, картинки и связи из шаблона сценария (ничего не удаляет)" onClick={() => {
                 const r = store.upgradeFromScenario(campaignId);
                 if (!r) { window.alert('Для этой кампании нет подходящего шаблона.'); return; }
@@ -416,7 +423,7 @@ export function IsolatedCampaignMapWorkspace() {
           type="button"
           className="ucw-battle-banner"
           onClick={() => {
-            if (!asPlayer) navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(runtime.presentedBattle!.mapId)}?returnTo=${encodeURIComponent(`/campaigns/${campaignId}/map`)}`);
+            if (!observer) navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(runtime.presentedBattle!.mapId)}?returnTo=${encodeURIComponent(`/campaigns/${campaignId}/map`)}`);
           }}
         >
           ▶ Мастер открыл бой — нажмите, чтобы открыть поле боя
@@ -427,7 +434,7 @@ export function IsolatedCampaignMapWorkspace() {
         <div className="ucw-player-battle-overlay" role="dialog" aria-label="Карта боя">
           <iframe
             title="Карта боя"
-            src={`/campaigns/${campaignId}/battle/${encodeURIComponent(runtime.presentedBattle.mapId)}?as=player&embedded=1`}
+            src={`/campaigns/${campaignId}/battle/${encodeURIComponent(runtime.presentedBattle.mapId)}?as=player&observer=1&embedded=1`}
           />
         </div>
       )}
