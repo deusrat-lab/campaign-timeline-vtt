@@ -122,6 +122,7 @@ export function CampaignEntityCard({
     match: () => true,
     isPlayer,
     battleMapsForLocation: (locationId) => {
+      if (isPlayer) return [];
       if (!data) return [];
       const loc = data.locations.find((l) => l.id === locationId);
       const key = loc?.title.match(/^L\d{2}/)?.[0];

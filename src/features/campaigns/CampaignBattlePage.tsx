@@ -206,6 +206,7 @@ export function CampaignBattlePage() {
     : (natural ? Math.max(1, Math.round((natural.h / natural.w) * columns)) : columns);
   const cellW = 100 / columns;            // % of width
   const cellH = 100 / rows;               // % of height
+  const showTerrain = board.showTerrain !== false;
   const cellAt = (pctX: number, pctY: number) => ({
     col: Math.max(0, Math.min(columns - 1, Math.floor(pctX / cellW))),
     row: Math.max(0, Math.min(rows - 1, Math.floor(pctY / cellH))),
@@ -582,6 +583,7 @@ export function CampaignBattlePage() {
             <button className={`ucw-tbtn ${board.snap ? 'active' : ''}`} onClick={() => patchBoard((b) => ({ ...b, snap: !b.snap }))}>Привязка</button>
             <span className="sep" />
             <span style={{ fontSize: '0.78rem', color: 'var(--fg-faint)' }}>Террейн:</span>
+            <button className={`ucw-tbtn ${showTerrain ? 'active' : ''}`} onClick={() => patchBoard((b) => ({ ...b, showTerrain: b.showTerrain === false ? true : false }))}>{showTerrain ? 'Видим' : 'Скрыт'}</button>
             {(['off', 'blocked', 'difficult', 'erase'] as const).map((m) => (
               <button key={m} className={`ucw-tbtn ${terrainMode === m ? 'active' : ''}`} onClick={() => setTerrainMode(m)}>
                 {m === 'off' ? 'Выкл' : m === 'blocked' ? 'Стена' : m === 'difficult' ? 'Трудно' : 'Стереть'}
@@ -598,9 +600,9 @@ export function CampaignBattlePage() {
             <div className="ucw-mapstack">
               {imgUrl && <img ref={imgRef} className="ucw-mapimg" src={imgUrl} alt={title} draggable={false} onLoad={(e) => { const im = e.currentTarget; setNatural({ w: im.naturalWidth, h: im.naturalHeight }); if (!fitted && fit()) setFitted(true); }} />}
               {/* grid + terrain + movement overlay */}
-              {(board.showGrid || terrainMode !== 'off' || Object.keys(board.terrain ?? {}).length > 0 || !!route || !!selTok) && (
+              {(board.showGrid || terrainMode !== 'off' || (showTerrain && Object.keys(board.terrain ?? {}).length > 0) || !!route || !!selTok) && (
                 <svg className="ucw-overlay-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                  {Object.entries(board.terrain ?? {}).map(([key, type]) => {
+                  {showTerrain && Object.entries(board.terrain ?? {}).map(([key, type]) => {
                     const [r, c] = key.split(',').map(Number);
                     return <rect key={key} x={c * cellW} y={r * cellH} width={cellW} height={cellH}
                       fill={type === 'blocked' ? 'rgba(179,65,58,0.45)' : 'rgba(192,138,46,0.4)'} stroke="none" />;

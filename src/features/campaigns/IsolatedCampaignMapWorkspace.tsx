@@ -56,6 +56,7 @@ export function IsolatedCampaignMapWorkspace() {
   const [routeEditId, setRouteEditId] = useState<string | null>(null);
   const [zoneEditId, setZoneEditId] = useState<string | null>(null);
   const [selected, setSelected] = useState<{ type: CampaignEntityType; id: string } | null>(null);
+  const [selectedStack, setSelectedStack] = useState<Array<{ type: CampaignEntityType; id: string }>>([]);
   const [editing, setEditing] = useState<{ type: CampaignEntityType; id: string } | null>(null);
   const [search, setSearch] = useState('');
   const [layers, setLayers] = useState({ objects: true, routes: true, zones: true });
@@ -585,6 +586,7 @@ export function IsolatedCampaignMapWorkspace() {
                         onClick={(e) => {
                           e.stopPropagation();
                           if (isPlayer && !canOpenForPlayer(mp.entityType, mp.entityId)) return;
+                          setSelectedStack([]);
                           setSelected({ type: mp.entityType, id: mp.entityId });
                         }}
                         title={entityLabel(mp.entityType, mp.entityId)}
@@ -631,6 +633,7 @@ export function IsolatedCampaignMapWorkspace() {
               onOpen: (_k, id) => {
                 const t = data.locations.some((l) => l.id === id) ? 'location' : data.npcs.some((n) => n.id === id) ? 'npc' : data.quests.some((q) => q.id === id) ? 'quest' : 'enemy';
                 if (isPlayer && !canOpenForPlayer(t as CampaignEntityType, id)) return;
+                setSelectedStack((prev) => (selected ? [...prev, selected] : prev));
                 setSelected({ type: t as CampaignEntityType, id });
               },
               isPlaced: (et, id) => data.mapPlacements.some((mp) => mp.entityType === et && mp.entityId === id),
@@ -642,9 +645,18 @@ export function IsolatedCampaignMapWorkspace() {
               isPlayer,
             });
             const placement = data.mapPlacements.find((mp) => mp.entityType === selected.type && mp.entityId === selected.id);
+            const backFromSelected = () => {
+              const prev = selectedStack[selectedStack.length - 1];
+              if (prev) {
+                setSelectedStack((items) => items.slice(0, -1));
+                setSelected(prev);
+              } else {
+                setSelected(null);
+              }
+            };
             return (
               <div>
-                <button className="atlas-back-link" style={{ margin: '0 0 8px' }} onClick={() => setSelected(null)}>← Библиотека кампании</button>
+                <button className="atlas-back-link" style={{ margin: '0 0 8px' }} onClick={backFromSelected}>{selectedStack.length ? '← Назад' : '← Библиотека кампании'}</button>
                 {vm ? (
                   <RichEntityDetail
                     vm={vm}
@@ -658,7 +670,7 @@ export function IsolatedCampaignMapWorkspace() {
                       presenting: isPresenting(selected.type, selected.id),
                       onToggleReveal: !isPlayer ? () => store.toggleReveal(campaignId, selected.id) : undefined,
                       revealed: revealed.has(selected.id),
-                      onDelete: !isPlayer ? () => { store.deleteEntity(campaignId, selected.type, selected.id); setSelected(null); } : undefined,
+                      onDelete: !isPlayer ? () => { store.deleteEntity(campaignId, selected.type, selected.id); setSelected(null); setSelectedStack([]); } : undefined,
                     }}
                   />
                 ) : <p className="atlas-empty">Карточка не найдена.</p>}

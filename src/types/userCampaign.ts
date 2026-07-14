@@ -226,6 +226,8 @@ export interface CampaignBattleBoard {
   showGrid?: boolean;
   columns?: number;
   snap?: boolean;
+  /** DM-only visual toggle: terrain stays functional, but may be hidden. */
+  showTerrain?: boolean;
   /** cell key "row,col" → terrain type */
   terrain?: Record<string, TerrainType>;
 }

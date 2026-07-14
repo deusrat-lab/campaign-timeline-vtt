@@ -141,13 +141,19 @@ export function mergeScenarioIntoData(data: UserCampaignData, scenario: Campaign
     }
   }
 
-  // ── Party / player character sheets (match by name) ──
+  // ── Party / player character sheets (match by stable PC code first, then by name) ──
+  // Character sheets are living play documents: the DM/players rename them and
+  // delete old drafts. Template refresh must not recreate PC01/PC02/PC03 just
+  // because the display name changed.
   const party = [...(data.party ?? [])];
-  for (const sp of scenario.players ?? []) {
-    const ex = party.find((p) => norm(p.name) === norm(sp.name));
+  const hadPartyBeforeMerge = party.length > 0;
+  const playerCode = (name?: string) => name?.match(/\bPC\s*0?\d+\b/i)?.[0]?.replace(/\s+/g, '').toUpperCase();
+  for (const [index, sp] of (scenario.players ?? []).entries()) {
+    const code = playerCode(sp.name) ?? `PC${String(index + 1).padStart(2, '0')}`;
+    const ex = party.find((p) => playerCode(p.name) === code) ?? party.find((p) => norm(p.name) === norm(sp.name));
     if (ex) {
       fillMissingPlayerFields(ex, sp);
-    } else {
+    } else if (!hadPartyBeforeMerge) {
       party.push({ ...sp, id: uid('pc') });
       added.players += 1;
     }
