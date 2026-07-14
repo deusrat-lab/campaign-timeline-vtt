@@ -93,6 +93,7 @@ function PlayerWorkspaceRoute() {
 /** /observer opens the same usable workspace in Player View. */
 function AppShell() {
   const location = useLocation();
+  const embedded = new URLSearchParams(location.search).get('embedded') === '1';
   if (location.pathname === '/observer') {
     return (
       <div className="app-shell app-shell--observer-player">
@@ -109,10 +110,10 @@ function AppShell() {
     );
   }
   return (
-    <div className="app-shell">
-      <NavRail />
+    <div className={`app-shell${embedded ? ' app-shell--embedded' : ''}`}>
+      {!embedded && <NavRail />}
       <div className="app-shell-main">
-        <NavBar />
+        {!embedded && <NavBar />}
         <main>
           <Routes>
             {/* Start screen = World Home (DM). Players never reach it: DmOnlyRoute

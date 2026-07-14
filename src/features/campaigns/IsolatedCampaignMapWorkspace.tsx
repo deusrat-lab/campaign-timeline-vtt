@@ -392,16 +392,16 @@ export function IsolatedCampaignMapWorkspace() {
                 ))}
               </div>
               <button className="ucw-tbtn" title="Открыть Observer — чистый вид игрока в отдельной вкладке (можно показать/дать игрокам)" onClick={() => { const u = new URL(window.location.href); u.searchParams.set('as', 'player'); window.open(u.toString(), '_blank', 'noopener'); }}>Открыть Observer</button>
-              <button className="ucw-tbtn" title="Безопасно до-насеять карточки, картинки и связи из шаблона сценария (ничего не удаляет)" onClick={() => {
+              <button className="ucw-tbtn ucw-mobile-secondary" title="Безопасно до-насеять карточки, картинки и связи из шаблона сценария (ничего не удаляет)" onClick={() => {
                 const r = store.upgradeFromScenario(campaignId);
                 if (!r) { window.alert('Для этой кампании нет подходящего шаблона.'); return; }
                 window.alert(`Обновлено из шаблона.\nДобавлено: локаций ${r.added.locations}, NPC ${r.added.npcs}, врагов ${r.added.enemies}, фракций ${r.added.factions}, игроков ${r.added.players}.\nПривязано картинок: ${r.imagesAttached}.`);
               }}>⟳ Обновить из шаблона</button>
-              <button className="ucw-tbtn" onClick={() => { const t = window.prompt('Новое название кампании:', data.title); if (t && t.trim()) store.renameCampaign(campaignId, t.trim()); }}>Переименовать</button>
-              <button className="ucw-tbtn" onClick={exportCampaign}>Export</button>
-              <button className="ucw-tbtn" onClick={() => fileInputRef.current?.click()}>Import</button>
+              <button className="ucw-tbtn ucw-mobile-secondary" onClick={() => { const t = window.prompt('Новое название кампании:', data.title); if (t && t.trim()) store.renameCampaign(campaignId, t.trim()); }}>Переименовать</button>
+              <button className="ucw-tbtn ucw-mobile-secondary" onClick={exportCampaign}>Export</button>
+              <button className="ucw-tbtn ucw-mobile-secondary" onClick={() => fileInputRef.current?.click()}>Import</button>
               <input ref={fileInputRef} type="file" accept="application/json" style={{ display: 'none' }} onChange={importCampaign} />
-              <button className="ucw-tbtn" style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => { if (window.confirm(`Удалить кампанию «${data.title}»?`)) { store.deleteCampaign(campaignId); navigate('/'); } }}>Удалить</button>
+              <button className="ucw-tbtn ucw-mobile-secondary" style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => { if (window.confirm(`Удалить кампанию «${data.title}»?`)) { store.deleteCampaign(campaignId); navigate('/'); } }}>Удалить</button>
             </>
           )}
         </div>

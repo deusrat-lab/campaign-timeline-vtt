@@ -223,7 +223,7 @@
   }
 
   .ucw-title strong {
-    flex: 1 1 100%;
+    flex: 1 1 auto;
     min-width: 0;
     font-size: 1rem;
     line-height: 1.15;
@@ -240,6 +240,10 @@
     font-size: 0.62rem;
     letter-spacing: 0.03em;
     padding: 1px 7px;
+  }
+
+  .ucw-mobile-secondary {
+    display: none;
   }
 
   .ucw-header-actions {
@@ -306,7 +310,7 @@
 
   .ucw-library {
     flex: 0 0 auto;
-    max-height: min(34dvh, 260px);
+    max-height: min(28dvh, 220px);
     padding: 10px 11px calc(10px + env(safe-area-inset-bottom));
     overflow-y: auto;
   }
