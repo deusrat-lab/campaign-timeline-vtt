@@ -64,6 +64,18 @@ function UserCampaignDmRoute({ children }: { children: ReactElement }) {
   return <DmOnlyRoute>{children}</DmOnlyRoute>;
 }
 
+function UserCampaignLibraryRoute({ children }: { children: ReactElement }) {
+  const { campaignId, kind } = useParams<{ campaignId: string; kind: string }>();
+  const location = useLocation();
+  const asPlayer = new URLSearchParams(location.search).get('as') === 'player';
+  // Observer/player tabs may open and edit character sheets. Other campaign
+  // libraries stay DM-only because they contain hidden notes and unrevealed
+  // objects unless the page itself explicitly filters them.
+  if (asPlayer && kind !== 'players') return <Navigate to={`/campaigns/${campaignId ?? ''}/map?as=player`} replace />;
+  if (asPlayer) return children;
+  return <DmOnlyRoute>{children}</DmOnlyRoute>;
+}
+
 function UserCampaignPlayerCapableRoute({ children }: { children: ReactElement }) {
   return <DmOnlyRoute>{children}</DmOnlyRoute>;
 }
@@ -139,7 +151,7 @@ function AppShell() {
             <Route path="/campaigns/:campaignId/map" element={<UserCampaignPlayerCapableRoute><IsolatedCampaignMapWorkspace /></UserCampaignPlayerCapableRoute>} />
             <Route path="/campaigns/:campaignId/library/battle-maps" element={<UserCampaignDmRoute><CampaignBattleMapsPage /></UserCampaignDmRoute>} />
             <Route path="/campaigns/:campaignId/library/bestiary" element={<UserCampaignDmRoute><CampaignBestiaryPage /></UserCampaignDmRoute>} />
-            <Route path="/campaigns/:campaignId/library/:kind" element={<UserCampaignDmRoute><CampaignLibraryPage /></UserCampaignDmRoute>} />
+            <Route path="/campaigns/:campaignId/library/:kind" element={<UserCampaignLibraryRoute><CampaignLibraryPage /></UserCampaignLibraryRoute>} />
             <Route path="/campaigns/:campaignId/battle/:mapId" element={<UserCampaignPlayerCapableRoute><CampaignBattlePage /></UserCampaignPlayerCapableRoute>} />
             <Route path="/campaigns/:campaignId" element={<UserCampaignDmRoute><CampaignEntryRedirect /></UserCampaignDmRoute>} />
           </Routes>

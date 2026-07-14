@@ -96,9 +96,20 @@ export function CampaignBattlePage() {
   useEffect(() => {
     if (!campaignId || !mapId || isPlayer || !(map || customMap)) return;
     if (runtime?.presentedBattle?.mapId === mapId) return;
-    store.updateRuntime(campaignId, (p) => ({ ...p, presentedBattle: { mapId } }));
+    store.updateRuntime(campaignId, (p) => ({ ...p, presentedBattle: { mapId }, presentedCard: null }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId, mapId, isPlayer, map?.id, customMap?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (!campaignId || !mapId || isPlayer) return;
+      store.updateRuntime(campaignId, (p) => ({
+        ...p,
+        presentedBattle: p.presentedBattle?.mapId === mapId ? null : p.presentedBattle,
+      }));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignId, mapId, isPlayer]);
 
   const patchBoard = (updater: (b: CampaignBattleBoard) => CampaignBattleBoard) => {
     if (!campaignId || !mapId) return;
@@ -429,9 +440,11 @@ export function CampaignBattlePage() {
   const finishBattle = () => {
     if (!window.confirm('Закончить бой? Токены и инициатива будут убраны, террейн и сетка останутся.')) return;
     patchBoard((b) => ({ ...b, tokens: [], round: 1, currentTurnTokenId: undefined }));
-    store.updateRuntime(campaignId, (p) => ({ ...p, presentedBattle: p.presentedBattle?.mapId === mapId ? null : p.presentedBattle }));
+    store.updateRuntime(campaignId, (p) => ({ ...p, presentedBattle: p.presentedBattle?.mapId === mapId ? null : p.presentedBattle, presentedCard: null }));
     setSelected(null);
     setPostMovePrompt(null);
+    if (window.history.length > 1) navigate(-1);
+    else navigate(`/campaigns/${campaignId}/map`);
   };
 
   return (
@@ -464,7 +477,11 @@ export function CampaignBattlePage() {
             <button
               className={`ucw-tbtn ${isPresented ? 'active' : ''}`}
               title={isPresented ? 'Игроки видят этот бой — нажмите, чтобы скрыть' : 'Открыть этот бой игрокам (появится у них)'}
-              onClick={() => store.updateRuntime(campaignId, (p) => ({ ...p, presentedBattle: { mapId } }))}
+              onClick={() => store.updateRuntime(campaignId, (p) => ({
+                ...p,
+                presentedBattle: isPresented ? null : { mapId },
+                presentedCard: null,
+              }))}
             >
               {isPresented ? '● Показано игрокам' : '▶ Показать игрокам'}
             </button>

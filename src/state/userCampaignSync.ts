@@ -57,6 +57,18 @@ export function deleteCampaignRemote(id: string): void {
   }).catch(() => { /* best-effort */ });
 }
 
+/** Narrow, tokenless player-sheet write. The server accepts only party sheet
+ * fields, so Observer tabs can maintain their character sheets without gaining
+ * DM write access to the campaign. */
+export function patchPlayerRemote(campaignId: string, playerId: string, patch: Record<string, unknown>): void {
+  if (!API_BASE_URL) return;
+  fetch(`${API_BASE_URL}/api/campaigns/${encodeURIComponent(campaignId)}/players/${encodeURIComponent(playerId)}?clientId=${clientId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ patch }),
+  }).catch(() => { /* best-effort; local cache still updates immediately */ });
+}
+
 export async function fetchRegistry(): Promise<UserCampaignRegistryEntry[]> {
   if (!API_BASE_URL) return [];
   try {

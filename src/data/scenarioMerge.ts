@@ -48,7 +48,10 @@ const fillMissingPlayerFields = (target: CampaignPlayer, source: Omit<CampaignPl
   for (const key of Object.keys(src)) {
     if (key === 'name') continue;
     const current = next[key];
-    if (current == null || current === '' || (Array.isArray(current) && current.length === 0)) next[key] = src[key];
+    // Empty string is a deliberate edit for character sheets: if the DM/player
+    // selects template text and deletes it, the scenario upgrader must not put
+    // the template text back on the next render.
+    if (current == null || (Array.isArray(current) && current.length === 0)) next[key] = src[key];
   }
 };
 

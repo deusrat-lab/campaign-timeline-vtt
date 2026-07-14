@@ -18,7 +18,7 @@ import type {
 } from '../types/userCampaign';
 import { getRegionPreset } from '../data/regionPresets';
 import { mergeScenarioIntoData, scenarioForCampaign } from '../data/scenarioMerge';
-import { syncEnabled, pushCampaign, deleteCampaignRemote, fetchRegistry, fetchCampaign, subscribeUc } from './userCampaignSync';
+import { syncEnabled, pushCampaign, deleteCampaignRemote, fetchRegistry, fetchCampaign, subscribeUc, patchPlayerRemote } from './userCampaignSync';
 
 /**
  * Isolated user-campaign store.
@@ -409,6 +409,7 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
       const key = ({ location: 'locations', npc: 'npcs', quest: 'quests', enemy: 'enemies', image: 'images', party: 'party', faction: 'factions' } as const)[entityType as 'location'];
       if (!key) return p;
       const list = ((p[key] as Array<{ id: string }> | undefined) ?? []).map((e) => (e.id === entityId ? { ...e, ...patch } : e));
+      if (entityType === 'party') patchPlayerRemote(id, entityId, patch);
       return { ...p, [key]: list } as UserCampaignData;
     }),
 

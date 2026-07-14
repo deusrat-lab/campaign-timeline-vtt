@@ -208,6 +208,7 @@ export function buildDetail(kind: LibraryKind, id: string, data: UserCampaignDat
     ].map(([label, value]) => `${label} ${value ?? '—'}`).join(' · ');
     return {
       ...base(p.name),
+      imageUrl: o.imageUrl(p.imageId),
       subtitle: [p.class, p.level ? `ур. ${p.level}` : '', p.equipmentState].filter(Boolean).join(' · '),
       description: [p.description, p.publicNotes].filter(Boolean).join('\n\n'),
       dmNotes: p.dmNotes,

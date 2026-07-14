@@ -53,12 +53,14 @@ export function CampaignLibraryPage() {
   const mode: UserCampaignMode = asPlayer ? 'playerView' : (runtime?.mode ?? 'dmView');
   const isEdit = mode === 'dmEdit';
   const isPlayer = mode === 'playerView';
-  const canEdit = isEdit;
+  const playerCanEditSheets = asPlayer && k === 'players';
+  const canEdit = isEdit || playerCanEditSheets;
   const isPresenting = (entityType: CampaignEntityType, entityId: string) => runtime?.presentedCard?.entityType === entityType && runtime?.presentedCard?.entityId === entityId;
   const togglePresentedCard = (entityType: CampaignEntityType, entityId: string) => {
     if (!campaignId) return;
     store.updateRuntime(campaignId, (prev) => ({
       ...prev,
+      presentedBattle: null,
       presentedCard: prev.presentedCard?.entityType === entityType && prev.presentedCard?.entityId === entityId
         ? null
         : { entityType, entityId },
@@ -83,7 +85,7 @@ export function CampaignLibraryPage() {
   const items = useMemo(() => {
     if (!data || !isEntityKind) return [];
     let list = buildListItems(k as LibraryKind, data, vmOpts);
-    if (isPlayer) list = list.filter((it) => revealed.has(it.id)); // player: only revealed
+    if (isPlayer && k !== 'players') list = list.filter((it) => revealed.has(it.id)); // player: only revealed, except own character sheets
     if (k === 'npc' && roleFilter !== 'all') list = list.filter((it) => data.npcs.find((n) => n.id === it.id)?.role === roleFilter);
     if (locFilter !== 'all') {
       list = list.filter((it) => {
@@ -213,7 +215,7 @@ export function CampaignLibraryPage() {
     <div className="ucw-lib-page entity-library-page--wide">
       <div className="ucw-lib-page-head">
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-          <button className="atlas-back-link" style={{ margin: 0 }} onClick={() => navigate(`/campaigns/${campaignId}/map`)}>← Карта</button>
+          <button className="atlas-back-link" style={{ margin: 0 }} onClick={() => navigate(`/campaigns/${campaignId}/map${asPlayer ? '?as=player' : ''}`)}>← Карта</button>
           <h1>{data.title} · {KIND_LABEL[k]}</h1>
         </div>
         {asPlayer ? (
@@ -252,7 +254,7 @@ export function CampaignLibraryPage() {
           emptyLabel={!isPlayer ? `Пусто. Нажмите «+ ${CREATE_LABEL[k as LibraryKind]}».` : 'Пусто.'}
           actions={type ? {
             onOpenWindow: activeId ? () => setEditOpen({ type, id: activeId }) : undefined,
-            onEdit: !isPlayer && activeId ? () => setEditOpen({ type, id: activeId }) : undefined,
+            onEdit: canEdit && activeId ? () => setEditOpen({ type, id: activeId }) : undefined,
             onPlace: !isPlayer && activeId ? () => navigate(`/campaigns/${campaignId}/map?place=${type}:${activeId}`) : undefined,
             onPresent: !isPlayer && activeId ? () => togglePresentedCard(type, activeId) : undefined,
             presenting: activeId ? isPresenting(type, activeId) : false,
@@ -269,7 +271,7 @@ export function CampaignLibraryPage() {
           campaignId={campaignId}
           type={editOpen.type}
           id={editOpen.id}
-          canEdit={!isPlayer}
+          canEdit={canEdit}
           isPlayer={isPlayer}
           onClose={() => setEditOpen(null)}
           onPlaceOnMap={(entityType, entityId) => navigate(`/campaigns/${campaignId}/map?place=${entityType}:${entityId}`)}

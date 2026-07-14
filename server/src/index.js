@@ -21,7 +21,7 @@ app.use((req, res, next) => {
   if (origin && (ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin))) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, PATCH, DELETE, OPTIONS');
   }
   if (req.method === 'OPTIONS') {
     res.sendStatus(204);
@@ -85,6 +85,47 @@ app.get('/api/campaigns', (_req, res) => {
 app.get('/api/campaigns/:id', (req, res) => {
   const json = loadUserCampaign(req.params.id);
   res.json({ campaign: json ? JSON.parse(json) : null });
+});
+
+// Player-facing character-sheet edits. This is intentionally narrower than
+// PUT /api/campaigns/:id: it can only patch an existing party member and only
+// the sheet fields players are allowed to maintain during play. It lets
+// tokenless Observer tabs update HP/inventory/notes without granting access to
+// locations, enemies, hidden notes, runtime visibility, or campaign deletion.
+const PLAYER_PATCH_FIELDS = new Set([
+  'name', 'playerName', 'class', 'level', 'imageId', 'ac', 'hp', 'maxHp',
+  'speedFeet', 'proficiencyBonus', 'str', 'dex', 'con', 'int', 'wis', 'cha',
+  'attacks', 'features', 'inventory', 'equipmentState', 'conditions',
+  'publicNotes', 'characterSheetUrl', 'description',
+]);
+
+app.patch('/api/campaigns/:id/players/:playerId', (req, res) => {
+  const json = loadUserCampaign(req.params.id);
+  if (!json) {
+    res.status(404).json({ error: 'Campaign not found' });
+    return;
+  }
+  const { patch } = req.body ?? {};
+  if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
+    res.status(400).json({ error: 'Body must be { patch: <object> }' });
+    return;
+  }
+  const campaign = JSON.parse(json);
+  const party = Array.isArray(campaign?.data?.party) ? campaign.data.party : [];
+  const idx = party.findIndex((p) => p.id === req.params.playerId);
+  if (idx < 0) {
+    res.status(404).json({ error: 'Player not found' });
+    return;
+  }
+  const safePatch = {};
+  for (const [key, value] of Object.entries(patch)) {
+    if (PLAYER_PATCH_FIELDS.has(key)) safePatch[key] = value;
+  }
+  campaign.data.party = party.map((p, i) => (i === idx ? { ...p, ...safePatch } : p));
+  const nextJson = JSON.stringify(campaign);
+  saveUserCampaign(req.params.id, nextJson);
+  broadcastUc(req.params.id, JSON.stringify({ campaignId: req.params.id, payload: campaign }), req.query.clientId);
+  res.json({ ok: true });
 });
 
 app.put('/api/campaigns/:id', requireDm, (req, res) => {

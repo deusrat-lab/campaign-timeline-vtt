@@ -315,6 +315,7 @@ export function IsolatedCampaignMapWorkspace() {
   const togglePresentedCard = (entityType: CampaignEntityType, entityId: string) => {
     store.updateRuntime(campaignId, (prev) => ({
       ...prev,
+      presentedBattle: null,
       presentedCard: prev.presentedCard?.entityType === entityType && prev.presentedCard?.entityId === entityId
         ? null
         : { entityType, entityId },
@@ -371,7 +372,10 @@ export function IsolatedCampaignMapWorkspace() {
         </div>
         <div className="ucw-header-actions">
           {asPlayer ? (
-            <span className="ucw-chip">Вид игрока — только раскрытое Мастером</span>
+            <>
+              <button className="ucw-tbtn" onClick={() => navigate(`/campaigns/${campaignId}/library/players?as=player`)}>Листы персонажей</button>
+              <span className="ucw-chip">Вид игрока — только раскрытое Мастером</span>
+            </>
           ) : (
             <>
               <div className="ucw-segmented" role="group" aria-label="Режим">
@@ -409,7 +413,7 @@ export function IsolatedCampaignMapWorkspace() {
         </button>
       )}
 
-      {isPlayer && runtime.presentedCard && (
+      {isPlayer && runtime.presentedCard && !runtime.presentedBattle && (
         <CampaignEntityCard
           campaignId={campaignId}
           type={runtime.presentedCard.entityType}

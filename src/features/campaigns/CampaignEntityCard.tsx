@@ -148,6 +148,8 @@ export function CampaignEntityCard({
   const nameField = current.type === 'npc' || current.type === 'party' || current.type === 'faction';
   const title = location?.title ?? npc?.name ?? quest?.title ?? enemy?.title ?? player?.name ?? faction?.name ?? '';
   const ro = !editing || !canEdit;
+  const canDmAct = canEdit && !isPlayer;
+  const canEditCurrent = canEdit && (!isPlayer || current.type === 'party');
 
   return (
     <div className={`ucw-modal-overlay${!allowClose ? ' presentation' : ''}`} onClick={allowClose ? closeTop : undefined}>
@@ -177,17 +179,18 @@ export function CampaignEntityCard({
             vm={detailVm}
             isPlayer={isPlayer}
             actions={{
-              onEdit: canEdit ? () => setEditingFor(currentKey) : undefined,
-              onPlace: canEdit && onPlaceOnMap && !placement ? () => { onPlaceOnMap(current.type, current.id); onClose(); } : undefined,
+              onEdit: canEditCurrent ? () => setEditingFor(currentKey) : undefined,
+              onPlace: canDmAct && onPlaceOnMap && !placement ? () => { onPlaceOnMap(current.type, current.id); onClose(); } : undefined,
               placed: !!placement,
-              onPresent: canEdit ? () => store.updateRuntime(campaignId, (prev) => ({
+              onPresent: canDmAct ? () => store.updateRuntime(campaignId, (prev) => ({
                 ...prev,
+                presentedBattle: null,
                 presentedCard: presenting ? null : { entityType: current.type, entityId: current.id },
               })) : undefined,
               presenting,
-              onToggleReveal: canEdit ? () => store.toggleReveal(campaignId, current.id) : undefined,
+              onToggleReveal: canDmAct ? () => store.toggleReveal(campaignId, current.id) : undefined,
               revealed,
-              onDelete: canEdit ? () => { store.deleteEntity(campaignId, current.type, current.id); onClose(); } : undefined,
+              onDelete: canDmAct ? () => { store.deleteEntity(campaignId, current.type, current.id); onClose(); } : undefined,
             }}
           />
         ) : (
@@ -234,6 +237,20 @@ export function CampaignEntityCard({
 
           {player && (
             <>
+              <label>Изображение персонажа</label>
+              <div className="ucw-character-image-slot">
+                {player.imageId && data.images.find((image) => image.id === player.imageId)?.src ? (
+                  <img src={data.images.find((image) => image.id === player.imageId)!.src} alt="" />
+                ) : (
+                  <span>Место под портрет</span>
+                )}
+              </div>
+              {!ro && (
+                <select value={player.imageId ?? ''} onChange={(e) => upd({ imageId: e.target.value || undefined })}>
+                  <option value="">— без картинки —</option>
+                  {data.images.map((image) => <option key={image.id} value={image.id}>{image.title}</option>)}
+                </select>
+              )}
               <div style={{ display: 'flex', gap: 8 }}>
                 <div style={{ flex: 2 }}><label>Игрок</label>{ro ? <p>{player.playerName || '—'}</p> : <input value={player.playerName ?? ''} onChange={(e) => upd({ playerName: e.target.value })} />}</div>
                 <div style={{ flex: 2 }}><label>Класс</label>{ro ? <p>{player.class || '—'}</p> : <input value={player.class ?? ''} onChange={(e) => upd({ class: e.target.value })} />}</div>
@@ -304,28 +321,32 @@ export function CampaignEntityCard({
         </div>
         )}
 
-        {canEdit && editing && (
+        {canEditCurrent && editing && (
           <div className="ucw-card-actions">
             <button className="atlas-btn small" onClick={() => setEditingFor(editing ? null : currentKey)}>{editing ? 'Готово' : 'Редактировать'}</button>
-            <button
-              className="atlas-btn ghost small"
-              title={revealed ? 'Игроки видят эту карточку в библиотеке' : 'Скрыто от игроков'}
-              onClick={() => store.toggleReveal(campaignId, current.id)}
-            >
-              {revealed ? '👁 Показано игрокам' : '🚫 Показать игрокам'}
-            </button>
-            {onPlaceOnMap && !placement && (
-              <button className="atlas-btn ghost small" onClick={() => { onPlaceOnMap(current.type, current.id); onClose(); }}>Поставить на карту</button>
-            )}
-            {placement && (
+            {canDmAct && (
               <>
-                <button className="atlas-btn ghost small" onClick={() => store.updatePlacement(campaignId, placement.id, { visibleToPlayers: !placement.visibleToPlayers })}>
-                  {placement.visibleToPlayers ? '👁 Видно игрокам' : '🚫 Скрыто от игроков'}
+                <button
+                  className="atlas-btn ghost small"
+                  title={revealed ? 'Игроки видят эту карточку в библиотеке' : 'Скрыто от игроков'}
+                  onClick={() => store.toggleReveal(campaignId, current.id)}
+                >
+                  {revealed ? '👁 Показано игрокам' : '🚫 Показать игрокам'}
                 </button>
-                <button className="atlas-btn ghost small" onClick={() => store.removePlacement(campaignId, placement.id)}>Снять с карты</button>
+                {onPlaceOnMap && !placement && (
+                  <button className="atlas-btn ghost small" onClick={() => { onPlaceOnMap(current.type, current.id); onClose(); }}>Поставить на карту</button>
+                )}
+                {placement && (
+                  <>
+                    <button className="atlas-btn ghost small" onClick={() => store.updatePlacement(campaignId, placement.id, { visibleToPlayers: !placement.visibleToPlayers })}>
+                      {placement.visibleToPlayers ? '👁 Видно игрокам' : '🚫 Скрыто от игроков'}
+                    </button>
+                    <button className="atlas-btn ghost small" onClick={() => store.removePlacement(campaignId, placement.id)}>Снять с карты</button>
+                  </>
+                )}
+                <button className="atlas-btn danger small" onClick={() => { store.deleteEntity(campaignId, current.type, current.id); onClose(); }}>Удалить</button>
               </>
             )}
-            <button className="atlas-btn danger small" onClick={() => { store.deleteEntity(campaignId, current.type, current.id); onClose(); }}>Удалить</button>
           </div>
         )}
       </div>
