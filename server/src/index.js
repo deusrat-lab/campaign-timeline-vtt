@@ -128,6 +128,38 @@ app.patch('/api/campaigns/:id/players/:playerId', (req, res) => {
   res.json({ ok: true });
 });
 
+// Player-facing battle-board edits. This stays intentionally narrow: tokenless
+// clients may update only one presented battle board (tokens/round/turn/grid
+// state) and cannot touch campaign data, libraries, notes, or other runtime
+// visibility flags. That is enough for player movement, HP buttons and
+// "next unit" to sync back to the DM.
+app.patch('/api/campaigns/:id/battle/:mapId', (req, res) => {
+  const json = loadUserCampaign(req.params.id);
+  if (!json) {
+    res.status(404).json({ error: 'Campaign not found' });
+    return;
+  }
+  const { board } = req.body ?? {};
+  if (!board || typeof board !== 'object' || Array.isArray(board)) {
+    res.status(400).json({ error: 'Body must be { board: <object> }' });
+    return;
+  }
+  const campaign = JSON.parse(json);
+  campaign.runtime = campaign.runtime && typeof campaign.runtime === 'object' ? campaign.runtime : {};
+  campaign.runtime.battleBoards = campaign.runtime.battleBoards && typeof campaign.runtime.battleBoards === 'object'
+    ? campaign.runtime.battleBoards
+    : {};
+  const safeBoard = { ...board, mapId: req.params.mapId };
+  campaign.runtime.battleBoards[req.params.mapId] = safeBoard;
+  if (campaign.runtime.battleBoard?.mapId === req.params.mapId) {
+    campaign.runtime.battleBoard = safeBoard;
+  }
+  const nextJson = JSON.stringify(campaign);
+  saveUserCampaign(req.params.id, nextJson);
+  broadcastUc(req.params.id, JSON.stringify({ campaignId: req.params.id, payload: campaign }), req.query.clientId);
+  res.json({ ok: true });
+});
+
 app.put('/api/campaigns/:id', requireDm, (req, res) => {
   const { campaign } = req.body;
   if (!campaign || typeof campaign !== 'object') {

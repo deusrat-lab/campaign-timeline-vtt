@@ -58,6 +58,7 @@ export function IsolatedCampaignMapWorkspace() {
   const [editing, setEditing] = useState<{ type: CampaignEntityType; id: string } | null>(null);
   const [search, setSearch] = useState('');
   const [layers, setLayers] = useState({ objects: true, routes: true, zones: true });
+  const [battleOverlayOpen, setBattleOverlayOpen] = useState(false);
 
   // `?as=player` forces a player-safe view locally (for opening a dedicated
   // player tab), independent of the shared runtime.mode — so the DM can keep
@@ -66,6 +67,11 @@ export function IsolatedCampaignMapWorkspace() {
   const mode: UserCampaignMode = asPlayer ? 'playerView' : (runtime?.mode ?? 'dmView');
   const isEdit = mode === 'dmEdit';
   const isPlayer = mode === 'playerView';
+
+  useEffect(() => {
+    if (isPlayer && runtime?.presentedBattle?.mapId) setBattleOverlayOpen(true);
+    else setBattleOverlayOpen(false);
+  }, [isPlayer, runtime?.presentedBattle?.mapId]);
 
   const persistView = useCallback((z: number, p: { x: number; y: number }) => {
     if (!campaignId) return;
@@ -407,10 +413,22 @@ export function IsolatedCampaignMapWorkspace() {
         <button
           type="button"
           className="ucw-battle-banner"
-          onClick={() => navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(runtime.presentedBattle!.mapId)}${asPlayer ? '?as=player' : ''}`)}
+          onClick={() => {
+            if (asPlayer) setBattleOverlayOpen(true);
+            else navigate(`/campaigns/${campaignId}/battle/${encodeURIComponent(runtime.presentedBattle!.mapId)}`);
+          }}
         >
-          ▶ Мастер открыл бой — нажмите, чтобы перейти на поле боя
+          ▶ Мастер открыл бой — нажмите, чтобы открыть поле боя
         </button>
+      )}
+
+      {isPlayer && runtime.presentedBattle?.mapId && battleOverlayOpen && (
+        <div className="ucw-player-battle-overlay" role="dialog" aria-label="Карта боя">
+          <iframe
+            title="Карта боя"
+            src={`/campaigns/${campaignId}/battle/${encodeURIComponent(runtime.presentedBattle.mapId)}?as=player&embedded=1`}
+          />
+        </div>
       )}
 
       {isPlayer && runtime.presentedCard && !runtime.presentedBattle && (

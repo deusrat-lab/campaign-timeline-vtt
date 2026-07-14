@@ -16,7 +16,7 @@
  */
 import { API_BASE_URL } from '../config';
 import { getStoredToken } from './persistence/authToken';
-import type { UserCampaignData, UserCampaignRuntime, UserCampaignRegistryEntry } from '../types/userCampaign';
+import type { CampaignBattleBoard, UserCampaignData, UserCampaignRuntime, UserCampaignRegistryEntry } from '../types/userCampaign';
 
 export interface CampaignBlob { data: UserCampaignData; runtime?: UserCampaignRuntime }
 export interface UcMessage { campaignId: string; payload?: CampaignBlob; deleted?: boolean }
@@ -66,6 +66,16 @@ export function patchPlayerRemote(campaignId: string, playerId: string, patch: R
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ patch }),
+  }).catch(() => { /* best-effort; local cache still updates immediately */ });
+}
+
+/** Narrow, tokenless battle-board write for Observer/player tabs. */
+export function patchBattleBoardRemote(campaignId: string, mapId: string, board: CampaignBattleBoard): void {
+  if (!API_BASE_URL) return;
+  fetch(`${API_BASE_URL}/api/campaigns/${encodeURIComponent(campaignId)}/battle/${encodeURIComponent(mapId)}?clientId=${clientId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ board }),
   }).catch(() => { /* best-effort; local cache still updates immediately */ });
 }
 

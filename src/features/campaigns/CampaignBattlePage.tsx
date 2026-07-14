@@ -8,6 +8,8 @@ import { scenarioForCampaign } from '../../data/scenarioMerge';
 import { getBattleMapCatalog, getBattleMapById, battleMapImageUrl, battleMapVariantTypes, BATTLE_VARIANT_LABEL } from '../../data/battleMapCatalog';
 import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
 import type { CampaignBattleToken, BattleTokenSide, CampaignBattleBoard } from '../../types/userCampaign';
+import { patchBattleBoardRemote } from '../../state/userCampaignSync';
+import { ImageLightbox } from '../embedded-dm-companion/ImageLightbox';
 
 const norm = (s: string) => s.trim().toLowerCase();
 const FEET_PER_CELL = 5;
@@ -59,6 +61,7 @@ export function CampaignBattlePage() {
   const [hoverCell, setHoverCell] = useState<{ row: number; col: number } | null>(null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const [postMovePrompt, setPostMovePrompt] = useState<{ id: string; name: string } | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<{ src: string; title: string } | null>(null);
   // Active touch/mouse pointers (id → viewport-local point) for pinch-zoom.
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinchRef = useRef<{ dist: number; zoom: number; midWorldX: number; midWorldY: number } | null>(null);
@@ -111,13 +114,16 @@ export function CampaignBattlePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId, mapId, isPlayer]);
 
-  const patchBoard = (updater: (b: CampaignBattleBoard) => CampaignBattleBoard) => {
+  const patchBoard = (updater: (b: CampaignBattleBoard) => CampaignBattleBoard, syncPlayerRemote = true) => {
     if (!campaignId || !mapId) return;
+    let nextBoard: CampaignBattleBoard | null = null;
     store.updateRuntime(campaignId, (p) => {
       const prev = p.battleBoards?.[mapId]
         ?? (p.battleBoard && p.battleBoard.mapId === mapId ? p.battleBoard : { tokens: [], round: 1 });
-      return { ...p, battleBoards: { ...(p.battleBoards ?? {}), [mapId]: { ...updater(prev), mapId } } };
+      nextBoard = { ...updater(prev), mapId };
+      return { ...p, battleBoards: { ...(p.battleBoards ?? {}), [mapId]: nextBoard } };
     });
+    if (isPlayer && syncPlayerRemote && nextBoard) patchBattleBoardRemote(campaignId, mapId, nextBoard);
   };
 
   const fit = () => {
@@ -175,6 +181,12 @@ export function CampaignBattlePage() {
     const r = img.getBoundingClientRect();
     return { x: Math.max(0, Math.min(100, ((cx - r.left) / r.width) * 100)), y: Math.max(0, Math.min(100, ((cy - r.top) / r.height) * 100)) };
   };
+  const clientToPctInside = (cx: number, cy: number) => {
+    const img = imgRef.current; if (!img) return null;
+    const r = img.getBoundingClientRect();
+    if (cx < r.left || cx > r.right || cy < r.top || cy > r.bottom) return null;
+    return { x: ((cx - r.left) / r.width) * 100, y: ((cy - r.top) / r.height) * 100 };
+  };
 
   // Grid geometry. Custom maps with a fixed NxN preset use those rows; otherwise
   // rows follow the image aspect so cells stay square.
@@ -183,7 +195,10 @@ export function CampaignBattlePage() {
     : (natural ? Math.max(1, Math.round((natural.h / natural.w) * columns)) : columns);
   const cellW = 100 / columns;            // % of width
   const cellH = 100 / rows;               // % of height
-  const cellAt = (pctX: number, pctY: number) => ({ col: Math.min(columns - 1, Math.floor(pctX / cellW)), row: Math.min(rows - 1, Math.floor(pctY / cellH)) });
+  const cellAt = (pctX: number, pctY: number) => ({
+    col: Math.max(0, Math.min(columns - 1, Math.floor(pctX / cellW))),
+    row: Math.max(0, Math.min(rows - 1, Math.floor(pctY / cellH))),
+  });
   const cellKey = (cell: { row: number; col: number }) => `${cell.row},${cell.col}`;
   const cellCenterPct = (cell: { row: number; col: number }) => ({ x: (cell.col + 0.5) * cellW, y: (cell.row + 0.5) * cellH });
   const terrainAt = (cell: { row: number; col: number }) => board.terrain?.[cellKey(cell)];
@@ -245,7 +260,7 @@ export function CampaignBattlePage() {
     return { status: cost <= speedCells ? 'valid' as const : 'too-far' as const, cells, cost, feet: cost * FEET_PER_CELL };
   };
   const snapPct = (pctX: number, pctY: number) => {
-    if (!board.showGrid || !board.snap) return { x: pctX, y: pctY };
+    if (!board.showGrid) return { x: pctX, y: pctY };
     const { col, row } = cellAt(pctX, pctY);
     return { x: (col + 0.5) * cellW, y: (row + 0.5) * cellH };
   };
@@ -264,7 +279,7 @@ export function CampaignBattlePage() {
     const nz = Math.max(0.15, Math.min(6, zoom * factor));
     const wx = (cx - pan.x) / zoom, wy = (cy - pan.y) / zoom;
     setZoom(nz); setPan({ x: cx - wx * nz, y: cy - wy * nz });
-    patchBoard((b) => ({ ...b, view: { zoom: nz, panX: cx - wx * nz, panY: cy - wy * nz } }));
+    patchBoard((b) => ({ ...b, view: { zoom: nz, panX: cx - wx * nz, panY: cy - wy * nz } }), !isPlayer);
   };
 
   const onWheel = (e: React.WheelEvent) => {
@@ -297,8 +312,8 @@ export function CampaignBattlePage() {
     const vp = viewportRef.current; if (!vp) return;
     const rect = vp.getBoundingClientRect();
     if (pointersRef.current.has(e.pointerId)) pointersRef.current.set(e.pointerId, { x: e.clientX - rect.left, y: e.clientY - rect.top });
-    const pct = clientToPct(e.clientX, e.clientY);
-    setHoverCell(cellAt(pct.x, pct.y));
+    const pct = clientToPctInside(e.clientX, e.clientY);
+    setHoverCell(pct ? cellAt(pct.x, pct.y) : null);
     // Pinch-zoom with two pointers.
     if (pointersRef.current.size === 2 && pinchRef.current) {
       const [a, b] = [...pointersRef.current.values()];
@@ -322,7 +337,8 @@ export function CampaignBattlePage() {
     downRef.current = null;
     if (terrainMode !== 'off') return;
     if (!d.moved && placing) {
-      const raw = clientToPct(e.clientX, e.clientY);
+      const raw = clientToPctInside(e.clientX, e.clientY);
+      if (!raw) return;
       const pct = snapPct(raw.x, raw.y);
       const tok: CampaignBattleToken = {
         id: `tok-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
@@ -345,8 +361,9 @@ export function CampaignBattlePage() {
       const center = cellCenterPct(route.cells[route.cells.length - 1]);
       patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, x: center.x, y: center.y } : t) }));
       setPostMovePrompt({ id: selTok.id, name: selTok.name });
+      setHoverCell(null);
     } else if (d.moved) {
-      patchBoard((b) => ({ ...b, view: { zoom, panX: d.sp.x + (e.clientX - d.x), panY: d.sp.y + (e.clientY - d.y) } }));
+      patchBoard((b) => ({ ...b, view: { zoom, panX: d.sp.x + (e.clientX - d.x), panY: d.sp.y + (e.clientY - d.y) } }), !isPlayer);
     }
   };
 
@@ -365,10 +382,22 @@ export function CampaignBattlePage() {
   const selectedEnemy = selTok?.sourceEnemyId
     ? data.enemies.find((enemy) => enemy.id === selTok.sourceEnemyId)
     : data.enemies.find((enemy) => selTok && norm(enemy.title) === norm(selTok.name));
+  const partyPlayerForToken = (token?: CampaignBattleToken | null) => {
+    if (!token) return undefined;
+    if (token.sourcePlayerId) return (data.party ?? []).find((player) => player.id === token.sourcePlayerId);
+    const direct = (data.party ?? []).find((player) => norm(player.name) === norm(token.name));
+    if (direct) return direct;
+    const generic = /^Игрок\s+(\d+)$/i.exec(token.name.trim());
+    if (generic) return (data.party ?? [])[Math.max(0, Number(generic[1]) - 1)];
+    return undefined;
+  };
   const selectedPlayer = selTok?.sourcePlayerId
     ? (data.party ?? []).find((player) => player.id === selTok.sourcePlayerId)
-    : (data.party ?? []).find((player) => selTok && norm(player.name) === norm(selTok.name));
+    : partyPlayerForToken(selTok);
   const selectedImage = imageSrcById(selectedEnemy?.imageId ?? selectedPlayer?.imageId ?? selTok?.imageId);
+  const selectedName = selectedEnemy?.title ?? selectedPlayer?.name ?? selTok?.name ?? '';
+  const selectedHp = selTok?.currentHp ?? selectedPlayer?.hp ?? selectedPlayer?.maxHp ?? 0;
+  const selectedMaxHp = selTok?.maxHp ?? selectedPlayer?.maxHp ?? selectedPlayer?.hp;
   const selectedIsPlayerControlled = !!selTok && (selTok.side === 'player' || selTok.side === 'ally');
   const ordered = [...board.tokens].sort((a, b) => (b.initiative ?? -999) - (a.initiative ?? -999) || a.name.localeCompare(b.name, 'ru'));
   const currentId = board.currentTurnTokenId && board.tokens.some((t) => t.id === board.currentTurnTokenId)
@@ -378,7 +407,7 @@ export function CampaignBattlePage() {
   const selectedCell = selTok ? cellAt(selTok.x, selTok.y) : null;
   const selectedCanAct = !!selTok && selTok.id === currentId && terrainMode === 'off' && (!isPlayer || selectedIsPlayerControlled);
   const canPassTurn = !!currentToken && (!isPlayer || currentToken.side === 'player' || currentToken.side === 'ally');
-  const route = selTok && selectedCell && hoverCell && cellKey(selectedCell) !== cellKey(hoverCell) && selectedCanAct ? findRoute(selTok, hoverCell) : null;
+  const route = selTok && selectedCell && hoverCell && postMovePrompt?.id !== selTok.id && cellKey(selectedCell) !== cellKey(hoverCell) && selectedCanAct ? findRoute(selTok, hoverCell) : null;
   const selectedRouteFeet = route?.feet ?? 0;
   const placeEnemy = (enemy: typeof data.enemies[number]) => setPlacing({
     side: 'enemy',
@@ -399,17 +428,18 @@ export function CampaignBattlePage() {
   });
   const fieldPlayers = board.tokens.filter((t) => t.side === 'player' || t.side === 'ally');
   const fieldEnemies = board.tokens.filter((t) => t.side === 'enemy' || t.side === 'neutral');
+  const fieldPlayerLabel = (token: CampaignBattleToken) => partyPlayerForToken(token)?.name ?? token.name;
   const tokenImage = (token: CampaignBattleToken) => {
     const enemy = token.sourceEnemyId
       ? data.enemies.find((e) => e.id === token.sourceEnemyId)
       : data.enemies.find((e) => norm(e.title) === norm(token.name));
-    const player = token.sourcePlayerId
-      ? (data.party ?? []).find((p) => p.id === token.sourcePlayerId)
-      : (data.party ?? []).find((p) => norm(p.name) === norm(token.name));
+    const player = partyPlayerForToken(token);
     return imageSrcById(token.imageId ?? enemy?.imageId ?? player?.imageId);
   };
   const tokenShortLabel = (token: CampaignBattleToken, index: number) => {
     if (token.side === 'player') {
+      const player = partyPlayerForToken(token);
+      if (player) return player.name.split(/\s+/).filter(Boolean).map((word) => word[0]).join('').slice(0, 3).toUpperCase() || 'ИГ';
       const sameSideIndex = board.tokens.filter((t) => t.side === token.side).findIndex((t) => t.id === token.id);
       return `И${sameSideIndex + 1}`;
     }
@@ -421,6 +451,12 @@ export function CampaignBattlePage() {
     return `${base.toUpperCase()}${duplicateIndex > 0 ? duplicateIndex + 1 : ''}`.slice(0, 3) || String(index + 1);
   };
   const setInit = (id: string, v: number | undefined) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === id ? { ...t, initiative: v } : t) }));
+  const startPlacingNextPlayer = () => {
+    const usedIds = new Set(fieldPlayers.map((token) => token.sourcePlayerId).filter(Boolean));
+    const nextPlayer = (data.party ?? []).find((player) => !usedIds.has(player.id));
+    if (nextPlayer) placePlayer(nextPlayer);
+    else setPlacing({ side: 'player', name: `Игрок ${fieldPlayers.filter((t) => t.side === 'player').length + 1}` });
+  };
   const rollAllInitiative = () => patchBoard((b) => {
     const tokens = b.tokens.map((t) => ({ ...t, initiative: 1 + Math.floor(Math.random() * 20) }));
     const first = [...tokens].sort((a, b) => (b.initiative ?? -999) - (a.initiative ?? -999) || a.name.localeCompare(b.name, 'ru'))[0];
@@ -436,6 +472,7 @@ export function CampaignBattlePage() {
     patchBoard((b) => ({ ...b, currentTurnTokenId: next.id, round: idx === ordered.length - 1 ? (b.round ?? 1) + 1 : (b.round ?? 1) }));
     setSelected(next.id);
     setPostMovePrompt(null);
+    setHoverCell(null);
   };
   const finishBattle = () => {
     if (!window.confirm('Закончить бой? Токены и инициатива будут убраны, террейн и сетка останутся.')) return;
@@ -467,7 +504,7 @@ export function CampaignBattlePage() {
           {variants.length > 1 && (
             <div className="ucw-segmented" role="group" aria-label="Время суток">
               {variants.map((v) => (
-                <button key={v} className={variant === v ? 'active' : ''} onClick={() => patchBoard((b) => ({ ...b, variant: v }))}>
+                <button key={v} className={variant === v ? 'active' : ''} onClick={() => patchBoard((b) => ({ ...b, variant: v }), !isPlayer)}>
                   {BATTLE_VARIANT_LABEL[v] ?? v}
                 </button>
               ))}
@@ -502,7 +539,7 @@ export function CampaignBattlePage() {
         {!isPlayer && <button className="ucw-tbtn" onClick={() => { if (window.confirm('Убрать все токены с поля? Террейн останется.')) { patchBoard((b) => ({ ...b, tokens: [], currentTurnTokenId: undefined })); setSelected(null); setPostMovePrompt(null); } }}>Очистить токены</button>}
         {!isPlayer && <button className="ucw-tbtn danger" onClick={finishBattle}>Закончить бой</button>}
         <span className="sep" />
-        <button className={`ucw-tbtn ${board.showGrid ? 'active' : ''}`} onClick={() => patchBoard((b) => ({ ...b, showGrid: !b.showGrid }))}>Сетка</button>
+        <button className={`ucw-tbtn ${board.showGrid ? 'active' : ''}`} onClick={() => patchBoard((b) => ({ ...b, showGrid: !b.showGrid }), !isPlayer)}>Сетка</button>
         {board.showGrid && !isPlayer && (
           <>
             <label style={{ fontSize: '0.8rem', color: 'var(--fg-dim)' }}>Клеток:
@@ -523,7 +560,7 @@ export function CampaignBattlePage() {
       </div>
 
       <div className="ucw-body">
-        <div className={`ucw-viewport${placing || terrainMode !== 'off' ? ' placing' : ''}`} ref={viewportRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onWheel={onWheel}>
+        <div className={`ucw-viewport${placing || terrainMode !== 'off' ? ' placing' : ''}`} ref={viewportRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onPointerLeave={() => setHoverCell(null)} onWheel={onWheel}>
           <div className="ucw-world" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
             <div className="ucw-mapstack">
               {imgUrl && <img ref={imgRef} className="ucw-mapimg" src={imgUrl} alt={title} draggable={false} onLoad={(e) => { const im = e.currentTarget; setNatural({ w: im.naturalWidth, h: im.naturalHeight }); if (!fitted) { fit(); setFitted(true); } }} />}
@@ -537,8 +574,8 @@ export function CampaignBattlePage() {
                   })}
                   {Array.from({ length: columns + 1 }, (_, i) => <line key={`v${i}`} x1={i * cellW} y1={0} x2={i * cellW} y2={100} stroke="rgba(255,255,255,0.25)" strokeWidth={0.15} vectorEffect="non-scaling-stroke" style={{ strokeWidth: 1 } as React.CSSProperties} />)}
                   {Array.from({ length: rows + 1 }, (_, i) => <line key={`h${i}`} x1={0} y1={i * cellH} x2={100} y2={i * cellH} stroke="rgba(255,255,255,0.25)" strokeWidth={0.15} vectorEffect="non-scaling-stroke" style={{ strokeWidth: 1 } as React.CSSProperties} />)}
-                  {!placing && selTok && selectedCell && selectedCanAct && terrainMode === 'off' && Array.from({ length: Math.floor((selTok.speedFeet ?? DEFAULT_SPEED_FEET) / FEET_PER_CELL) * 2 + 1 }).flatMap((_, ri) => {
-                    const speedCells = Math.floor((selTok.speedFeet ?? DEFAULT_SPEED_FEET) / FEET_PER_CELL);
+                  {!placing && selTok && selectedCell && selectedCanAct && postMovePrompt?.id !== selTok.id && terrainMode === 'off' && Array.from({ length: Math.floor((selTok.speedFeet ?? selectedPlayer?.speedFeet ?? DEFAULT_SPEED_FEET) / FEET_PER_CELL) * 2 + 1 }).flatMap((_, ri) => {
+                    const speedCells = Math.floor((selTok.speedFeet ?? selectedPlayer?.speedFeet ?? DEFAULT_SPEED_FEET) / FEET_PER_CELL);
                     const dr = ri - speedCells;
                     return Array.from({ length: speedCells * 2 + 1 }).map((__, ci) => {
                       const dc = ci - speedCells;
@@ -613,18 +650,26 @@ export function CampaignBattlePage() {
           {selTok && (
             <div className="ucw-card ucw-token-card">
               <div className="ucw-token-card-head">
-                {selectedImage ? <img className="ucw-row-thumb large" src={selectedImage} alt="" /> : <span className="ucw-row-thumb large fallback">{selTok.name.slice(0, 2)}</span>}
+                {selectedImage ? (
+                  <button type="button" className="ucw-image-button inline" onClick={() => setLightboxImage({ src: selectedImage, title: selectedName })}>
+                    <img className="ucw-row-thumb large" src={selectedImage} alt="" />
+                  </button>
+                ) : <span className="ucw-row-thumb large fallback">{selectedName.slice(0, 2)}</span>}
                 <div>
-                  <strong>{selectedEnemy?.title ?? selectedPlayer?.name ?? selTok.name}</strong>
+                  <strong>{selectedName}</strong>
                   <small>{isPlayer ? 'Карточка' : selectedEnemy ? 'Карточка врага' : selectedPlayer ? 'Карточка игрока' : 'Свободный токен'}</small>
                 </div>
               </div>
               {isPlayer ? (
                 selectedIsPlayerControlled ? (
                   <>
-                    {selectedImage ? <img className="ucw-token-card-image compact" src={selectedImage} alt="" /> : <div className="ucw-token-card-fallback compact">{selTok.name.slice(0, 2)}</div>}
+                    {selectedImage ? (
+                      <button type="button" className="ucw-image-button block" onClick={() => setLightboxImage({ src: selectedImage, title: selectedName })}>
+                        <img className="ucw-token-card-image compact" src={selectedImage} alt="" />
+                      </button>
+                    ) : <div className="ucw-token-card-fallback compact">{selectedName.slice(0, 2)}</div>}
                     <div className="ucw-player-hp-panel">
-                      <div className="ucw-player-hp-value">HP {selTok.currentHp ?? 0}{selTok.maxHp != null ? ` / ${selTok.maxHp}` : ''}</div>
+                      <div className="ucw-player-hp-value">HP {selectedHp}{selectedMaxHp != null ? ` / ${selectedMaxHp}` : ''}</div>
                       <div className="ucw-card-actions">
                         {[-5, -1, 1, 5].map((delta) => (
                           <button
@@ -634,7 +679,8 @@ export function CampaignBattlePage() {
                               ...b,
                               tokens: b.tokens.map((t) => t.id === selTok.id ? {
                                 ...t,
-                                currentHp: Math.max(0, Math.min(Math.max(t.maxHp ?? 0, (t.currentHp ?? 0) + delta), (t.currentHp ?? 0) + delta)),
+                                currentHp: Math.max(0, Math.min(Math.max(t.maxHp ?? selectedMaxHp ?? 0, (t.currentHp ?? selectedHp) + delta), (t.currentHp ?? selectedHp) + delta)),
+                                maxHp: t.maxHp ?? selectedMaxHp,
                               } : t),
                             }))}
                           >
@@ -645,17 +691,21 @@ export function CampaignBattlePage() {
                     </div>
                   </>
                 ) : (
-                  selectedImage ? <img className="ucw-token-card-image" src={selectedImage} alt="" /> : <div className="ucw-token-card-fallback">{selTok.name.slice(0, 2)}</div>
+                  selectedImage ? (
+                    <button type="button" className="ucw-image-button block" onClick={() => setLightboxImage({ src: selectedImage, title: selectedName })}>
+                      <img className="ucw-token-card-image" src={selectedImage} alt="" />
+                    </button>
+                  ) : <div className="ucw-token-card-fallback">{selectedName.slice(0, 2)}</div>
                 )
               ) : (
                 <>
                   <label>Имя</label>
                   <input value={selTok.name} onChange={(e) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, name: e.target.value } : t) }))} />
                   <div className="ucw-stat-row">
-                    <div><label>HP</label><input type="number" value={selTok.currentHp ?? ''} onChange={(e) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, currentHp: Number(e.target.value) } : t) }))} /></div>
-                    <div><label>Макс HP</label><input type="number" value={selTok.maxHp ?? ''} onChange={(e) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, maxHp: Number(e.target.value) } : t) }))} /></div>
-                    <div><label>AC</label><input type="number" value={selTok.ac ?? ''} onChange={(e) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, ac: Number(e.target.value) } : t) }))} /></div>
-                    <div><label>Скор.</label><input type="number" value={selTok.speedFeet ?? DEFAULT_SPEED_FEET} onChange={(e) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, speedFeet: Math.max(5, Number(e.target.value) || DEFAULT_SPEED_FEET) } : t) }))} /></div>
+                    <div><label>HP</label><input type="number" value={selTok.currentHp ?? selectedPlayer?.hp ?? ''} onChange={(e) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, currentHp: Number(e.target.value) } : t) }))} /></div>
+                    <div><label>Макс HP</label><input type="number" value={selTok.maxHp ?? selectedPlayer?.maxHp ?? ''} onChange={(e) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, maxHp: Number(e.target.value) } : t) }))} /></div>
+                    <div><label>AC</label><input type="number" value={selTok.ac ?? selectedPlayer?.ac ?? ''} onChange={(e) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, ac: Number(e.target.value) } : t) }))} /></div>
+                    <div><label>Скор.</label><input type="number" value={selTok.speedFeet ?? selectedPlayer?.speedFeet ?? DEFAULT_SPEED_FEET} onChange={(e) => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, speedFeet: Math.max(5, Number(e.target.value) || DEFAULT_SPEED_FEET) } : t) }))} /></div>
                   </div>
                   <div className="ucw-card-actions">
                     <button className="atlas-btn ghost small" onClick={() => patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, currentHp: (t.currentHp ?? 0) - 5 } : t) }))}>−5 HP</button>
@@ -702,8 +752,8 @@ export function CampaignBattlePage() {
               <div className="label">Игроки на поле ({fieldPlayers.length})</div>
               {fieldPlayers.length === 0 ? <p className="ucw-empty-note">Пока нет.</p> : fieldPlayers.map((t) => (
                 <button key={t.id} type="button" className={`ucw-token-row side-${t.side}${selected === t.id ? ' selected' : ''}`} onClick={() => setSelected(t.id)}>
-                  <span>{t.name}</span>
-                  <small>{t.ac != null ? `AC ${t.ac} · ` : ''}{t.currentHp != null ? `HP ${t.currentHp}${t.maxHp ? `/${t.maxHp}` : ''} · ` : ''}{t.speedFeet ?? DEFAULT_SPEED_FEET} фт</small>
+                  <span>{fieldPlayerLabel(t)}</span>
+                  <small>{(t.ac ?? partyPlayerForToken(t)?.ac) != null ? `AC ${t.ac ?? partyPlayerForToken(t)?.ac} · ` : ''}{(t.currentHp ?? partyPlayerForToken(t)?.hp) != null ? `HP ${t.currentHp ?? partyPlayerForToken(t)?.hp}${(t.maxHp ?? partyPlayerForToken(t)?.maxHp) ? `/${t.maxHp ?? partyPlayerForToken(t)?.maxHp}` : ''} · ` : ''}{t.speedFeet ?? partyPlayerForToken(t)?.speedFeet ?? DEFAULT_SPEED_FEET} фт</small>
                 </button>
               ))}
             </div>
@@ -725,7 +775,7 @@ export function CampaignBattlePage() {
           )}
           {!isPlayer && (
             <div className="ucw-add-grid">
-              <button className="atlas-btn small" onClick={() => setPlacing({ side: 'player', name: `Игрок ${fieldPlayers.filter((t) => t.side === 'player').length + 1}` })}>+ Игрок</button>
+              <button className="atlas-btn small" onClick={startPlacingNextPlayer}>+ Игрок</button>
               <button className="atlas-btn small" onClick={() => setPlacing({ side: 'ally', name: `Союзник ${fieldPlayers.filter((t) => t.side === 'ally').length + 1}` })}>+ Союзник</button>
               <button className="atlas-btn small" onClick={() => setPlacing({ side: 'neutral', name: `Нейтрал ${fieldEnemies.filter((t) => t.side === 'neutral').length + 1}` })}>+ Нейтрал</button>
               <button className="atlas-btn small" onClick={() => { const n = window.prompt('Имя токена:'); if (n) setPlacing({ side: 'enemy', name: n }); }}>+ Свой</button>
@@ -772,6 +822,7 @@ export function CampaignBattlePage() {
           )}
         </aside>
       </div>
+      {lightboxImage && <ImageLightbox image={lightboxImage} onClose={() => setLightboxImage(null)} />}
     </div>
   );
 }
