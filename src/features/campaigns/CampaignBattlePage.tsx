@@ -430,7 +430,7 @@ export function CampaignBattlePage() {
   const selectedCell = selTok ? cellAt(selTok.x, selTok.y) : null;
   const selectedCanAct = !!selTok && selTok.id === currentId && terrainMode === 'off' && !teleportMode && (!isPlayer || selectedIsPlayerControlled);
   const canPassTurn = !!currentToken && (!isPlayer || currentToken.side === 'player' || currentToken.side === 'ally');
-  const route = selTok && selectedCell && hoverCell && postMovePrompt?.id !== selTok.id && cellKey(selectedCell) !== cellKey(hoverCell) && selectedCanAct ? findRoute(selTok, hoverCell) : null;
+  const route = selTok && selectedCell && hoverCell && cellKey(selectedCell) !== cellKey(hoverCell) && selectedCanAct ? findRoute(selTok, hoverCell) : null;
   const selectedRouteFeet = route?.feet ?? 0;
   const placeEnemy = (enemy: typeof data.enemies[number]) => setPlacing({
     side: 'enemy',
@@ -607,7 +607,7 @@ export function CampaignBattlePage() {
                   })}
                   {board.showGrid && Array.from({ length: columns + 1 }, (_, i) => <line key={`v${i}`} x1={i * cellW} y1={0} x2={i * cellW} y2={100} stroke="rgba(255,255,255,0.25)" strokeWidth={0.15} vectorEffect="non-scaling-stroke" style={{ strokeWidth: 1 } as React.CSSProperties} />)}
                   {board.showGrid && Array.from({ length: rows + 1 }, (_, i) => <line key={`h${i}`} x1={0} y1={i * cellH} x2={100} y2={i * cellH} stroke="rgba(255,255,255,0.25)" strokeWidth={0.15} vectorEffect="non-scaling-stroke" style={{ strokeWidth: 1 } as React.CSSProperties} />)}
-                  {!placing && selTok && selectedCell && selectedCanAct && postMovePrompt?.id !== selTok.id && terrainMode === 'off' && Array.from({ length: Math.floor((selTok.speedFeet ?? selectedPlayer?.speedFeet ?? DEFAULT_SPEED_FEET) / FEET_PER_CELL) * 2 + 1 }).flatMap((_, ri) => {
+                  {!placing && selTok && selectedCell && selectedCanAct && terrainMode === 'off' && Array.from({ length: Math.floor((selTok.speedFeet ?? selectedPlayer?.speedFeet ?? DEFAULT_SPEED_FEET) / FEET_PER_CELL) * 2 + 1 }).flatMap((_, ri) => {
                     const speedCells = Math.floor((selTok.speedFeet ?? selectedPlayer?.speedFeet ?? DEFAULT_SPEED_FEET) / FEET_PER_CELL);
                     const dr = ri - speedCells;
                     return Array.from({ length: speedCells * 2 + 1 }).map((__, ci) => {
