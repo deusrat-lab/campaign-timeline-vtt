@@ -69,7 +69,7 @@ export function IsolatedCampaignMapWorkspace() {
   const isEdit = mode === 'dmEdit';
   const isPlayer = mode === 'playerView';
 
-  const battleOverlayOpen = isPlayer && !!runtime?.presentedBattle?.mapId;
+  const battleOverlayOpen = observer && !!runtime?.presentedBattle?.mapId;
 
   const persistView = useCallback((z: number, p: { x: number; y: number }) => {
     if (!campaignId) return;
