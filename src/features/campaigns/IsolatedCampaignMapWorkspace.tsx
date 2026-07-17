@@ -77,17 +77,35 @@ export function IsolatedCampaignMapWorkspace() {
     store.updateRuntime(campaignId, (prev) => ({ ...prev, mapViewState: { zoom: z, panX: p.x, panY: p.y } }));
   }, [campaignId, store]);
 
-  // Size the workspace to fill the viewport below the top chrome.
+  // Size the workspace to fill the viewport below the top chrome and ABOVE the
+  // mobile bottom nav. Two subtleties this must get right on phones:
+  //  • Use the scroll-independent document top (`rect.top + scrollY`), not the
+  //    live viewport `rect.top`. The app-shell can scroll; measuring the live
+  //    top while scrolled over-computes the height, which makes the workspace
+  //    taller, which allows more scroll — a runaway that pushed the header and
+  //    toolbar off-screen. The document top is stable regardless of scroll.
+  //  • Subtract the fixed bottom nav-rail (its height lands on `.app-shell-main`
+  //    as padding-bottom on mobile), so the library panel's last rows are never
+  //    hidden behind the nav bar.
   useLayoutEffect(() => {
     const measure = () => {
       const el = rootRef.current;
       if (!el) return;
-      const top = el.getBoundingClientRect().top;
-      setShellHeight(Math.max(320, window.innerHeight - top));
+      const docTop = el.getBoundingClientRect().top + window.scrollY;
+      const shellMain = el.closest('.app-shell-main');
+      const padBottom = shellMain ? parseFloat(getComputedStyle(shellMain).paddingBottom) || 0 : 0;
+      setShellHeight(Math.max(320, window.innerHeight - docTop - padBottom));
     };
+    // Measure now and again after layout settles — the top chrome (navbar) and
+    // its wrapping height arrive over the first couple of frames, so a single
+    // synchronous read can see the workspace momentarily at top 0.
     measure();
+    const raf = requestAnimationFrame(() => requestAnimationFrame(measure));
+    const t = setTimeout(measure, 220);
     window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    // The bottom nav only exists on mobile; re-measure after orientation too.
+    window.addEventListener('orientationchange', measure);
+    return () => { cancelAnimationFrame(raf); clearTimeout(t); window.removeEventListener('resize', measure); window.removeEventListener('orientationchange', measure); };
   }, []);
 
   const fitToScreen = useCallback((markManual = false) => {
@@ -147,6 +165,9 @@ export function IsolatedCampaignMapWorkspace() {
   // `data` is momentarily null (e.g. during async server hydration) and then
   // arrives — otherwise React sees a different hook count between renders.
   const downRef = useRef<{ x: number; y: number; moved: boolean; startPan: { x: number; y: number } } | null>(null);
+  // Active pointers (touch/mouse) for pointer-based pan + two-finger pinch-zoom.
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchRef = useRef<{ dist: number; zoom: number; midWorldX: number; midWorldY: number } | null>(null);
 
   if (!data || !runtime || !campaignId) {
     return (
@@ -212,93 +233,131 @@ export function IsolatedCampaignMapWorkspace() {
     setZoom(nz); setPan(np); persistView(nz, np);
   };
 
-  // ── panning + click-to-place ────────────────────────────────────────
-  const onViewportMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
+  // ── panning + pinch-zoom + click-to-place (pointer-based: mouse + touch) ──
+  // Works on phones: one finger pans / taps, two fingers pinch-zoom. Mirrors
+  // the campaign battle board's pointer model so DM prep is usable on mobile.
+  const onViewportPointerDown = (e: React.PointerEvent) => {
+    const vp = viewportRef.current; if (!vp) return;
+    const rect = vp.getBoundingClientRect();
+    try { vp.setPointerCapture?.(e.pointerId); } catch { /* capture is best-effort; never abort the gesture */ }
+    pointersRef.current.set(e.pointerId, { x: e.clientX - rect.left, y: e.clientY - rect.top });
+    if (pointersRef.current.size === 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+      pinchRef.current = { dist: Math.hypot(a.x - b.x, a.y - b.y), zoom, midWorldX: (midX - pan.x) / zoom, midWorldY: (midY - pan.y) / zoom };
+      downRef.current = null;
+      setPanning(false);
+      return;
+    }
+    // Ignore non-primary mouse buttons; touch/pen have no meaningful button.
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     const editingShape = placing || placingParty || routeEditId || zoneEditId;
     downRef.current = { x: e.clientX, y: e.clientY, moved: false, startPan: { ...pan } };
     if (!editingShape) setPanning(true);
-    const onMove = (ev: MouseEvent) => {
-      const d = downRef.current; if (!d) return;
-      if (Math.abs(ev.clientX - d.x) + Math.abs(ev.clientY - d.y) > 4) d.moved = true;
-      if (!editingShape && d.moved) {
-        autoFitRef.current = false;
-        setPan({ x: d.startPan.x + (ev.clientX - d.x), y: d.startPan.y + (ev.clientY - d.y) });
-      }
-    };
-    const onUp = (ev: MouseEvent) => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-      setPanning(false);
-      const d = downRef.current; downRef.current = null;
-      if (!d) return;
-      if (!d.moved) {
-        // click — place or add route point
-        const pct = clientToPct(ev.clientX, ev.clientY);
-        if (placing) {
-          store.addPlacement(campaignId, { mapId: runtime.activeMapId, entityType: placing.entityType, entityId: placing.entityId, x: pct.x, y: pct.y, visibleToPlayers: false });
-          setPlacing(null);
-        } else if (placingParty) {
-          // Party is a singleton pin per map — drop any previous party placement
-          // on this map before adding the new one.
-          data.mapPlacements
-            .filter((mp) => mp.entityType === 'party' && mp.mapId === runtime.activeMapId)
-            .forEach((mp) => store.removePlacement(campaignId, mp.id));
-          store.addPlacement(campaignId, { mapId: runtime.activeMapId, entityType: 'party', entityId: PARTY_ENTITY_ID, x: pct.x, y: pct.y, visibleToPlayers: true });
-          setPlacingParty(false);
-        } else if (routeEditId) {
-          const route = data.routes.find((r) => r.id === routeEditId);
-          if (route) store.updateRoute(campaignId, routeEditId, { points: [...route.points, pct] });
-        } else if (zoneEditId) {
-          const zone = data.zones.find((z) => z.id === zoneEditId);
-          if (zone) store.updateData(campaignId, (p) => ({ ...p, zones: p.zones.map((z) => (z.id === zoneEditId ? { ...z, points: [...z.points, pct] } : z)) }));
-        }
-      } else {
-        persistView(zoom, { x: d.startPan.x + (ev.clientX - d.x), y: d.startPan.y + (ev.clientY - d.y) });
-      }
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
   };
 
-  // ── marker drag ─────────────────────────────────────────────────────
-  const startMarkerDrag = (e: React.MouseEvent, placementId: string) => {
+  const onViewportPointerMove = (e: React.PointerEvent) => {
+    const vp = viewportRef.current; if (!vp) return;
+    const rect = vp.getBoundingClientRect();
+    if (pointersRef.current.has(e.pointerId)) pointersRef.current.set(e.pointerId, { x: e.clientX - rect.left, y: e.clientY - rect.top });
+    // Two-finger pinch-zoom, anchored on the gesture midpoint.
+    if (pointersRef.current.size === 2 && pinchRef.current) {
+      autoFitRef.current = false;
+      const [a, b] = [...pointersRef.current.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+      const nz = clampZoom(pinchRef.current.zoom * (dist / (pinchRef.current.dist || 1)));
+      setZoom(nz);
+      setPan({ x: midX - pinchRef.current.midWorldX * nz, y: midY - pinchRef.current.midWorldY * nz });
+      return;
+    }
+    const d = downRef.current; if (!d) return;
+    const editingShape = placing || placingParty || routeEditId || zoneEditId;
+    if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 4) d.moved = true;
+    if (!editingShape && d.moved) {
+      autoFitRef.current = false;
+      setPan({ x: d.startPan.x + (e.clientX - d.x), y: d.startPan.y + (e.clientY - d.y) });
+    }
+  };
+
+  const onViewportPointerUp = (e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) pinchRef.current = null;
+    // Another finger is still down (e.g. lifting one after a pinch) — wait.
+    if (pointersRef.current.size > 0) return;
+    setPanning(false);
+    const d = downRef.current; downRef.current = null;
+    if (!d) { persistView(zoom, pan); return; } // pinch just ended — persist it
+    if (!d.moved) {
+      // tap/click — place or add route/zone point
+      const pct = clientToPct(e.clientX, e.clientY);
+      if (placing) {
+        store.addPlacement(campaignId, { mapId: runtime.activeMapId, entityType: placing.entityType, entityId: placing.entityId, x: pct.x, y: pct.y, visibleToPlayers: false });
+        setPlacing(null);
+      } else if (placingParty) {
+        // Party is a singleton pin per map — drop any previous party placement
+        // on this map before adding the new one.
+        data.mapPlacements
+          .filter((mp) => mp.entityType === 'party' && mp.mapId === runtime.activeMapId)
+          .forEach((mp) => store.removePlacement(campaignId, mp.id));
+        store.addPlacement(campaignId, { mapId: runtime.activeMapId, entityType: 'party', entityId: PARTY_ENTITY_ID, x: pct.x, y: pct.y, visibleToPlayers: true });
+        setPlacingParty(false);
+      } else if (routeEditId) {
+        const route = data.routes.find((r) => r.id === routeEditId);
+        if (route) store.updateRoute(campaignId, routeEditId, { points: [...route.points, pct] });
+      } else if (zoneEditId) {
+        const zone = data.zones.find((z) => z.id === zoneEditId);
+        if (zone) store.updateData(campaignId, (p) => ({ ...p, zones: p.zones.map((z) => (z.id === zoneEditId ? { ...z, points: [...z.points, pct] } : z)) }));
+      }
+    } else {
+      persistView(zoom, { x: d.startPan.x + (e.clientX - d.x), y: d.startPan.y + (e.clientY - d.y) });
+    }
+  };
+
+  // ── marker / vertex drag (pointer-based so it works under touch too) ──
+  const startMarkerDrag = (e: React.PointerEvent, placementId: string) => {
     if (!isEdit) return;
     e.stopPropagation();
-    const onMove = (ev: MouseEvent) => {
+    const el = e.currentTarget as HTMLElement;
+    try { el.setPointerCapture?.(e.pointerId); } catch { /* best-effort */ }
+    const onMove = (ev: PointerEvent) => {
       const pct = clientToPct(ev.clientX, ev.clientY);
       store.updatePlacement(campaignId, placementId, { x: pct.x, y: pct.y });
     };
-    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    const onUp = () => { el.releasePointerCapture?.(e.pointerId); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   };
 
-  const startPointDrag = (e: React.MouseEvent, routeId: string, index: number) => {
+  const startPointDrag = (e: React.PointerEvent, routeId: string, index: number) => {
     if (!isEdit) return;
     e.stopPropagation();
-    const onMove = (ev: MouseEvent) => {
+    const el = e.currentTarget as unknown as SVGElement;
+    try { el.setPointerCapture?.(e.pointerId); } catch { /* best-effort */ }
+    const onMove = (ev: PointerEvent) => {
       const pct = clientToPct(ev.clientX, ev.clientY);
       const route = data.routes.find((r) => r.id === routeId);
       if (!route) return;
       const points = route.points.map((p, i) => (i === index ? pct : p));
       store.updateRoute(campaignId, routeId, { points });
     };
-    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    const onUp = () => { el.releasePointerCapture?.(e.pointerId); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   };
 
-  const startZonePointDrag = (e: React.MouseEvent, zoneId: string, index: number) => {
+  const startZonePointDrag = (e: React.PointerEvent, zoneId: string, index: number) => {
     if (!isEdit) return;
     e.stopPropagation();
-    const onMove = (ev: MouseEvent) => {
+    const el = e.currentTarget as unknown as SVGElement;
+    try { el.setPointerCapture?.(e.pointerId); } catch { /* best-effort */ }
+    const onMove = (ev: PointerEvent) => {
       const pct = clientToPct(ev.clientX, ev.clientY);
       store.updateData(campaignId, (p) => ({ ...p, zones: p.zones.map((z) => (z.id === zoneId ? { ...z, points: z.points.map((pt, i) => (i === index ? pct : pt)) } : z)) }));
     };
-    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    const onUp = () => { el.releasePointerCapture?.(e.pointerId); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   };
 
   // Center the view on the party pin (main-campaign parity: "Партия" button).
@@ -494,7 +553,10 @@ export function IsolatedCampaignMapWorkspace() {
         <div
           ref={viewportRef}
           className={`ucw-viewport${panning ? ' panning' : ''}${placing || placingParty || routeEditId || zoneEditId ? ' placing' : ''}`}
-          onMouseDown={onViewportMouseDown}
+          onPointerDown={onViewportPointerDown}
+          onPointerMove={onViewportPointerMove}
+          onPointerUp={onViewportPointerUp}
+          onPointerCancel={onViewportPointerUp}
           onWheel={onWheel}
         >
           {(placing || placingParty || routeEditId || zoneEditId) && (
@@ -545,7 +607,7 @@ export function IsolatedCampaignMapWorkspace() {
                   ))}
                   {isEdit && zoneInEdit?.points.map((p, i) => (
                     <circle key={i} cx={p.x} cy={p.y} r={0.8} className="ucw-routept"
-                      onMouseDown={(e) => startZonePointDrag(e, zoneInEdit.id, i)}
+                      onPointerDown={(e) => startZonePointDrag(e, zoneInEdit.id, i)}
                       onDoubleClick={(e) => { e.stopPropagation(); store.updateData(campaignId, (prev) => ({ ...prev, zones: prev.zones.map((zz) => (zz.id === zoneInEdit.id ? { ...zz, points: zz.points.filter((_, idx) => idx !== i) } : zz)) })); }} />
                   ))}
                 </svg>
@@ -567,7 +629,7 @@ export function IsolatedCampaignMapWorkspace() {
                   ))}
                   {isEdit && routeInEdit?.points.map((p, i) => (
                     <circle key={i} cx={p.x} cy={p.y} r={0.8} className="ucw-routept"
-                      onMouseDown={(e) => startPointDrag(e, routeInEdit.id, i)}
+                      onPointerDown={(e) => startPointDrag(e, routeInEdit.id, i)}
                       onDoubleClick={(e) => { e.stopPropagation(); store.updateRoute(campaignId, routeInEdit.id, { points: routeInEdit.points.filter((_, idx) => idx !== i) }); }} />
                   ))}
                 </svg>
@@ -582,7 +644,7 @@ export function IsolatedCampaignMapWorkspace() {
                         key={mp.id}
                         className={`ucw-marker${isEdit ? ' edit' : ''}${isSel ? ' selected' : ''}${!isPlacementPlayerVisible(mp, runtime) ? ' hidden-pin' : ''}`}
                         style={{ left: `${mp.x}%`, top: `${mp.y}%` }}
-                        onMouseDown={(e) => startMarkerDrag(e, mp.id)}
+                        onPointerDown={(e) => startMarkerDrag(e, mp.id)}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (isPlayer && !canOpenForPlayer(mp.entityType, mp.entityId)) return;

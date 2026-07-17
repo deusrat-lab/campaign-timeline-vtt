@@ -76,14 +76,25 @@ export function CampaignBattlePage() {
 
   useEffect(() => { getBattleMapCatalog().then(setCatalog); }, []);
 
+  // Fill the viewport below the top chrome and above the mobile bottom nav.
+  // Uses the scroll-independent document top (rect.top + scrollY) so a scrolled
+  // shell can't inflate the height into a runaway, and subtracts the fixed
+  // bottom nav-rail (padding-bottom on .app-shell-main) so nothing hides behind
+  // it. See IsolatedCampaignMapWorkspace for the full rationale.
   useLayoutEffect(() => {
     const measure = () => {
       const el = rootRef.current; if (!el) return;
-      setShellHeight(Math.max(360, window.innerHeight - el.getBoundingClientRect().top));
+      const docTop = el.getBoundingClientRect().top + window.scrollY;
+      const shellMain = el.closest('.app-shell-main');
+      const padBottom = shellMain ? parseFloat(getComputedStyle(shellMain).paddingBottom) || 0 : 0;
+      setShellHeight(Math.max(360, window.innerHeight - docTop - padBottom));
     };
     measure();
+    const raf = requestAnimationFrame(() => requestAnimationFrame(measure));
+    const t = setTimeout(measure, 220);
     window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    window.addEventListener('orientationchange', measure);
+    return () => { cancelAnimationFrame(raf); clearTimeout(t); window.removeEventListener('resize', measure); window.removeEventListener('orientationchange', measure); };
   }, []);
 
   // Initialize this map's own board once (if it has no entry yet), carrying over

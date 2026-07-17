@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { EntityImage } from './EntityImage';
 import { RichEntityDetail } from './RichEntityDetail';
 import type { EntityListItemVM, EntityDetailVM, EntityActionsVM, FilterConfig } from './types';
@@ -26,6 +27,12 @@ export function RichEntityLibrary({
   isPlayer?: boolean;
   emptyLabel?: string;
 }) {
+  // On phones the list and detail can't sit side-by-side; the detail would
+  // render below the entire (often long) list and be effectively invisible.
+  // Tapping a row opens the detail as a full-screen sheet over the list; a
+  // back button returns to the list. On desktop both panels show and this
+  // flag is ignored by the CSS. See sharedEntity.css `.shared-lib-detail`.
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   return (
     <div className="entity-library-layout shared-lib">
       <aside className="entity-library-list">
@@ -46,7 +53,7 @@ export function RichEntityLibrary({
             key={it.id}
             type="button"
             className={`entity-library-row shared-lib-row${selectedId === it.id ? ' active' : ''}`}
-            onClick={() => onSelect(it.id)}
+            onClick={() => { onSelect(it.id); setMobileDetailOpen(true); }}
           >
             <EntityImage src={it.imageUrl} name={it.title} size={40} />
             <div className="entity-library-row-main">
@@ -61,7 +68,8 @@ export function RichEntityLibrary({
         ))}
       </aside>
 
-      <section className="entity-library-detail shared-lib-detail">
+      <section className={`entity-library-detail shared-lib-detail${mobileDetailOpen ? ' mobile-open' : ''}`}>
+        <button type="button" className="shared-lib-back" onClick={() => setMobileDetailOpen(false)}>← Список</button>
         {detail ? <RichEntityDetail vm={detail} actions={actions} isPlayer={isPlayer} />
           : <p className="shared-muted" style={{ padding: 16 }}>Выберите карточку слева, чтобы увидеть детали.</p>}
       </section>

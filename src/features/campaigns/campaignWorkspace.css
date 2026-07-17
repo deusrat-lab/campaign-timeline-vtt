@@ -210,7 +210,11 @@
 
 @media (max-width: 640px) {
   .ucw {
-    min-height: calc(100dvh - 56px);
+    /* The workspace height is measured in JS (viewport minus the top chrome AND
+       the fixed bottom nav). A dvh-based min-height here ignores the navbar and
+       would override that accurate height, pushing the panel's bottom behind the
+       nav bar — so let the measured height win. */
+    min-height: 0;
     overflow: hidden;
   }
 
@@ -423,6 +427,24 @@
 .ucw-modal-close { background: none; border: none; color: var(--fg-dim); font-size: 1.4rem; cursor: pointer; line-height: 1; }
 .ucw-modal-close:hover { color: var(--gold); }
 .ucw-modal-type { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg-faint); }
+
+/* Phones: the card should use the whole screen (the boxed, padded modal wastes
+   ~50px of width and clipped under the bottom nav). Full-bleed sheet with a
+   sticky close header, scrollable body, and safe bottom inset. */
+@media (max-width: 640px) {
+  .ucw-modal-overlay { padding: 0; align-items: stretch; justify-content: stretch; }
+  .ucw-modal {
+    width: 100vw; max-width: 100vw; max-height: 100dvh; height: 100dvh;
+    border: none; border-radius: 0;
+    padding: 14px 14px calc(18px + env(safe-area-inset-bottom));
+  }
+  .ucw-modal-head {
+    position: sticky; top: -14px; z-index: 2;
+    margin: -14px -14px 8px; padding: 12px 14px;
+    background: var(--bg-card); border-bottom: 1px solid var(--border-soft);
+  }
+  .ucw-modal-close { font-size: 1.7rem; padding: 4px 6px; margin: -4px -4px 0 0; }
+}
 
 /* library page grid of entity cards */
 .ucw-lib-page { padding: 20px 26px 60px; }

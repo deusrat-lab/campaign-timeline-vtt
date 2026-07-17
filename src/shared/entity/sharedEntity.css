@@ -14,6 +14,8 @@
 .shared-badge.ok { color: var(--green); border-color: var(--green); }
 
 .shared-lib-detail { min-height: 200px; border: 1px solid var(--border-soft); border-radius: 12px; background: var(--bg-panel, rgba(255,255,255,0.02)); overflow: hidden; }
+/* The "← Список" back control only exists on the mobile detail sheet. */
+.shared-lib-back { display: none; }
 .shared-detail { padding: 0 0 16px; }
 .shared-detail-hero-button {
   display: block;
@@ -65,4 +67,54 @@
 .shared-rel-action.active { border-color: var(--gold); background: rgba(192,138,46,0.18); color: var(--gold-soft); }
 .shared-muted { color: var(--fg-faint); }
 
-@media (max-width: 860px) { .shared-lib { grid-template-columns: 1fr; } }
+@media (max-width: 860px) {
+  .shared-lib { grid-template-columns: 1fr; }
+
+  /* Detail becomes a full-screen sheet over the list, opened by tapping a row
+     and dismissed with the back button. Without this the detail renders far
+     below a long list and is effectively hidden. */
+  .shared-lib-detail {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--bg-deep, #0b0a08);
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+    /* Hidden until a row is tapped. A `display` toggle (not a transform on a
+       visibility:hidden element, which strands the transform mid-transition)
+       is the reliable way to reveal it. */
+    display: none;
+  }
+  .shared-lib-detail.mobile-open {
+    display: block;
+    animation: shared-lib-sheet-in 0.2s ease;
+  }
+  .shared-lib-back {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    width: 100%;
+    text-align: left;
+    padding: 12px 14px;
+    background: var(--bg-card);
+    border: none;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--gold-soft);
+    font: inherit;
+    font-size: 0.95rem;
+  }
+}
+
+@keyframes shared-lib-sheet-in {
+  from { transform: translateY(14px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shared-lib-detail.mobile-open { animation: none; }
+}
