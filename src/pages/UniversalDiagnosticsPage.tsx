@@ -10,6 +10,7 @@ import {
   projectPlayerSafe,
 } from '../domain';
 import type { MainCampaignOverlayInput } from '../domain';
+import { ShadowIntegrationDiagnostics } from '../features/shadow-integration/ShadowIntegrationDiagnostics';
 
 export function UniversalDiagnosticsPage() {
   const { data, loading, error } = useCampaignData();
@@ -66,6 +67,7 @@ export function UniversalDiagnosticsPage() {
       </div>
       <h2>Parity</h2>
       <pre>{JSON.stringify(parity, null, 2)}</pre>
+      <ShadowIntegrationDiagnostics />
     </section>
   );
 }

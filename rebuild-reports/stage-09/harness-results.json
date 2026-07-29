@@ -1,0 +1,187 @@
+{
+  "verdict": "STAGE_09_HARNESS_PASS",
+  "summary": {
+    "passed": 44,
+    "failed": 0,
+    "total": 44,
+    "ok": true
+  },
+  "results": [
+    {
+      "name": "flag-01 default-off in config",
+      "pass": true
+    },
+    {
+      "name": "flag-01b no committed env enables flag",
+      "pass": true
+    },
+    {
+      "name": "flag-02 off => zero storage writes",
+      "pass": true
+    },
+    {
+      "name": "flag-03 off => zero storage reads/keys (no subscription)",
+      "pass": true
+    },
+    {
+      "name": "flag-04 on installs + persists",
+      "pass": true
+    },
+    {
+      "name": "flag-05 dispose cancels + no new writes",
+      "pass": true
+    },
+    {
+      "name": "main-06 initial hydration success",
+      "pass": true
+    },
+    {
+      "name": "main-07 single mutation replace + monotonic rev",
+      "pass": true
+    },
+    {
+      "name": "main-08 rapid mutations debounced to one run",
+      "pass": true
+    },
+    {
+      "name": "main-09 import/reset persists new revision",
+      "pass": true
+    },
+    {
+      "name": "main-10 runtime update projected",
+      "pass": true
+    },
+    {
+      "name": "main-11 active battle in runtime",
+      "pass": true
+    },
+    {
+      "name": "main-12 validation failure not persisted + prior survives",
+      "pass": true
+    },
+    {
+      "name": "main-13 adapter failure isolated",
+      "pass": true
+    },
+    {
+      "name": "main-14 reload equality",
+      "pass": true
+    },
+    {
+      "name": "main-15 source immutable (real Greyholm input)",
+      "pass": true
+    },
+    {
+      "name": "main-ns shadow-only keys",
+      "pass": true
+    },
+    {
+      "name": "user-16 single campaign success",
+      "pass": true
+    },
+    {
+      "name": "user-17 two isolated campaigns distinct keys",
+      "pass": true
+    },
+    {
+      "name": "user-18 campaign switch isolated",
+      "pass": true
+    },
+    {
+      "name": "user-19 create -> revision 1",
+      "pass": true
+    },
+    {
+      "name": "user-20 import -> new key",
+      "pass": true
+    },
+    {
+      "name": "user-21 update replace + rev advances",
+      "pass": true
+    },
+    {
+      "name": "user-22 battle boards projected",
+      "pass": true
+    },
+    {
+      "name": "user-23 clear removes only shadow key",
+      "pass": true
+    },
+    {
+      "name": "user-24 missing campaignId rejected by adapter",
+      "pass": true
+    },
+    {
+      "name": "user-25 source immutable (real Caldran input)",
+      "pass": true
+    },
+    {
+      "name": "repo-26 shadow-only namespace",
+      "pass": true
+    },
+    {
+      "name": "repo-27 production namespace untouched",
+      "pass": true
+    },
+    {
+      "name": "repo-28 revision conflict surfaced",
+      "pass": true
+    },
+    {
+      "name": "repo-29 stale run protection (latest wins)",
+      "pass": true
+    },
+    {
+      "name": "repo-30 revision monotonic",
+      "pass": true
+    },
+    {
+      "name": "repo-31 cross-campaign restore isolation",
+      "pass": true
+    },
+    {
+      "name": "repo-32 prior valid snapshot survives failed run",
+      "pass": true
+    },
+    {
+      "name": "diag-33 structured status",
+      "pass": true
+    },
+    {
+      "name": "diag-34 validation errors visible",
+      "pass": true
+    },
+    {
+      "name": "diag-35 persistence errors visible",
+      "pass": true
+    },
+    {
+      "name": "diag-36 no secret payload in status",
+      "pass": true
+    },
+    {
+      "name": "diag-37 DM-only + flag-gated diagnostics",
+      "pass": true
+    },
+    {
+      "name": "diag-38 read-only / shadow-only actions",
+      "pass": true
+    },
+    {
+      "name": "anchor-greyholm 210 NPC",
+      "pass": true
+    },
+    {
+      "name": "anchor-greyholm 139 battle maps",
+      "pass": true
+    },
+    {
+      "name": "anchor-caldran 66 NPC",
+      "pass": true
+    },
+    {
+      "name": "anchor-caldran reveals resolved 8/8",
+      "pass": true
+    }
+  ]
+}
