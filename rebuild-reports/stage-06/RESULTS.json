@@ -1,0 +1,32 @@
+{
+  "ok": true,
+  "verdict": "PASS",
+  "checks": [
+    {
+      "name": "repository behavioral test compiles",
+      "ok": true
+    },
+    {
+      "name": "repository behavioral cases pass",
+      "ok": true,
+      "output": "{\"ok\":true,\"cases\":15}"
+    },
+    {
+      "name": "revision contract exposes expected/current/new revisions",
+      "ok": true
+    },
+    {
+      "name": "conflicts use CONFLICT code",
+      "ok": true
+    },
+    {
+      "name": "shadow namespace does not use legacy overlay keys",
+      "ok": true
+    },
+    {
+      "name": "production repository exists without UI switch",
+      "ok": true
+    }
+  ],
+  "failed": []
+}

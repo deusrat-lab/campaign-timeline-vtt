@@ -13,6 +13,8 @@ const requiredFiles = [
   'src/domain/persistence/serialization.ts',
   'src/domain/projection/types.ts',
   'src/domain/projection/projectCampaign.ts',
+  'src/domain/repository/types.ts',
+  'src/domain/repository/shadowRepository.ts',
   'src/domain/validation/validateCampaignSnapshot.ts',
   'src/domain/adapters/types.ts',
   'src/domain/adapters/idMapping.ts',
