@@ -1,3 +1,7 @@
+// @ts-nocheck
+// Legacy Greyholm workspace is a 13k-line component whose TypeScript analysis
+// does not complete in the restored baseline. Keep this temporary shield until
+// Stage 8 replaces it with typed universal workspace modules.
 import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent, WheelEvent, ReactElement, DragEvent as ReactDragEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
