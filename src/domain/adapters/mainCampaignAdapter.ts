@@ -333,7 +333,12 @@ function mapMainEntities(data: MainCampaignDataInput, campaignId: CampaignSnapsh
       dmNotes: quest.notes,
       locationRefs: quest.location ? [{ campaignId, entityId: entityIdFromLegacy('location', quest.location), kind: 'location' }] : undefined,
       npcRefs: quest.giver ? [{ campaignId, entityId: entityIdFromLegacy('npc', quest.giver), kind: 'npc' }] : undefined,
-      enemyRefs: quest.enemies?.map((id) => ({ campaignId, entityId: entityIdFromLegacy('enemy', id), kind: 'enemy' })),
+      // Stage 8: real DM Companion quests carry `enemies` as either a string[]
+      // or a bare string (e.g. ""). Guard against the non-array real-data shape
+      // so the adapter never crashes; array behavior is unchanged.
+      enemyRefs: Array.isArray(quest.enemies)
+        ? quest.enemies.map((id) => ({ campaignId, entityId: entityIdFromLegacy('enemy', id), kind: 'enemy' }))
+        : undefined,
       imageRef: quest.image ? { campaignId, entityId: entityIdFromLegacy('image', quest.image), kind: 'image' } : undefined,
       visibility: quest.status === 'hidden' ? HIDDEN_VISIBILITY : PUBLIC_VISIBILITY,
       tags: quest.tags,

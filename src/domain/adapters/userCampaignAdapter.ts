@@ -78,6 +78,36 @@ export function adaptUserCampaignToUniversal(input: UserCampaignAdapterInput): A
   };
 
   const runtime = mapRuntime(input, campaignId);
+
+  // Stage 8 fix: reveal targets must resolve to the SAME universal entity id
+  // that mapEntities produced. The legacy revealedToPlayers list stores raw,
+  // kind-agnostic source ids (e.g. "npc-...", "emy-..."), so we resolve each id
+  // to its actual kind by looking up which source collection owns it. A raw id
+  // that matches zero collections, or more than one (ambiguous), is never
+  // resolved by array order or by picking the earliest match: it is recorded
+  // with an unresolvable sentinel key so validateCampaignSnapshot rejects the
+  // snapshot, and an error diagnostic is emitted.
+  const revealResolver = buildRevealResolver(input.data);
+  const revealDiagnostics: AdapterResult['diagnostics'] = [];
+  const revealEntries: Array<[string, typeof PUBLIC_VISIBILITY]> = [];
+  (input.runtime?.revealedToPlayers ?? []).forEach((rawId, index) => {
+    const resolution = revealResolver(rawId);
+    if (resolution.kind) {
+      revealEntries.push([entityIdFromLegacy(resolution.kind, rawId), PUBLIC_VISIBILITY]);
+    } else {
+      revealEntries.push([`entity:unresolved-reveal:${rawId}`, PUBLIC_VISIBILITY]);
+      revealDiagnostics.push(
+        adapterError(
+          `runtime.revealedToPlayers.${index}`,
+          resolution.reason === 'ambiguous' ? 'ambiguous_reveal_target' : 'unresolved_reveal_target',
+          resolution.reason === 'ambiguous'
+            ? `reveal id ${rawId} matches multiple kinds: ${resolution.kinds.join(', ')}`
+            : `reveal id ${rawId} does not match any source entity`,
+        ),
+      );
+    }
+  });
+
   const snapshot: CampaignSnapshot = createCampaignSnapshot({
     schemaVersion: makeSchemaVersion('1.0.0'),
     revision: makeRevision(0),
@@ -93,7 +123,7 @@ export function adaptUserCampaignToUniversal(input: UserCampaignAdapterInput): A
     durable,
     runtime,
     visibility: {
-      entities: Object.fromEntries((input.runtime?.revealedToPlayers ?? []).map((id) => [entityIdFromLegacy('legacy', id), PUBLIC_VISIBILITY])),
+      entities: Object.fromEntries(revealEntries),
       fields: {},
       maps: {},
       presentations: {},
@@ -110,13 +140,43 @@ export function adaptUserCampaignToUniversal(input: UserCampaignAdapterInput): A
   });
 
   const validation = validateCampaignSnapshot(snapshot);
-  const diagnostics = validation.issues.map((issue) =>
-    issue.severity === 'error'
-      ? adapterError(issue.path, issue.code, issue.message)
-      : adapterWarning(issue.path, issue.code, issue.message),
-  );
+  const diagnostics = [
+    ...revealDiagnostics,
+    ...validation.issues.map((issue) =>
+      issue.severity === 'error'
+        ? adapterError(issue.path, issue.code, issue.message)
+        : adapterWarning(issue.path, issue.code, issue.message),
+    ),
+  ];
 
   return { snapshot, source, classifications, diagnostics };
+}
+
+type RevealKind = 'location' | 'npc' | 'quest' | 'enemy' | 'player' | 'faction' | 'image';
+
+interface RevealResolution {
+  kind: RevealKind | null;
+  kinds: RevealKind[];
+  reason?: 'ambiguous' | 'unresolved';
+}
+
+function buildRevealResolver(data: UserCampaignData): (id: string) => RevealResolution {
+  const byKind: Record<RevealKind, Set<string>> = {
+    location: new Set(data.locations.map((item) => item.id)),
+    npc: new Set(data.npcs.map((item) => item.id)),
+    quest: new Set(data.quests.map((item) => item.id)),
+    enemy: new Set(data.enemies.map((item) => item.id)),
+    player: new Set((data.party ?? []).map((item) => item.id)),
+    faction: new Set((data.factions ?? []).map((item) => item.id)),
+    image: new Set(data.images.map((item) => item.id)),
+  };
+  const order: RevealKind[] = ['location', 'npc', 'quest', 'enemy', 'player', 'faction', 'image'];
+  return (id: string): RevealResolution => {
+    const kinds = order.filter((kind) => byKind[kind].has(id));
+    if (kinds.length === 1) return { kind: kinds[0], kinds };
+    if (kinds.length === 0) return { kind: null, kinds, reason: 'unresolved' };
+    return { kind: null, kinds, reason: 'ambiguous' };
+  };
 }
 
 function mapEntities(data: UserCampaignData, campaignId: CampaignSnapshot['metadata']['campaignId']): UniversalEntity[] {
