@@ -92,4 +92,5 @@ export interface BattleRuntime {
   initiative?: InitiativeState;
   presentedToPlayers?: boolean;
   revision?: number;
+  extensions?: Record<string, unknown>;
 }

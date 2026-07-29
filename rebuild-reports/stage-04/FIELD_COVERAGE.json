@@ -1,0 +1,526 @@
+{
+  "representativeRecords": [
+    {
+      "path": "dmCompanion.locations[0].arcId",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.locations[0].atmosphere",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.locations[0].description",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.locations[0].dmSecrets",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.locations[0].id",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.locations[0].images",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.locations[0].lore",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.locations[0].name",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.locations[0].notes",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.locations[0].npcs",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.locations[0].playerView",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.locations[0].quests",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.locations[0].quickScenes",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.locations[0].region",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.locations[0].rumors",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.locations[0].shops",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.locations[0].tags",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.locations[0].type",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.npcs[0].arcId",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.npcs[0].goals",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.npcs[0].id",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.npcs[0].image",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.npcs[0].knowledge",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.npcs[0].location",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.npcs[0].name",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.npcs[0].notes",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.npcs[0].personality",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.npcs[0].race",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.npcs[0].relatedQuests",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.npcs[0].role",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.npcs[0].secrets",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.npcs[0].speechStyle",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.npcs[0].tags",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.quests[0].consequences",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.quests[0].description",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.quests[0].enemies",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.quests[0].giver",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.quests[0].goal",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.quests[0].id",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.quests[0].location",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.quests[0].notes",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.quests[0].proof",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.quests[0].reward",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.quests[0].solutions",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.quests[0].status",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.quests[0].tags",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.quests[0].title",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.enemies[0].abilityScores",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].ac",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].arcId",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.enemies[0].attacks",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].baseMonsterCr",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].baseMonsterId",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.enemies[0].baseMonsterName",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].baseMonsterSourceBook",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].conditionImmunities",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].cr",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].customVersion",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].dmNotes",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.enemies[0].faction",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].features",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].hitDice",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].hp",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].id",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.enemies[0].image",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.enemies[0].immunities",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].isCustom",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].languages",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].legendaryActions",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].locationIds",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.enemies[0].lore",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].name",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.enemies[0].passivePerception",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].questIds",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.enemies[0].reactions",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].resistances",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].role",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].savingThrows",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].senses",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].skills",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].speed",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].tactics",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].tags",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].vulnerabilities",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.enemies[0].xp",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.players[0].backstory",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.players[0].characterName",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.players[0].class",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.players[0].description",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.players[0].dmNotes",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.players[0].id",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.players[0].image",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.players[0].journal",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.players[0].level",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.players[0].playerName",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.players[0].race",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.players[0].relatedNpcs",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.players[0].relatedQuests",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.players[0].reputation",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.players[0].tags",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.images[0].id",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.images[0].relatedEntity",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.images[0].safeForPlayers",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.images[0].src",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.images[0].tags",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "dmCompanion.images[0].title",
+      "verdict": "mapped"
+    },
+    {
+      "path": "dmCompanion.images[0].type",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "synthetic.locations[0].description",
+      "verdict": "mapped"
+    },
+    {
+      "path": "synthetic.locations[0].dmNotes",
+      "verdict": "mapped"
+    },
+    {
+      "path": "synthetic.locations[0].id",
+      "verdict": "mapped"
+    },
+    {
+      "path": "synthetic.locations[0].imageId",
+      "verdict": "mapped"
+    },
+    {
+      "path": "synthetic.locations[0].title",
+      "verdict": "mapped"
+    },
+    {
+      "path": "synthetic.locations[0].unknownField",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "synthetic.battleBoards[0].columns",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "synthetic.battleBoards[0].currentTurnTokenId",
+      "verdict": "mapped"
+    },
+    {
+      "path": "synthetic.battleBoards[0].mapId",
+      "verdict": "mapped"
+    },
+    {
+      "path": "synthetic.battleBoards[0].round",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "synthetic.battleBoards[0].showGrid",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "synthetic.battleBoards[0].snap",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "synthetic.battleBoards[0].terrain",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "synthetic.battleBoards[0].tokens",
+      "verdict": "preserved-as-extension"
+    },
+    {
+      "path": "synthetic.battleBoards[0].variant",
+      "verdict": "preserved-as-extension"
+    }
+  ],
+  "coordinateParity": [
+    {
+      "path": "repo.hotspots",
+      "sourceSpace": "normalized",
+      "universalSpace": "normalized",
+      "tolerance": 0,
+      "status": "passed"
+    },
+    {
+      "path": "synthetic.mapPlacements",
+      "sourceSpace": "percent",
+      "universalSpace": "percent",
+      "tolerance": 0,
+      "status": "passed"
+    },
+    {
+      "path": "synthetic.battleTokens",
+      "sourceSpace": "percent",
+      "universalSpace": "percent",
+      "tolerance": 0,
+      "status": "passed"
+    },
+    {
+      "path": "edge coordinates",
+      "sourceSpace": "normalized",
+      "universalSpace": "normalized",
+      "tolerance": 0,
+      "status": "passed",
+      "values": [
+        0,
+        1
+      ]
+    }
+  ]
+}

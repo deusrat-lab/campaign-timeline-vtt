@@ -1,0 +1,30 @@
+{
+  "stage": 4,
+  "verdict": "PASS_WITH_WARNINGS",
+  "inputs": 90,
+  "realInputs": 82,
+  "repositoryFixtures": 7,
+  "syntheticFixtures": 1,
+  "droppedCollections": [],
+  "duplicateCollections": [
+    {
+      "name": "battleMaps",
+      "duplicateIdCount": 63
+    }
+  ],
+  "failedNegatives": [],
+  "forbiddenDeps": [],
+  "deterministic": {
+    "sourceImmutabilityHashBefore": "8f642fe204152d8e1741a64ab293043a4a3443f3ef76deb32d069c48079a8a6d",
+    "sourceImmutabilityHashAfter": "8f642fe204152d8e1741a64ab293043a4a3443f3ef76deb32d069c48079a8a6d",
+    "sourceMutationCount": 0,
+    "candidateHashA": "359b79ee545fb598bd1e560ddd6b44e8cbada07ab5965fc3f225217cd693c676",
+    "candidateHashB": "359b79ee545fb598bd1e560ddd6b44e8cbada07ab5965fc3f225217cd693c676",
+    "determinismFailures": 0
+  },
+  "warnings": [
+    "No live browser localStorage export was present; synthetic rich user campaign covers UC runtime/battle/reveal mechanics.",
+    "Greyholm overlay snapshot in repository is empty, so events/triggers/movable/battleEntries real overlay collections are zero-count repository fixtures.",
+    "Harness validates Stage 4 adapters and parity contracts without writing storage or calling server APIs."
+  ]
+}

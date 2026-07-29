@@ -27,7 +27,7 @@ export interface UniversalMapDefinition {
   id: UniversalMapId;
   campaignId: CampaignId;
   title: string;
-  scope?: 'world' | 'region' | 'city' | 'local' | 'battle' | 'custom';
+  scope?: 'world' | 'kingdom' | 'region' | 'city' | 'local' | 'battle' | 'custom';
   parentMapId?: UniversalMapId;
   timelineId?: string;
   backgroundImageSrc?: string;

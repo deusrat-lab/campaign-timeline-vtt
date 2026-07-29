@@ -1,0 +1,180 @@
+[
+  {
+    "name": "valid NPC reveal",
+    "reveal": {
+      "campaignId": "camp:test",
+      "kind": "npc",
+      "semanticId": "same"
+    },
+    "expectedCode": "resolved",
+    "actualCode": "resolved",
+    "passed": true
+  },
+  {
+    "name": "valid player reveal",
+    "reveal": {
+      "campaignId": "camp:test",
+      "kind": "player",
+      "semanticId": "same"
+    },
+    "expectedCode": "resolved",
+    "actualCode": "resolved",
+    "passed": true
+  },
+  {
+    "name": "valid quest reveal",
+    "reveal": {
+      "campaignId": "camp:test",
+      "kind": "quest",
+      "semanticId": "quest-ok"
+    },
+    "expectedCode": "resolved",
+    "actualCode": "resolved",
+    "passed": true
+  },
+  {
+    "name": "missing target",
+    "reveal": {
+      "campaignId": "camp:test",
+      "kind": "npc",
+      "semanticId": "missing"
+    },
+    "expectedCode": "missing_target",
+    "actualCode": "missing_target",
+    "passed": true
+  },
+  {
+    "name": "unsupported target type",
+    "reveal": {
+      "campaignId": "camp:test",
+      "kind": "shop",
+      "semanticId": "same"
+    },
+    "expectedCode": "unsupported_reveal_target",
+    "actualCode": "unsupported_reveal_target",
+    "passed": true
+  },
+  {
+    "name": "npc/player duplicate ID remains type-scoped",
+    "reveal": {
+      "campaignId": "camp:test",
+      "kind": "npc",
+      "semanticId": "same"
+    },
+    "expectedCode": "resolved",
+    "actualCode": "resolved",
+    "passed": true
+  },
+  {
+    "name": "two NPC with same semantic ID",
+    "reveal": {
+      "campaignId": "camp:test",
+      "kind": "npc",
+      "semanticId": "dup-npc"
+    },
+    "expectedCode": "ambiguous_reveal",
+    "actualCode": "ambiguous_reveal",
+    "passed": true
+  },
+  {
+    "name": "two players with same semantic ID",
+    "reveal": {
+      "campaignId": "camp:test",
+      "kind": "player",
+      "semanticId": "dup-player"
+    },
+    "expectedCode": "ambiguous_reveal",
+    "actualCode": "ambiguous_reveal",
+    "passed": true
+  },
+  {
+    "name": "malformed reveal",
+    "reveal": null,
+    "expectedCode": "malformed_reveal",
+    "actualCode": "malformed_reveal",
+    "passed": true
+  },
+  {
+    "name": "cross-campaign reveal",
+    "reveal": {
+      "campaignId": "camp:other",
+      "kind": "npc",
+      "semanticId": "same"
+    },
+    "expectedCode": "cross_campaign_reveal",
+    "actualCode": "cross_campaign_reveal",
+    "passed": true
+  },
+  {
+    "name": "duplicate map ID",
+    "expectedCode": "duplicate_map_id",
+    "result": {
+      "code": "duplicate_map_id"
+    },
+    "actualCode": "duplicate_map_id",
+    "passed": true
+  },
+  {
+    "name": "duplicate entity ID",
+    "expectedCode": "duplicate_entity_id",
+    "result": {
+      "code": "duplicate_entity_id"
+    },
+    "actualCode": "duplicate_entity_id",
+    "passed": true
+  },
+  {
+    "name": "missing mapRef",
+    "expectedCode": "missing_map_ref",
+    "result": {
+      "code": "missing_map_ref"
+    },
+    "actualCode": "missing_map_ref",
+    "passed": true
+  },
+  {
+    "name": "invalid coordinates",
+    "expectedCode": "invalid_coordinates",
+    "result": {
+      "code": "invalid_coordinates"
+    },
+    "actualCode": "invalid_coordinates",
+    "passed": true
+  },
+  {
+    "name": "broken battle participant reference",
+    "expectedCode": "broken_battle_participant_ref",
+    "result": {
+      "code": "broken_battle_participant_ref"
+    },
+    "actualCode": "broken_battle_participant_ref",
+    "passed": true
+  },
+  {
+    "name": "unknown optional content",
+    "expectedCode": "preserved_unknown_optional_content",
+    "result": {
+      "code": "preserved_unknown_optional_content"
+    },
+    "actualCode": "preserved_unknown_optional_content",
+    "passed": true
+  },
+  {
+    "name": "disabled module with retained content",
+    "expectedCode": "disabled_module_retained_content",
+    "result": {
+      "code": "disabled_module_retained_content"
+    },
+    "actualCode": "disabled_module_retained_content",
+    "passed": true
+  },
+  {
+    "name": "corrupted nested object",
+    "expectedCode": "corrupted_nested_object",
+    "result": {
+      "code": "corrupted_nested_object"
+    },
+    "actualCode": "corrupted_nested_object",
+    "passed": true
+  }
+]

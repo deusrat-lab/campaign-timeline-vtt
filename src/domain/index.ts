@@ -1,4 +1,7 @@
 export * from './adapters/idMapping';
+export * from './adapters/battleMapVttAdapter';
+export * from './adapters/dmCompanionAdapter';
+export * from './adapters/mainCampaignAdapter';
 export * from './adapters/types';
 export * from './adapters/userCampaignAdapter';
 export * from './battles/types';
