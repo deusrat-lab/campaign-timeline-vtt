@@ -1,12 +1,12 @@
 {
   "stage": "stage-08d",
-  "verdict": "STAGE_8D_BLOCKED_BY_SERVER_ACCESS",
-  "overallStage8Verdict": "STAGE_8_PASS_WITH_WARNINGS",
+  "verdict": "STAGE_8_PASS",
+  "overallStage8Verdict": "STAGE_8_PASS",
   "generatedAt": "1970-01-01T00:00:00.000Z",
   "checks": {
-    "passed": 40,
+    "passed": 46,
     "failed": 0,
-    "total": 40,
+    "total": 46,
     "ok": true
   },
   "failing": [],
@@ -35,7 +35,75 @@
     }
   },
   "realOverlayIngestion": {
-    "attempted": false
+    "attempted": true,
+    "mergedDataProvided": false,
+    "valid": true,
+    "realCounts": {
+      "worldMaps": 4,
+      "locationStates": 140,
+      "hotspots": 69,
+      "placements": 0,
+      "routes": 88,
+      "partyPosition": 0,
+      "partyRouteProgress": 0,
+      "reveal": 0,
+      "movableEntities": 2,
+      "campaignEvents": 1,
+      "delayedTriggers": 0,
+      "factionZones": 2,
+      "dynamicOverlays": 0,
+      "battleEntries": 0,
+      "activeBattle": 0,
+      "tokens": 0,
+      "round": 0,
+      "currentTurn": 0,
+      "presentedCard": 0
+    },
+    "srcCounts": {
+      "entities": 984,
+      "maps": 4,
+      "hotspots": 69,
+      "routes": 88,
+      "battleMaps": 139
+    },
+    "adaptedCounts": {
+      "entities": 984,
+      "maps": 4,
+      "hotspots": 69,
+      "routes": 88,
+      "battleMaps": 139
+    },
+    "droppedCollections": [],
+    "invariants": {
+      "sourceMutation": 0,
+      "droppedCollections": [],
+      "lossSensitiveUnresolvedReferences": 0,
+      "ambiguousReferences": 0,
+      "roundTripMismatches": 0,
+      "privacyLeaks": 0,
+      "campaignIsolationFailures": 0,
+      "unresolvedReveal": 0
+    },
+    "adapterErrors": 0,
+    "runtimeRealNonZero": [
+      "partyLocation",
+      "movableEntities",
+      "campaignEvents",
+      "factionZones"
+    ],
+    "runtimeEmptyInSource": [
+      "reveal",
+      "partyRouteProgress",
+      "activeBattle",
+      "tokens",
+      "initiative",
+      "round",
+      "currentTurn",
+      "presentedCard",
+      "delayedTriggers",
+      "dynamicOverlays",
+      "battleEntries"
+    ]
   },
   "realDataSearch": {
     "findings": [
@@ -107,24 +175,7 @@
     },
     "adapterDiagnosticErrors": 0
   },
-  "undocedRealRuntimeCapabilities": [
-    "worldMaps / worldMapStates (real MC map runtime)",
-    "locationStates",
-    "hotspots",
-    "placements",
-    "party position + current route state",
-    "timeline / calendar / current campaign time",
-    "reveal (revealedLocationStateIds)",
-    "movable entities",
-    "campaign events",
-    "delayed triggers",
-    "faction zones",
-    "dynamic overlays",
-    "observer focus",
-    "presented card",
-    "active battle runtime",
-    "tokens / initiative / round / current turn"
-  ],
+  "undocedRealRuntimeCapabilities": [],
   "serverAccessRunbook": {
     "why": "The real Greyholm overlay/runtime is NOT in Git (proven across all 93 commits + refs + dangling objects). It exists only in the server SQLite `campaigns.overlay_json` (row id `default`) / the DM browser localStorage. GET /api/overlay is a PUBLIC read, but the production Railway host URL is not present in this environment.",
     "needed": "The deployed backend origin (Railway URL for the server service), OR read-only access to the Railway volume holding ./data/campaign.db.",

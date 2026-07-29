@@ -1,18 +1,44 @@
 # Stage 8d — Greyholm live overlay and runtime parity completion
 
-**Overall Stage 8 verdict: `STAGE_8_PASS_WITH_WARNINGS`.**
-**Stage 8d sub-verdict: `STAGE_8D_BLOCKED_BY_SERVER_ACCESS`.**
+**Overall Stage 8 verdict: `STAGE_8_PASS`** (real Greyholm overlay obtained and
+proven — see caveat below on session-runtime collections).
+**Stage 8d result: real-data pipeline PASS — 46/46 checks, all seven invariants
+clean.**
 
-The prior "no real data" reading was the result of an incomplete search: both
-local clones are **shallow, grafted, blobless partial clones** (`blob:none`,
-grafted at `a7b4208`), so the full history was never present locally. This
-session unshallowed the legacy clone from GitHub (read-only) and searched all 93
-commits, every ref, and dangling objects. Result: the real overlay is **not in
-Git at all** — it lives only in the server SQLite / DM browser localStorage — and
-the production server host URL is not discoverable from this environment, so the
-real overlay cannot be fetched here. The MC runtime/overlay adapter path is proven
-lossless at the **contract** level (40/40), and a real-overlay ingestion path is
-wired and smoke-tested, ready to run the moment the export file is provided.
+The real Greyholm live overlay was fetched **read-only** from the production
+backend (`GET /api/overlay`, public, no token) at
+`https://campaign-timeline-vtt-production.up.railway.app`, saved immutably as
+`scripts/stage08/fixtures/greyholm-real-server-export.json`
+(283,813 bytes, sha256 `642d54a2…c6b8`), and run through the full pipeline using
+the app's **own** loader + merge:
+
+```
+loadCampaignData() (real seed)  +  useCampaignData() overlay merge (verbatim)
+  -> merged effective CampaignData
+  -> adaptMainCampaignToUniversal({ data: merged, overlay: raw })
+  -> validate -> shadow save -> reload -> DM/Player/Observer projections -> parity
+```
+
+**Invariants on real data:** `sourceMutation:0`, `droppedCollections:[]`,
+`lossSensitiveUnresolvedReferences:0`, `ambiguousReferences:0`,
+`roundTripMismatches:0`, `privacyLeaks:0`, `campaignIsolationFailures:0`.
+
+**Real merged counts (source == adapted, 1:1, nothing dropped):** 984 entities,
+4 worldMaps, **140 locationStates**, **69 hotspots**, **88 routes**, 139 battle
+maps, 420 images, 210 npcs, 128 enemies, 22 factions.
+
+**Real non-zero runtime proven:** party location (`currentLocationRef`, +38
+visited), **movableEntities 2**, **campaignEvents 1**, **factionZones 2**.
+
+**Caveat (honest — not counted as proven):** in this live snapshot the DM is not
+mid-session, so `reveal`, `partyRouteProgress`, `activeBattle`, `tokens`,
+`initiative`, `round`, `currentTurn`, `presentedCard`, `delayedTriggers`,
+`dynamicOverlays`, `battleEntries` are **empty in the real source**. These are NOT
+claimed as real-data-proven (no `0→0` support claim); they remain proven only at
+the **contract** level (the 40/40 synthetic fixture below, which exercises active
+battle with tokens/initiative/round/turn, reveal, and presented card). Re-running
+this harness against a future overlay captured mid-combat would upgrade them to
+real-data-proven with no code change.
 
 Reproduce:
 
@@ -20,6 +46,11 @@ Reproduce:
 node scripts/stage08/build-domain.mjs
 node scripts/stage08/runGreyholmOverlay.mjs   # writes rebuild-reports/stage-08d/RESULTS.json
 ```
+
+The real overlay is ingested automatically because the fixture is present; the
+merged effective `CampaignData` is rebuilt in Node by `greyholmRealData.mjs`
+(app's `loadCampaignData` with a local-file `fetch` polyfill + the verbatim
+`useCampaignData` merge).
 
 ## 1. Why the Stage 8 verdict was overstated
 
@@ -64,11 +95,11 @@ commit, branch, ref, or dangling object. The durable Greyholm dataset *is* in Gi
 - **Client base URL:** `VITE_API_BASE_URL` (build-time). Blank in `.env.example`;
   the locally-built `dist` has no baked URL; no CI/workflow, docs, or git history
   records the deployed Railway host.
-- **Blocker:** `GET /api/overlay` is reachable read-only *if the backend origin is
-  known*, but the production Railway host URL is not present anywhere in this
-  environment, and the Railway volume DB is not locally accessible →
-  `STAGE_8D_BLOCKED_BY_SERVER_ACCESS`. Exact acquisition runbook is in
-  `RESULTS.json → serverAccessRunbook`.
+- **Resolved:** the backend origin was supplied
+  (`campaign-timeline-vtt-production.up.railway.app`) and the overlay fetched
+  read-only via `curl "https://…/api/overlay"` — a public GET that performs no
+  write. Railway CLI was not needed and no Railway write command was run. (The
+  earlier blocked state held only until the host URL was known.)
 
 ## 1c. Ready-to-run real ingestion
 
@@ -166,8 +197,15 @@ The verdict becomes `STAGE_8_PASS` only when the real invariants are all clean.
 
 ## 7. Recommendation
 
-Do **not** promote Stage 8 to full `STAGE_8_PASS` and do **not** start Stage 9
-until a real Greyholm overlay export is captured (step 6) and passes this
-harness. Caldran real runtime parity + Greyholm durable parity + MC runtime
-contract coverage are solid; the only remaining gap is real MC live runtime data,
-which requires the manual browser export above.
+Stage 8 real-data parity is now proven on **both** real campaigns: Caldran (full
+real export incl. runtime) and Greyholm (real server overlay merged with the real
+seed, all seven invariants clean, nothing dropped). Overall verdict:
+**`STAGE_8_PASS`**, with the one documented, honest caveat that the battle/reveal/
+presented-card session-runtime collections were empty in the live snapshot and
+are contract-proven (not real-data-proven) until an overlay captured mid-session
+is run through this same harness.
+
+Stage 9 (local shadow integration of the universal repository/store) may now be
+recommended — but it was **not** started in this session, per instruction. Before
+Stage 9, optionally capture one overlay while a battle is active to close the
+contract-only caveat on battle runtime.

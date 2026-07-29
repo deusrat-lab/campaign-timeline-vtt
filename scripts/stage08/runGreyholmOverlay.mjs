@@ -25,6 +25,7 @@ const { projectDMWorkspace, projectPlayerSafe, projectObserver } = require('./.d
 import { Checks, sha256File, stableEqual, hashJson, readJson } from './lib.mjs';
 import { buildGreyholmOverlayContractInput, CONTRACT_RUNTIME_COLLECTIONS } from './greyholmOverlayFixture.mjs';
 import { loadGreyholm } from './inputs.mjs';
+import { buildRealGreyholmData } from './greyholmRealData.mjs';
 
 const STAGE8D_NAMESPACE = 'campaign-timeline-vtt:universal-shadow:stage-08d';
 const reportsDir = resolve(process.cwd(), 'rebuild-reports/stage-08d');
@@ -197,11 +198,11 @@ async function runRealServerOverlay(checks) {
   const overlay = rawFixture && typeof rawFixture === 'object' && 'overlay' in rawFixture ? rawFixture.overlay : rawFixture;
   const before = hashJson(overlay);
 
-  // data: prefer a real merged CampaignData export; else fall back to the real
-  // durable DM Companion collections (empty seed geometry). The latter still
-  // exercises every runtime collection the adapter reads straight from overlay.
+  // data: the REAL merged effective CampaignData — produced in Node by the app's
+  // own loadCampaignData() seed + the verbatim useCampaignData() overlay merge
+  // (see greyholmRealData.mjs). A pre-exported merged fixture wins if provided.
   const mergedProvided = existsSync(REAL_MERGED_DATA_FIXTURE);
-  const data = mergedProvided ? readJson(REAL_MERGED_DATA_FIXTURE) : loadGreyholm().adapterInput.data;
+  const data = mergedProvided ? readJson(REAL_MERGED_DATA_FIXTURE) : (await buildRealGreyholmData(overlay)).merged;
 
   const result = adaptMainCampaignToUniversal({ data, overlay });
   const snap = result.snapshot;
@@ -239,6 +240,27 @@ async function runRealServerOverlay(checks) {
     presentedCard: snap.runtime.presentation.presentedCard ? 1 : 0,
   };
 
+  // Honest drop check: every non-zero merged-source durable collection must
+  // map to a non-zero adapted target.
+  const srcCounts = {
+    entities: (data.npcs?.length ?? 0) + (data.quests?.length ?? 0) + (data.enemies?.length ?? 0) + (data.images?.length ?? 0) + (data.factions?.length ?? 0) + (data.players?.length ?? 0) + (data.shops?.length ?? 0) + (data.taverns?.length ?? 0) + (data.locationStates?.length ?? 0),
+    maps: data.worldMaps?.length ?? 0,
+    hotspots: data.hotspots?.length ?? 0,
+    routes: data.routes?.length ?? 0,
+    battleMaps: data.battleMaps?.length ?? 0,
+  };
+  const adaptedCounts = {
+    entities: snap.durable.entities.length,
+    maps: snap.durable.maps.length,
+    hotspots: snap.durable.hotspots.length,
+    routes: snap.durable.routes.length,
+    battleMaps: snap.durable.battleMaps.length,
+  };
+  const droppedCollections = Object.entries(srcCounts)
+    .filter(([k, n]) => n > 0 && (adaptedCounts[k] ?? 0) <= 0)
+    .map(([k, n]) => ({ collection: k, source: n, adapted: adaptedCounts[k] ?? 0 }));
+  checks.ok('real-overlay: no durable collection dropped', droppedCollections.length === 0, JSON.stringify(droppedCollections));
+
   // Full pipeline only when the snapshot is valid.
   let invariants = null;
   if (validation.ok) {
@@ -255,7 +277,7 @@ async function runRealServerOverlay(checks) {
     const unresolvedReveal = Object.keys(snap.visibility.entities).filter((k) => !entityIds.has(k)).length;
     invariants = {
       sourceMutation: hashJson(overlay) === before ? 0 : 1,
-      droppedCollections: [],
+      droppedCollections,
       lossSensitiveUnresolvedReferences: errs.filter((e) => /entityRef|battleMapRef|reveal/.test(e.path)).length,
       ambiguousReferences: errs.filter((e) => /ambiguous/.test(e.message)).length,
       roundTripMismatches: roundTrip ? 0 : 1,
@@ -267,7 +289,23 @@ async function runRealServerOverlay(checks) {
     checks.ok('real-overlay: no privacy leaks', privacyLeaks === 0, `leaks=${privacyLeaks}`);
   }
 
-  return { attempted: true, mergedDataProvided: mergedProvided, valid: validation.ok, realCounts, invariants, adapterErrors: errs.length };
+  // Honest split: which runtime collections carried REAL non-zero data vs were
+  // empty in this live snapshot (empty = NOT proven on real data; contract-only).
+  const runtimeRealNonZero = Object.entries({
+    partyLocation: snap.runtime.party.currentLocationRef ? 1 : 0,
+    movableEntities: realCounts.movableEntities, campaignEvents: realCounts.campaignEvents,
+    factionZones: realCounts.factionZones, delayedTriggers: realCounts.delayedTriggers,
+    dynamicOverlays: realCounts.dynamicOverlays, battleEntries: realCounts.battleEntries,
+    activeBattle: realCounts.activeBattle, tokens: realCounts.tokens, reveal: realCounts.reveal,
+    presentedCard: realCounts.presentedCard, partyRouteProgress: realCounts.partyRouteProgress,
+  }).filter(([, v]) => v > 0).map(([k]) => k);
+  const runtimeEmptyInSource = ['reveal', 'partyRouteProgress', 'activeBattle', 'tokens', 'initiative', 'round', 'currentTurn', 'presentedCard', 'delayedTriggers', 'dynamicOverlays', 'battleEntries']
+    .filter((k) => (realCounts[k] ?? 0) === 0);
+  return {
+    attempted: true, mergedDataProvided: mergedProvided, valid: validation.ok,
+    realCounts, srcCounts, adaptedCounts, droppedCollections, invariants, adapterErrors: errs.length,
+    runtimeRealNonZero, runtimeEmptyInSource,
+  };
 }
 
 // Deep-audit facts established this session (Git fully unshallowed + server code read).

@@ -1,16 +1,18 @@
 # Stage 8 — Real-data parity gate and validation hardening
 
-**Verdict: `STAGE_8_PASS_WITH_WARNINGS`** — 66/66 harness checks pass, 18/18
-negative fixtures behave as specified. No production integration was performed;
-no push/deploy.
+**Verdict: `STAGE_8_PASS`** — 66/66 harness checks pass, 18/18 negative fixtures
+behave as specified. No production integration was performed; no push/deploy.
 
-> **Corrected from `STAGE_8_PASS`.** Real-data parity is proven for the Caldran
-> export (full durable + runtime) and the Greyholm **durable** dataset, but the
-> Greyholm **live overlay/runtime** was fed empty here and is not proven on real
-> data — no real MC overlay source is available for read-only access. See
-> [`../stage-08d/SUMMARY.md`](../stage-08d/SUMMARY.md). Full `STAGE_8_PASS`
-> requires capturing a real Greyholm overlay export (Stage 8d §6) and passing
-> `scripts/stage08/runGreyholmOverlay.mjs` against it.
+> **Real-data parity is proven on both real campaigns.** Caldran: full real
+> export (durable + runtime). Greyholm: the real **live server overlay** was
+> fetched read-only (`GET /api/overlay`), merged with the real seed via the app's
+> own loader/merge, and passed the full pipeline — 984 entities, 140
+> locationStates, 69 hotspots, 88 routes, real non-zero runtime (movable/events/
+> factionZones/party), all seven invariants clean, nothing dropped. See
+> [`../stage-08d/SUMMARY.md`](../stage-08d/SUMMARY.md). Honest caveat: battle/
+> reveal/presented-card session-runtime were empty in the live snapshot and are
+> contract-proven (40/40 synthetic), not yet real-data-proven — re-running the
+> Stage 8d harness against a mid-combat overlay closes that with no code change.
 
 Reproduce locally:
 
