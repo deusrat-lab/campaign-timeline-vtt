@@ -16,6 +16,7 @@
     "lint:hooks": "eslint . --format json | node scripts/check-hooks-lint.mjs",
     "lint:runtime": "npm run lint:hooks && npm run typecheck && npm run build",
     "audit:data": "node scripts/audit-campaign-data.mjs",
+    "verify:domain": "node scripts/verify-universal-domain.mjs",
     "snapshot:promote": "node scripts/promote-overlay-snapshot.mjs",
     "preview": "vite preview --host 0.0.0.0 --port 5175 --open",
     "start": "vite preview --host 0.0.0.0 --port ${PORT:-4173}"

@@ -1,0 +1,33 @@
+{
+  "stage": 3,
+  "verdict": "PASS_WITH_WARNINGS",
+  "domain": {
+    "firstClassCampaignId": true,
+    "brandedIds": true,
+    "schemaVersion": true,
+    "sourceMetadata": true,
+    "durableRuntimeSeparation": true,
+    "typedCapabilities": true,
+    "explicitEntityDiscriminants": true,
+    "universalMaps": true,
+    "universalEntities": true,
+    "universalBattles": true,
+    "playerSafeModel": true,
+    "observerModel": true,
+    "validation": true,
+    "deterministicSerialization": true,
+    "reactDependency": false,
+    "storeDependency": false,
+    "anyUsage": false
+  },
+  "checks": {
+    "verifyDomain": "passed",
+    "build": "passed",
+    "auditCampaignData": "passed"
+  },
+  "warnings": [
+    "Adapters and parity verification start in Stage 4.",
+    "Repository round-trip and revision conflict tests start in Stage 6.",
+    "Temporary ts-nocheck shield remains on legacy MapWorkspacePage.tsx."
+  ]
+}
