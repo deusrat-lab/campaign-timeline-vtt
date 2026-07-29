@@ -1,3 +1,6 @@
+export * from './adapters/idMapping';
+export * from './adapters/types';
+export * from './adapters/userCampaignAdapter';
 export * from './battles/types';
 export * from './campaign/capabilities';
 export * from './campaign/ids';
