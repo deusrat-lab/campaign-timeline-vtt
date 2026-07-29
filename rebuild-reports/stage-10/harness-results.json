@@ -1,0 +1,307 @@
+{
+  "verdict": "STAGE_10_HARNESS_PASS",
+  "summary": {
+    "passed": 74,
+    "failed": 0,
+    "total": 74,
+    "ok": true
+  },
+  "results": [
+    {
+      "name": "flag-01 read flag default-off in config",
+      "pass": true
+    },
+    {
+      "name": "flag-01b no committed env enables read flag",
+      "pass": true
+    },
+    {
+      "name": "flag-02 read off => all pilots disabled/legacy",
+      "pass": true
+    },
+    {
+      "name": "flag-03 read off => empty allowlist",
+      "pass": true
+    },
+    {
+      "name": "flag-04 shadow + read flags independent",
+      "pass": true
+    },
+    {
+      "name": "flag-05 read on + missing shadow => waiting/legacy",
+      "pass": true
+    },
+    {
+      "name": "flag-06 allowlist narrows + ignores unknown",
+      "pass": true
+    },
+    {
+      "name": "flag-06b resolve all with empty/star",
+      "pass": true
+    },
+    {
+      "name": "flag-07 non-pilot scope stays legacy",
+      "pass": true
+    },
+    {
+      "name": "flag-07c known scope outside allowlist => disabled",
+      "pass": true
+    },
+    {
+      "name": "gw-08 correct campaign => universal",
+      "pass": true
+    },
+    {
+      "name": "gw-09 wrong campaign rejected",
+      "pass": true
+    },
+    {
+      "name": "gw-10 missing campaignId rejected",
+      "pass": true
+    },
+    {
+      "name": "gw-11 production namespace untouched",
+      "pass": true
+    },
+    {
+      "name": "gw-12 gateway read performs zero writes",
+      "pass": true
+    },
+    {
+      "name": "gw-13 no network primitive in read-path source",
+      "pass": true
+    },
+    {
+      "name": "gw-14 no command invocation in read-path source",
+      "pass": true
+    },
+    {
+      "name": "gw-15 DM projection selected",
+      "pass": true
+    },
+    {
+      "name": "gw-16 Player-Safe projection enforced",
+      "pass": true
+    },
+    {
+      "name": "gw-17 Observer projection enforced",
+      "pass": true
+    },
+    {
+      "name": "fresh-18 fresh success => universal",
+      "pass": true
+    },
+    {
+      "name": "fresh-19 pending => stale_fallback/legacy",
+      "pass": true
+    },
+    {
+      "name": "fresh-20 running => stale_fallback/legacy",
+      "pass": true
+    },
+    {
+      "name": "fresh-21 validation_failed => validation_fallback",
+      "pass": true
+    },
+    {
+      "name": "fresh-22 persistence_failed => repository_failed",
+      "pass": true
+    },
+    {
+      "name": "fresh-22b conflict => repository_failed",
+      "pass": true
+    },
+    {
+      "name": "fresh-23 reload_mismatch status => mismatch_fallback",
+      "pass": true
+    },
+    {
+      "name": "fresh-23b comparison-not-equal => mismatch_fallback",
+      "pass": true
+    },
+    {
+      "name": "fresh-23c revisionOnly still universal",
+      "pass": true
+    },
+    {
+      "name": "fresh-24a idle => stale_fallback",
+      "pass": true
+    },
+    {
+      "name": "fresh-24b later success => universal",
+      "pass": true
+    },
+    {
+      "name": "fresh-25 unsupported schema => repository_failed",
+      "pass": true
+    },
+    {
+      "name": "fresh-25b supported set is exactly 1.0.0",
+      "pass": true
+    },
+    {
+      "name": "grey-26 pre-hydration => legacy",
+      "pass": true
+    },
+    {
+      "name": "grey-27 post-success => universal",
+      "pass": true
+    },
+    {
+      "name": "grey-28 snapshot campaign matches greyId",
+      "pass": true
+    },
+    {
+      "name": "grey-29 pending mutation => legacy fallback",
+      "pass": true
+    },
+    {
+      "name": "grey-30 post-success resumes universal",
+      "pass": true
+    },
+    {
+      "name": "grey-31 DM summary parity (universal==legacy)",
+      "pass": true
+    },
+    {
+      "name": "grey-32 NPC list parity (order/ids/titles)",
+      "pass": true
+    },
+    {
+      "name": "grey-33 read does not mutate shadow snapshot",
+      "pass": true
+    },
+    {
+      "name": "user-34 direct URL pre-shadow => legacy",
+      "pass": true
+    },
+    {
+      "name": "user-35 delayed hydration => universal",
+      "pass": true
+    },
+    {
+      "name": "user-36 campaign switch reads correct snapshot each",
+      "pass": true
+    },
+    {
+      "name": "user-37 two-campaign isolation",
+      "pass": true
+    },
+    {
+      "name": "user-38 deleted campaign => no stale universal",
+      "pass": true
+    },
+    {
+      "name": "user-39 import => own universal snapshot",
+      "pass": true
+    },
+    {
+      "name": "user-40 missing cache => legacy",
+      "pass": true
+    },
+    {
+      "name": "user-41 snapshot for other campaign => wrong_campaign",
+      "pass": true
+    },
+    {
+      "name": "user-42 user campaign summary parity",
+      "pass": true
+    },
+    {
+      "name": "user-43 shadow-only namespace + never falls back to a default id",
+      "pass": true
+    },
+    {
+      "name": "priv-44 DM projection includes all entities",
+      "pass": true
+    },
+    {
+      "name": "priv-45 player view model has no DM secret",
+      "pass": true
+    },
+    {
+      "name": "priv-46 observer view model has no DM secret",
+      "pass": true
+    },
+    {
+      "name": "priv-47 hidden entities stay hidden from player",
+      "pass": true
+    },
+    {
+      "name": "priv-48 player entities subset of DM entities",
+      "pass": true
+    },
+    {
+      "name": "priv-49 player view model is a narrow safe shape",
+      "pass": true
+    },
+    {
+      "name": "rt-50 non-zero runtime pilot (active battles present)",
+      "pass": true
+    },
+    {
+      "name": "rt-51 runtime pending => legacy fallback",
+      "pass": true
+    },
+    {
+      "name": "rt-52 refreshed snapshot reflects updated runtime",
+      "pass": true
+    },
+    {
+      "name": "rt-53 runtime pilot is player-safe presentation",
+      "pass": true
+    },
+    {
+      "name": "diag-54 structured read decision visible",
+      "pass": true
+    },
+    {
+      "name": "diag-55 fallback reason visible",
+      "pass": true
+    },
+    {
+      "name": "diag-56 no raw snapshot dump in UI",
+      "pass": true
+    },
+    {
+      "name": "diag-57 read-path route is DM-only",
+      "pass": true
+    },
+    {
+      "name": "diag-58 read-path page flag-gated",
+      "pass": true
+    },
+    {
+      "name": "diag-59 provider read-only",
+      "pass": true
+    },
+    {
+      "name": "diag-60 hook read-only",
+      "pass": true
+    },
+    {
+      "name": "diag-61 provider never constructs coordinator",
+      "pass": true
+    },
+    {
+      "name": "diag-62 pilots isolated to read-path page",
+      "pass": true
+    },
+    {
+      "name": "anchor-63 greyholm 210 NPC",
+      "pass": true
+    },
+    {
+      "name": "anchor-64 greyholm 139 battle maps",
+      "pass": true
+    },
+    {
+      "name": "anchor-65 caldran 66 NPC",
+      "pass": true
+    },
+    {
+      "name": "anchor-66 caldran reveals 8/8",
+      "pass": true
+    }
+  ]
+}
