@@ -20,6 +20,7 @@
     "verify:stage04": "node scripts/verify-stage-04-parity.mjs",
     "verify:stage05": "node scripts/verify-stage-05-projections.mjs",
     "verify:stage06": "node scripts/verify-stage-06-repository.mjs",
+    "verify:stage07": "node scripts/verify-stage-07-migration.mjs",
     "snapshot:promote": "node scripts/promote-overlay-snapshot.mjs",
     "preview": "vite preview --host 0.0.0.0 --port 5175 --open",
     "start": "vite preview --host 0.0.0.0 --port ${PORT:-4173}"

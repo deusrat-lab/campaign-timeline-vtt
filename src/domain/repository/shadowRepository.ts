@@ -158,7 +158,13 @@ function createCampaignRepository(
       return createCampaign(backup.snapshot);
     }
     assertRevision(backup.campaignId, expectedRevision ?? makeRevision(0), current.snapshot.revision);
-    return replaceCampaign(backup.snapshot, expectedRevision ?? makeRevision(0));
+    writeRecord(storage, indexKey, campaignKey(backup.campaignId), backup.snapshot);
+    return {
+      campaignId: backup.campaignId,
+      expectedRevision: expectedRevision ?? makeRevision(0),
+      currentRevision: current.snapshot.revision,
+      newRevision: backup.snapshot.revision,
+    };
   }
 
   async function exportCampaign(campaignId: CampaignId): Promise<string> {

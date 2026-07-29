@@ -1,0 +1,48 @@
+{
+  "ok": true,
+  "verdict": "PASS",
+  "checks": [
+    {
+      "name": "migration behavioral test compiles",
+      "ok": true
+    },
+    {
+      "name": "migration behavioral cases pass",
+      "ok": true,
+      "output": "{\"ok\":true,\"cases\":11}"
+    },
+    {
+      "name": "migration engine requires explicit target campaign id",
+      "ok": true
+    },
+    {
+      "name": "migration engine supports dry-run and commit",
+      "ok": true
+    },
+    {
+      "name": "migration engine validates read-back",
+      "ok": true
+    },
+    {
+      "name": "migration engine supports rollback",
+      "ok": true
+    },
+    {
+      "name": "universal store exposes required state buckets",
+      "ok": true
+    },
+    {
+      "name": "campaign-scoped commands exist",
+      "ok": true
+    },
+    {
+      "name": "commands enforce campaign scope",
+      "ok": true
+    },
+    {
+      "name": "campaign switch clears selected entity",
+      "ok": true
+    }
+  ],
+  "failed": []
+}
