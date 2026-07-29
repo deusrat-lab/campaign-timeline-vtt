@@ -1,0 +1,29 @@
+{
+  "stage": 1,
+  "sources": [
+    {"path": "src/data/hotspots.json", "size": 5165, "sha256": "d675fdf205bfd05c5b7ac07099e3142ca55c9bfcecabab04a35c1838ad9f58c9", "format": "json-array", "count": 16},
+    {"path": "src/data/routes.json", "size": 3, "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570", "format": "json-array", "count": 0},
+    {"path": "src/data/travelEvents.json", "size": 728, "sha256": "a06be5b2476c5952012534a375e0b46fe4602045e1b866fbdc7253974a938317", "format": "json-array", "count": 1},
+    {"path": "src/data/battle-maps-index.json", "size": 3, "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570", "format": "json-array", "count": 0},
+    {"path": "src/data/campaignOverlaySnapshot.json", "size": 3, "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356", "format": "json-object", "count": 0},
+    {"path": "public/battle-maps/manifest.json", "size": 66132, "sha256": "8b7b17e2df4759103069b0f6b242c032ac632b27c6d20b2fc9994f1338e94d24", "format": "manifest-object"},
+    {"path": "public/battle-maps/arc-2/manifest.json", "size": 50231, "sha256": "c07dfc9a6b113733ae7d7fe3768b3526849096c6ba008918b675eb6edae79d82", "format": "manifest-object"},
+    {"path": "public/data/battle-map-vtt/manifest.json", "size": 74491, "sha256": "6dfd81325cdae345f3c0457ee8ba35ec9b8664170a86cd80b0718755ef54da9e", "format": "manifest-object"},
+    {"path": "../dm-companion/public/data/locations.json", "size": 146959, "sha256": "cb6de6261d16ef71ba00d56539ec862d55888a07dcf0dbfecd2603fc2d829c99", "format": "json-array", "count": 73},
+    {"path": "../dm-companion/public/data/npcs.json", "size": 234041, "sha256": "1c6882e3f9e3293d5c4715cfc2cbbddff2b2e59cd52ca7ee34db06fed4da0b86", "format": "json-array", "count": 140},
+    {"path": "../dm-companion/public/data/quests.json", "size": 89839, "sha256": "fd99bd3a3668237346b47d8cde940ca2e516fd187003d1788709d35aeb97e116", "format": "json-array", "count": 51},
+    {"path": "../dm-companion/public/data/custom-enemies.json", "size": 356398, "sha256": "a23f72851765eb545b5c93bee15614b55d3812016a0b5c62b415bfacd7369b71", "format": "json-array", "count": 127},
+    {"path": "../dm-companion/public/data/images.json", "size": 613993, "sha256": "e6c6960664e6c583cc57278f6d9d5c644c4db0f958335c6905c0c5a645c774f7", "format": "json-array", "count": 293},
+    {"path": "../dm-companion/public/data/shops.json", "size": 32008, "sha256": "16bfbc5e3086d4f7f67c4c528b4075ee6bd88d7125662dedd6b636d33bcf477f", "format": "json-array", "count": 6},
+    {"path": "../dm-companion/public/data/taverns.json", "size": 11238, "sha256": "216d7e7bcc13ebf20289279051434fbb6734b085b3c3c80c1222ad8a0c1e17de", "format": "json-array", "count": 3},
+    {"path": "../dm-companion/public/data/factions.json", "size": 22249, "sha256": "2765747aa24ce2681d11a3a8a5f5b7ea2f168340e6e8e9f37ba3e4e38aa1f1f0", "format": "json-array", "count": 22},
+    {"path": "../dm-companion/public/data/players.json", "size": 23723, "sha256": "0017363df56c3f7b12439dfc7e4f5ca18d0e74334733ee32bf5344cf5cf7d095", "format": "json-array", "count": 4},
+    {"path": "../dm-companion/public/data/economy.json", "size": 26690, "sha256": "d2b92aa7137ea5ed6cc6648696a08fc2ac54e95692e2b3e66c8f214145ac8070", "format": "json-array", "count": 8},
+    {"path": "../dm-companion/public/data/economy-reference.json", "size": 245450, "sha256": "8b39d5810493ffa0476117eed9419cb83cbcad757cc44f04b885cf88bc03bf45", "format": "json-array", "count": 700},
+    {"path": "../battle-map-vtt/public/db-export.json", "size": 2497628, "sha256": "b252e49b2b9b9e01466c6e148576ba36cb541fe7922e186bc94b917900183cca", "format": "json-object"}
+  ],
+  "auditCampaignData": {
+    "status": "passed",
+    "summary": "locations=93, npcs=210, quests=51, enemies=127, images=420"
+  }
+}

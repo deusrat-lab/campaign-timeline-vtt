@@ -1,0 +1,27 @@
+{
+  "stage": 1,
+  "localStorage": {
+    "mainCampaign": {
+      "current": "campaign-timeline-vtt:overlay:v2",
+      "legacy": "campaign-timeline-vtt:state:v1"
+    },
+    "userCampaigns": {
+      "registry": "dmCompanion.userCampaigns.registry.v1",
+      "data": "dmCompanion.userCampaignData.${id}.v1",
+      "runtime": "dmCompanion.userCampaignRuntime.${id}.v1"
+    },
+    "auth": {
+      "source": "src/state/persistence/authToken.ts"
+    }
+  },
+  "server": {
+    "database": "SQLite better-sqlite3",
+    "table": "campaigns(id TEXT PRIMARY KEY, overlay_json TEXT NOT NULL, updated_at TEXT NOT NULL)",
+    "mainCampaignRow": "default",
+    "userCampaignRowPrefix": "uc:",
+    "revisionSupport": false,
+    "etagSupport": false,
+    "optimisticConcurrency": false,
+    "writeMode": "last-write-wins upsert"
+  }
+}

@@ -1,0 +1,19 @@
+original path: /Users/dmitry/Downloads/днд сюжет/campaign-timeline-vtt
+original physical path: /Users/dmitry/Downloads/днд сюжет/campaign-timeline-vtt
+original branch: master
+original HEAD: a7b420845dfafc8e368f2ec0a2a89cb3173fd005
+original status:
+## master...origin/master
+original remotes:
+origin	https://github.com/deusrat-lab/campaign-timeline-vtt.git (fetch) [blob:none]
+origin	https://github.com/deusrat-lab/campaign-timeline-vtt.git (push)
+working path: /Users/dmitry/Downloads/днд сюжет/campaign-timeline-vtt-universal-rebuild
+working physical path: /Users/dmitry/Downloads/днд сюжет/campaign-timeline-vtt-universal-rebuild
+working branch: master
+working HEAD: a7b420845dfafc8e368f2ec0a2a89cb3173fd005
+working status:
+## master...origin/master
+?? rebuild-evidence/
+working remotes:
+origin	/Users/dmitry/Downloads/днд сюжет/./campaign-timeline-vtt (fetch)
+origin	/Users/dmitry/Downloads/днд сюжет/./campaign-timeline-vtt (push)

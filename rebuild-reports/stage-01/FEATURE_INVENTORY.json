@@ -1,0 +1,44 @@
+{
+  "stage": 1,
+  "status": "captured",
+  "features": {
+    "campaignManagement": {
+      "mainCampaign": "implicit single Greyholm campaign",
+      "userCampaigns": "registry, create, rename, delete, import, export"
+    },
+    "maps": {
+      "mainCampaign": ["world maps", "map states", "hotspots", "routes", "placements", "party marker", "layers", "dynamic overlays", "movable entities"],
+      "userCampaigns": ["base map", "map placements", "routes", "zones", "map view state"]
+    },
+    "time": {
+      "mainCampaign": ["timelines", "calendar", "time of day", "campaign events", "delayed triggers"],
+      "userCampaigns": ["not equivalent in baseline"]
+    },
+    "entities": {
+      "mainCampaign": ["locations", "location states", "npcs", "quests", "enemies", "players", "factions", "images", "shops", "taverns", "economy", "laws"],
+      "userCampaigns": ["locations", "npcs", "quests", "enemies", "party", "factions", "images", "notes"]
+    },
+    "battles": {
+      "mainCampaign": ["battle maps", "battle-map links", "battle entries", "active embedded battle"],
+      "userCampaigns": ["catalog/custom battle maps", "per-map battle boards", "tokens", "round", "turn", "terrain", "grid"]
+    },
+    "visibility": {
+      "mainCampaign": ["player view mode", "player safe projection", "visibleToPlayers flags", "presented card"],
+      "userCampaigns": ["revealedToPlayers", "player-safe library filtering", "observer query mode", "presented battle", "presented card"]
+    },
+    "serverSync": {
+      "mainCampaign": ["overlay blob GET/PUT", "ws broadcast"],
+      "userCampaigns": ["campaign blob GET/PUT/DELETE", "player patch", "battle board patch", "ws-uc broadcast"]
+    }
+  },
+  "knownGaps": [
+    "No universal domain model",
+    "No universal repository",
+    "No universal campaign store",
+    "No single Campaign Workspace",
+    "No revision/etag optimistic concurrency",
+    "No deterministic universal snapshot",
+    "No lossless legacy adapters",
+    "Main campaign has no first-class campaignId"
+  ]
+}

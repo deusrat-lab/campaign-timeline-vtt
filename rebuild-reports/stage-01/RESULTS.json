@@ -1,0 +1,58 @@
+{
+  "stage": 1,
+  "verdict": "FAIL_WITH_BASELINE_BLOCKER",
+  "original": {
+    "path": "/Users/dmitry/Downloads/днд сюжет/campaign-timeline-vtt",
+    "branch": "master",
+    "head": "a7b420845dfafc8e368f2ec0a2a89cb3173fd005",
+    "statusBefore": "## master...origin/master",
+    "trackedFileManifest": "rebuild-evidence/original-tracked-files-before.sha256",
+    "trackedFileCount": 1186
+  },
+  "workingCopy": {
+    "path": "/Users/dmitry/Downloads/днд сюжет/campaign-timeline-vtt-universal-rebuild",
+    "branch": "master",
+    "headAtClone": "a7b420845dfafc8e368f2ec0a2a89cb3173fd005"
+  },
+  "checks": {
+    "npmCi": {
+      "status": "passed_with_warnings",
+      "warnings": ["EBADENGINE warnings under Node v23.11.0 for packages requiring ^20.19.0 || ^22.13.0 || >=24"]
+    },
+    "npmRunTypecheck": {
+      "status": "passed_with_low_confidence",
+      "reason": "tsc --noEmit against solution tsconfig exited successfully, but direct tsconfig.app project check hangs"
+    },
+    "npmRunBuild": {
+      "status": "failed_hang_interrupted",
+      "blockedAt": "tsc -b / tsconfig.app.json"
+    },
+    "tscAppProject": {
+      "status": "failed_hang_interrupted",
+      "commands": [
+        "npx tsc -b --verbose",
+        "npx tsc -p tsconfig.app.json --noEmit --extendedDiagnostics"
+      ]
+    },
+    "viteBuildOnly": {
+      "status": "passed"
+    },
+    "auditCampaignData": {
+      "status": "passed"
+    }
+  },
+  "architecture": {
+    "mainCampaignSystemFound": true,
+    "userCampaignSystemFound": true,
+    "separateStores": true,
+    "separateWorkspaces": true,
+    "mainCampaignHasCampaignId": false,
+    "userCampaignHasCampaignId": true,
+    "optimisticConcurrencyFound": false,
+    "revisionOrEtagFound": false
+  },
+  "screenshots": {
+    "captured": false,
+    "reason": "Strict baseline TypeScript/build blocker was prioritized; browser screenshots remain required after blocker isolation or fix."
+  }
+}
