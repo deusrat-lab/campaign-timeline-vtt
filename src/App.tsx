@@ -26,7 +26,9 @@ import { CampaignBattlePage } from './features/campaigns/CampaignBattlePage';
 import { CampaignEntryRedirect } from './features/campaigns/CampaignEntryRedirect';
 import { canPlayerOpenCampaignPath } from './features/campaigns/playerSafe';
 import { UniversalDiagnosticsPage } from './pages/UniversalDiagnosticsPage';
+import { ReadPathDiagnosticsPage } from './pages/ReadPathDiagnosticsPage';
 import { ShadowIntegrationProvider } from './features/shadow-integration/ShadowIntegrationProvider';
+import { ReadPathProvider } from './features/read-path/ReadPathProvider';
 import { MainCampaignShadowBridge } from './features/shadow-integration/MainCampaignShadowBridge';
 import { UserCampaignShadowBridge } from './features/shadow-integration/UserCampaignShadowBridge';
 
@@ -163,6 +165,7 @@ function AppShell() {
                workspace (never a raw PNG). Shares the world atlas data only. */}
             <Route path="/atlas/maps/:mapId" element={<DmOnlyRoute><AtlasMapWorkspace /></DmOnlyRoute>} />
             <Route path="/diagnostics/universal" element={<DmOnlyRoute><UniversalDiagnosticsPage /></DmOnlyRoute>} />
+            <Route path="/diagnostics/read-path" element={<DmOnlyRoute><ReadPathDiagnosticsPage /></DmOnlyRoute>} />
             <Route path="/campaigns" element={<DmOnlyRoute><CampaignsPage /></DmOnlyRoute>} />
             <Route path="/campaigns/new" element={<DmOnlyRoute><NewCampaignWizard /></DmOnlyRoute>} />
             <Route path="/campaigns/:campaignId/map" element={<UserCampaignPlayerCapableRoute><IsolatedCampaignMapWorkspace /></UserCampaignPlayerCapableRoute>} />
@@ -188,7 +191,12 @@ function App() {
                self-disable when the default-off flag is unset. */}
             <MainCampaignShadowBridge />
             <UserCampaignShadowBridge />
-            <AppShell />
+            {/* Stage 10 — guarded universal read path. Provider is inert when its
+               own default-off flag is unset; pilots mount only on the DM-only,
+               flag-gated /diagnostics/read-path route. */}
+            <ReadPathProvider>
+              <AppShell />
+            </ReadPathProvider>
           </ShadowIntegrationProvider>
         </UserCampaignProvider>
       </CampaignDataProvider>
