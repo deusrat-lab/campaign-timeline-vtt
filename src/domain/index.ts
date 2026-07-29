@@ -15,6 +15,7 @@ export * from './migration/migrationEngine';
 export * from './persistence/serialization';
 export * from './projection/projectCampaign';
 export * from './projection/types';
+export * from './readpath/index';
 export * from './repository/shadowRepository';
 export * from './repository/types';
 export * from './runtime/types';

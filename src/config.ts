@@ -64,3 +64,36 @@ export const UNIVERSAL_DIAGNOSTICS_ENABLED: boolean =
 export const UNIVERSAL_SHADOW_INTEGRATION_ENABLED: boolean =
   import.meta.env.VITE_UNIVERSAL_SHADOW_INTEGRATION === '1' ||
   import.meta.env.VITE_UNIVERSAL_SHADOW_INTEGRATION === 'true';
+
+/**
+ * Stage 10 — controlled local universal READ path (see rebuild-reports/stage-10).
+ * SEPARATE and INDEPENDENT from the Stage 9 shadow flag above. When enabled, a
+ * small allowlist of read-only pilot UI consumers may read from the validated
+ * Stage 9 shadow snapshot (through the guarded Universal Read Gateway) instead
+ * of the legacy read path — but ONLY when the snapshot is fresh, valid and
+ * campaign-matched; otherwise every consumer deterministically falls back to
+ * legacy. Legacy stores remain authoritative for ALL writes; this flag never
+ * changes any write path, never calls universal commands, and never reads or
+ * writes the production universal namespace.
+ *
+ * Default OFF. Must NOT be set in any committed env file or production/Railway
+ * environment. All four flag combinations are defined and safe:
+ *   shadow off + read off  -> fully legacy
+ *   shadow on  + read off  -> shadow updates, UI stays legacy
+ *   shadow on  + read on   -> allowlisted pilots read universal when fresh
+ *   shadow off + read on   -> safe legacy fallback (no coordinator auto-created;
+ *                             no live status to confirm freshness -> legacy)
+ */
+export const UNIVERSAL_READ_PATH_ENABLED: boolean =
+  import.meta.env.VITE_UNIVERSAL_READ_PATH === '1' ||
+  import.meta.env.VITE_UNIVERSAL_READ_PATH === 'true';
+
+/**
+ * Optional pilot-scope narrowing for the Stage 10 read path. Comma/space
+ * separated list of KNOWN pilot scope ids (see src/domain/readpath/pilotScopes).
+ * Empty / unset / "all" / "*" means "all pilot scopes" (when the flag is on).
+ * Unknown tokens are ignored — this can only ever narrow the built-in pilot
+ * allowlist, never widen it to a non-pilot consumer.
+ */
+export const UNIVERSAL_READ_PATH_SCOPES: string =
+  import.meta.env.VITE_UNIVERSAL_READ_PATH_SCOPES ?? '';
