@@ -1,0 +1,314 @@
+{
+  "stage": "stage-08",
+  "verdict": "STAGE_8_PASS",
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "checks": {
+    "passed": 66,
+    "failed": 0,
+    "total": 66,
+    "ok": true
+  },
+  "failing": [],
+  "parity": {
+    "Caldran": {
+      "sourceCollections": {
+        "locations": 17,
+        "npcs": 66,
+        "quests": 26,
+        "enemies": 78,
+        "images": 205,
+        "party": 3,
+        "factions": 12,
+        "mapPlacements": 17,
+        "routes": 1,
+        "mapIds": 1,
+        "zones": 0,
+        "notes": 0,
+        "customBattleMaps": 0,
+        "runtime.battleBoards": 4,
+        "runtime.revealedToPlayers": 8
+      },
+      "adapted": {
+        "entities": 407,
+        "maps": 1,
+        "placements": 17,
+        "routes": 1,
+        "battleMaps": 0,
+        "battleEntries": 0,
+        "runtime.battles": 4,
+        "visibility.entities": 8
+      },
+      "droppedCollections": [],
+      "identity": {
+        "campaignId": "camp:user:camp-mrfalp9g-kp7qp",
+        "battleMapCount": 0,
+        "sampleEntityIds": [
+          "entity:npc:npc-seed-0-ucax",
+          "entity:npc:npc-seed-1-y212",
+          "entity:npc:npc-seed-2-hcl0",
+          "entity:npc:npc-seed-3-anf8",
+          "entity:npc:npc-seed-4-c9a7",
+          "entity:enemy:emy-seed-0-kp6o",
+          "entity:enemy:emy-seed-1-wuo5",
+          "entity:enemy:emy-seed-2-7i9p",
+          "entity:enemy:emy-seed-3-dypx",
+          "entity:enemy:emy-seed-4-618x",
+          "entity:location:loc-mri2a0d8-p90mr",
+          "entity:location:loc-mri2a0d8-l0sa2",
+          "entity:location:loc-mri2a0d8-mfm5h"
+        ],
+        "revealResolved": "8/8",
+        "battleBoards": 4,
+        "tokensTotal": 16
+      },
+      "privacy": {
+        "dmEntities": 407,
+        "playerEntities": 10,
+        "hiddenEntities": 397,
+        "dmSecretsScanned": 50,
+        "leaks": {
+          "player": 0,
+          "observer": 0,
+          "hiddenIds": 0,
+          "images": 0
+        }
+      },
+      "roundTrip": true,
+      "validationErrors": 0,
+      "sourceImmutable": true,
+      "realNotes": "Full real one-shot export: durable + runtime + battle boards + reveal.",
+      "absent": [],
+      "hashesBefore": {
+        "export": "501d101b6f4ad822c60e12af7752ee891dd2b1141ed9b577272e8b0a880f04a0"
+      },
+      "hashesAfter": {
+        "export": "501d101b6f4ad822c60e12af7752ee891dd2b1141ed9b577272e8b0a880f04a0"
+      }
+    },
+    "Greyholm": {
+      "sourceCollections": {
+        "npcs": 210,
+        "quests": 51,
+        "enemies": 127,
+        "images": 420,
+        "factions": 22,
+        "players": 4,
+        "shops": 6,
+        "taverns": 3,
+        "battleMaps": 139
+      },
+      "adapted": {
+        "entities": 843,
+        "maps": 0,
+        "placements": 0,
+        "routes": 0,
+        "battleMaps": 139,
+        "battleEntries": 0,
+        "runtime.battles": 0,
+        "visibility.entities": 0
+      },
+      "droppedCollections": [],
+      "identity": {
+        "campaignId": "camp:greyholm:main",
+        "battleMapCount": 139,
+        "entityCount": 843
+      },
+      "privacy": {
+        "dmEntities": 843,
+        "playerEntities": 382,
+        "hiddenEntities": 461,
+        "dmSecretsScanned": 50,
+        "leaks": {
+          "player": 0,
+          "observer": 0,
+          "hiddenIds": 0,
+          "images": 0
+        }
+      },
+      "roundTrip": true,
+      "validationErrors": 0,
+      "sourceImmutable": true,
+      "realNotes": "Real DM Companion durable collections + real 139-map battle catalog. Timeline/worldMap/locationState/placement/route collections and live overlay are out of read-only scope (baked-TS + localStorage) and fed empty.",
+      "absent": [
+        "worldMaps",
+        "worldMapStates",
+        "locationStates",
+        "hotspots",
+        "placements",
+        "routes",
+        "travelEvents",
+        "timelines",
+        "liveOverlay"
+      ],
+      "hashesBefore": {
+        "npcs": "8881b1b31efc5576348046009dfa985d56c83ae3677089bff710545a6c1c22f9",
+        "quests": "fd99bd3a3668237346b47d8cde940ca2e516fd187003d1788709d35aeb97e116",
+        "enemies": "a23f72851765eb545b5c93bee15614b55d3812016a0b5c62b415bfacd7369b71",
+        "images": "ad9dfb0e4d5f42980e3eb76d4331d4fb849ee6ea4411294718bfe3081e242c28",
+        "factions": "2765747aa24ce2681d11a3a8a5f5b7ea2f168340e6e8e9f37ba3e4e38aa1f1f0",
+        "players": "3af1cae11fdc2c5a46b85ff1ff179a61e8a2ff6092a7151e9942b5d22ce256f3",
+        "shops": "16bfbc5e3086d4f7f67c4c528b4075ee6bd88d7125662dedd6b636d33bcf477f",
+        "taverns": "216d7e7bcc13ebf20289279051434fbb6734b085b3c3c80c1222ad8a0c1e17de",
+        "locations": "954ba2f704d6c3733473ebdb1e0762fc52028313e2b3d66852873f2ccff85751",
+        "economy": "d2b92aa7137ea5ed6cc6648696a08fc2ac54e95692e2b3e66c8f214145ac8070",
+        "economyReference": "8b39d5810493ffa0476117eed9419cb83cbcad757cc44f04b885cf88bc03bf45",
+        "battleCatalog": "fe0ac128664119c9cf2991b5ea123bb18a4536860ebb22bb1ca749d5039ea92d"
+      },
+      "hashesAfter": {
+        "npcs": "8881b1b31efc5576348046009dfa985d56c83ae3677089bff710545a6c1c22f9",
+        "quests": "fd99bd3a3668237346b47d8cde940ca2e516fd187003d1788709d35aeb97e116",
+        "enemies": "a23f72851765eb545b5c93bee15614b55d3812016a0b5c62b415bfacd7369b71",
+        "images": "ad9dfb0e4d5f42980e3eb76d4331d4fb849ee6ea4411294718bfe3081e242c28",
+        "factions": "2765747aa24ce2681d11a3a8a5f5b7ea2f168340e6e8e9f37ba3e4e38aa1f1f0",
+        "players": "3af1cae11fdc2c5a46b85ff1ff179a61e8a2ff6092a7151e9942b5d22ce256f3",
+        "shops": "16bfbc5e3086d4f7f67c4c528b4075ee6bd88d7125662dedd6b636d33bcf477f",
+        "taverns": "216d7e7bcc13ebf20289279051434fbb6734b085b3c3c80c1222ad8a0c1e17de",
+        "locations": "954ba2f704d6c3733473ebdb1e0762fc52028313e2b3d66852873f2ccff85751",
+        "economy": "d2b92aa7137ea5ed6cc6648696a08fc2ac54e95692e2b3e66c8f214145ac8070",
+        "economyReference": "8b39d5810493ffa0476117eed9419cb83cbcad757cc44f04b885cf88bc03bf45",
+        "battleCatalog": "fe0ac128664119c9cf2991b5ea123bb18a4536860ebb22bb1ca749d5039ea92d"
+      }
+    }
+  },
+  "negativeFixtures": [
+    {
+      "name": "ambiguous_reveal_target",
+      "expected": "reject",
+      "pass": true,
+      "adapterDiagnostic": true,
+      "snapshotInvalid": true
+    },
+    {
+      "name": "source_mutation_detection",
+      "expected": "reject",
+      "pass": true
+    },
+    {
+      "name": "duplicate_battle_map_id",
+      "expected": "reject",
+      "pass": true,
+      "rejected": true,
+      "pathMatched": true,
+      "gateThrows": true,
+      "repoRefuses": true
+    },
+    {
+      "name": "duplicate_entity_id",
+      "expected": "reject",
+      "pass": true,
+      "rejected": true,
+      "pathMatched": true,
+      "gateThrows": true,
+      "repoRefuses": true
+    },
+    {
+      "name": "unresolved_placement_entityRef",
+      "expected": "reject",
+      "pass": true,
+      "rejected": true,
+      "pathMatched": true,
+      "gateThrows": true,
+      "repoRefuses": true
+    },
+    {
+      "name": "unresolved_hotspot_entityRef",
+      "expected": "reject",
+      "pass": true,
+      "rejected": true,
+      "pathMatched": true,
+      "gateThrows": true,
+      "repoRefuses": true
+    },
+    {
+      "name": "unresolved_battleMapRef",
+      "expected": "reject",
+      "pass": true,
+      "rejected": true,
+      "pathMatched": true,
+      "gateThrows": true,
+      "repoRefuses": true
+    },
+    {
+      "name": "ambiguous_battleMapRef",
+      "expected": "reject",
+      "pass": true,
+      "rejected": true,
+      "pathMatched": true,
+      "gateThrows": true,
+      "repoRefuses": true
+    },
+    {
+      "name": "cross_campaign_reference",
+      "expected": "reject",
+      "pass": true,
+      "rejected": true,
+      "pathMatched": true,
+      "gateThrows": true,
+      "repoRefuses": true
+    },
+    {
+      "name": "missing_campaignId",
+      "expected": "reject",
+      "pass": true,
+      "rejected": true,
+      "pathMatched": true,
+      "gateThrows": true,
+      "repoRefuses": true
+    },
+    {
+      "name": "malformed_runtime_battleMapRef",
+      "expected": "reject",
+      "pass": true,
+      "rejected": true,
+      "pathMatched": true,
+      "gateThrows": true,
+      "repoRefuses": true
+    },
+    {
+      "name": "persist_after_failed_validation",
+      "expected": "reject",
+      "pass": true,
+      "gateThrows": true,
+      "repoRefuses": true,
+      "nothingWritten": true
+    },
+    {
+      "name": "wrong_shadow_namespace",
+      "expected": "reject",
+      "pass": true
+    },
+    {
+      "name": "restore_wrong_campaign",
+      "expected": "reject",
+      "pass": true
+    },
+    {
+      "name": "missing_optional_collection",
+      "expected": "preserve",
+      "pass": true,
+      "valid": true,
+      "lossless": true
+    },
+    {
+      "name": "empty_optional_collection",
+      "expected": "preserve",
+      "pass": true,
+      "valid": true,
+      "lossless": true
+    },
+    {
+      "name": "unsupported_entity_kind",
+      "expected": "preserve",
+      "pass": true,
+      "valid": true,
+      "lossless": true
+    },
+    {
+      "name": "duplicate_migration_identity",
+      "expected": "preserve",
+      "pass": true,
+      "valid": true,
+      "lossless": true
+    }
+  ]
+}

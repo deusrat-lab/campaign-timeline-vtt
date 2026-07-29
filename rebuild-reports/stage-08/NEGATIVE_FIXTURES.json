@@ -1,0 +1,141 @@
+[
+  {
+    "name": "ambiguous_reveal_target",
+    "expected": "reject",
+    "pass": true,
+    "adapterDiagnostic": true,
+    "snapshotInvalid": true
+  },
+  {
+    "name": "source_mutation_detection",
+    "expected": "reject",
+    "pass": true
+  },
+  {
+    "name": "duplicate_battle_map_id",
+    "expected": "reject",
+    "pass": true,
+    "rejected": true,
+    "pathMatched": true,
+    "gateThrows": true,
+    "repoRefuses": true
+  },
+  {
+    "name": "duplicate_entity_id",
+    "expected": "reject",
+    "pass": true,
+    "rejected": true,
+    "pathMatched": true,
+    "gateThrows": true,
+    "repoRefuses": true
+  },
+  {
+    "name": "unresolved_placement_entityRef",
+    "expected": "reject",
+    "pass": true,
+    "rejected": true,
+    "pathMatched": true,
+    "gateThrows": true,
+    "repoRefuses": true
+  },
+  {
+    "name": "unresolved_hotspot_entityRef",
+    "expected": "reject",
+    "pass": true,
+    "rejected": true,
+    "pathMatched": true,
+    "gateThrows": true,
+    "repoRefuses": true
+  },
+  {
+    "name": "unresolved_battleMapRef",
+    "expected": "reject",
+    "pass": true,
+    "rejected": true,
+    "pathMatched": true,
+    "gateThrows": true,
+    "repoRefuses": true
+  },
+  {
+    "name": "ambiguous_battleMapRef",
+    "expected": "reject",
+    "pass": true,
+    "rejected": true,
+    "pathMatched": true,
+    "gateThrows": true,
+    "repoRefuses": true
+  },
+  {
+    "name": "cross_campaign_reference",
+    "expected": "reject",
+    "pass": true,
+    "rejected": true,
+    "pathMatched": true,
+    "gateThrows": true,
+    "repoRefuses": true
+  },
+  {
+    "name": "missing_campaignId",
+    "expected": "reject",
+    "pass": true,
+    "rejected": true,
+    "pathMatched": true,
+    "gateThrows": true,
+    "repoRefuses": true
+  },
+  {
+    "name": "malformed_runtime_battleMapRef",
+    "expected": "reject",
+    "pass": true,
+    "rejected": true,
+    "pathMatched": true,
+    "gateThrows": true,
+    "repoRefuses": true
+  },
+  {
+    "name": "persist_after_failed_validation",
+    "expected": "reject",
+    "pass": true,
+    "gateThrows": true,
+    "repoRefuses": true,
+    "nothingWritten": true
+  },
+  {
+    "name": "wrong_shadow_namespace",
+    "expected": "reject",
+    "pass": true
+  },
+  {
+    "name": "restore_wrong_campaign",
+    "expected": "reject",
+    "pass": true
+  },
+  {
+    "name": "missing_optional_collection",
+    "expected": "preserve",
+    "pass": true,
+    "valid": true,
+    "lossless": true
+  },
+  {
+    "name": "empty_optional_collection",
+    "expected": "preserve",
+    "pass": true,
+    "valid": true,
+    "lossless": true
+  },
+  {
+    "name": "unsupported_entity_kind",
+    "expected": "preserve",
+    "pass": true,
+    "valid": true,
+    "lossless": true
+  },
+  {
+    "name": "duplicate_migration_identity",
+    "expected": "preserve",
+    "pass": true,
+    "valid": true,
+    "lossless": true
+  }
+]

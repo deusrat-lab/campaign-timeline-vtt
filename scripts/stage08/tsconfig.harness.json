@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "ignoreDeprecations": "6.0",
+    "outDir": ".dist",
+    "rootDir": "../../src",
+    "strict": false,
+    "skipLibCheck": true,
+    "declaration": false,
+    "esModuleInterop": true,
+    "verbatimModuleSyntax": false,
+    "isolatedModules": false
+  },
+  "include": ["../../src/domain/**/*.ts"]
+}
