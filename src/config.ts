@@ -48,3 +48,19 @@ export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? '';
 export const UNIVERSAL_DIAGNOSTICS_ENABLED: boolean =
   import.meta.env.VITE_UNIVERSAL_DIAGNOSTICS === '1' ||
   import.meta.env.VITE_UNIVERSAL_DIAGNOSTICS === 'true';
+
+/**
+ * Stage 9 — local-only universal *shadow* integration (see
+ * rebuild-reports/stage-09). When enabled, legacy campaign state changes are
+ * additionally projected into an isolated universal snapshot that is validated
+ * and written to a separate, campaign-scoped SHADOW localStorage namespace
+ * (never the production universal namespace, never the server). Legacy stores
+ * remain the sole authoritative source of truth; a shadow failure never blocks
+ * a legacy save. Default OFF — the flag must be explicitly opted into via
+ * VITE_UNIVERSAL_SHADOW_INTEGRATION and must NOT be set in any committed env
+ * file or production/Railway environment. When OFF, zero shadow subscriptions,
+ * reads, or writes occur (proven by the Stage 9 harness feature-flag checks).
+ */
+export const UNIVERSAL_SHADOW_INTEGRATION_ENABLED: boolean =
+  import.meta.env.VITE_UNIVERSAL_SHADOW_INTEGRATION === '1' ||
+  import.meta.env.VITE_UNIVERSAL_SHADOW_INTEGRATION === 'true';

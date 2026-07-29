@@ -173,6 +173,16 @@ interface UserCampaignValue {
 
   exportCampaign: (id: string, includeRuntime: boolean) => string;
   importCampaign: (json: string) => string | null;
+
+  /**
+   * Stage 9 shadow integration — side-effect-free snapshot of the in-memory
+   * user-campaign state, keyed by campaignId. Reads ONLY the in-memory caches
+   * (never localStorage, never the server, never triggering an upgrade/fetch),
+   * so it is safe to poll from a shadow-integration subscription without
+   * mutating legacy state. Identity of each entry's `data`/`runtime` changes
+   * only when that campaign is actually mutated, letting the bridge dedupe.
+   */
+  listShadowSources: () => Array<{ campaignId: string; data: UserCampaignData | null; runtime: UserCampaignRuntime | null }>;
 }
 
 const UserCampaignContext = createContext<UserCampaignValue | null>(null);
@@ -469,7 +479,14 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
         return null;
       }
     },
-  }), [registry, persistRegistry, readData, readRuntime, patchData, patchRuntime, pushBlob]);
+    listShadowSources: () => registry.map((entry) => ({
+      campaignId: entry.campaignId,
+      // In-memory only: never fall back to localStorage / server, never run the
+      // scenario-upgrade side effect that readData performs.
+      data: dataCache[entry.campaignId] ?? null,
+      runtime: runtimeCache[entry.campaignId] ?? null,
+    })),
+  }), [registry, persistRegistry, readData, readRuntime, patchData, patchRuntime, pushBlob, dataCache, runtimeCache]);
 
   return <UserCampaignContext.Provider value={value}>{children}</UserCampaignContext.Provider>;
 }

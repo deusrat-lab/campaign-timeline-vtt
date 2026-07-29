@@ -26,6 +26,9 @@ import { CampaignBattlePage } from './features/campaigns/CampaignBattlePage';
 import { CampaignEntryRedirect } from './features/campaigns/CampaignEntryRedirect';
 import { canPlayerOpenCampaignPath } from './features/campaigns/playerSafe';
 import { UniversalDiagnosticsPage } from './pages/UniversalDiagnosticsPage';
+import { ShadowIntegrationProvider } from './features/shadow-integration/ShadowIntegrationProvider';
+import { MainCampaignShadowBridge } from './features/shadow-integration/MainCampaignShadowBridge';
+import { UserCampaignShadowBridge } from './features/shadow-integration/UserCampaignShadowBridge';
 
 /** Legacy /location/:id deep links now resolve inside the Map Workspace instead of a standalone page. */
 function LocationRedirect() {
@@ -180,7 +183,13 @@ function App() {
     <CampaignStoreProvider>
       <CampaignDataProvider>
         <UserCampaignProvider>
-          <AppShell />
+          <ShadowIntegrationProvider>
+            {/* Stage 9 — local shadow integration. Both bridges render null and
+               self-disable when the default-off flag is unset. */}
+            <MainCampaignShadowBridge />
+            <UserCampaignShadowBridge />
+            <AppShell />
+          </ShadowIntegrationProvider>
         </UserCampaignProvider>
       </CampaignDataProvider>
     </CampaignStoreProvider>
