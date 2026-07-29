@@ -44,3 +44,7 @@ export const BATTLE_MAP_VTT_BASE_URL: string | undefined = BATTLE_MAP_VTT_ORIGIN
  * .env.example).
  */
 export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? '';
+
+export const UNIVERSAL_DIAGNOSTICS_ENABLED: boolean =
+  import.meta.env.VITE_UNIVERSAL_DIAGNOSTICS === '1' ||
+  import.meta.env.VITE_UNIVERSAL_DIAGNOSTICS === 'true';

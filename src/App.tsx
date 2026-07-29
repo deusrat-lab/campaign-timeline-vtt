@@ -25,6 +25,7 @@ import { CampaignBestiaryPage } from './features/campaigns/CampaignBestiaryPage'
 import { CampaignBattlePage } from './features/campaigns/CampaignBattlePage';
 import { CampaignEntryRedirect } from './features/campaigns/CampaignEntryRedirect';
 import { canPlayerOpenCampaignPath } from './features/campaigns/playerSafe';
+import { UniversalDiagnosticsPage } from './pages/UniversalDiagnosticsPage';
 
 /** Legacy /location/:id deep links now resolve inside the Map Workspace instead of a standalone page. */
 function LocationRedirect() {
@@ -158,6 +159,7 @@ function AppShell() {
             {/* Atlas Map Workspace — opens a canonical map as a full campaign-prep
                workspace (never a raw PNG). Shares the world atlas data only. */}
             <Route path="/atlas/maps/:mapId" element={<DmOnlyRoute><AtlasMapWorkspace /></DmOnlyRoute>} />
+            <Route path="/diagnostics/universal" element={<DmOnlyRoute><UniversalDiagnosticsPage /></DmOnlyRoute>} />
             <Route path="/campaigns" element={<DmOnlyRoute><CampaignsPage /></DmOnlyRoute>} />
             <Route path="/campaigns/new" element={<DmOnlyRoute><NewCampaignWizard /></DmOnlyRoute>} />
             <Route path="/campaigns/:campaignId/map" element={<UserCampaignPlayerCapableRoute><IsolatedCampaignMapWorkspace /></UserCampaignPlayerCapableRoute>} />

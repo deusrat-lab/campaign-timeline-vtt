@@ -12,6 +12,8 @@ export * from './campaign/source';
 export * from './entities/types';
 export * from './maps/types';
 export * from './persistence/serialization';
+export * from './projection/projectCampaign';
+export * from './projection/types';
 export * from './runtime/types';
 export * from './validation/validateCampaignSnapshot';
 export * from './visibility/types';

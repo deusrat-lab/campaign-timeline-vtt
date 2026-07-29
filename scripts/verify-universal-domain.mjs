@@ -11,6 +11,8 @@ const requiredFiles = [
   'src/domain/battles/types.ts',
   'src/domain/visibility/types.ts',
   'src/domain/persistence/serialization.ts',
+  'src/domain/projection/types.ts',
+  'src/domain/projection/projectCampaign.ts',
   'src/domain/validation/validateCampaignSnapshot.ts',
   'src/domain/adapters/types.ts',
   'src/domain/adapters/idMapping.ts',

@@ -1,0 +1,67 @@
+{
+  "ok": true,
+  "verdict": "PASS",
+  "checks": [
+    {
+      "name": "pure projection has no React dependency",
+      "ok": true
+    },
+    {
+      "name": "pure projection has no storage or network side effects",
+      "ok": true
+    },
+    {
+      "name": "DM workspace projection exists",
+      "ok": true
+    },
+    {
+      "name": "map projection exists",
+      "ok": true
+    },
+    {
+      "name": "entity card projection exists",
+      "ok": true
+    },
+    {
+      "name": "timeline projection exists",
+      "ok": true
+    },
+    {
+      "name": "travel projection exists",
+      "ok": true
+    },
+    {
+      "name": "battle projection exists",
+      "ok": true
+    },
+    {
+      "name": "player-safe projection exists",
+      "ok": true
+    },
+    {
+      "name": "observer projection exists",
+      "ok": true
+    },
+    {
+      "name": "player-safe projection does not expose DM-only notes",
+      "ok": true
+    },
+    {
+      "name": "diagnostics feature flag is present",
+      "ok": true
+    },
+    {
+      "name": "diagnostics route is guarded as DM-only",
+      "ok": true
+    },
+    {
+      "name": "diagnostics page uses real main adapter and direct projections",
+      "ok": true
+    },
+    {
+      "name": "diagnostics page is read-only",
+      "ok": true
+    }
+  ],
+  "failed": []
+}
