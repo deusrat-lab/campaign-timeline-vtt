@@ -1,7 +1,16 @@
 # Stage 8 — Real-data parity gate and validation hardening
 
-**Verdict: `STAGE_8_PASS`** — 66/66 harness checks pass, 18/18 negative fixtures
-behave as specified. No production integration was performed; no push/deploy.
+**Verdict: `STAGE_8_PASS_WITH_WARNINGS`** — 66/66 harness checks pass, 18/18
+negative fixtures behave as specified. No production integration was performed;
+no push/deploy.
+
+> **Corrected from `STAGE_8_PASS`.** Real-data parity is proven for the Caldran
+> export (full durable + runtime) and the Greyholm **durable** dataset, but the
+> Greyholm **live overlay/runtime** was fed empty here and is not proven on real
+> data — no real MC overlay source is available for read-only access. See
+> [`../stage-08d/SUMMARY.md`](../stage-08d/SUMMARY.md). Full `STAGE_8_PASS`
+> requires capturing a real Greyholm overlay export (Stage 8d §6) and passing
+> `scripts/stage08/runGreyholmOverlay.mjs` against it.
 
 Reproduce locally:
 

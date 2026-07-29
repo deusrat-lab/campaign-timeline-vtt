@@ -1,0 +1,108 @@
+{
+  "stage": "stage-08d",
+  "verdict": "STAGE_8_PASS_WITH_WARNINGS",
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "checks": {
+    "passed": 40,
+    "failed": 0,
+    "total": 40,
+    "ok": true
+  },
+  "failing": [],
+  "realDataSearch": {
+    "findings": [
+      {
+        "path": "/Users/dmitry/Downloads/днд сюжет/campaign-timeline-vtt-universal-rebuild/src/data/campaignOverlaySnapshot.json",
+        "role": "promoted MC overlay snapshot",
+        "exists": true,
+        "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+        "note": ""
+      },
+      {
+        "path": "/Users/dmitry/Downloads/greyholm_region_routes_graph.json",
+        "role": "route-graph design artifact",
+        "exists": true,
+        "sha256": "0d7ea6c4dd6def297e42ab5e9db8d0ee9edf044717d97de17904f7432056804c",
+        "note": ""
+      },
+      {
+        "path": "/Users/dmitry/Downloads/днд сюжет/dm-companion/seed-import/campaign-2026-06-25.zip",
+        "role": "DM Companion campaign export (zip)",
+        "exists": true,
+        "sha256": "aa1ead05202b1f0cece78b701a28ed15bd89abb8c304614ea312260403cb88e6",
+        "note": ""
+      },
+      {
+        "path": "/Users/dmitry/Downloads/днд сюжет/campaign-timeline-vtt-universal-rebuild/server/src/db.js",
+        "role": "server overlay store (SQLite) code",
+        "exists": true,
+        "sha256": "be0abeb195c73bd2ebc458693b04a4404641727814d76f8fe72d652d9d91c357",
+        "note": ""
+      },
+      {
+        "path": "/Users/dmitry/Downloads/днд сюжет/campaign-timeline-vtt-universal-rebuild/data/campaign.db",
+        "role": "local server overlay DB",
+        "exists": false,
+        "verdict": "absent"
+      }
+    ],
+    "classification": {
+      "realMcOverlayFound": false,
+      "promotedOverlayEmpty": true,
+      "notes": [
+        "campaignOverlaySnapshot.json is {} (empty) in this clone and in every git revision of both clones.",
+        "greyholm_region_routes_graph.json is a {canvas,nodes,routes,adjacency} design graph, NOT MainCampaignOverlayInput; it carries no worldMapStates/party/activeBattle/reveal runtime.",
+        "DM Companion campaign zip contains combat-state.json (real battle runtime) but the DM Companion adapter (adaptDmCompanionToUniversal) is DURABLE-ONLY — it has no overlay/runtime/battle input fields, so there is no universal adapter path that consumes it.",
+        "The real MC overlay lives only in browser localStorage key `campaign-timeline-vtt:overlay:v2` and the production server SQLite (server/src/db.js, ./data/campaign.db) — no local ./data/campaign.db exists and the browser store is not accessible read-only here."
+      ]
+    }
+  },
+  "contractCoverage": {
+    "note": "SYNTHETIC contract fixture — proves MC runtime/overlay mapping is lossless at the contract level, NOT real-data parity.",
+    "coverage": {
+      "party.position": true,
+      "party.routeProgress": true,
+      "reveal": 1,
+      "movableEntities": 1,
+      "campaignEvents": 1,
+      "delayedTriggers": 1,
+      "factionZones": 1,
+      "dynamicOverlays": 1,
+      "battleEntries": 1,
+      "activeBattle": 1,
+      "tokens": 3,
+      "initiative": 1,
+      "round": 2,
+      "currentTurn": 1,
+      "terrain": 2,
+      "presentedCard": 1
+    },
+    "adapterDiagnosticErrors": 0
+  },
+  "undocedRealRuntimeCapabilities": [
+    "worldMaps / worldMapStates (real MC map runtime)",
+    "locationStates",
+    "hotspots",
+    "placements",
+    "party position + current route state",
+    "timeline / calendar / current campaign time",
+    "reveal (revealedLocationStateIds)",
+    "movable entities",
+    "campaign events",
+    "delayed triggers",
+    "faction zones",
+    "dynamic overlays",
+    "observer focus",
+    "presented card",
+    "active battle runtime",
+    "tokens / initiative / round / current turn"
+  ],
+  "manualExportInstructions": [
+    "To obtain a REAL Greyholm overlay without modifying any data:",
+    "1. Open the campaign-timeline-vtt app in the DM browser (the one holding the live campaign).",
+    "2. Use the in-app export (NavBar \"Export\"/download overlay JSON) which serializes store.exportOverlay() — this only READS state, it writes nothing back.",
+    "   Alternatively, in DevTools console (read-only): copy(localStorage.getItem(\"campaign-timeline-vtt:overlay:v2\")) and paste into a new file.",
+    "3. Save the file locally (e.g. campaign-timeline-vtt-export.json). Do NOT run snapshot:promote against the live src/data (that would edit tracked state) — instead drop the file under scripts/stage08/fixtures/ as an immutable Stage 8d fixture.",
+    "4. Re-run this harness pointing at that fixture to convert PASS_WITH_WARNINGS into full real-data PASS."
+  ]
+}
