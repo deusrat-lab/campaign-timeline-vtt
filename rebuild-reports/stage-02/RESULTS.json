@@ -1,0 +1,33 @@
+{
+  "stage": 2,
+  "verdict": "PASS_WITH_WARNINGS",
+  "artifacts": [
+    "CAPABILITY_MATRIX.json",
+    "ENTITY_MATRIX.json",
+    "REFERENCE_POLICY.md",
+    "VISIBILITY_POLICY.md",
+    "BATTLE_CONTRACT.md",
+    "TARGET_ARCHITECTURE.md",
+    "SUMMARY.md",
+    "RESULTS.json"
+  ],
+  "coverage": {
+    "coversStage1Capabilities": true,
+    "mainCampaignRichnessPreservedInTarget": true,
+    "userCampaignIsolationPreservedInTarget": true,
+    "campaignIdRequiredForWrites": true,
+    "disabledCapabilitiesPreserveData": true,
+    "silentDropsForbidden": true,
+    "ambiguousReferencesRejected": true,
+    "playerSafeAndObserverSeparated": true,
+    "battleDurableRuntimeSeparated": true,
+    "snapshotFullPayloadRequired": true,
+    "optimisticConcurrencyRequired": true,
+    "rollbackRequired": true
+  },
+  "warnings": [
+    "Target architecture is documented but not implemented until Stage 3+.",
+    "Temporary ts-nocheck shield remains on legacy MapWorkspacePage.tsx from Stage 1.",
+    "Visual baseline screenshots remain pending."
+  ]
+}
