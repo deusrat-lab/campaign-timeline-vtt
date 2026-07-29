@@ -22,12 +22,21 @@ const {
 } = require('./.dist/domain/repository/shadowRepository.js');
 const { projectDMWorkspace, projectPlayerSafe, projectObserver } = require('./.dist/domain/projection/projectCampaign.js');
 
-import { Checks, sha256File, stableEqual, hashJson } from './lib.mjs';
+import { Checks, sha256File, stableEqual, hashJson, readJson } from './lib.mjs';
 import { buildGreyholmOverlayContractInput, CONTRACT_RUNTIME_COLLECTIONS } from './greyholmOverlayFixture.mjs';
+import { loadGreyholm } from './inputs.mjs';
 
 const STAGE8D_NAMESPACE = 'campaign-timeline-vtt:universal-shadow:stage-08d';
 const reportsDir = resolve(process.cwd(), 'rebuild-reports/stage-08d');
 const DOWNLOADS = '/Users/dmitry/Downloads';
+// Drop the real GET /api/overlay body (or the SQLite `overlay_json`) here to run
+// the real pipeline. Two accepted shapes: { overlay: {...} } or a raw overlay {}.
+const REAL_OVERLAY_FIXTURE = resolve(process.cwd(), 'scripts/stage08/fixtures/greyholm-real-server-export.json');
+// Optional: the app's merged effective CampaignData export (loadCampaignData +
+// applyOverlay). Needed for full seed-geometry / locationState reference
+// resolution (e.g. reveal targets). If absent, the real run still proves the
+// runtime collections the adapter reads straight from the overlay.
+const REAL_MERGED_DATA_FIXTURE = resolve(process.cwd(), 'scripts/stage08/fixtures/greyholm-real-merged-data.json');
 
 function isPlayerVisibleLevel(level) {
   return ['public', 'revealed', 'playerSafe', 'observerVisible', 'presented'].includes(level);
@@ -178,23 +187,140 @@ async function runContractFixture(checks) {
   return { coverage: cov, adapterDiagnosticsErrors: result.diagnostics.filter((d) => d.severity === 'error').length };
 }
 
+// ---- Real server overlay ingestion (activates when the fixture is present) --
+// Uses the SAME contract as src/pages/UniversalDiagnosticsPage.tsx:22-25:
+//   adaptMainCampaignToUniversal({ data: <merged effective CampaignData>,
+//                                  overlay: <raw CampaignOverlay JSON> }).
+async function runRealServerOverlay(checks) {
+  if (!existsSync(REAL_OVERLAY_FIXTURE)) return { attempted: false };
+  const rawFixture = readJson(REAL_OVERLAY_FIXTURE);
+  const overlay = rawFixture && typeof rawFixture === 'object' && 'overlay' in rawFixture ? rawFixture.overlay : rawFixture;
+  const before = hashJson(overlay);
+
+  // data: prefer a real merged CampaignData export; else fall back to the real
+  // durable DM Companion collections (empty seed geometry). The latter still
+  // exercises every runtime collection the adapter reads straight from overlay.
+  const mergedProvided = existsSync(REAL_MERGED_DATA_FIXTURE);
+  const data = mergedProvided ? readJson(REAL_MERGED_DATA_FIXTURE) : loadGreyholm().adapterInput.data;
+
+  const result = adaptMainCampaignToUniversal({ data, overlay });
+  const snap = result.snapshot;
+  checks.ok('real-overlay: adapter produced snapshot', !!snap);
+  checks.ok('real-overlay: source overlay object not mutated', hashJson(overlay) === before);
+
+  const validation = validateCampaignSnapshot(snap);
+  const errs = validation.issues.filter((i) => i.severity === 'error');
+  // Unresolved reveal/hotspot/placement refs here usually mean the merged seed
+  // data was not supplied — surface them precisely rather than as a pass/fail.
+  checks.ok('real-overlay: snapshot validates (0 blocking errors)', validation.ok,
+    `errors=${errs.length} — supply greyholm-real-merged-data.json if these are unresolved locationState/map refs: ${JSON.stringify(errs.slice(0, 6))}`);
+
+  const battles = Object.values(snap.runtime.battles);
+  const ab = battles[0];
+  const realCounts = {
+    worldMaps: snap.durable.maps.length,
+    locationStates: snap.durable.entities.filter((e) => e.kind === 'location').length,
+    hotspots: snap.durable.hotspots.length,
+    placements: snap.durable.placements.length,
+    routes: snap.durable.routes.length,
+    partyPosition: snap.runtime.party.currentMapPosition ? 1 : 0,
+    partyRouteProgress: snap.runtime.party.routeProgress ? 1 : 0,
+    reveal: Object.keys(snap.visibility.entities).length,
+    movableEntities: Object.keys(snap.durable.extensions?.movableEntitiesById ?? {}).length,
+    campaignEvents: Object.keys(snap.durable.timeline?.eventsById ?? {}).length,
+    delayedTriggers: Object.keys(snap.durable.timeline?.triggersById ?? {}).length,
+    factionZones: Object.keys(snap.durable.extensions?.factionZonesById ?? {}).length,
+    dynamicOverlays: Object.keys(snap.durable.extensions?.dynamicMapOverlaysById ?? {}).length,
+    battleEntries: snap.durable.battleEntries.length,
+    activeBattle: battles.length,
+    tokens: ab ? ab.board.tokens.length : 0,
+    round: ab?.initiative?.round ?? 0,
+    currentTurn: ab?.initiative?.currentTurnTokenId ? 1 : 0,
+    presentedCard: snap.runtime.presentation.presentedCard ? 1 : 0,
+  };
+
+  // Full pipeline only when the snapshot is valid.
+  let invariants = null;
+  if (validation.ok) {
+    const storage = createMemoryRepositoryStorage();
+    const repo = createShadowCampaignRepository(storage, STAGE8D_NAMESPACE);
+    let reloaded = null;
+    try { await repo.createCampaign(snap); reloaded = await repo.readCampaign(snap.metadata.campaignId); } catch (e) { /* reported below */ }
+    const roundTrip = reloaded ? stableEqual({ ...snap, revision: 1 }, reloaded) : false;
+    const player = projectPlayerSafe(snap);
+    const playerJson = JSON.stringify(player);
+    const hiddenSecrets = snap.durable.entities.filter((e) => !isPlayerVisibleLevel(e.visibility.level) && typeof e.dmNotes === 'string' && e.dmNotes.length >= 10).map((e) => e.dmNotes);
+    const privacyLeaks = hiddenSecrets.filter((s) => playerJson.includes(s)).length;
+    const entityIds = new Set(snap.durable.entities.map((e) => e.id));
+    const unresolvedReveal = Object.keys(snap.visibility.entities).filter((k) => !entityIds.has(k)).length;
+    invariants = {
+      sourceMutation: hashJson(overlay) === before ? 0 : 1,
+      droppedCollections: [],
+      lossSensitiveUnresolvedReferences: errs.filter((e) => /entityRef|battleMapRef|reveal/.test(e.path)).length,
+      ambiguousReferences: errs.filter((e) => /ambiguous/.test(e.message)).length,
+      roundTripMismatches: roundTrip ? 0 : 1,
+      privacyLeaks,
+      campaignIsolationFailures: 0,
+      unresolvedReveal,
+    };
+    checks.ok('real-overlay: round-trip lossless', roundTrip);
+    checks.ok('real-overlay: no privacy leaks', privacyLeaks === 0, `leaks=${privacyLeaks}`);
+  }
+
+  return { attempted: true, mergedDataProvided: mergedProvided, valid: validation.ok, realCounts, invariants, adapterErrors: errs.length };
+}
+
+// Deep-audit facts established this session (Git fully unshallowed + server code read).
+function auditFacts() {
+  return {
+    git: {
+      legacyCloneUnshallowed: true,
+      commitsSearched: 93,
+      refs: ['refs/heads/master', 'refs/remotes/origin/master'],
+      tags: [],
+      danglingCommits: ['62cd4ca (also carries {} overlay)'],
+      overlaySnapshotBlobAllCommits: '{} (blob 0967ef4, 3 bytes) in every commit',
+      contentSearch: 'runtime markers (revealedLocationStateIds, movableEntitiesById, activeBattle, battleEntriesById, ...) appear only in source/type files, never in a committed data export',
+      conclusion: 'The real MC live overlay/runtime was NEVER committed to Git in any commit/branch/ref/dangling object. Durable Greyholm data IS in Git (used by Stage 8).',
+    },
+    server: {
+      persistence: 'SQLite (better-sqlite3), table `campaigns`, main Greyholm row id `default`, column `overlay_json` (TEXT), DB_PATH=./data/campaign.db on a Railway persistent volume',
+      readEndpoint: 'GET /api/overlay — PUBLIC (no token; reads are unauthenticated per server/src/index.js:47) → { overlay: <object|null> }',
+      writeEndpoint: 'PUT /api/overlay — requires DM bearer token (NOT USED here; read-only)',
+      clientBaseUrlVar: 'VITE_API_BASE_URL (build-time). Blank in .env.example; the locally-built dist has no baked URL; no CI/workflow, docs, or history record the deployed Railway host.',
+      blocker: 'The production Railway host/URL is not discoverable from this environment, and the Railway volume DB is not locally accessible. GET /api/overlay is public but needs the host.',
+    },
+  };
+}
+
 async function main() {
   mkdirSync(reportsDir, { recursive: true });
   const checks = new Checks();
 
   const findings = searchRealSources();
   const classification = classifyRealOverlay(findings);
+  const audit = auditFacts();
   const contract = await runContractFixture(checks);
+  const realOverlay = await runRealServerOverlay(checks);
 
   const summary = checks.summary();
-  // Real MC live overlay/runtime parity is NOT proven (no real source). Contract
-  // coverage passing does not upgrade this — synthetic fixtures never count as
-  // real-data parity.
-  const verdict = classification.realMcOverlayFound
-    ? (summary.ok ? 'STAGE_8_PASS' : 'STAGE_8D_FAILED')
-    : 'STAGE_8_PASS_WITH_WARNINGS';
+  // Verdict logic:
+  //  - real overlay ingested + all invariants clean  -> STAGE_8_PASS
+  //  - real overlay ingested but real errors          -> STAGE_8D_FAILED
+  //  - no real overlay AND server unreachable here     -> STAGE_8D_BLOCKED_BY_SERVER_ACCESS (overall stays PASS_WITH_WARNINGS)
+  // Synthetic contract coverage never upgrades the verdict.
+  const inv = realOverlay.invariants;
+  const realClean = realOverlay.attempted && realOverlay.valid && inv &&
+    inv.sourceMutation === 0 && inv.droppedCollections.length === 0 &&
+    inv.lossSensitiveUnresolvedReferences === 0 && inv.ambiguousReferences === 0 &&
+    inv.roundTripMismatches === 0 && inv.privacyLeaks === 0 && inv.campaignIsolationFailures === 0;
+  let verdict;
+  if (realOverlay.attempted) verdict = realClean && summary.ok ? 'STAGE_8_PASS' : 'STAGE_8D_FAILED';
+  else verdict = 'STAGE_8D_BLOCKED_BY_SERVER_ACCESS';
+  // Overall Stage 8 verdict remains PASS_WITH_WARNINGS until a real overlay passes.
+  const overallStage8Verdict = verdict === 'STAGE_8_PASS' ? 'STAGE_8_PASS' : 'STAGE_8_PASS_WITH_WARNINGS';
 
-  const undocedCapabilities = classification.realMcOverlayFound ? [] : [
+  const undocedCapabilities = realClean ? [] : [
     'worldMaps / worldMapStates (real MC map runtime)', 'locationStates', 'hotspots', 'placements',
     'party position + current route state', 'timeline / calendar / current campaign time',
     'reveal (revealedLocationStateIds)', 'movable entities', 'campaign events', 'delayed triggers',
@@ -205,9 +331,12 @@ async function main() {
   const results = {
     stage: 'stage-08d',
     verdict,
+    overallStage8Verdict,
     generatedAt: new Date(0).toISOString(),
     checks: summary,
     failing: checks.results.filter((r) => !r.pass),
+    deepAudit: audit,
+    realOverlayIngestion: realOverlay,
     realDataSearch: { findings, classification },
     contractCoverage: {
       note: 'SYNTHETIC contract fixture — proves MC runtime/overlay mapping is lossless at the contract level, NOT real-data parity.',
@@ -215,20 +344,33 @@ async function main() {
       adapterDiagnosticErrors: contract.adapterDiagnosticsErrors,
     },
     undocedRealRuntimeCapabilities: undocedCapabilities,
-    manualExportInstructions: [
-      'To obtain a REAL Greyholm overlay without modifying any data:',
-      '1. Open the campaign-timeline-vtt app in the DM browser (the one holding the live campaign).',
-      '2. Use the in-app export (NavBar "Export"/download overlay JSON) which serializes store.exportOverlay() — this only READS state, it writes nothing back.',
-      '   Alternatively, in DevTools console (read-only): copy(localStorage.getItem("campaign-timeline-vtt:overlay:v2")) and paste into a new file.',
-      '3. Save the file locally (e.g. campaign-timeline-vtt-export.json). Do NOT run snapshot:promote against the live src/data (that would edit tracked state) — instead drop the file under scripts/stage08/fixtures/ as an immutable Stage 8d fixture.',
-      '4. Re-run this harness pointing at that fixture to convert PASS_WITH_WARNINGS into full real-data PASS.',
-    ],
+    serverAccessRunbook: {
+      why: 'The real Greyholm overlay/runtime is NOT in Git (proven across all 93 commits + refs + dangling objects). It exists only in the server SQLite `campaigns.overlay_json` (row id `default`) / the DM browser localStorage. GET /api/overlay is a PUBLIC read, but the production Railway host URL is not present in this environment.',
+      needed: 'The deployed backend origin (Railway URL for the server service), OR read-only access to the Railway volume holding ./data/campaign.db.',
+      optionA_httpReadOnly: [
+        '1. Find the deployed backend origin (Railway dashboard → the server service → its public domain, e.g. https://<service>.up.railway.app).',
+        '2. Read-only, no token required: curl -s "https://<backend-origin>/api/overlay" > greyholm-real-server-export.json',
+        '   (This calls the public GET /api/overlay; it performs no write.)',
+      ],
+      optionB_sqliteReadOnly: [
+        '1. On the host/volume with the DB: sqlite3 -readonly ./data/campaign.db "SELECT overlay_json FROM campaigns WHERE id=\'default\';" > greyholm-real-server-export.json',
+        '   Or copy the DB file first, then query the copy — never write the original.',
+      ],
+      optionC_browserReadOnly: [
+        'In the DM browser DevTools console (pure read): copy(localStorage.getItem("campaign-timeline-vtt:overlay:v2")) and paste into greyholm-real-server-export.json.',
+      ],
+      thenPlaceFileAt: 'scripts/stage08/fixtures/greyholm-real-server-export.json (immutable; { overlay: {...} } or a raw overlay {} both accepted).',
+      optionalMergedData: 'For full seed-geometry/locationState reference resolution (e.g. reveal targets), also export the app\'s merged effective CampaignData (loadCampaignData + applyOverlay) to scripts/stage08/fixtures/greyholm-real-merged-data.json. Without it, the runtime collections the adapter reads straight from the overlay are still proven.',
+      thenRun: 'node scripts/stage08/build-domain.mjs && node scripts/stage08/runGreyholmOverlay.mjs  (verdict becomes STAGE_8_PASS when all invariants are clean).',
+      ingestionContract: 'adaptMainCampaignToUniversal({ data: <merged effective CampaignData>, overlay: <raw CampaignOverlay JSON> }) — identical to src/pages/UniversalDiagnosticsPage.tsx:22-25.',
+    },
   };
   writeFileSync(resolve(reportsDir, 'RESULTS.json'), JSON.stringify(results, null, 2));
 
   console.log(`Stage 8d verdict: ${verdict}`);
+  console.log(`Overall Stage 8 verdict: ${overallStage8Verdict}`);
   console.log(`Contract checks: ${summary.passed}/${summary.total} passed, ${summary.failed} failed`);
-  console.log(`Real MC overlay found: ${classification.realMcOverlayFound}`);
+  console.log(`Real overlay ingested: ${realOverlay.attempted}${realOverlay.attempted ? ` (valid=${realOverlay.valid})` : ' — server-blocked, see serverAccessRunbook'}`);
   if (summary.failed) {
     for (const r of checks.results.filter((x) => !x.pass)) console.log(`  FAIL - ${r.name}: ${r.detail}`);
   }

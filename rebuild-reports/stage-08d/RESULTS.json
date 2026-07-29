@@ -1,6 +1,7 @@
 {
   "stage": "stage-08d",
-  "verdict": "STAGE_8_PASS_WITH_WARNINGS",
+  "verdict": "STAGE_8D_BLOCKED_BY_SERVER_ACCESS",
+  "overallStage8Verdict": "STAGE_8_PASS_WITH_WARNINGS",
   "generatedAt": "1970-01-01T00:00:00.000Z",
   "checks": {
     "passed": 40,
@@ -9,6 +10,33 @@
     "ok": true
   },
   "failing": [],
+  "deepAudit": {
+    "git": {
+      "legacyCloneUnshallowed": true,
+      "commitsSearched": 93,
+      "refs": [
+        "refs/heads/master",
+        "refs/remotes/origin/master"
+      ],
+      "tags": [],
+      "danglingCommits": [
+        "62cd4ca (also carries {} overlay)"
+      ],
+      "overlaySnapshotBlobAllCommits": "{} (blob 0967ef4, 3 bytes) in every commit",
+      "contentSearch": "runtime markers (revealedLocationStateIds, movableEntitiesById, activeBattle, battleEntriesById, ...) appear only in source/type files, never in a committed data export",
+      "conclusion": "The real MC live overlay/runtime was NEVER committed to Git in any commit/branch/ref/dangling object. Durable Greyholm data IS in Git (used by Stage 8)."
+    },
+    "server": {
+      "persistence": "SQLite (better-sqlite3), table `campaigns`, main Greyholm row id `default`, column `overlay_json` (TEXT), DB_PATH=./data/campaign.db on a Railway persistent volume",
+      "readEndpoint": "GET /api/overlay — PUBLIC (no token; reads are unauthenticated per server/src/index.js:47) → { overlay: <object|null> }",
+      "writeEndpoint": "PUT /api/overlay — requires DM bearer token (NOT USED here; read-only)",
+      "clientBaseUrlVar": "VITE_API_BASE_URL (build-time). Blank in .env.example; the locally-built dist has no baked URL; no CI/workflow, docs, or history record the deployed Railway host.",
+      "blocker": "The production Railway host/URL is not discoverable from this environment, and the Railway volume DB is not locally accessible. GET /api/overlay is public but needs the host."
+    }
+  },
+  "realOverlayIngestion": {
+    "attempted": false
+  },
   "realDataSearch": {
     "findings": [
       {
@@ -97,12 +125,24 @@
     "active battle runtime",
     "tokens / initiative / round / current turn"
   ],
-  "manualExportInstructions": [
-    "To obtain a REAL Greyholm overlay without modifying any data:",
-    "1. Open the campaign-timeline-vtt app in the DM browser (the one holding the live campaign).",
-    "2. Use the in-app export (NavBar \"Export\"/download overlay JSON) which serializes store.exportOverlay() — this only READS state, it writes nothing back.",
-    "   Alternatively, in DevTools console (read-only): copy(localStorage.getItem(\"campaign-timeline-vtt:overlay:v2\")) and paste into a new file.",
-    "3. Save the file locally (e.g. campaign-timeline-vtt-export.json). Do NOT run snapshot:promote against the live src/data (that would edit tracked state) — instead drop the file under scripts/stage08/fixtures/ as an immutable Stage 8d fixture.",
-    "4. Re-run this harness pointing at that fixture to convert PASS_WITH_WARNINGS into full real-data PASS."
-  ]
+  "serverAccessRunbook": {
+    "why": "The real Greyholm overlay/runtime is NOT in Git (proven across all 93 commits + refs + dangling objects). It exists only in the server SQLite `campaigns.overlay_json` (row id `default`) / the DM browser localStorage. GET /api/overlay is a PUBLIC read, but the production Railway host URL is not present in this environment.",
+    "needed": "The deployed backend origin (Railway URL for the server service), OR read-only access to the Railway volume holding ./data/campaign.db.",
+    "optionA_httpReadOnly": [
+      "1. Find the deployed backend origin (Railway dashboard → the server service → its public domain, e.g. https://<service>.up.railway.app).",
+      "2. Read-only, no token required: curl -s \"https://<backend-origin>/api/overlay\" > greyholm-real-server-export.json",
+      "   (This calls the public GET /api/overlay; it performs no write.)"
+    ],
+    "optionB_sqliteReadOnly": [
+      "1. On the host/volume with the DB: sqlite3 -readonly ./data/campaign.db \"SELECT overlay_json FROM campaigns WHERE id='default';\" > greyholm-real-server-export.json",
+      "   Or copy the DB file first, then query the copy — never write the original."
+    ],
+    "optionC_browserReadOnly": [
+      "In the DM browser DevTools console (pure read): copy(localStorage.getItem(\"campaign-timeline-vtt:overlay:v2\")) and paste into greyholm-real-server-export.json."
+    ],
+    "thenPlaceFileAt": "scripts/stage08/fixtures/greyholm-real-server-export.json (immutable; { overlay: {...} } or a raw overlay {} both accepted).",
+    "optionalMergedData": "For full seed-geometry/locationState reference resolution (e.g. reveal targets), also export the app's merged effective CampaignData (loadCampaignData + applyOverlay) to scripts/stage08/fixtures/greyholm-real-merged-data.json. Without it, the runtime collections the adapter reads straight from the overlay are still proven.",
+    "thenRun": "node scripts/stage08/build-domain.mjs && node scripts/stage08/runGreyholmOverlay.mjs  (verdict becomes STAGE_8_PASS when all invariants are clean).",
+    "ingestionContract": "adaptMainCampaignToUniversal({ data: <merged effective CampaignData>, overlay: <raw CampaignOverlay JSON> }) — identical to src/pages/UniversalDiagnosticsPage.tsx:22-25."
+  }
 }
