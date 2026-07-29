@@ -15,6 +15,21 @@ export interface ValidationResult {
   issues: ValidationIssue[];
 }
 
+/**
+ * Stage 8 severity policy (see rebuild-reports/stage-08/SUMMARY.md):
+ *
+ *   error  -> loss-sensitive or ambiguity-inducing problems. A reference that
+ *             resolves to 0 targets, or to 2+ targets, is a blocking error
+ *             because the referenced object becomes unusable or is resolved
+ *             non-deterministically (first-match / array order). Persistence is
+ *             refused when any error is present.
+ *   warning -> genuinely optional / non-destructive observations that do not
+ *             change the meaning of the campaign if dropped. Warnings never
+ *             block persistence.
+ *
+ * Ambiguity is never resolved with find()/first-match: a reference that matches
+ * more than one semantic target is reported as an error, not silently resolved.
+ */
 export function validateCampaignSnapshot(snapshot: CampaignSnapshot): ValidationResult {
   const issues: ValidationIssue[] = [];
   const campaignId = snapshot.metadata.campaignId;
@@ -44,19 +59,36 @@ export function validateCampaignSnapshot(snapshot: CampaignSnapshot): Validation
     entityIds.add(entity.id);
   });
 
+  // Stage 8: campaign-scoped uniqueness of battleMaps.id is a blocking rule.
+  // A duplicate id makes every battleMapRef pointing at it ambiguous (it could
+  // resolve to 2+ maps), so it must be rejected instead of first-match resolved.
+  const battleMapIdCounts = new Map<string, number>();
+  snapshot.durable.battleMaps.forEach((map, index) => {
+    if (map.campaignId !== campaignId) issues.push(error(`durable.battleMaps.${index}.campaignId`, 'battle map belongs to another campaign'));
+    const seen = battleMapIdCounts.get(map.id) ?? 0;
+    battleMapIdCounts.set(map.id, seen + 1);
+    if (seen >= 1) {
+      issues.push(error(`durable.battleMaps.${index}.id`, `duplicate battle map id ${map.id}`));
+    }
+  });
+
   snapshot.durable.hotspots.forEach((hotspot, index) => {
     if (!mapIds.has(hotspot.mapId)) issues.push(error(`durable.hotspots.${index}.mapId`, `unknown map ${hotspot.mapId}`));
     validatePoint(hotspot.position, `durable.hotspots.${index}.position`, issues);
+    // Loss-sensitive: a hotspot that names an entity but cannot resolve it is a
+    // dead hotspot. Absent entityRef is allowed (label-only hotspot).
     if (hotspot.entityRef && !entityIds.has(hotspot.entityRef)) {
-      issues.push(warning(`durable.hotspots.${index}.entityRef`, `unresolved entity ${hotspot.entityRef}`));
+      issues.push(error(`durable.hotspots.${index}.entityRef`, `unresolved entity ${hotspot.entityRef}`));
     }
   });
 
   snapshot.durable.placements.forEach((placement, index) => {
     if (!mapIds.has(placement.mapId)) issues.push(error(`durable.placements.${index}.mapId`, `unknown map ${placement.mapId}`));
     validatePoint(placement.position, `durable.placements.${index}.position`, issues);
+    // Loss-sensitive: a placement always carries an entityRef; if it cannot be
+    // resolved the placement is meaningless, so this is a blocking error.
     if (!entityIds.has(placement.entityRef)) {
-      issues.push(warning(`durable.placements.${index}.entityRef`, `unresolved entity ${placement.entityRef}`));
+      issues.push(error(`durable.placements.${index}.entityRef`, `unresolved entity ${placement.entityRef}`));
     }
   });
 
@@ -66,8 +98,23 @@ export function validateCampaignSnapshot(snapshot: CampaignSnapshot): Validation
   });
 
   snapshot.durable.battleEntries.forEach((entry, index) => {
-    if (entry.battleMapRef && !snapshot.durable.battleMaps.some((map) => map.id === entry.battleMapRef)) {
-      issues.push(warning(`durable.battleEntries.${index}.battleMapRef`, `unresolved battle map ${entry.battleMapRef}`));
+    if (!entry.battleMapRef) return;
+    const matches = battleMapIdCounts.get(entry.battleMapRef) ?? 0;
+    if (matches === 0) {
+      // Loss-sensitive: a battle entry whose map cannot be resolved is unusable.
+      issues.push(error(`durable.battleEntries.${index}.battleMapRef`, `unresolved battle map ${entry.battleMapRef}`));
+    } else if (matches > 1) {
+      // Ambiguous: refuse first-match resolution.
+      issues.push(error(`durable.battleEntries.${index}.battleMapRef`, `ambiguous battle map ${entry.battleMapRef} (${matches} matches)`));
+    }
+  });
+
+  // Reveal targets must resolve to exactly one entity. Entity ids are already
+  // asserted unique above, so an unresolved reveal target (0 matches) is a
+  // blocking loss-sensitive error: a reveal that points at nothing is lost.
+  Object.keys(snapshot.visibility.entities).forEach((revealId) => {
+    if (!entityIds.has(revealId)) {
+      issues.push(error(`visibility.entities.${revealId}`, `unresolved reveal target ${revealId}`));
     }
   });
 
@@ -77,6 +124,33 @@ export function validateCampaignSnapshot(snapshot: CampaignSnapshot): Validation
   }
 
   return { ok: issues.every((issue) => issue.severity !== 'error'), issues };
+}
+
+/**
+ * Stage 8 pre-persistence gate. Throws a diagnosable error if the snapshot is
+ * not valid, so a broken snapshot can never be written to any repository
+ * (shadow or otherwise). Reusable helper used by the Stage 8 parity harness in
+ * addition to the repository's own write-time validation.
+ */
+export class SnapshotValidationError extends Error {
+  readonly issues: ValidationIssue[];
+  constructor(campaignId: string, issues: ValidationIssue[]) {
+    const errors = issues.filter((issue) => issue.severity === 'error');
+    super(
+      `Snapshot ${campaignId} failed validation with ${errors.length} error(s): ` +
+        errors.map((issue) => `[${issue.code}] ${issue.path}: ${issue.message}`).join('; '),
+    );
+    this.name = 'SnapshotValidationError';
+    this.issues = issues;
+  }
+}
+
+export function assertSnapshotPersistable(snapshot: CampaignSnapshot): ValidationResult {
+  const result = validateCampaignSnapshot(snapshot);
+  if (!result.ok) {
+    throw new SnapshotValidationError(snapshot.metadata.campaignId, result.issues);
+  }
+  return result;
 }
 
 function validatePoint(point: { x: number; y: number }, path: string, issues: ValidationIssue[]): void {
@@ -93,8 +167,4 @@ function validatePointLike(value: string, path: string, issues: ValidationIssue[
 
 function error(path: string, message: string): ValidationIssue {
   return { severity: 'error', code: 'invalid_snapshot', path, message };
-}
-
-function warning(path: string, message: string): ValidationIssue {
-  return { severity: 'warning', code: 'snapshot_warning', path, message };
 }
