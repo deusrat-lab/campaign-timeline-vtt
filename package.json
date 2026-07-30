@@ -26,6 +26,7 @@
     "verify:stage11": "node scripts/stage11/build-domain.mjs && node scripts/stage11/runSections.mjs",
     "verify:stage12": "node scripts/stage12/build-domain.mjs && node scripts/stage12/runWorkspace.mjs",
     "verify:stage13": "node scripts/stage13/build-domain.mjs && node scripts/stage13/runCommandShadow.mjs",
+    "verify:stage14": "node scripts/stage14/build-domain.mjs && node scripts/stage14/runAuthority.mjs",
     "snapshot:promote": "node scripts/promote-overlay-snapshot.mjs",
     "preview": "vite preview --host 0.0.0.0 --port 5175 --open",
     "start": "vite preview --host 0.0.0.0 --port ${PORT:-4173}"

@@ -12,6 +12,7 @@ import {
 import type { MainCampaignOverlayInput } from '../domain';
 import { ShadowIntegrationDiagnostics } from '../features/shadow-integration/ShadowIntegrationDiagnostics';
 import { CommandShadowDiagnostics } from '../features/command-shadow/CommandShadowDiagnostics';
+import { CommandAuthorityDiagnostics } from '../features/command-authority/CommandAuthorityDiagnostics';
 
 export function UniversalDiagnosticsPage() {
   const { data, loading, error } = useCampaignData();
@@ -70,6 +71,7 @@ export function UniversalDiagnosticsPage() {
       <pre>{JSON.stringify(parity, null, 2)}</pre>
       <ShadowIntegrationDiagnostics />
       <CommandShadowDiagnostics />
+      <CommandAuthorityDiagnostics />
     </section>
   );
 }
