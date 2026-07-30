@@ -13,6 +13,7 @@ import { CompanionQuestCard } from '../features/embedded-dm-companion/CompanionQ
 import { CompanionShopCard } from '../features/embedded-dm-companion/CompanionShopCard';
 import { BATTLE_MAP_ASSET_ORIGIN } from '../config';
 import type { BattleMapManifestEntry } from '../data/battleMapManifest';
+import { GreyholmUniversalSections } from '../features/universal-sections/GreyholmUniversalSections';
 
 export type EntityLibraryKind = 'npc' | 'quests' | 'enemies' | 'bestiary' | 'players' | 'battleMaps' | 'factions';
 type EntitySortKey = 'name_asc' | 'name_desc' | 'location' | 'status' | 'role';
@@ -637,6 +638,11 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
           )}
         </div>
       </header>
+
+      {/* Stage 11 — additive universal read-only sections. Renders nothing when
+          the default-off read flag is unset, so the library page is unchanged at
+          baseline. Legacy write path below is untouched. */}
+      <GreyholmUniversalSections />
 
       <div className="entity-library-layout">
         <aside className="entity-library-list">

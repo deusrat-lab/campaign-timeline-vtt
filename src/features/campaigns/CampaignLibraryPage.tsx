@@ -11,6 +11,7 @@ import { RichEntityLibrary } from '../../shared/entity/RichEntityLibrary';
 import { buildListItems, buildDetail, type LibraryKind } from '../../shared/entity/userCampaignEntityVM';
 import type { EntityKind, FilterConfig } from '../../shared/entity/types';
 import { isEntityPlayerVisible, playerSafeImageSrc } from './playerSafe';
+import { UserCampaignUniversalSections } from '../universal-sections/UserCampaignUniversalSections';
 
 type Kind = LibraryKind | 'images' | 'notes';
 
@@ -250,6 +251,11 @@ export function CampaignLibraryPage() {
           </>
         )}
       </div>
+
+      {/* Stage 11 — additive universal read-only sections for THIS campaign only.
+          Renders nothing when the default-off read flag is unset. Player/observer
+          audiences see only the Player-Safe section. Legacy write path untouched. */}
+      <UserCampaignUniversalSections legacyCampaignId={campaignId} isPlayer={asPlayer || isPlayer} />
 
       {k === 'notes' ? (
         <NotesSection campaignId={campaignId} canEdit={canEdit} />
