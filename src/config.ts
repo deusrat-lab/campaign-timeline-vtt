@@ -134,3 +134,35 @@ export function isSharedWorkspaceEnabledForKind(kind: 'greyholm' | 'userCampaign
   const tokens = trimmed.split(/[\s,]+/).filter(Boolean);
   return tokens.includes(kind.toLowerCase());
 }
+
+/**
+ * Stage 13 — controlled universal COMMAND / write-path *shadow* execution (see
+ * rebuild-reports/stage-13). SEPARATE and INDEPENDENT from every earlier flag.
+ * When enabled, a small allowlist of real legacy mutations additionally emit a
+ * command event AFTER they have already committed for real; an isolated
+ * in-memory universal command is replayed against the captured pre-state and
+ * its result is compared to the adapter-derived post-state. Legacy stores stay
+ * the sole authoritative writers: this flag NEVER changes any write path, never
+ * blocks or delays a legacy save, never applies the universal result to legacy,
+ * never reads/writes the production universal namespace, never touches the
+ * Stage 9 shadow namespace as an output, and never performs network/server
+ * sync. Only bounded, redacted local diagnostics are written.
+ *
+ * Default OFF. Must NOT be set in any committed env file or production/Railway
+ * environment. When OFF, zero command-shadow coordinators, interceptors, reads
+ * or writes occur (proven by the Stage 13 harness feature-flag checks). This
+ * flag does NOT enable the Stage 9/10/11/12 flags.
+ */
+export const UNIVERSAL_COMMAND_SHADOW_ENABLED: boolean =
+  import.meta.env.VITE_UNIVERSAL_COMMAND_SHADOW === '1' ||
+  import.meta.env.VITE_UNIVERSAL_COMMAND_SHADOW === 'true';
+
+/**
+ * Optional command-scope allowlist for Stage 13. Comma/space separated subset
+ * of the known command scopes (e.g. `greyholm.npc.update`,
+ * `userCampaign.reveal.update`). Empty / unset / "all" / "*" means all known
+ * scopes (when the flag is on). Unknown tokens are ignored — this can only ever
+ * narrow the built-in allowlist, never widen it to a non-allowlisted mutation.
+ */
+export const UNIVERSAL_COMMAND_SHADOW_SCOPES: string =
+  import.meta.env.VITE_UNIVERSAL_COMMAND_SHADOW_SCOPES ?? '';
