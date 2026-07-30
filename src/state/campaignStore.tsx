@@ -40,6 +40,7 @@ import { API_BASE_URL } from '../config';
 import { emitMainCommand } from './commandShadowSink';
 import { routeMainAuthority } from './commandAuthoritySink';
 import { routeMainDurable } from './durableAuthoritySink';
+import { routeMainComplex, type ComplexActionDescriptor } from './complexAuthoritySink';
 
 const STORAGE_KEY = 'campaign-timeline-vtt:overlay:v2';
 const OLD_STORAGE_KEY = 'campaign-timeline-vtt:state:v1';
@@ -1095,6 +1096,30 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Stage 16.1 — route an allowlisted aggregate transition through the (default
+    // off) universal complex-authority sink FIRST. When Stage 16 owns the scope
+    // it durably commits the universal aggregate command and runs this exact
+    // legacy dispatch once as the compatibility projection; otherwise (flag off,
+    // scope not owned, or the legacy effect does not match the single aggregate
+    // command) `routeMainComplex` returns false and we dispatch normally — exactly
+    // the pre-Stage-16 behaviour. Only used for single-slot clean actions.
+    const routeGreyComplex = (scope: string, descriptor: ComplexActionDescriptor, action: Action): boolean => {
+      const preOverlay = state;
+      const handled = routeMainComplex({
+        complexScope: scope,
+        descriptor,
+        preOverlay,
+        predict: () => reducer(preOverlay, action),
+        commit: () => {
+          dispatch(action);
+          return reducer(preOverlay, action);
+        },
+        fallback: () => dispatch(action),
+      });
+      if (!handled) dispatch(action);
+      return handled;
+    };
+
     return {
       ...state,
       isDmView: state.mode !== 'player-view',
@@ -1106,10 +1131,13 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       setKnown: (locationStateId) => dispatch({ type: 'SET_KNOWN', locationStateId }),
       setRevealed: (locationStateId) => {
         const action: Action = { type: 'SET_REVEALED', locationStateId };
-        dispatch(action);
+        routeGreyComplex('greyholm.reveal', { aggregate: 'reveal', reveal: true, entityKind: 'locationState', legacyEntityId: locationStateId }, action);
         emitCommand('greyholm.reveal.update', { scope: 'greyholm.reveal.update', kind: 'locationState', legacyId: locationStateId }, action);
       },
-      unsetRevealed: (locationStateId) => dispatch({ type: 'UNSET_REVEALED', locationStateId }),
+      unsetRevealed: (locationStateId) => {
+        const action: Action = { type: 'UNSET_REVEALED', locationStateId };
+        routeGreyComplex('greyholm.reveal', { aggregate: 'reveal', reveal: false, entityKind: 'locationState', legacyEntityId: locationStateId }, action);
+      },
       setLocationStatus: (locationStateId, status) =>
         dispatch({ type: 'SET_LOCATION_STATUS', locationStateId, status }),
       setQuestStatus: (questId, status) => dispatch({ type: 'SET_QUEST_STATUS', questId, status }),
@@ -1247,12 +1275,17 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       endActiveBattle: () => dispatch({ type: 'END_ACTIVE_BATTLE' }),
       presentCard: (card) => {
         const action: Action = { type: 'SET_PRESENTED_CARD', card };
-        dispatch(action);
         if (card && typeof card.type === 'string' && typeof card.id === 'string') {
+          routeGreyComplex('greyholm.presentedCard', { aggregate: 'presentedCard', present: true, cardType: card.type, cardId: card.id }, action);
           emitCommand('greyholm.presentedCard.set', { scope: 'greyholm.presentedCard.set', card: { type: card.type, id: card.id } }, action);
+        } else {
+          dispatch(action);
         }
       },
-      clearPresentedCard: () => dispatch({ type: 'SET_PRESENTED_CARD', card: null }),
+      clearPresentedCard: () => {
+        const action: Action = { type: 'SET_PRESENTED_CARD', card: null };
+        routeGreyComplex('greyholm.presentedCard', { aggregate: 'presentedCard', present: false }, action);
+      },
       setPartyMapPosition: (position) => dispatch({ type: 'SET_PARTY_MAP_POSITION', position }),
       setPartyRouteProgress: (progress) => dispatch({ type: 'SET_PARTY_ROUTE_PROGRESS', progress }),
       confirmBattleMapLink: (locationStateId, battleMapId) => {

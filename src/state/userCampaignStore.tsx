@@ -21,6 +21,7 @@ import { mergeScenarioIntoData, scenarioForCampaign } from '../data/scenarioMerg
 import { emitUserCommand } from './commandShadowSink';
 import { routeUserAuthority } from './commandAuthoritySink';
 import { routeUserDurable } from './durableAuthoritySink';
+import { routeUserComplex } from './complexAuthoritySink';
 import { syncEnabled, pushCampaign, deleteCampaignRemote, fetchRegistry, fetchCampaign, subscribeUc, patchPlayerRemote } from './userCampaignSync';
 
 /**
@@ -604,14 +605,45 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     addPlacement: (id, placement) => patchData(id, (p) => ({ ...p, mapPlacements: [...p.mapPlacements, { ...placement, id: uid('pin') }] })),
     updatePlacement: (id, placementId, patch) => {
       const pre = captureUc(id);
-      patchData(id, (p) => ({ ...p, mapPlacements: p.mapPlacements.map((mp) => (mp.id === placementId ? { ...mp, ...patch } : mp)) }));
-      // Allowlisted slice: a placement position (x/y) move maps 1:1 to the
-      // universal map-placement command.
-      if (typeof patch.x === 'number' && typeof patch.y === 'number') {
+      const updater = (p: UserCampaignData): UserCampaignData => ({ ...p, mapPlacements: p.mapPlacements.map((mp) => (mp.id === placementId ? { ...mp, ...patch } : mp)) });
+      const keys = Object.keys(patch);
+      const isPureMove = typeof patch.x === 'number' && typeof patch.y === 'number' && keys.every((k) => k === 'x' || k === 'y');
+      if (isPureMove) {
+        // Stage 16.1 — a pure position move maps 1:1 to the universal placement
+        // command; route it through the (default off) complex-authority sink
+        // first (durable universal commit + this exact patchData once as the
+        // compatibility projection). Flag off / scope not owned -> false -> normal.
+        const handled = routeUserComplex({
+          legacyCampaignId: id,
+          complexScope: 'userCampaign.placement',
+          descriptor: { aggregate: 'placement', op: 'move', placementId, x: patch.x as number, y: patch.y as number },
+          preData: pre.data,
+          preRuntime: pre.runtime,
+          predict: () => ({ data: pre.data ? updater(pre.data) : pre.data, runtime: pre.runtime }),
+          commit: () => { patchData(id, updater); return captureUc(id); },
+          fallback: () => patchData(id, updater),
+        });
+        if (!handled) patchData(id, updater);
         emitUcCommand(id, 'userCampaign.mapPlacement.update', { scope: 'userCampaign.mapPlacement.update', placementId, x: patch.x, y: patch.y }, pre);
+      } else {
+        patchData(id, updater);
       }
     },
-    removePlacement: (id, placementId) => patchData(id, (p) => ({ ...p, mapPlacements: p.mapPlacements.filter((mp) => mp.id !== placementId) })),
+    removePlacement: (id, placementId) => {
+      const pre = captureUc(id);
+      const updater = (p: UserCampaignData): UserCampaignData => ({ ...p, mapPlacements: p.mapPlacements.filter((mp) => mp.id !== placementId) });
+      const handled = routeUserComplex({
+        legacyCampaignId: id,
+        complexScope: 'userCampaign.placement',
+        descriptor: { aggregate: 'placement', op: 'remove', placementId },
+        preData: pre.data,
+        preRuntime: pre.runtime,
+        predict: () => ({ data: pre.data ? updater(pre.data) : pre.data, runtime: pre.runtime }),
+        commit: () => { patchData(id, updater); return captureUc(id); },
+        fallback: () => patchData(id, updater),
+      });
+      if (!handled) patchData(id, updater);
+    },
 
     addRoute: (id, route) => { const rid = uid('rte'); patchData(id, (p) => ({ ...p, routes: [...p.routes, { ...route, id: rid }] })); return rid; },
     updateRoute: (id, routeId, patch) => patchData(id, (p) => ({ ...p, routes: p.routes.map((r) => (r.id === routeId ? { ...r, ...patch } : r)) })),
