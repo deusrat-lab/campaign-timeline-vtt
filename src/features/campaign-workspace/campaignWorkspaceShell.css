@@ -1,0 +1,71 @@
+/* Stage 12 — shared Campaign Workspace shell. Additive, low-chrome layout so
+   the composed route keeps its existing look; only groups the header, nav,
+   status and module slots into one composition container. */
+.cws-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cws-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.cws-identity h1 {
+  margin: 0;
+}
+
+.cws-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cws-nav-item {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  text-decoration: none;
+  color: var(--muted, #8a94a6);
+  border: 1px solid transparent;
+}
+
+.cws-nav-item--active {
+  color: var(--text, #e6e9ef);
+  border-color: var(--border, #2a3140);
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+}
+
+.cws-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted, #8a94a6);
+}
+
+.cws-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted, #8a94a6);
+  display: inline-block;
+}
+
+.cws-status-dot--ready {
+  background: #43b581;
+}
+
+.cws-modules {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cws-slot {
+  min-width: 0;
+}

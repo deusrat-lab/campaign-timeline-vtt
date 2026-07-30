@@ -97,3 +97,40 @@ export const UNIVERSAL_READ_PATH_ENABLED: boolean =
  */
 export const UNIVERSAL_READ_PATH_SCOPES: string =
   import.meta.env.VITE_UNIVERSAL_READ_PATH_SCOPES ?? '';
+
+/**
+ * Stage 12 — shared Campaign Workspace composition (see rebuild-reports/stage-12).
+ * SEPARATE and INDEPENDENT from the Stage 9 shadow and Stage 10 read flags. When
+ * enabled, the real Greyholm and user-campaign routes compose their existing
+ * header + read-only sections + legacy body through ONE shared workspace shell +
+ * descriptor + module registry, instead of ad-hoc per-page layout. It is a
+ * COMPOSITION layer only: it never changes any write path, never calls universal
+ * commands, never reads/writes the production universal namespace, and does not
+ * enable the Stage 9/10 read flags — a shared-read-only module still only reads
+ * universal data when the Stage 10 flag independently allows it, else legacy.
+ *
+ * Default OFF. Must NOT be set in any committed env file or production/Railway
+ * environment. When OFF, the host routes render their exact pre-Stage-12 baseline
+ * composition (same header, same Stage 11 sections, same legacy body) — zero DOM
+ * or layout change, no added subscriptions/reads/writes.
+ */
+export const SHARED_CAMPAIGN_WORKSPACE_ENABLED: boolean =
+  import.meta.env.VITE_SHARED_CAMPAIGN_WORKSPACE === '1' ||
+  import.meta.env.VITE_SHARED_CAMPAIGN_WORKSPACE === 'true';
+
+/**
+ * Optional stack allowlist for the Stage 12 workspace. Comma/space separated
+ * subset of {greyholm, userCampaign}. Empty / unset / "all" / "*" means both
+ * stacks (when the flag is on). Unknown tokens are ignored — can only narrow.
+ */
+export const SHARED_CAMPAIGN_WORKSPACE_SCOPES: string =
+  import.meta.env.VITE_SHARED_CAMPAIGN_WORKSPACE_SCOPES ?? '';
+
+/** Resolve whether the shared workspace is enabled for a given campaign kind. */
+export function isSharedWorkspaceEnabledForKind(kind: 'greyholm' | 'userCampaign'): boolean {
+  if (!SHARED_CAMPAIGN_WORKSPACE_ENABLED) return false;
+  const trimmed = SHARED_CAMPAIGN_WORKSPACE_SCOPES.trim().toLowerCase();
+  if (trimmed === '' || trimmed === '*' || trimmed === 'all') return true;
+  const tokens = trimmed.split(/[\s,]+/).filter(Boolean);
+  return tokens.includes(kind.toLowerCase());
+}
