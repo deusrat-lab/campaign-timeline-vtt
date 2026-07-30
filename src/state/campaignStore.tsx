@@ -37,6 +37,7 @@ import type { CampaignOverlay, Patch, PresentedCard } from './overlay';
 import { createHttpOverlayAdapter, createLocalStorageOverlayAdapter, readLegacyOverlayRaw } from './persistence/overlayStorage';
 import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
 import { API_BASE_URL } from '../config';
+import { emitMainCommand } from './commandShadowSink';
 
 const STORAGE_KEY = 'campaign-timeline-vtt:overlay:v2';
 const OLD_STORAGE_KEY = 'campaign-timeline-vtt:state:v1';
@@ -1078,6 +1079,20 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       arc2Patch && arc2Patch !== DELETED ? arc2Patch.visibleToPlayers : arc2?.visibleToPlayers
     );
 
+    // Stage 13 — emit an already-committed command event for a small allowlist
+    // of Greyholm mutations to the OPTIONAL, default-off universal
+    // command-shadow sink. Legacy dispatch has already happened; the exact
+    // post-command overlay is recomputed from the pure reducer (never a delayed
+    // read), and emission is best-effort (the sink itself is fully guarded).
+    const emitCommand = (scope: string, input: unknown, action: Action): void => {
+      try {
+        const postOverlay = reducer(state, action);
+        emitMainCommand({ scope, input, preOverlay: state, postOverlay });
+      } catch {
+        // A shadow emission must never affect the legacy action.
+      }
+    };
+
     return {
       ...state,
       isDmView: state.mode !== 'player-view',
@@ -1087,7 +1102,11 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_CURRENT_LOCATION', locationStateId, routeId }),
       markVisited: (locationStateId) => dispatch({ type: 'MARK_VISITED', locationStateId }),
       setKnown: (locationStateId) => dispatch({ type: 'SET_KNOWN', locationStateId }),
-      setRevealed: (locationStateId) => dispatch({ type: 'SET_REVEALED', locationStateId }),
+      setRevealed: (locationStateId) => {
+        const action: Action = { type: 'SET_REVEALED', locationStateId };
+        dispatch(action);
+        emitCommand('greyholm.reveal.update', { scope: 'greyholm.reveal.update', kind: 'locationState', legacyId: locationStateId }, action);
+      },
       unsetRevealed: (locationStateId) => dispatch({ type: 'UNSET_REVEALED', locationStateId }),
       setLocationStatus: (locationStateId, status) =>
         dispatch({ type: 'SET_LOCATION_STATUS', locationStateId, status }),
@@ -1108,7 +1127,16 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       patchRoute: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'route', id, patch: patch as Patch<unknown> }),
       patchTravelEvent: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'travelEvent', id, patch: patch as Patch<unknown> }),
       patchPlacement: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'placement', id, patch: patch as Patch<unknown> }),
-      patchNpc: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'npc', id, patch: patch as Patch<unknown> }),
+      patchNpc: (id, patch) => {
+        const action: Action = { type: 'PATCH_ENTITY', kind: 'npc', id, patch: patch as Patch<unknown> };
+        dispatch(action);
+        // Allowlisted slice only: a single-field `role` edit maps 1:1 to the
+        // universal npc-update command. Any other patch shape is not emitted.
+        const keys = Object.keys(patch as Record<string, unknown>);
+        if (keys.length === 1 && keys[0] === 'role' && typeof (patch as { role?: unknown }).role === 'string') {
+          emitCommand('greyholm.npc.update', { scope: 'greyholm.npc.update', legacyNpcId: id, field: 'role', value: (patch as { role: string }).role }, action);
+        }
+      },
       patchTavern: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'tavern', id, patch: patch as Patch<unknown> }),
       patchShop: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'shop', id, patch: patch as Patch<unknown> }),
       patchImage: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'image', id, patch: patch as Patch<unknown> }),
@@ -1169,7 +1197,13 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'UPDATE_ACTIVE_BATTLE_COMBATANT', combatantId, patch }),
       addActiveBattleCombatant: (combatant) => dispatch({ type: 'ADD_ACTIVE_BATTLE_COMBATANT', combatant }),
       endActiveBattle: () => dispatch({ type: 'END_ACTIVE_BATTLE' }),
-      presentCard: (card) => dispatch({ type: 'SET_PRESENTED_CARD', card }),
+      presentCard: (card) => {
+        const action: Action = { type: 'SET_PRESENTED_CARD', card };
+        dispatch(action);
+        if (card && typeof card.type === 'string' && typeof card.id === 'string') {
+          emitCommand('greyholm.presentedCard.set', { scope: 'greyholm.presentedCard.set', card: { type: card.type, id: card.id } }, action);
+        }
+      },
       clearPresentedCard: () => dispatch({ type: 'SET_PRESENTED_CARD', card: null }),
       setPartyMapPosition: (position) => dispatch({ type: 'SET_PARTY_MAP_POSITION', position }),
       setPartyRouteProgress: (progress) => dispatch({ type: 'SET_PARTY_ROUTE_PROGRESS', progress }),

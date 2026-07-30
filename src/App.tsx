@@ -29,6 +29,7 @@ import { UniversalDiagnosticsPage } from './pages/UniversalDiagnosticsPage';
 import { ReadPathDiagnosticsPage } from './pages/ReadPathDiagnosticsPage';
 import { ShadowIntegrationProvider } from './features/shadow-integration/ShadowIntegrationProvider';
 import { ReadPathProvider } from './features/read-path/ReadPathProvider';
+import { CommandShadowProvider } from './features/command-shadow/CommandShadowProvider';
 import { MainCampaignShadowBridge } from './features/shadow-integration/MainCampaignShadowBridge';
 import { UserCampaignShadowBridge } from './features/shadow-integration/UserCampaignShadowBridge';
 
@@ -194,9 +195,13 @@ function App() {
             {/* Stage 10 — guarded universal read path. Provider is inert when its
                own default-off flag is unset; pilots mount only on the DM-only,
                flag-gated /diagnostics/read-path route. */}
-            <ReadPathProvider>
-              <AppShell />
-            </ReadPathProvider>
+            {/* Stage 13 — universal command-shadow. Inert (no coordinator, no
+               sink) when its own default-off flag is unset. */}
+            <CommandShadowProvider>
+              <ReadPathProvider>
+                <AppShell />
+              </ReadPathProvider>
+            </CommandShadowProvider>
           </ShadowIntegrationProvider>
         </UserCampaignProvider>
       </CampaignDataProvider>

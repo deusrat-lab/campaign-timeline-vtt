@@ -18,6 +18,7 @@ import type {
 } from '../types/userCampaign';
 import { getRegionPreset } from '../data/regionPresets';
 import { mergeScenarioIntoData, scenarioForCampaign } from '../data/scenarioMerge';
+import { emitUserCommand } from './commandShadowSink';
 import { syncEnabled, pushCampaign, deleteCampaignRemote, fetchRegistry, fetchCampaign, subscribeUc, patchPlayerRemote } from './userCampaignSync';
 
 /**
@@ -332,6 +333,48 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     pushBlob(id);
   }, [registry, runtimeCache, pushBlob]);
 
+  // Stage 13 — emit an already-committed user-campaign command to the OPTIONAL,
+  // default-off universal command-shadow sink. Reads the exact pre/post legacy
+  // data+runtime straight from persisted storage (patchData/patchRuntime write
+  // synchronously) so the captured states are precise. Fully guarded — a shadow
+  // emission can never affect the legacy action. `pre` is captured by the caller
+  // BEFORE running the real action.
+  const emitUcCommand = (
+    id: string,
+    scope: string,
+    input: unknown,
+    pre: { data: UserCampaignData | null; runtime: UserCampaignRuntime | null },
+  ): void => {
+    try {
+      const postData = readJson<UserCampaignData>(dataKey(id)) ?? pre.data;
+      const postRuntime = readJson<UserCampaignRuntime>(runtimeKey(id)) ?? pre.runtime;
+      emitUserCommand({
+        legacyCampaignId: id,
+        scope,
+        input,
+        preData: pre.data,
+        postData,
+        preRuntime: pre.runtime,
+        postRuntime,
+      });
+    } catch {
+      /* never affect the legacy action */
+    }
+  };
+  const captureUc = (id: string) => ({
+    data: readJson<UserCampaignData>(dataKey(id)),
+    runtime: readJson<UserCampaignRuntime>(runtimeKey(id)),
+  });
+  const resolveUcKind = (data: UserCampaignData | null, entityId: string): string | null => {
+    if (!data) return null;
+    const owners: Array<[string, Array<{ id: string }> | undefined]> = [
+      ['npc', data.npcs], ['location', data.locations], ['quest', data.quests],
+      ['enemy', data.enemies], ['faction', data.factions], ['player', data.party], ['image', data.images],
+    ];
+    const hits = owners.filter(([, list]) => (list ?? []).some((e) => e.id === entityId)).map(([k]) => k);
+    return hits.length === 1 ? hits[0] : null; // deterministic; never first-match on ambiguity
+  };
+
   const value = useMemo<UserCampaignValue>(() => ({
     registry,
 
@@ -374,7 +417,10 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
 
     setMode: (id, mode) => patchRuntime(id, (prev) => ({ ...prev, mode })),
     setSelected: (id, entityId, entityType) => patchRuntime(id, (prev) => ({ ...prev, selectedEntityId: entityId, selectedEntityType: entityType })),
-    toggleReveal: (id, entityId) => patchRuntime(id, (prev) => {
+    toggleReveal: (id, entityId) => {
+    const __pre = captureUc(id);
+    const __wasRevealed = (__pre.runtime?.revealedToPlayers ?? []).includes(entityId);
+    patchRuntime(id, (prev) => {
       const set = new Set(prev.revealedToPlayers ?? []);
       const reveal = !set.has(entityId);
       if (reveal) set.add(entityId); else set.delete(entityId);
@@ -398,7 +444,19 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
         setDataCache((prevData) => ({ ...prevData, [id]: nextData }));
       }
       return { ...prev, revealedToPlayers: [...set] };
-    }),
+    });
+    // Emit only the reveal (add) direction, and only when the target resolves
+    // unambiguously to a single kind (never first-match). The universal reveal
+    // command models the runtime revealedToPlayers -> visibility.entities delta;
+    // when the legacy toggle also flips a placement/image, the comparison will
+    // honestly report the wider legacy effect rather than a false success.
+    if (!__wasRevealed) {
+      const kind = resolveUcKind(__pre.data, entityId);
+      if (kind) {
+        emitUcCommand(id, 'userCampaign.reveal.update', { scope: 'userCampaign.reveal.update', kind, legacyId: entityId }, __pre);
+      }
+    }
+    },
     isRevealed: (id, entityId) => (readRuntime(id).revealedToPlayers ?? []).includes(entityId),
     upgradeFromScenario: (id) => {
       const data = readData(id);
@@ -425,13 +483,22 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     addCustomBattleMap: (id, map) => { const eid = uid('bmap'); patchData(id, (p) => ({ ...p, customBattleMaps: [...(p.customBattleMaps ?? []), { ...map, id: eid }] })); return eid; },
     removeCustomBattleMap: (id, mapId) => patchData(id, (p) => ({ ...p, customBattleMaps: (p.customBattleMaps ?? []).filter((m) => m.id !== mapId) })),
 
-    updateEntity: (id, entityType, entityId, patch) => patchData(id, (p) => {
-      const key = ({ location: 'locations', npc: 'npcs', quest: 'quests', enemy: 'enemies', image: 'images', party: 'party', faction: 'factions' } as const)[entityType as 'location'];
-      if (!key) return p;
-      const list = ((p[key] as Array<{ id: string }> | undefined) ?? []).map((e) => (e.id === entityId ? { ...e, ...patch } : e));
-      if (entityType === 'party') patchPlayerRemote(id, entityId, patch);
-      return { ...p, [key]: list } as UserCampaignData;
-    }),
+    updateEntity: (id, entityType, entityId, patch) => {
+      const pre = captureUc(id);
+      patchData(id, (p) => {
+        const key = ({ location: 'locations', npc: 'npcs', quest: 'quests', enemy: 'enemies', image: 'images', party: 'party', faction: 'factions' } as const)[entityType as 'location'];
+        if (!key) return p;
+        const list = ((p[key] as Array<{ id: string }> | undefined) ?? []).map((e) => (e.id === entityId ? { ...e, ...patch } : e));
+        if (entityType === 'party') patchPlayerRemote(id, entityId, patch);
+        return { ...p, [key]: list } as UserCampaignData;
+      });
+      // Allowlisted slice: a single-field npc `role` edit maps 1:1 to the
+      // universal npc-update command.
+      const keys = Object.keys(patch);
+      if (entityType === 'npc' && keys.length === 1 && keys[0] === 'role' && typeof (patch as { role?: unknown }).role === 'string') {
+        emitUcCommand(id, 'userCampaign.npc.update', { scope: 'userCampaign.npc.update', legacyNpcId: entityId, field: 'role', value: (patch as { role: string }).role }, pre);
+      }
+    },
 
     deleteEntity: (id, entityType, entityId) => patchData(id, (p) => {
       const key = ({ location: 'locations', npc: 'npcs', quest: 'quests', enemy: 'enemies', image: 'images', party: 'party', faction: 'factions' } as const)[entityType as 'location'];
@@ -441,7 +508,15 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     }),
 
     addPlacement: (id, placement) => patchData(id, (p) => ({ ...p, mapPlacements: [...p.mapPlacements, { ...placement, id: uid('pin') }] })),
-    updatePlacement: (id, placementId, patch) => patchData(id, (p) => ({ ...p, mapPlacements: p.mapPlacements.map((mp) => (mp.id === placementId ? { ...mp, ...patch } : mp)) })),
+    updatePlacement: (id, placementId, patch) => {
+      const pre = captureUc(id);
+      patchData(id, (p) => ({ ...p, mapPlacements: p.mapPlacements.map((mp) => (mp.id === placementId ? { ...mp, ...patch } : mp)) }));
+      // Allowlisted slice: a placement position (x/y) move maps 1:1 to the
+      // universal map-placement command.
+      if (typeof patch.x === 'number' && typeof patch.y === 'number') {
+        emitUcCommand(id, 'userCampaign.mapPlacement.update', { scope: 'userCampaign.mapPlacement.update', placementId, x: patch.x, y: patch.y }, pre);
+      }
+    },
     removePlacement: (id, placementId) => patchData(id, (p) => ({ ...p, mapPlacements: p.mapPlacements.filter((mp) => mp.id !== placementId) })),
 
     addRoute: (id, route) => { const rid = uid('rte'); patchData(id, (p) => ({ ...p, routes: [...p.routes, { ...route, id: rid }] })); return rid; },
