@@ -207,3 +207,53 @@ export const UNIVERSAL_COMMAND_AUTHORITY_ENABLED: boolean =
  */
 export const UNIVERSAL_COMMAND_AUTHORITY_SCOPES: string =
   import.meta.env.VITE_UNIVERSAL_COMMAND_AUTHORITY_SCOPES ?? '';
+
+/**
+ * Stage 15 — controlled local universal DURABLE AUTHORITY for a proven-safe set
+ * of scalar/text entity field updates (see rebuild-reports/stage-15). SEPARATE
+ * and INDEPENDENT from every earlier flag, including Stage 13 (command shadow)
+ * and Stage 14 (command authority).
+ *
+ * Unlike Stage 14 (which only calculates/validates a universal candidate and
+ * lets the legacy path perform the sole durable write), Stage 15 makes the
+ * universal PRODUCTION repository the durable source of truth for the
+ * allowlisted, field-level scope: on an allowlisted edit the universal command
+ * runs first to form a validated candidate, the candidate is atomically
+ * committed to the campaign-scoped production universal namespace with an
+ * expected-revision guard, the write is verified read-after-write, and only then
+ * is the existing legacy action invoked ONCE as a deterministic compatibility
+ * projection of the already-committed universal intent. There is never an
+ * independent legacy business decision and never a second universal write.
+ *
+ * When a Stage 15 scope is enabled it OWNS that scope: the Stage 14 authority
+ * router does not independently process it (the durable sink is consulted first
+ * and reports `handled`). Legacy-owned fields (maps, runtime, reveal, battle,
+ * routes, timeline…) are always composed fresh from the exact current legacy
+ * state, so Stage 15 never overwrites them with a stale universal snapshot.
+ *
+ * It never uses the Stage 9 shadow namespace as an output, never adds network /
+ * server sync, never changes `userCampaignSync`, never performs migration, and
+ * never takes authority over anything outside its field-level allowlist. Before
+ * the durable universal commit, ANY uncertainty runs the unchanged legacy action
+ * once as a safe fallback (no repository write). After the durable commit the
+ * universal repository is authoritative and is never automatically rolled back;
+ * a failed legacy projection becomes a pending, idempotent recovery record.
+ *
+ * Default OFF. Must NOT be set in any committed env file or production/Railway
+ * environment. When OFF: no durable router is created, no production repository
+ * is read or written for command authority, no recovery is processed, no Stage
+ * 15 diagnostics are read or written, and the Stage 14 / legacy command path runs
+ * exactly as baseline. This flag does NOT enable the Stage 9/10/11/12/13/14 flags.
+ */
+export const UNIVERSAL_DURABLE_AUTHORITY_ENABLED: boolean =
+  import.meta.env.VITE_UNIVERSAL_DURABLE_AUTHORITY === '1' ||
+  import.meta.env.VITE_UNIVERSAL_DURABLE_AUTHORITY === 'true';
+
+/**
+ * Optional narrowing allowlist for Stage 15. Comma/space separated subset of the
+ * known durable-authority scopes. Empty / unset / "all" / "*" means all known
+ * durable scopes (when the flag is on). Unknown tokens are ignored — this can
+ * only ever narrow the built-in allowlist, never widen it.
+ */
+export const UNIVERSAL_DURABLE_AUTHORITY_SCOPES: string =
+  import.meta.env.VITE_UNIVERSAL_DURABLE_AUTHORITY_SCOPES ?? '';
