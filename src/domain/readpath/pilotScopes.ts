@@ -58,6 +58,26 @@ export const PILOT_SCOPES: readonly PilotScopeDefinition[] = Object.freeze([
     variant: 'summary',
     runtime: false,
   },
+  // Stage 11 — user-campaign Player-Safe and Observer read-only consumers. These
+  // let the real campaign library page (in player / observer mode) read the
+  // universal shadow snapshot through the audience projection, so a DM secret can
+  // never reach a player component even when the data source is universal.
+  {
+    scope: 'userCampaign.playerSafe.entities',
+    label: 'User campaign — Player-Safe entity list',
+    stack: 'userCampaign',
+    projection: 'playerSafe',
+    variant: 'entities',
+    runtime: false,
+  },
+  {
+    scope: 'userCampaign.observer.status',
+    label: 'User campaign — Observer status',
+    stack: 'userCampaign',
+    projection: 'observer',
+    variant: 'observer',
+    runtime: false,
+  },
 ] as const);
 
 const BY_SCOPE = new Map(PILOT_SCOPES.map((definition) => [definition.scope, definition]));

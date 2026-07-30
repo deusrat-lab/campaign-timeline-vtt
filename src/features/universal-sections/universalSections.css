@@ -1,0 +1,113 @@
+/* Stage 11 — shared styling for the additive universal read-only section band.
+   Kept deliberately compact and neutral so it reads as a diagnostic-grade
+   summary strip inside the host page rather than a redesign of its cards. */
+
+.usec-band {
+  border: 1px solid var(--border, #d8d8de);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 12px 0;
+  background: var(--panel, #fafafb);
+  font-size: 13px;
+}
+
+.usec-band--compact {
+  padding: 8px 12px;
+  margin: 8px 0;
+}
+
+.usec-band-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.usec-band-head h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.usec-source {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.usec-source--universal {
+  background: #e6f4ea;
+  color: #1e7a3c;
+}
+
+.usec-source--legacy {
+  background: #eceef1;
+  color: #566;
+}
+
+.usec-counts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.usec-counts li {
+  color: var(--muted, #667);
+}
+
+.usec-counts strong {
+  color: var(--text, #223);
+  margin-left: 4px;
+}
+
+.usec-list-count,
+.usec-more {
+  margin: 0 0 6px;
+  color: var(--muted, #667);
+}
+
+.usec-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px 12px;
+}
+
+.usec-list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.usec-list-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.usec-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex: none;
+}
+
+.usec-thumb--empty {
+  background: var(--border, #e2e2e8);
+}
+
+.usec-empty {
+  margin: 0;
+  color: var(--muted, #889);
+}
