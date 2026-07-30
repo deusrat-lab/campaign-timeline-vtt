@@ -1,0 +1,299 @@
+{
+  "verdict": "STAGE_11_HARNESS_PASS",
+  "summary": {
+    "passed": 72,
+    "failed": 0,
+    "total": 72,
+    "ok": true
+  },
+  "results": [
+    {
+      "name": "flag-01 read flag default-off in config",
+      "pass": true
+    },
+    {
+      "name": "flag-02 no committed env enables read flag",
+      "pass": true
+    },
+    {
+      "name": "flag-03 all scopes disabled when flag off",
+      "pass": true
+    },
+    {
+      "name": "flag-04 allowlist all/empty",
+      "pass": true
+    },
+    {
+      "name": "flag-05 allowlist narrows to known only",
+      "pass": true
+    },
+    {
+      "name": "flag-06 UC Player-Safe scope registered",
+      "pass": true
+    },
+    {
+      "name": "flag-07 UC Observer scope registered",
+      "pass": true
+    },
+    {
+      "name": "flag-08 both are known pilot scopes",
+      "pass": true
+    },
+    {
+      "name": "flag-09 section shell renders null when flag off",
+      "pass": true
+    },
+    {
+      "name": "flag-10 wrappers guard heavy build behind flag",
+      "pass": true
+    },
+    {
+      "name": "vm-11 DM summary parity",
+      "pass": true
+    },
+    {
+      "name": "vm-12 NPC list parity (order/ids/titles)",
+      "pass": true
+    },
+    {
+      "name": "vm-13 Player-Safe entities parity",
+      "pass": true
+    },
+    {
+      "name": "vm-14 Observer status parity",
+      "pass": true
+    },
+    {
+      "name": "vm-15 deterministic ordering",
+      "pass": true
+    },
+    {
+      "name": "vm-16 items have stable id/kind/visible",
+      "pass": true
+    },
+    {
+      "name": "vm-17 image refs normalized (null|string)",
+      "pass": true
+    },
+    {
+      "name": "vm-18 summary counts numeric",
+      "pass": true
+    },
+    {
+      "name": "vm-19 no raw snapshot buckets in VM",
+      "pass": true
+    },
+    {
+      "name": "vm-20 VM build does not mutate snapshot",
+      "pass": true
+    },
+    {
+      "name": "grey-21 pre-hydration => legacy",
+      "pass": true
+    },
+    {
+      "name": "grey-22 section1 summary => universal",
+      "pass": true
+    },
+    {
+      "name": "grey-23 section2 npcList => universal + non-empty",
+      "pass": true
+    },
+    {
+      "name": "grey-24 image/card consumer resolves an image",
+      "pass": true
+    },
+    {
+      "name": "grey-25 pending mutation => legacy fallback",
+      "pass": true
+    },
+    {
+      "name": "grey-26 resumes universal after success",
+      "pass": true
+    },
+    {
+      "name": "grey-27 runtime VM shape",
+      "pass": true
+    },
+    {
+      "name": "grey-28 reads do not mutate shadow",
+      "pass": true
+    },
+    {
+      "name": "uc-29 direct URL pre-hydration => legacy",
+      "pass": true
+    },
+    {
+      "name": "uc-30 section1 DM summary => universal",
+      "pass": true
+    },
+    {
+      "name": "uc-31 section2 Player-Safe => universal",
+      "pass": true
+    },
+    {
+      "name": "uc-31b Player-Safe entities <= DM entities",
+      "pass": true
+    },
+    {
+      "name": "uc-32 unknown campaign => legacy, no cross-read",
+      "pass": true
+    },
+    {
+      "name": "uc-33 wrong-campaign snapshot rejected",
+      "pass": true
+    },
+    {
+      "name": "uc-34 deleted/absent campaign => legacy",
+      "pass": true
+    },
+    {
+      "name": "uc-35 snapshot campaign matches requested",
+      "pass": true
+    },
+    {
+      "name": "uc-36 UC mutation => legacy fallback",
+      "pass": true
+    },
+    {
+      "name": "uc-37 UC resumes universal",
+      "pass": true
+    },
+    {
+      "name": "shared-38 both stacks use UniversalSection",
+      "pass": true
+    },
+    {
+      "name": "shared-39 shell uses shared SectionBody",
+      "pass": true
+    },
+    {
+      "name": "shared-40 bodies are presentational",
+      "pass": true
+    },
+    {
+      "name": "shared-41 single view-model contract",
+      "pass": true
+    },
+    {
+      "name": "priv-42 DM includes all entities",
+      "pass": true
+    },
+    {
+      "name": "priv-43 Player-Safe < DM entities",
+      "pass": true
+    },
+    {
+      "name": "priv-44 all Player-Safe entities visible",
+      "pass": true
+    },
+    {
+      "name": "priv-45 no DM-only fields in Player-Safe VM",
+      "pass": true
+    },
+    {
+      "name": "priv-46 Observer VM is status-only",
+      "pass": true
+    },
+    {
+      "name": "priv-47 wrong projection for player scope throws",
+      "pass": true
+    },
+    {
+      "name": "priv-48 wrong projection for observer scope throws",
+      "pass": true
+    },
+    {
+      "name": "priv-49 caldran reveals 8/8",
+      "pass": true
+    },
+    {
+      "name": "safe-50 src/features/universal-sections/useUniversalSection.ts no writes/commands",
+      "pass": true
+    },
+    {
+      "name": "safe-50 src/features/universal-sections/UniversalSection.tsx no writes/commands",
+      "pass": true
+    },
+    {
+      "name": "safe-50 src/features/universal-sections/SectionBodies.tsx no writes/commands",
+      "pass": true
+    },
+    {
+      "name": "safe-50 src/features/universal-sections/GreyholmUniversalSections.tsx no writes/commands",
+      "pass": true
+    },
+    {
+      "name": "safe-50 src/features/universal-sections/UserCampaignUniversalSections.tsx no writes/commands",
+      "pass": true
+    },
+    {
+      "name": "safe-50 src/features/universal-sections/sectionRegistry.ts no writes/commands",
+      "pass": true
+    },
+    {
+      "name": "safe-51 no network in section layer",
+      "pass": true
+    },
+    {
+      "name": "safe-52 no production namespace in sections",
+      "pass": true
+    },
+    {
+      "name": "safe-53 read gateway reads shadow namespace",
+      "pass": true
+    },
+    {
+      "name": "safe-54 EntityLibrary mounts Greyholm sections",
+      "pass": true
+    },
+    {
+      "name": "safe-55 CampaignLibrary mounts UC sections",
+      "pass": true
+    },
+    {
+      "name": "safe-56 EntityLibrary does not import read-path (Stage 10 diag-62)",
+      "pass": true
+    },
+    {
+      "name": "safe-57 Greyholm section carries no write handlers",
+      "pass": true
+    },
+    {
+      "name": "safe-58 providers wrap the app shell",
+      "pass": true
+    },
+    {
+      "name": "diag-59 real hosted sections enumerated",
+      "pass": true
+    },
+    {
+      "name": "diag-60 read-path route DM-only",
+      "pass": true
+    },
+    {
+      "name": "diag-61 diagnostics flag-gated",
+      "pass": true
+    },
+    {
+      "name": "diag-62 registry is descriptive metadata only",
+      "pass": true
+    },
+    {
+      "name": "anchor-63 greyholm 210 NPC",
+      "pass": true
+    },
+    {
+      "name": "anchor-64 greyholm 139 battle maps",
+      "pass": true
+    },
+    {
+      "name": "anchor-65 caldran 66 NPC",
+      "pass": true
+    },
+    {
+      "name": "anchor-66 caldran 78 enemies",
+      "pass": true
+    }
+  ]
+}

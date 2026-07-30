@@ -23,6 +23,7 @@
     "verify:stage07": "node scripts/verify-stage-07-migration.mjs",
     "verify:stage09": "node scripts/stage09/build-domain.mjs && node scripts/stage09/runShadow.mjs",
     "verify:stage10": "node scripts/stage10/build-domain.mjs && node scripts/stage10/runReadPath.mjs",
+    "verify:stage11": "node scripts/stage11/build-domain.mjs && node scripts/stage11/runSections.mjs",
     "snapshot:promote": "node scripts/promote-overlay-snapshot.mjs",
     "preview": "vite preview --host 0.0.0.0 --port 5175 --open",
     "start": "vite preview --host 0.0.0.0 --port ${PORT:-4173}"

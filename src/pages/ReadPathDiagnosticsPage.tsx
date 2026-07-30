@@ -20,6 +20,7 @@ import type {
 import type { UserCampaignData, UserCampaignRuntime } from '../types/userCampaign';
 import { useReadPath } from '../features/read-path/ReadPathProvider';
 import { PilotCard } from '../features/read-path/PilotCard';
+import { STAGE_11_HOSTED_SECTIONS } from '../features/universal-sections/sectionRegistry';
 
 /**
  * Stage 10 — DM-only, read-flag-gated diagnostics surface that hosts the real
@@ -81,6 +82,28 @@ export function ReadPathDiagnosticsPage() {
         Legacy stores remain authoritative for all writes. A card reads the universal shadow snapshot only when it is
         fresh, valid and campaign-matched; otherwise it falls back to legacy. No writes, no commands, no network.
       </p>
+
+      <h2>Stage 11 — real hosted sections</h2>
+      <p>
+        These pilot scopes are additionally mounted inside REAL application routes (not just this diagnostics page).
+        Each renders the same normalized view model, sourced from the universal shadow snapshot when fresh, else legacy.
+      </p>
+      <table className="readpath-hosted">
+        <thead>
+          <tr><th>scope</th><th>route</th><th>projection</th><th>audience</th><th>legacy fallback source</th></tr>
+        </thead>
+        <tbody>
+          {STAGE_11_HOSTED_SECTIONS.map((s) => (
+            <tr key={s.scope}>
+              <td><code>{s.scope}</code></td>
+              <td>{s.route}</td>
+              <td>{s.projection}</td>
+              <td>{s.audience}</td>
+              <td>{s.legacySource}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       <h2>Greyholm (main campaign)</h2>
       {loading ? (

@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "ignoreDeprecations": "6.0",
+    "outDir": ".dist",
+    "rootDir": "../../src",
+    "strict": false,
+    "skipLibCheck": true,
+    "declaration": false,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": false,
+    "isolatedModules": false
+  },
+  "include": ["../../src/domain/**/*.ts", "../../src/data/**/*.ts", "../../src/state/overlay.ts"],
+  "exclude": ["../../src/config.ts", "../../src/data/battleMapCatalog.ts"]
+}
