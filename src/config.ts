@@ -257,3 +257,36 @@ export const UNIVERSAL_DURABLE_AUTHORITY_ENABLED: boolean =
  */
 export const UNIVERSAL_DURABLE_AUTHORITY_SCOPES: string =
   import.meta.env.VITE_UNIVERSAL_DURABLE_AUTHORITY_SCOPES ?? '';
+
+/**
+ * Stage 16 — universal COMPLEX (aggregate-level) durable authority. Extends the
+ * Stage 15 durable authority from field-level to aggregate-level transition
+ * ownership for a proven allowlist (reveal, presented cards, placements, party
+ * location, route progress). Same durable flow and the same `repository_committed`
+ * boundary: safe pre-commit fallback; after the durable commit the universal
+ * repository owns the aggregate and is never rolled back, and a failed legacy
+ * projection becomes a pending idempotent recovery record. Legacy-owned data
+ * (maps, hotspot/faction geometry, timeline, battles, entity content) is always
+ * composed fresh from the exact current legacy state.
+ *
+ * Default OFF. Must NOT be set in any committed env file or production/Railway
+ * environment. When OFF: no complex router is created, no production repository
+ * is read or written for aggregate authority, no recovery is processed, no Stage
+ * 16 diagnostics are read or written, and the Stage 15 / Stage 14 / legacy path
+ * runs exactly as baseline. This flag does NOT enable the Stage 9/10/11/12/13/14/15
+ * flags.
+ */
+export const UNIVERSAL_COMPLEX_AUTHORITY_ENABLED: boolean =
+  import.meta.env.VITE_UNIVERSAL_COMPLEX_AUTHORITY === '1' ||
+  import.meta.env.VITE_UNIVERSAL_COMPLEX_AUTHORITY === 'true';
+
+/**
+ * Optional narrowing allowlist for Stage 16. Comma/space separated subset of the
+ * known complex-authority scopes (`greyholm.reveal`, `greyholm.presentedCard`,
+ * `greyholm.placement`, `greyholm.partyLocation`, `greyholm.routeProgress`,
+ * `userCampaign.reveal`, `userCampaign.presentedCard`, `userCampaign.placement`).
+ * Empty / unset / "all" / "*" means all known complex scopes (when the flag is
+ * on). Unknown tokens are ignored — this can only ever narrow, never widen.
+ */
+export const UNIVERSAL_COMPLEX_AUTHORITY_SCOPES: string =
+  import.meta.env.VITE_UNIVERSAL_COMPLEX_AUTHORITY_SCOPES ?? '';
