@@ -14,6 +14,7 @@ import { ShadowIntegrationDiagnostics } from '../features/shadow-integration/Sha
 import { CommandShadowDiagnostics } from '../features/command-shadow/CommandShadowDiagnostics';
 import { CommandAuthorityDiagnostics } from '../features/command-authority/CommandAuthorityDiagnostics';
 import { DurableAuthorityDiagnostics } from '../features/durable-authority/DurableAuthorityDiagnostics';
+import { ComplexAuthorityDiagnostics } from '../features/complex-authority/ComplexAuthorityDiagnostics';
 
 export function UniversalDiagnosticsPage() {
   const { data, loading, error } = useCampaignData();
@@ -74,6 +75,7 @@ export function UniversalDiagnosticsPage() {
       <CommandShadowDiagnostics />
       <CommandAuthorityDiagnostics />
       <DurableAuthorityDiagnostics />
+      <ComplexAuthorityDiagnostics />
     </section>
   );
 }

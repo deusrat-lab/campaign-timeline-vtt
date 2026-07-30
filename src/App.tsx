@@ -32,6 +32,7 @@ import { ReadPathProvider } from './features/read-path/ReadPathProvider';
 import { CommandShadowProvider } from './features/command-shadow/CommandShadowProvider';
 import { CommandAuthorityProvider } from './features/command-authority/CommandAuthorityProvider';
 import { DurableAuthorityProvider } from './features/durable-authority/DurableAuthorityProvider';
+import { ComplexAuthorityProvider } from './features/complex-authority/ComplexAuthorityProvider';
 import { MainCampaignShadowBridge } from './features/shadow-integration/MainCampaignShadowBridge';
 import { UserCampaignShadowBridge } from './features/shadow-integration/UserCampaignShadowBridge';
 
@@ -209,9 +210,15 @@ function App() {
                    flag is unset. Consulted before Stage 14 for its owned scopes.
                    Independent of the Stage 9/10/11/12/13/14 flags. */}
                 <DurableAuthorityProvider>
-                  <ReadPathProvider>
-                    <AppShell />
-                  </ReadPathProvider>
+                  {/* Stage 16.1 — universal COMPLEX (aggregate) authority. Inert
+                     (no router, no sink, no production repository access) when its
+                     own default-off flag is unset. Consulted before Stage 15 for
+                     its owned aggregate scopes. Independent of every earlier flag. */}
+                  <ComplexAuthorityProvider>
+                    <ReadPathProvider>
+                      <AppShell />
+                    </ReadPathProvider>
+                  </ComplexAuthorityProvider>
                 </DurableAuthorityProvider>
               </CommandAuthorityProvider>
             </CommandShadowProvider>
