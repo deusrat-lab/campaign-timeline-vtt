@@ -14,8 +14,21 @@ import { CompanionShopCard } from '../features/embedded-dm-companion/CompanionSh
 import { BATTLE_MAP_ASSET_ORIGIN } from '../config';
 import type { BattleMapManifestEntry } from '../data/battleMapManifest';
 import { GreyholmUniversalSections } from '../features/universal-sections/GreyholmUniversalSections';
+import { GreyholmWorkspace } from '../features/campaign-workspace/GreyholmWorkspace';
+import { isSharedWorkspaceEnabledForKind } from '../config';
 
 export type EntityLibraryKind = 'npc' | 'quests' | 'enemies' | 'bestiary' | 'players' | 'battleMaps' | 'factions';
+
+/** Stage 12 — stable Greyholm route path per library kind (for the shared nav). */
+const GREYHOLM_ROUTE_BY_KIND: Record<EntityLibraryKind, string> = {
+  npc: '/npc',
+  quests: '/quests',
+  enemies: '/enemies',
+  bestiary: '/bestiary',
+  players: '/players',
+  battleMaps: '/battle-maps',
+  factions: '/factions',
+};
 type EntitySortKey = 'name_asc' | 'name_desc' | 'location' | 'status' | 'role';
 
 const QUEST_STATUS_LABELS: Record<QuestStatus, string> = {
@@ -618,32 +631,29 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
     setEditing(true);
   }
 
-  return (
-    <div className="page entity-library-page">
-      <header className="entity-library-header">
-        <div>
-          <h1>{title} — {timeline?.title}</h1>
-          <p className="muted">Просмотр, правка карточек и быстрый переход к размещению на текущей карте.</p>
-        </div>
-        <div className="entity-library-actions">
-          {kind === 'enemies' && (
-            <button className="btn-primary" onClick={createEnemy}>
-              Создать врага
-            </button>
-          )}
-          {kind !== 'players' && (
-            <button className="btn-primary" onClick={() => selected ? openMapLibrary(selected as DmNpc | DmQuest | DmCustomEnemy) : openMapLibrary()}>
-              {kind === 'quests' ? 'Разместить цель на карте' : 'Разместить на карте'}
-            </button>
-          )}
-        </div>
-      </header>
+  const legacyHeader = (
+    <header className="entity-library-header">
+      <div>
+        <h1>{title} — {timeline?.title}</h1>
+        <p className="muted">Просмотр, правка карточек и быстрый переход к размещению на текущей карте.</p>
+      </div>
+      <div className="entity-library-actions">
+        {kind === 'enemies' && (
+          <button className="btn-primary" onClick={createEnemy}>
+            Создать врага
+          </button>
+        )}
+        {kind !== 'players' && (
+          <button className="btn-primary" onClick={() => selected ? openMapLibrary(selected as DmNpc | DmQuest | DmCustomEnemy) : openMapLibrary()}>
+            {kind === 'quests' ? 'Разместить цель на карте' : 'Разместить на карте'}
+          </button>
+        )}
+      </div>
+    </header>
+  );
 
-      {/* Stage 11 — additive universal read-only sections. Renders nothing when
-          the default-off read flag is unset, so the library page is unchanged at
-          baseline. Legacy write path below is untouched. */}
-      <GreyholmUniversalSections />
-
+  const legacyBody = (
+    <>
       <div className="entity-library-layout">
         <aside className="entity-library-list">
           <input
@@ -888,6 +898,29 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
         </section>
       </div>
       {linkPreview.modal}
+    </>
+  );
+
+  // Stage 12 — when the default-off shared-workspace flag is on for Greyholm,
+  // compose the SAME header + Stage 11 read-only sections + legacy body through
+  // the shared workspace shell + descriptor. When off, render the exact
+  // pre-Stage-12 baseline composition (header, sections band, body) with no DOM
+  // change. The legacy write path inside `legacyBody` is untouched either way.
+  return (
+    <div className="page entity-library-page">
+      {isSharedWorkspaceEnabledForKind('greyholm') ? (
+        <GreyholmWorkspace
+          activeRoute={GREYHOLM_ROUTE_BY_KIND[kind]}
+          legacyHeader={legacyHeader}
+          legacyBody={legacyBody}
+        />
+      ) : (
+        <>
+          {legacyHeader}
+          <GreyholmUniversalSections />
+          {legacyBody}
+        </>
+      )}
     </div>
   );
 }

@@ -12,6 +12,9 @@ import { buildListItems, buildDetail, type LibraryKind } from '../../shared/enti
 import type { EntityKind, FilterConfig } from '../../shared/entity/types';
 import { isEntityPlayerVisible, playerSafeImageSrc } from './playerSafe';
 import { UserCampaignUniversalSections } from '../universal-sections/UserCampaignUniversalSections';
+import { UserCampaignWorkspace } from '../campaign-workspace/UserCampaignWorkspace';
+import type { CampaignWorkspaceAudience } from '../../domain';
+import { isSharedWorkspaceEnabledForKind } from '../../config';
 
 type Kind = LibraryKind | 'images' | 'notes';
 
@@ -222,41 +225,38 @@ export function CampaignLibraryPage() {
 
   const type = isEntityKind ? KIND_ENTITY[k] : undefined;
 
-  return (
-    <div className="ucw-lib-page entity-library-page--wide">
-      <div className="ucw-lib-page-head">
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-          <button className="atlas-back-link" style={{ margin: 0 }} onClick={() => navigate(`/campaigns/${campaignId}/map${observer ? '?as=player&observer=1' : asPlayer ? '?as=player' : ''}`)}>← Карта</button>
-          <h1>{data.title} · {KIND_LABEL[k]}</h1>
-        </div>
-        {observer ? (
-          <span className="ucw-chip">Вид игрока</span>
-        ) : (
-          <>
-            <div className="ucw-segmented" role="group" aria-label="Режим">
-              {(['dmView', 'dmEdit', 'playerView'] as UserCampaignMode[]).map((m) => (
-                <button
-                  key={m}
-                  className={mode === m ? 'active' : ''}
-                  onClick={() => {
-                    if (asPlayer && m !== 'playerView') navigate(`/campaigns/${campaignId}/library/${k}`);
-                    store.setMode(campaignId, m);
-                  }}
-                >
-                  {m === 'dmView' ? 'DM View' : m === 'dmEdit' ? 'DM Edit' : 'Player View'}
-                </button>
-              ))}
-            </div>
-            {asPlayer && <button className="ucw-tbtn" onClick={() => navigate(`/campaigns/${campaignId}/library/${k}`)}>Вернуться в DM</button>}
-          </>
-        )}
+  const legacyHeader = (
+    <div className="ucw-lib-page-head">
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+        <button className="atlas-back-link" style={{ margin: 0 }} onClick={() => navigate(`/campaigns/${campaignId}/map${observer ? '?as=player&observer=1' : asPlayer ? '?as=player' : ''}`)}>← Карта</button>
+        <h1>{data.title} · {KIND_LABEL[k]}</h1>
       </div>
+      {observer ? (
+        <span className="ucw-chip">Вид игрока</span>
+      ) : (
+        <>
+          <div className="ucw-segmented" role="group" aria-label="Режим">
+            {(['dmView', 'dmEdit', 'playerView'] as UserCampaignMode[]).map((m) => (
+              <button
+                key={m}
+                className={mode === m ? 'active' : ''}
+                onClick={() => {
+                  if (asPlayer && m !== 'playerView') navigate(`/campaigns/${campaignId}/library/${k}`);
+                  store.setMode(campaignId, m);
+                }}
+              >
+                {m === 'dmView' ? 'DM View' : m === 'dmEdit' ? 'DM Edit' : 'Player View'}
+              </button>
+            ))}
+          </div>
+          {asPlayer && <button className="ucw-tbtn" onClick={() => navigate(`/campaigns/${campaignId}/library/${k}`)}>Вернуться в DM</button>}
+        </>
+      )}
+    </div>
+  );
 
-      {/* Stage 11 — additive universal read-only sections for THIS campaign only.
-          Renders nothing when the default-off read flag is unset. Player/observer
-          audiences see only the Player-Safe section. Legacy write path untouched. */}
-      <UserCampaignUniversalSections legacyCampaignId={campaignId} isPlayer={asPlayer || isPlayer} />
-
+  const legacyBody = (
+    <>
       {k === 'notes' ? (
         <NotesSection campaignId={campaignId} canEdit={canEdit} />
       ) : k === 'images' ? (
@@ -302,6 +302,36 @@ export function CampaignLibraryPage() {
           onClose={() => setEditOpen(null)}
           onPlaceOnMap={(entityType, entityId) => navigate(`/campaigns/${campaignId}/map?place=${entityType}:${entityId}`)}
         />
+      )}
+    </>
+  );
+
+  const workspaceAudience: CampaignWorkspaceAudience = observer ? 'observer' : asPlayer ? 'player' : 'dm';
+
+  // Stage 12 — when the default-off shared-workspace flag is on for user
+  // campaigns, compose the SAME header + Stage 11 read-only sections + legacy
+  // body through the shared workspace shell + descriptor. When off, render the
+  // exact pre-Stage-12 baseline composition with no DOM change. Strict
+  // campaignId isolation — the shell requires a real campaign id (no Greyholm
+  // fallback). All legacy write handlers inside `legacyBody` are untouched.
+  return (
+    <div className="ucw-lib-page entity-library-page--wide">
+      {isSharedWorkspaceEnabledForKind('userCampaign') ? (
+        <UserCampaignWorkspace
+          legacyCampaignId={campaignId}
+          title={data.title}
+          kind={k}
+          activeRoute={`/campaigns/${campaignId}/library/${k}`}
+          audience={workspaceAudience}
+          legacyHeader={legacyHeader}
+          legacyBody={legacyBody}
+        />
+      ) : (
+        <>
+          {legacyHeader}
+          <UserCampaignUniversalSections legacyCampaignId={campaignId} isPlayer={asPlayer || isPlayer} />
+          {legacyBody}
+        </>
       )}
     </div>
   );
