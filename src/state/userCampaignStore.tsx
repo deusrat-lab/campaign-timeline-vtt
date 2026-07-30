@@ -19,6 +19,7 @@ import type {
 import { getRegionPreset } from '../data/regionPresets';
 import { mergeScenarioIntoData, scenarioForCampaign } from '../data/scenarioMerge';
 import { emitUserCommand } from './commandShadowSink';
+import { routeUserAuthority } from './commandAuthoritySink';
 import { syncEnabled, pushCampaign, deleteCampaignRemote, fetchRegistry, fetchCampaign, subscribeUc, patchPlayerRemote } from './userCampaignSync';
 
 /**
@@ -485,18 +486,53 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
 
     updateEntity: (id, entityType, entityId, patch) => {
       const pre = captureUc(id);
-      patchData(id, (p) => {
+      const keys = Object.keys(patch);
+      const isNpcRoleOnly =
+        entityType === 'npc' && keys.length === 1 && keys[0] === 'role' && typeof (patch as { role?: unknown }).role === 'string';
+
+      const genericUpdater = (p: UserCampaignData): UserCampaignData => {
         const key = ({ location: 'locations', npc: 'npcs', quest: 'quests', enemy: 'enemies', image: 'images', party: 'party', faction: 'factions' } as const)[entityType as 'location'];
         if (!key) return p;
         const list = ((p[key] as Array<{ id: string }> | undefined) ?? []).map((e) => (e.id === entityId ? { ...e, ...patch } : e));
         if (entityType === 'party') patchPlayerRemote(id, entityId, patch);
         return { ...p, [key]: list } as UserCampaignData;
-      });
-      // Allowlisted slice: a single-field npc `role` edit maps 1:1 to the
-      // universal npc-update command.
-      const keys = Object.keys(patch);
-      if (entityType === 'npc' && keys.length === 1 && keys[0] === 'role' && typeof (patch as { role?: unknown }).role === 'string') {
-        emitUcCommand(id, 'userCampaign.npc.update', { scope: 'userCampaign.npc.update', legacyNpcId: entityId, field: 'role', value: (patch as { role: string }).role }, pre);
+      };
+
+      if (isNpcRoleOnly) {
+        const nextValue = (patch as { role: string }).role;
+        // Pure npc updater — npc never triggers `patchPlayerRemote`, so it has no
+        // side effect beyond the single field. Used for both the pure prediction
+        // (on the immutable captured pre-data) and the ONE real legacy commit.
+        const npcUpdater = (p: UserCampaignData): UserCampaignData => ({
+          ...p,
+          npcs: (p.npcs ?? []).map((e) => (e.id === entityId ? { ...e, ...patch } : e)),
+        });
+        // Stage 14 — universal command authority for this tiny reversible edit.
+        // `commit` performs the ONE real `patchData` (existing persistence +
+        // existing `pushBlob` sync, fired exactly once) and reads back the
+        // committed post-state; `predict` applies the pure updater to the captured
+        // immutable pre-data WITHOUT writing. Flag off / no router → false → the
+        // store performs the same single `patchData` itself (baseline behaviour).
+        const handled = routeUserAuthority({
+          legacyCampaignId: id,
+          scope: 'userCampaign.npc.role.update',
+          input: { scope: 'userCampaign.npc.update', legacyNpcId: entityId, field: 'role', value: nextValue },
+          preData: pre.data,
+          preRuntime: pre.runtime,
+          nextValue,
+          predict: () => ({ data: pre.data ? npcUpdater(pre.data) : pre.data, runtime: pre.runtime }),
+          commit: () => {
+            patchData(id, npcUpdater);
+            return captureUc(id);
+          },
+          fallback: () => patchData(id, npcUpdater),
+        });
+        if (!handled) patchData(id, npcUpdater);
+        // Stage 13 shadow diagnostics remain independent (one commit, at most two
+        // diagnostics; never a second mutation, never a second sync).
+        emitUcCommand(id, 'userCampaign.npc.update', { scope: 'userCampaign.npc.update', legacyNpcId: entityId, field: 'role', value: nextValue }, pre);
+      } else {
+        patchData(id, genericUpdater);
       }
     },
 

@@ -30,6 +30,7 @@ import { ReadPathDiagnosticsPage } from './pages/ReadPathDiagnosticsPage';
 import { ShadowIntegrationProvider } from './features/shadow-integration/ShadowIntegrationProvider';
 import { ReadPathProvider } from './features/read-path/ReadPathProvider';
 import { CommandShadowProvider } from './features/command-shadow/CommandShadowProvider';
+import { CommandAuthorityProvider } from './features/command-authority/CommandAuthorityProvider';
 import { MainCampaignShadowBridge } from './features/shadow-integration/MainCampaignShadowBridge';
 import { UserCampaignShadowBridge } from './features/shadow-integration/UserCampaignShadowBridge';
 
@@ -197,10 +198,15 @@ function App() {
                flag-gated /diagnostics/read-path route. */}
             {/* Stage 13 — universal command-shadow. Inert (no coordinator, no
                sink) when its own default-off flag is unset. */}
+            {/* Stage 14 — universal command authority. Inert (no router, no
+               sink) when its own default-off flag is unset. Independent of the
+               Stage 9/10/11/12/13 flags. */}
             <CommandShadowProvider>
-              <ReadPathProvider>
-                <AppShell />
-              </ReadPathProvider>
+              <CommandAuthorityProvider>
+                <ReadPathProvider>
+                  <AppShell />
+                </ReadPathProvider>
+              </CommandAuthorityProvider>
             </CommandShadowProvider>
           </ShadowIntegrationProvider>
         </UserCampaignProvider>

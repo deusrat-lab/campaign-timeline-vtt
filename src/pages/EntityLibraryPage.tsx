@@ -1740,7 +1740,7 @@ function NpcEditor({ npc, data, onDone }: { npc: DmNpc; data: CampaignData; onDo
   return (
     <form className="entity-inline-editor" onSubmit={(e) => {
       e.preventDefault();
-      store.patchNpc(npc.id, {
+      const fullPatch = {
         name: draft.name.trim(),
         race: draft.race.trim(),
         role: draft.role.trim(),
@@ -1752,7 +1752,31 @@ function NpcEditor({ npc, data, onDone }: { npc: DmNpc; data: CampaignData; onDo
         notes: draft.notes.trim() || undefined,
         image: draft.image || undefined,
         visibleToPlayers: draft.visibleToPlayers,
-      });
+      };
+      // Fast path: when the DM only changed the NPC's role, emit a single-field
+      // `{ role }` patch. This is semantically identical to the full patch (every
+      // other field already equals the current value) but maps 1:1 to the
+      // allowlisted universal npc role-update command, so a normal role edit is
+      // handled by the Stage 14 command-authority router when enabled (and by the
+      // unchanged legacy path when off). Any other change dispatches the full
+      // patch exactly as before.
+      const roleChanged = fullPatch.role !== (npc.role ?? '');
+      const othersUnchanged =
+        fullPatch.name === (npc.name ?? '').trim() &&
+        fullPatch.race === (npc.race ?? '').trim() &&
+        fullPatch.location === (npc.location ?? '').trim() &&
+        (fullPatch.personality ?? '') === (npc.personality ?? '') &&
+        (fullPatch.goals ?? '') === (npc.goals ?? '') &&
+        (fullPatch.knowledge ?? '') === (npc.knowledge ?? '') &&
+        (fullPatch.secrets ?? '') === (npc.secrets ?? '') &&
+        (fullPatch.notes ?? '') === (npc.notes ?? npc.dmNotes ?? '') &&
+        (fullPatch.image ?? '') === (npc.image ?? '') &&
+        fullPatch.visibleToPlayers === (npc.visibleToPlayers === true);
+      if (roleChanged && othersUnchanged) {
+        store.patchNpc(npc.id, { role: fullPatch.role });
+      } else {
+        store.patchNpc(npc.id, fullPatch);
+      }
       onDone();
     }}>
       <label>Имя<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>

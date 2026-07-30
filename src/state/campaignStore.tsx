@@ -38,6 +38,7 @@ import { createHttpOverlayAdapter, createLocalStorageOverlayAdapter, readLegacyO
 import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
 import { API_BASE_URL } from '../config';
 import { emitMainCommand } from './commandShadowSink';
+import { routeMainAuthority } from './commandAuthoritySink';
 
 const STORAGE_KEY = 'campaign-timeline-vtt:overlay:v2';
 const OLD_STORAGE_KEY = 'campaign-timeline-vtt:state:v1';
@@ -1129,12 +1130,38 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       patchPlacement: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'placement', id, patch: patch as Patch<unknown> }),
       patchNpc: (id, patch) => {
         const action: Action = { type: 'PATCH_ENTITY', kind: 'npc', id, patch: patch as Patch<unknown> };
-        dispatch(action);
         // Allowlisted slice only: a single-field `role` edit maps 1:1 to the
-        // universal npc-update command. Any other patch shape is not emitted.
+        // universal npc-update command. Any other patch shape dispatches directly.
         const keys = Object.keys(patch as Record<string, unknown>);
-        if (keys.length === 1 && keys[0] === 'role' && typeof (patch as { role?: unknown }).role === 'string') {
-          emitCommand('greyholm.npc.update', { scope: 'greyholm.npc.update', legacyNpcId: id, field: 'role', value: (patch as { role: string }).role }, action);
+        const isRoleOnly =
+          keys.length === 1 && keys[0] === 'role' && typeof (patch as { role?: unknown }).role === 'string';
+        if (isRoleOnly) {
+          const nextValue = (patch as { role: string }).role;
+          const preOverlay = state;
+          // Stage 14 — universal command authority for this tiny reversible edit.
+          // The universal command runs first; only on proven parity does the ONE
+          // real legacy dispatch happen (inside `commit`). `predict` recomputes the
+          // pure post-overlay WITHOUT dispatching. When the flag is off / no router
+          // is registered, `routeMainAuthority` returns false and the store
+          // dispatches once itself — exactly the pre-Stage-14 behaviour.
+          const handled = routeMainAuthority({
+            scope: 'greyholm.npc.role.update',
+            input: { scope: 'greyholm.npc.update', legacyNpcId: id, field: 'role', value: nextValue },
+            preOverlay,
+            nextValue,
+            predict: () => reducer(preOverlay, action),
+            commit: () => {
+              dispatch(action);
+              return reducer(preOverlay, action);
+            },
+            fallback: () => dispatch(action),
+          });
+          if (!handled) dispatch(action);
+          // Stage 13 shadow diagnostics remain independent (one dispatch, at most
+          // two diagnostics; never a second mutation).
+          emitCommand('greyholm.npc.update', { scope: 'greyholm.npc.update', legacyNpcId: id, field: 'role', value: nextValue }, action);
+        } else {
+          dispatch(action);
         }
       },
       patchTavern: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'tavern', id, patch: patch as Patch<unknown> }),
