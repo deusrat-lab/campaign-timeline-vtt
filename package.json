@@ -27,6 +27,10 @@
     "verify:stage12": "node scripts/stage12/build-domain.mjs && node scripts/stage12/runWorkspace.mjs",
     "verify:stage13": "node scripts/stage13/build-domain.mjs && node scripts/stage13/runCommandShadow.mjs",
     "verify:stage14": "node scripts/stage14/build-domain.mjs && node scripts/stage14/runAuthority.mjs",
+    "verify:stage08": "node scripts/stage08/build-domain.mjs && node scripts/stage08/runParity.mjs",
+    "verify:stage08d": "node scripts/stage08/build-domain.mjs && node scripts/stage08/runGreyholmOverlay.mjs",
+    "verify:stage15": "node scripts/stage15/build-domain.mjs && node scripts/stage15/runDurable.mjs",
+    "verify:universal-regression": "node scripts/verify-universal-regression.mjs",
     "snapshot:promote": "node scripts/promote-overlay-snapshot.mjs",
     "preview": "vite preview --host 0.0.0.0 --port 5175 --open",
     "start": "vite preview --host 0.0.0.0 --port ${PORT:-4173}"
