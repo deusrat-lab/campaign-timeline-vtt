@@ -39,6 +39,7 @@ import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
 import { API_BASE_URL } from '../config';
 import { emitMainCommand } from './commandShadowSink';
 import { routeMainAuthority } from './commandAuthoritySink';
+import { routeMainDurable } from './durableAuthoritySink';
 
 const STORAGE_KEY = 'campaign-timeline-vtt:overlay:v2';
 const OLD_STORAGE_KEY = 'campaign-timeline-vtt:state:v1';
@@ -1130,36 +1131,56 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       patchPlacement: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'placement', id, patch: patch as Patch<unknown> }),
       patchNpc: (id, patch) => {
         const action: Action = { type: 'PATCH_ENTITY', kind: 'npc', id, patch: patch as Patch<unknown> };
-        // Allowlisted slice only: a single-field `role` edit maps 1:1 to the
-        // universal npc-update command. Any other patch shape dispatches directly.
+        // Allowlisted slice only: a single-field `role` or `name` edit maps 1:1 to
+        // a universal safe-field command. Any other patch shape dispatches directly.
         const keys = Object.keys(patch as Record<string, unknown>);
-        const isRoleOnly =
-          keys.length === 1 && keys[0] === 'role' && typeof (patch as { role?: unknown }).role === 'string';
-        if (isRoleOnly) {
-          const nextValue = (patch as { role: string }).role;
+        const singleKey = keys.length === 1 ? keys[0] : null;
+        const value = singleKey ? (patch as Record<string, unknown>)[singleKey] : undefined;
+        // Stage 15 durable scope for the safe Greyholm npc fields.
+        const durableScope =
+          singleKey === 'role' ? 'greyholm.npc.role.update' : singleKey === 'name' ? 'greyholm.npc.name.update' : null;
+        if (durableScope && typeof value === 'string') {
+          const nextValue = value;
           const preOverlay = state;
-          // Stage 14 — universal command authority for this tiny reversible edit.
-          // The universal command runs first; only on proven parity does the ONE
-          // real legacy dispatch happen (inside `commit`). `predict` recomputes the
-          // pure post-overlay WITHOUT dispatching. When the flag is off / no router
-          // is registered, `routeMainAuthority` returns false and the store
-          // dispatches once itself — exactly the pre-Stage-14 behaviour.
-          const handled = routeMainAuthority({
-            scope: 'greyholm.npc.role.update',
-            input: { scope: 'greyholm.npc.update', legacyNpcId: id, field: 'role', value: nextValue },
+          const commitOnce = () => {
+            dispatch(action);
+            return reducer(preOverlay, action);
+          };
+          // Stage 15 — universal DURABLE authority runs FIRST: the universal
+          // command is committed to the production repository, then this exact
+          // legacy dispatch runs once as the compatibility projection. When the
+          // Stage 15 flag is off / scope not owned, `routeMainDurable` returns
+          // false and we fall through to the Stage 14 authority path (role only)
+          // or a direct dispatch — exactly the pre-Stage-15 behaviour.
+          let handled = routeMainDurable({
+            durableScope,
+            legacyEntityId: id,
+            value: nextValue,
             preOverlay,
-            nextValue,
             predict: () => reducer(preOverlay, action),
-            commit: () => {
-              dispatch(action);
-              return reducer(preOverlay, action);
-            },
+            commit: commitOnce,
             fallback: () => dispatch(action),
           });
+          // Stage 14 — universal command authority (role only) for the reversible
+          // edit, only if Stage 15 did not take it.
+          if (!handled && durableScope === 'greyholm.npc.role.update') {
+            handled = routeMainAuthority({
+              scope: 'greyholm.npc.role.update',
+              input: { scope: 'greyholm.npc.update', legacyNpcId: id, field: 'role', value: nextValue },
+              preOverlay,
+              nextValue,
+              predict: () => reducer(preOverlay, action),
+              commit: commitOnce,
+              fallback: () => dispatch(action),
+            });
+          }
           if (!handled) dispatch(action);
           // Stage 13 shadow diagnostics remain independent (one dispatch, at most
-          // two diagnostics; never a second mutation).
-          emitCommand('greyholm.npc.update', { scope: 'greyholm.npc.update', legacyNpcId: id, field: 'role', value: nextValue }, action);
+          // two diagnostics; never a second mutation). Only the role field maps to
+          // a Stage 13 command scope.
+          if (durableScope === 'greyholm.npc.role.update') {
+            emitCommand('greyholm.npc.update', { scope: 'greyholm.npc.update', legacyNpcId: id, field: 'role', value: nextValue }, action);
+          }
         } else {
           dispatch(action);
         }

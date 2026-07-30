@@ -31,6 +31,7 @@ import { ShadowIntegrationProvider } from './features/shadow-integration/ShadowI
 import { ReadPathProvider } from './features/read-path/ReadPathProvider';
 import { CommandShadowProvider } from './features/command-shadow/CommandShadowProvider';
 import { CommandAuthorityProvider } from './features/command-authority/CommandAuthorityProvider';
+import { DurableAuthorityProvider } from './features/durable-authority/DurableAuthorityProvider';
 import { MainCampaignShadowBridge } from './features/shadow-integration/MainCampaignShadowBridge';
 import { UserCampaignShadowBridge } from './features/shadow-integration/UserCampaignShadowBridge';
 
@@ -203,9 +204,15 @@ function App() {
                Stage 9/10/11/12/13 flags. */}
             <CommandShadowProvider>
               <CommandAuthorityProvider>
-                <ReadPathProvider>
-                  <AppShell />
-                </ReadPathProvider>
+                {/* Stage 15 — universal durable authority. Inert (no router, no
+                   sink, no production repository access) when its own default-off
+                   flag is unset. Consulted before Stage 14 for its owned scopes.
+                   Independent of the Stage 9/10/11/12/13/14 flags. */}
+                <DurableAuthorityProvider>
+                  <ReadPathProvider>
+                    <AppShell />
+                  </ReadPathProvider>
+                </DurableAuthorityProvider>
               </CommandAuthorityProvider>
             </CommandShadowProvider>
           </ShadowIntegrationProvider>

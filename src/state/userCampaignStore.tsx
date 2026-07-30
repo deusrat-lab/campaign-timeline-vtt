@@ -20,6 +20,7 @@ import { getRegionPreset } from '../data/regionPresets';
 import { mergeScenarioIntoData, scenarioForCampaign } from '../data/scenarioMerge';
 import { emitUserCommand } from './commandShadowSink';
 import { routeUserAuthority } from './commandAuthoritySink';
+import { routeUserDurable } from './durableAuthoritySink';
 import { syncEnabled, pushCampaign, deleteCampaignRemote, fetchRegistry, fetchCampaign, subscribeUc, patchPlayerRemote } from './userCampaignSync';
 
 /**
@@ -30,6 +31,35 @@ import { syncEnabled, pushCampaign, deleteCampaignRemote, fetchRegistry, fetchCa
  *   dmCompanion.userCampaignData.${id}.v1
  *   dmCompanion.userCampaignRuntime.${id}.v1
  */
+/**
+ * Stage 15 — map a user-campaign entity kind + single patched field to its
+ * proven-safe durable-authority scope, or null when the edit is not an
+ * allowlisted single scalar/text field. Kept as a closed table so an unknown
+ * field can never take durable authority.
+ */
+function resolveUserDurableScope(entityType: string, field: string | null): string | null {
+  if (!field) return null;
+  const table: Record<string, Record<string, string>> = {
+    npc: {
+      role: 'userCampaign.npc.role.update',
+      name: 'userCampaign.npc.name.update',
+      description: 'userCampaign.npc.description.update',
+    },
+    quest: {
+      title: 'userCampaign.quest.title.update',
+      description: 'userCampaign.quest.description.update',
+    },
+    faction: {
+      name: 'userCampaign.faction.name.update',
+      description: 'userCampaign.faction.description.update',
+    },
+    location: {
+      description: 'userCampaign.location.description.update',
+    },
+  };
+  return table[entityType]?.[field] ?? null;
+}
+
 const REGISTRY_KEY = 'dmCompanion.userCampaigns.registry.v1';
 const dataKey = (id: string) => `dmCompanion.userCampaignData.${id}.v1`;
 const runtimeKey = (id: string) => `dmCompanion.userCampaignRuntime.${id}.v1`;
@@ -487,8 +517,6 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     updateEntity: (id, entityType, entityId, patch) => {
       const pre = captureUc(id);
       const keys = Object.keys(patch);
-      const isNpcRoleOnly =
-        entityType === 'npc' && keys.length === 1 && keys[0] === 'role' && typeof (patch as { role?: unknown }).role === 'string';
 
       const genericUpdater = (p: UserCampaignData): UserCampaignData => {
         const key = ({ location: 'locations', npc: 'npcs', quest: 'quests', enemy: 'enemies', image: 'images', party: 'party', faction: 'factions' } as const)[entityType as 'location'];
@@ -498,39 +526,69 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
         return { ...p, [key]: list } as UserCampaignData;
       };
 
-      if (isNpcRoleOnly) {
-        const nextValue = (patch as { role: string }).role;
-        // Pure npc updater — npc never triggers `patchPlayerRemote`, so it has no
-        // side effect beyond the single field. Used for both the pure prediction
-        // (on the immutable captured pre-data) and the ONE real legacy commit.
-        const npcUpdater = (p: UserCampaignData): UserCampaignData => ({
+      // Stage 15 durable-authority scope for a proven-safe single scalar/text
+      // field edit on this entity kind (see safeFieldRegistry). Only exact
+      // single-field patches qualify.
+      const singleKey = keys.length === 1 ? keys[0] : null;
+      const singleVal = singleKey ? (patch as Record<string, unknown>)[singleKey] : undefined;
+      const durableScope = resolveUserDurableScope(entityType, singleKey);
+
+      if (durableScope && typeof singleVal === 'string') {
+        const nextValue = singleVal;
+        // A pure single-field updater on the target list. None of npc / quest /
+        // faction / location trigger `patchPlayerRemote`, so it has no side effect
+        // beyond the single field. Used for the pure prediction (on the captured
+        // immutable pre-data) and the ONE real legacy commit.
+        const listKey = ({ npc: 'npcs', quest: 'quests', faction: 'factions', location: 'locations' } as const)[entityType as 'npc'];
+        const fieldUpdater = (p: UserCampaignData): UserCampaignData => ({
           ...p,
-          npcs: (p.npcs ?? []).map((e) => (e.id === entityId ? { ...e, ...patch } : e)),
-        });
-        // Stage 14 — universal command authority for this tiny reversible edit.
-        // `commit` performs the ONE real `patchData` (existing persistence +
-        // existing `pushBlob` sync, fired exactly once) and reads back the
-        // committed post-state; `predict` applies the pure updater to the captured
-        // immutable pre-data WITHOUT writing. Flag off / no router → false → the
-        // store performs the same single `patchData` itself (baseline behaviour).
-        const handled = routeUserAuthority({
+          [listKey]: ((p[listKey] as Array<{ id: string }> | undefined) ?? []).map((e) => (e.id === entityId ? { ...e, ...patch } : e)),
+        } as UserCampaignData);
+
+        // Stage 15 — universal DURABLE authority runs FIRST: the universal command
+        // is committed to the production repository, then this exact legacy
+        // `patchData` runs once as the compatibility projection (existing
+        // persistence + existing `pushBlob` sync, fired exactly once). When the
+        // Stage 15 flag is off / scope not owned, `routeUserDurable` returns false
+        // and we fall through to the Stage 14 path (role only) or a direct
+        // `patchData` — exactly the pre-Stage-15 behaviour.
+        const commitOnce = () => {
+          patchData(id, fieldUpdater);
+          return captureUc(id);
+        };
+        let handled = routeUserDurable({
           legacyCampaignId: id,
-          scope: 'userCampaign.npc.role.update',
-          input: { scope: 'userCampaign.npc.update', legacyNpcId: entityId, field: 'role', value: nextValue },
+          durableScope,
+          entityKind: entityType,
+          legacyEntityId: entityId,
+          value: nextValue,
           preData: pre.data,
           preRuntime: pre.runtime,
-          nextValue,
-          predict: () => ({ data: pre.data ? npcUpdater(pre.data) : pre.data, runtime: pre.runtime }),
-          commit: () => {
-            patchData(id, npcUpdater);
-            return captureUc(id);
-          },
-          fallback: () => patchData(id, npcUpdater),
+          predict: () => ({ data: pre.data ? fieldUpdater(pre.data) : pre.data, runtime: pre.runtime }),
+          commit: commitOnce,
+          fallback: () => patchData(id, fieldUpdater),
         });
-        if (!handled) patchData(id, npcUpdater);
-        // Stage 13 shadow diagnostics remain independent (one commit, at most two
-        // diagnostics; never a second mutation, never a second sync).
-        emitUcCommand(id, 'userCampaign.npc.update', { scope: 'userCampaign.npc.update', legacyNpcId: entityId, field: 'role', value: nextValue }, pre);
+        // Stage 14 — universal command authority (npc role only) if Stage 15 did
+        // not take the scope.
+        if (!handled && durableScope === 'userCampaign.npc.role.update') {
+          handled = routeUserAuthority({
+            legacyCampaignId: id,
+            scope: 'userCampaign.npc.role.update',
+            input: { scope: 'userCampaign.npc.update', legacyNpcId: entityId, field: 'role', value: nextValue },
+            preData: pre.data,
+            preRuntime: pre.runtime,
+            nextValue,
+            predict: () => ({ data: pre.data ? fieldUpdater(pre.data) : pre.data, runtime: pre.runtime }),
+            commit: commitOnce,
+            fallback: () => patchData(id, fieldUpdater),
+          });
+        }
+        if (!handled) patchData(id, fieldUpdater);
+        // Stage 13 shadow diagnostics remain independent (npc role only maps to a
+        // Stage 13 command scope).
+        if (durableScope === 'userCampaign.npc.role.update') {
+          emitUcCommand(id, 'userCampaign.npc.update', { scope: 'userCampaign.npc.update', legacyNpcId: entityId, field: 'role', value: nextValue }, pre);
+        }
       } else {
         patchData(id, genericUpdater);
       }
