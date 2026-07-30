@@ -1,0 +1,399 @@
+{
+  "verdict": "STAGE_12_HARNESS_PASS",
+  "summary": {
+    "passed": 97,
+    "failed": 0,
+    "total": 97,
+    "ok": true
+  },
+  "results": [
+    {
+      "name": "A1 flag default off (greyholm)",
+      "pass": true
+    },
+    {
+      "name": "A2 flag default off (userCampaign)",
+      "pass": true
+    },
+    {
+      "name": "A3 flag on, no scope -> both kinds",
+      "pass": true
+    },
+    {
+      "name": "A4 flag on, all -> both",
+      "pass": true
+    },
+    {
+      "name": "A5 flag on, * -> both",
+      "pass": true
+    },
+    {
+      "name": "A6 scope allowlist narrows to greyholm",
+      "pass": true
+    },
+    {
+      "name": "A7 scope allowlist excludes userCampaign",
+      "pass": true
+    },
+    {
+      "name": "A8 unknown scope token cannot enable",
+      "pass": true
+    },
+    {
+      "name": "A9 flag off ignores scope",
+      "pass": true
+    },
+    {
+      "name": "A10 descriptor build is pure (no throw on valid)",
+      "pass": true
+    },
+    {
+      "name": "B1 campaignId required",
+      "pass": true
+    },
+    {
+      "name": "B2 campaignKind explicit",
+      "pass": true
+    },
+    {
+      "name": "B3 audience explicit",
+      "pass": true
+    },
+    {
+      "name": "B4 descriptor frozen (immutable)",
+      "pass": true
+    },
+    {
+      "name": "B5 moduleSlots frozen",
+      "pass": true
+    },
+    {
+      "name": "B6 nav frozen",
+      "pass": true
+    },
+    {
+      "name": "B7 status frozen",
+      "pass": true
+    },
+    {
+      "name": "B8 each slot frozen",
+      "pass": true
+    },
+    {
+      "name": "B9 no raw store in descriptor",
+      "pass": true
+    },
+    {
+      "name": "B10 no repository in descriptor",
+      "pass": true
+    },
+    {
+      "name": "B11 no full snapshot in descriptor",
+      "pass": true
+    },
+    {
+      "name": "B12 writes remain legacy flag",
+      "pass": true
+    },
+    {
+      "name": "B13 universal commands not invoked",
+      "pass": true
+    },
+    {
+      "name": "B14 stable nav ids across builds",
+      "pass": true
+    },
+    {
+      "name": "B15 stable module ids across builds",
+      "pass": true
+    },
+    {
+      "name": "B16 slots array cannot be mutated",
+      "pass": true
+    },
+    {
+      "name": "C1 registry non-empty",
+      "pass": true
+    },
+    {
+      "name": "C2 registry frozen",
+      "pass": true
+    },
+    {
+      "name": "C3 shared-read-only classification present",
+      "pass": true
+    },
+    {
+      "name": "C4 legacy-mixed classification present",
+      "pass": true
+    },
+    {
+      "name": "C5 legacy-write classification present",
+      "pass": true
+    },
+    {
+      "name": "C6 NO write module marked universal",
+      "pass": true
+    },
+    {
+      "name": "C7 every shared-read-only has read scope",
+      "pass": true
+    },
+    {
+      "name": "C8 every shared-read-only has no writeOwner",
+      "pass": true
+    },
+    {
+      "name": "C9 every write-capable has writeOwner",
+      "pass": true
+    },
+    {
+      "name": "C10 library.body is legacy-mixed",
+      "pass": true
+    },
+    {
+      "name": "C11 campaign.summary is shared-read-only",
+      "pass": true
+    },
+    {
+      "name": "C12 map.workspace legacy-mixed",
+      "pass": true
+    },
+    {
+      "name": "C13 battle.board legacy-write",
+      "pass": true
+    },
+    {
+      "name": "C14 settings legacy-write",
+      "pass": true
+    },
+    {
+      "name": "C15 importExport legacy-write",
+      "pass": true
+    },
+    {
+      "name": "C16 summary scope resolves per greyholm",
+      "pass": true
+    },
+    {
+      "name": "C17 summary scope resolves per userCampaign",
+      "pass": true
+    },
+    {
+      "name": "C18 playerSafe scope resolves per userCampaign",
+      "pass": true
+    },
+    {
+      "name": "C19 resolved read scopes are real pilot scopes",
+      "pass": true
+    },
+    {
+      "name": "C20 audience compat helper works",
+      "pass": true
+    },
+    {
+      "name": "C21 campaign.summary not for player",
+      "pass": true
+    },
+    {
+      "name": "C22 library.dmList only greyholm kind",
+      "pass": true
+    },
+    {
+      "name": "C23 library.body allowed both kinds",
+      "pass": true
+    },
+    {
+      "name": "C24 allWorkspaceModuleIds returns all",
+      "pass": true
+    },
+    {
+      "name": "D1 greyholm DM has >=2 shared-read-only slots",
+      "pass": true
+    },
+    {
+      "name": "D2 greyholm DM includes legacy-mixed library.body",
+      "pass": true
+    },
+    {
+      "name": "D3 greyholm DM includes runtime.presentation",
+      "pass": true
+    },
+    {
+      "name": "D4 greyholm DM includes campaign.summary + dmList",
+      "pass": true
+    },
+    {
+      "name": "D5 module order preserved",
+      "pass": true
+    },
+    {
+      "name": "D6 active nav = /npc",
+      "pass": true
+    },
+    {
+      "name": "D7 active nav follows route",
+      "pass": true
+    },
+    {
+      "name": "D8 nav labels present",
+      "pass": true
+    },
+    {
+      "name": "E1 UC uses SAME contract type (has moduleSlots+nav)",
+      "pass": true
+    },
+    {
+      "name": "E2 UC DM has >=2 shared-read-only slots",
+      "pass": true
+    },
+    {
+      "name": "E3 UC DM includes legacy-mixed library.body",
+      "pass": true
+    },
+    {
+      "name": "E4 UC does NOT include greyholm-only runtime",
+      "pass": true
+    },
+    {
+      "name": "E5 UC does NOT include greyholm-only library.dmList",
+      "pass": true
+    },
+    {
+      "name": "E6 UC campaignId scoped (caldran)",
+      "pass": true
+    },
+    {
+      "name": "E7 two campaigns get distinct ids",
+      "pass": true
+    },
+    {
+      "name": "E8 nav strictly scoped to campaign a",
+      "pass": true
+    },
+    {
+      "name": "E9 nav strictly scoped to campaign b",
+      "pass": true
+    },
+    {
+      "name": "E10 UC nav rejects empty campaignId (no greyholm fallback)",
+      "pass": true
+    },
+    {
+      "name": "E11 no greyholm path leaks into UC nav",
+      "pass": true
+    },
+    {
+      "name": "F1 greyholm nav stable ids",
+      "pass": true
+    },
+    {
+      "name": "F2 greyholm player nav excludes DM-only npc",
+      "pass": true
+    },
+    {
+      "name": "F3 greyholm player nav includes map",
+      "pass": true
+    },
+    {
+      "name": "F4 UC nav stable ids",
+      "pass": true
+    },
+    {
+      "name": "F5 UC player nav excludes DM-only npc",
+      "pass": true
+    },
+    {
+      "name": "F6 UC player nav paths carry ?as=player",
+      "pass": true
+    },
+    {
+      "name": "F7 UC observer nav paths carry observer=1",
+      "pass": true
+    },
+    {
+      "name": "F8 nav items frozen",
+      "pass": true
+    },
+    {
+      "name": "G1 player descriptor excludes campaign.summary (DM-only)",
+      "pass": true
+    },
+    {
+      "name": "G2 player descriptor excludes library.dmList (DM-only)",
+      "pass": true
+    },
+    {
+      "name": "G3 player descriptor excludes observer.status (DM/observer only)",
+      "pass": true
+    },
+    {
+      "name": "G4 player descriptor still has playerSafe",
+      "pass": true
+    },
+    {
+      "name": "G5 player descriptor still has runtime (playerSafe projection)",
+      "pass": true
+    },
+    {
+      "name": "G6 observer descriptor includes observer.status",
+      "pass": true
+    },
+    {
+      "name": "G7 observer descriptor excludes campaign.summary (DM-only)",
+      "pass": true
+    },
+    {
+      "name": "G8 UC player excludes DM summary",
+      "pass": true
+    },
+    {
+      "name": "G9 UC player excludes observer.status",
+      "pass": true
+    },
+    {
+      "name": "G10 UC player has playerSafe only among shared",
+      "pass": true
+    },
+    {
+      "name": "G11 no getData/store/secret keys in serialized player descriptor",
+      "pass": true
+    },
+    {
+      "name": "G12 player nav has no DM-only npc item",
+      "pass": true
+    },
+    {
+      "name": "G13 player shared slots never carry dm projection",
+      "pass": true
+    },
+    {
+      "name": "H1 route change keeps identical slot ids",
+      "pass": true
+    },
+    {
+      "name": "H2 route change only moves active nav",
+      "pass": true
+    },
+    {
+      "name": "H3 kind-incompatible modules dropped for UC",
+      "pass": true
+    },
+    {
+      "name": "H4 unknown module id ignored",
+      "pass": true
+    },
+    {
+      "name": "H5 fallback status surfaced honestly",
+      "pass": true
+    },
+    {
+      "name": "H6 legacy fallback status not hidden",
+      "pass": true
+    },
+    {
+      "name": "H7 status note preserved",
+      "pass": true
+    }
+  ]
+}
