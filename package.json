@@ -30,6 +30,7 @@
     "verify:stage08": "node scripts/stage08/build-domain.mjs && node scripts/stage08/runParity.mjs",
     "verify:stage08d": "node scripts/stage08/build-domain.mjs && node scripts/stage08/runGreyholmOverlay.mjs",
     "verify:stage15": "node scripts/stage15/build-domain.mjs && node scripts/stage15/runDurable.mjs",
+    "verify:stage16": "node scripts/stage16/build-domain.mjs && node scripts/stage16/runComplex.mjs",
     "verify:universal-regression": "node scripts/verify-universal-regression.mjs",
     "snapshot:promote": "node scripts/promote-overlay-snapshot.mjs",
     "preview": "vite preview --host 0.0.0.0 --port 5175 --open",
