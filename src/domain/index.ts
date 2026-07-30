@@ -23,6 +23,7 @@ export * from './shadow/shadowTypes';
 export * from './shadow/compareSnapshots';
 export * from './shadow/shadowIntegrationCoordinator';
 export * from './command-shadow/index';
+export * from './command-authority/index';
 export * from './store/commands';
 export * from './store/universalStore';
 export * from './validation/validateCampaignSnapshot';

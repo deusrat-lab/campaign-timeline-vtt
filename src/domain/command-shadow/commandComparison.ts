@@ -1,5 +1,6 @@
 import type { CampaignSnapshot } from '../campaign/snapshot';
 import { compareSnapshots } from '../shadow/compareSnapshots';
+import { stableHash } from './commandShadowCoordinator';
 import type { CommandComparisonSummary } from './commandShadowTypes';
 
 const MAX_REPORTED = 25;
@@ -84,7 +85,20 @@ function isReferencePath(path: string): boolean {
  * normalised field — entities, refs, coordinates, visibility, runtime.party,
  * runtime.presentation, images — is preserved and still compared.
  */
-function normalizeTechnical(snapshot: CampaignSnapshot): CampaignSnapshot {
+/**
+ * A stable hash of a snapshot's SEMANTIC content — the same normalisation the
+ * command comparison applies (repository revision + adaptation timestamps + the
+ * verbatim raw-legacy echoes neutralised). Two adapter runs over the identical
+ * legacy state hash equal, even though their raw `stableHash` differs because the
+ * adapter stamps a fresh `importedAt`/`updatedAt` each run. Used by Stage 14 for
+ * stable pre/candidate/committed hashes, deterministic event ids and the stale
+ * precondition re-check.
+ */
+export function semanticSnapshotHash(snapshot: CampaignSnapshot): string {
+  return stableHash(normalizeTechnical(snapshot));
+}
+
+export function normalizeTechnical(snapshot: CampaignSnapshot): CampaignSnapshot {
   const durableExtensions = { ...(snapshot.durable.extensions ?? {}) };
   delete (durableExtensions as Record<string, unknown>).overlayRemainder;
   return {
@@ -95,10 +109,29 @@ function normalizeTechnical(snapshot: CampaignSnapshot): CampaignSnapshot {
       updatedAt: '',
       sources: snapshot.metadata.sources.map((source) => ({ ...source, importedAt: undefined })),
     },
-    durable: { ...snapshot.durable, extensions: durableExtensions },
+    durable: {
+      ...snapshot.durable,
+      extensions: durableExtensions,
+      // Neutralise the per-entity verbatim raw-legacy preservation mirror
+      // (`extensions.original`). Like `durable.extensions.overlayRemainder` and
+      // `runtime.extensions`, it is retained only for lossless round-trip
+      // persistence and is NOT part of the normalised universal model a command
+      // operates on: the normalised fields (`entity.role`, `entity.name`, …) are
+      // still compared directly. Without this, a legacy edit applied through the
+      // overlay (which leaves the base-data echo untouched) would spuriously
+      // differ from a universal command that also rewrites the echo.
+      entities: snapshot.durable.entities.map((entity) => stripEntityOriginal(entity)),
+    },
     runtime: { ...snapshot.runtime, extensions: {} },
     migrationMetadata: snapshot.migrationMetadata.map((meta) => ({ ...meta, migratedAt: '' })),
   };
+}
+
+function stripEntityOriginal<T extends { extensions?: Record<string, unknown> }>(entity: T): T {
+  if (!entity.extensions || !('original' in entity.extensions)) return entity;
+  const extensions = { ...entity.extensions };
+  delete (extensions as Record<string, unknown>).original;
+  return { ...entity, extensions };
 }
 
 function sortIdentifiable(snapshot: CampaignSnapshot): CampaignSnapshot {

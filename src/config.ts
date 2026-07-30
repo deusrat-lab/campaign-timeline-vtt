@@ -166,3 +166,44 @@ export const UNIVERSAL_COMMAND_SHADOW_ENABLED: boolean =
  */
 export const UNIVERSAL_COMMAND_SHADOW_SCOPES: string =
   import.meta.env.VITE_UNIVERSAL_COMMAND_SHADOW_SCOPES ?? '';
+
+/**
+ * Stage 14 — controlled local universal COMMAND AUTHORITY for a tiny, reversible
+ * allowlist (see rebuild-reports/stage-14). SEPARATE and INDEPENDENT from every
+ * earlier flag, including the Stage 13 command-shadow flag. When enabled, a very
+ * small allowlist of single-field NPC edits execute the universal command FIRST
+ * to form a validated candidate transition; the equivalent legacy transition is
+ * predicted independently on an immutable clone; only when the two match at
+ * semantic parity is the existing legacy mutation invoked ONCE as a compatibility
+ * commit; the committed legacy post-state is then verified against the universal
+ * candidate.
+ *
+ * This flag NEVER creates two independent authoritative writes: the universal
+ * candidate is calculated/validated only, and exactly one durable write happens
+ * through the existing legacy persistence boundary. It never writes the
+ * production universal namespace, never uses the Stage 9 shadow namespace as an
+ * output, never adds network / server sync, never changes `userCampaignSync`,
+ * and never performs migration. On ANY uncertainty before the compatibility
+ * commit, the unchanged legacy action runs once as a safe fallback. After a
+ * successful commit the legacy result is authoritative and is never rolled back
+ * or re-run.
+ *
+ * Default OFF. Must NOT be set in any committed env file or production/Railway
+ * environment. When OFF: no authority router is created, no universal-first
+ * execution occurs, no Stage 14 diagnostics are read or written, and the legacy
+ * command path runs exactly as baseline (proven by the Stage 14 harness
+ * feature-flag checks). This flag does NOT enable the Stage 9/10/11/12/13 flags.
+ */
+export const UNIVERSAL_COMMAND_AUTHORITY_ENABLED: boolean =
+  import.meta.env.VITE_UNIVERSAL_COMMAND_AUTHORITY === '1' ||
+  import.meta.env.VITE_UNIVERSAL_COMMAND_AUTHORITY === 'true';
+
+/**
+ * Optional narrowing allowlist for Stage 14. Comma/space separated subset of the
+ * known authority scopes (`greyholm.npc.role.update`,
+ * `userCampaign.npc.role.update`). Empty / unset / "all" / "*" means all known
+ * authority scopes (when the flag is on). Unknown tokens are ignored — this can
+ * only ever narrow the built-in allowlist, never widen it.
+ */
+export const UNIVERSAL_COMMAND_AUTHORITY_SCOPES: string =
+  import.meta.env.VITE_UNIVERSAL_COMMAND_AUTHORITY_SCOPES ?? '';
