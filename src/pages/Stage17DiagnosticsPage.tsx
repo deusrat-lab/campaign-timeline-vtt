@@ -14,6 +14,8 @@ import {
   createBrowserRepositoryStorage,
   listBattleRecords,
   totalPendingCount,
+  syncPending,
+  remoteAppliedCount,
 } from '../domain';
 import type { MainCampaignOverlayInput } from '../domain';
 
@@ -54,6 +56,9 @@ export function Stage17DiagnosticsPage() {
   const battleStorage = typeof window !== 'undefined' ? createBrowserRepositoryStorage(window.localStorage) : null;
   const battleRecords = battleStorage ? listBattleRecords(battleStorage) : [];
   const pendingTotal = battleStorage ? totalPendingCount(battleStorage) : 0;
+  const syncCampaigns = [...new Set(battleRecords.map((r) => r.campaignId))];
+  const syncQueued = battleStorage ? syncCampaigns.reduce((s, cid) => s + syncPending(battleStorage, cid), 0) : 0;
+  const syncRemoteApplied = battleStorage ? syncCampaigns.reduce((s, cid) => s + remoteAppliedCount(battleStorage, cid), 0) : 0;
 
   return (
     <section className="page-panel stage17-diagnostics">
@@ -80,6 +85,12 @@ export function Stage17DiagnosticsPage() {
           <p data-testid="s17-durable-battles">durable battle records: <strong>{battleRecords.length}</strong></p>
           <p data-testid="s17-pending-total">pending projections: <strong>{pendingTotal}</strong></p>
           <p>adapter: {adapted.source.kind} / {adapted.diagnostics.length} diagnostics</p>
+        </article>
+        <article>
+          <h2>Sync (live, local/mock)</h2>
+          <p data-testid="s17-sync-queued">queued ops: <strong>{syncQueued}</strong></p>
+          <p data-testid="s17-sync-applied">remote applied ops: <strong>{syncRemoteApplied}</strong></p>
+          <p>sync flag: {String(engine.flags.sync)}</p>
         </article>
         <article>
           <h2>Privacy projection hashes</h2>

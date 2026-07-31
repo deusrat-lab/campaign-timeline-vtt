@@ -16,6 +16,7 @@ export * from './persistence/serialization';
 export * from './portability/portability';
 export * from './portability/userCampaignPortability';
 export * from './sync/universalSync';
+export * from './sync/battleSyncQueue';
 export * from './cutover/ownershipRegistry';
 export * from './projection/projectCampaign';
 export * from './projection/types';

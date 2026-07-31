@@ -9,15 +9,22 @@ import {
   readPendingProjection,
   clearPendingProjection,
   pendingProjectionCount,
+  enqueueBattleSync,
+  syncPending,
+  flushBattleSync,
+  remoteRevision,
+  remoteAppliedCount,
+  canonicalHash,
   type RepositoryStorage,
   type BattleMoveOutcome,
   type TurnAdvanceOutcome,
   type PendingBattleProjection,
+  type SyncFlushResult,
   type CampaignId,
 } from '../../domain';
 import type { CampaignBattleBoard } from '../../types/userCampaign';
 import type { ActiveBattleState } from '../../types';
-import { UNIVERSAL_BATTLE_AUTHORITY_ENABLED, UNIVERSAL_LOCAL_CUTOVER_ENABLED } from '../../config';
+import { UNIVERSAL_BATTLE_AUTHORITY_ENABLED, UNIVERSAL_LOCAL_CUTOVER_ENABLED, UNIVERSAL_SYNC_ENABLED } from '../../config';
 
 /**
  * Stage 17 — universal BATTLE AUTHORITY provider.
@@ -56,6 +63,12 @@ export interface BattleAuthorityContextValue {
   readPending(campaignId: string, battleId: string): PendingBattleProjection | null;
   clearPending(campaignId: string, battleId: string): void;
   pendingCount(campaignId: string): number;
+  /** Sync (local/mock transport only). */
+  syncActive: boolean;
+  syncPendingCount(campaignId: string): number;
+  flushSync(campaignId: string, online?: boolean): SyncFlushResult;
+  remoteRevisionOf(campaignId: string, battleId: string): number;
+  remoteAppliedTotal(campaignId: string): number;
 }
 
 const DISABLED: BattleAuthorityContextValue = {
@@ -68,6 +81,11 @@ const DISABLED: BattleAuthorityContextValue = {
   readPending: () => null,
   clearPending: () => {},
   pendingCount: () => 0,
+  syncActive: false,
+  syncPendingCount: () => 0,
+  flushSync: () => ({ attempted: 0, applied: 0, duplicates: 0, conflicts: 0, remaining: 0, statuses: [] }),
+  remoteRevisionOf: () => 0,
+  remoteAppliedTotal: () => 0,
 };
 
 const BattleAuthorityContext = createContext<BattleAuthorityContextValue>(DISABLED);
@@ -77,18 +95,53 @@ const FAIL_COMPAT_ONCE_KEY = 'stage17.test.failBattleCompatOnce';
 export function BattleAuthorityProvider({ children }: { children: ReactNode }) {
   const active = UNIVERSAL_BATTLE_AUTHORITY_ENABLED && UNIVERSAL_LOCAL_CUTOVER_ENABLED;
 
+  const syncActive = active && UNIVERSAL_SYNC_ENABLED;
+
   const value = useMemo<BattleAuthorityContextValue>(() => {
     if (!active || typeof window === 'undefined') return DISABLED;
     const storage: RepositoryStorage = createBrowserRepositoryStorage(window.localStorage);
+
+    // Enqueue EXACTLY ONE sync op per successful durable commit. Deterministic
+    // eventId (per campaign/battle/revision) makes a re-enqueue idempotent.
+    const afterCommit = (campaignId: string, battleId: string, newRevision?: number) => {
+      if (!syncActive || newRevision == null) return;
+      enqueueBattleSync(storage, {
+        campaignId,
+        battleId,
+        baseRevision: newRevision - 1,
+        candidateRevision: newRevision,
+        snapshotHash: canonicalHash({ campaignId, battleId, newRevision }),
+        eventId: `${campaignId}:${battleId}:rev${newRevision}`,
+        occurredAt: new Date(0).toISOString(),
+      });
+      // Flush online immediately so one UI mutation → one commit → one sync op →
+      // one remote application. A dev fixture keeps the client "offline" so the
+      // persisted queue can be demonstrated surviving a reload.
+      const offline = import.meta.env.DEV && (() => {
+        try { return window.localStorage.getItem('stage17.test.syncOffline') === '1'; } catch { return false; }
+      })();
+      flushBattleSync(storage, campaignId, !offline);
+    };
+
     return {
       active: true,
-      moveUserToken: (campaignId, battleId, legacyBoard, tokenId, position) =>
-        routeUserTokenMove(storage, campaignId as never, battleId, legacyBoard, tokenId, position),
+      moveUserToken: (campaignId, battleId, legacyBoard, tokenId, position) => {
+        const outcome = routeUserTokenMove(storage, campaignId as never, battleId, legacyBoard, tokenId, position);
+        if (outcome.ok) afterCommit(campaignId, battleId, outcome.newRevision);
+        return outcome;
+      },
       advanceGreyholmTurn: (campaignId, activeBattle, nextCombatantId, round) => {
         const cid = campaignId as unknown as CampaignId;
         const seed = greyholmBattleToUniversal(cid, activeBattle);
-        return routeSetTurn(storage, cid, activeBattle.id, seed, nextCombatantId, round);
+        const outcome = routeSetTurn(storage, cid, activeBattle.id, seed, nextCombatantId, round);
+        if (outcome.ok) afterCommit(campaignId, activeBattle.id, outcome.newRevision);
+        return outcome;
       },
+      syncActive,
+      syncPendingCount: (campaignId) => syncPending(storage, campaignId),
+      flushSync: (campaignId, online = true) => flushBattleSync(storage, campaignId, online),
+      remoteRevisionOf: (campaignId, battleId) => remoteRevision(storage, campaignId, battleId),
+      remoteAppliedTotal: (campaignId) => remoteAppliedCount(storage, campaignId),
       revisionOf: (campaignId, battleId) => battleRevision(storage, campaignId as never, battleId),
       recordPending: (pending) => recordPendingProjection(storage, pending),
       readPending: (campaignId, battleId) => readPendingProjection(storage, campaignId as never, battleId),
@@ -107,7 +160,7 @@ export function BattleAuthorityProvider({ children }: { children: ReactNode }) {
         return false;
       },
     };
-  }, [active]);
+  }, [active, syncActive]);
 
   return <BattleAuthorityContext.Provider value={value}>{children}</BattleAuthorityContext.Provider>;
 }

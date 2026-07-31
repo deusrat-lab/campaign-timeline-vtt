@@ -127,6 +127,23 @@ DM management panel "Создать бэкап" / "Восстановить бэ
 
 ---
 
+## PART G — application sync lifecycle (local/mock transport, NO production)
+Flags add `VITE_UNIVERSAL_SYNC=1`. After each durable battle commit the provider enqueues exactly one
+sync op and (online) flushes it to a LOCAL mock remote (localStorage namespace). Zero network, no
+`API_BASE_URL`, no fetch.
+
+**Core rule — one UI mutation → one commit → one sync op → one remote application** (Caldran A,
+fresh board `custom-beta`): teleport move → durable rev 0→1, **remote rev 1, remote applied events 1,
+queue pending 0** (`oneToOne: true`). No duplicate op.
+
+Offline queue persistence, retry, conflict (remote-ahead, no silent LWW), duplicate-delivery
+idempotency, reconciliation, and two-campaign isolation are proven by the 20 `application sync
+lifecycle` harness assertions exercising the exact functions the provider calls
+(`enqueueBattleSync` / `flushBattleSync` / `remoteRevision` / `remoteAppliedCount`). The legacy
+`userCampaignSync` still no-ops locally (empty `API_BASE_URL`), so there is no duplicate request.
+
+---
+
 ## What this establishes (real, non-fabricated)
 The **#1 mandatory vertical slice is done and browser-proven**: a real Caldran battle token move runs
 universal-first with a durable expected-revision commit, a matching legacy compatibility projection,
