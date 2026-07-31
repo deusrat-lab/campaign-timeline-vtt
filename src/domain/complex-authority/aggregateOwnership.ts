@@ -15,6 +15,20 @@ export type AggregateOwnership = 'universal-owned' | 'legacy-owned';
  * kinds it accepts and the single owned changed-path *prefix* a candidate is
  * allowed to touch for a resolved target.
  */
+/**
+ * Whether a real, normal UI action durably routes through Stage 16 for this
+ * scope (Stage 16.1 completion). `engine-capable` scopes are proven durable in
+ * the core harness in isolation but have no clean single-aggregate UI action, so
+ * they are EXCLUDED from the app's UI ownership (the store never routes them —
+ * no permanent fallback) and remain legacy-owned in practice until a later stage.
+ */
+export type AggregateUiStatus =
+  | 'wired' // a normal UI action durably commits through Stage 16
+  | 'excluded-coupled' // real UI action bundles multiple slots -> legacy-owned in the UI
+  | 'excluded-id-coordination' // real UI action generates its own id -> legacy-owned in the UI
+  | 'no-ui-action' // no normal UI control exists for this scope
+  | 'patch-merge-deferred'; // real UI action uses the overlay patch-merge -> not wired
+
 export interface AggregateOwnershipDescriptor {
   scope: ComplexAuthorityScope;
   campaignKind: CommandCampaignKind;
@@ -23,6 +37,10 @@ export interface AggregateOwnershipDescriptor {
   commandKinds: readonly ComplexCommandKind[];
   /** Reversible destructive command kinds within this aggregate. */
   destructiveCommandKinds: readonly ComplexCommandKind[];
+  /** Real-UI wiring status (Stage 16.1 completion). */
+  uiStatus: AggregateUiStatus;
+  /** Short honest note about the UI wiring decision. */
+  uiNote: string;
 }
 
 const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
@@ -33,6 +51,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['reveal.entity', 'reveal.hide'],
     destructiveCommandKinds: ['reveal.hide'],
+    uiStatus: 'wired',
+    uiNote: 'MapWorkspace "Отметить открытым/Сбросить открытие" -> setRevealed/unsetRevealed; single-slot, durable.',
   },
   {
     scope: 'greyholm.presentedCard',
@@ -41,6 +61,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['presentedCard.present', 'presentedCard.dismiss'],
     destructiveCommandKinds: ['presentedCard.dismiss'],
+    uiStatus: 'wired',
+    uiNote: 'MapWorkspace "Показать карточку игрокам" -> presentCard; single-slot, durable when card id resolves.',
   },
   {
     scope: 'greyholm.placement',
@@ -49,6 +71,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['placement.place', 'placement.move', 'placement.remove'],
     destructiveCommandKinds: ['placement.remove'],
+    uiStatus: 'patch-merge-deferred',
+    uiNote: 'Greyholm placements use the overlay patch-merge; not routed through Stage 16 (no permanent fallback).',
   },
   {
     scope: 'greyholm.partyLocation',
@@ -57,6 +81,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['partyLocation.move'],
     destructiveCommandKinds: [],
+    uiStatus: 'excluded-coupled',
+    uiNote: 'SET_CURRENT_LOCATION also clears currentMapPosition + partyRouteProgress (multi-slot); excluded from UI ownership, legacy-owned.',
   },
   {
     scope: 'greyholm.routeProgress',
@@ -65,6 +91,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['routeProgress.advance', 'routeProgress.clear'],
     destructiveCommandKinds: ['routeProgress.clear'],
+    uiStatus: 'excluded-coupled',
+    uiNote: 'SET_PARTY_ROUTE_PROGRESS advance also clears currentMapPosition (multi-slot); excluded from UI ownership, legacy-owned.',
   },
   {
     scope: 'userCampaign.reveal',
@@ -73,6 +101,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['reveal.entity', 'reveal.hide'],
     destructiveCommandKinds: ['reveal.hide'],
+    uiStatus: 'excluded-coupled',
+    uiNote: 'toggleReveal also flips mapPlacements[e].visibleToPlayers + images[i].playerSafe (multi-slot); excluded from UI ownership, legacy-owned.',
   },
   {
     scope: 'userCampaign.presentedCard',
@@ -81,6 +111,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['presentedCard.present', 'presentedCard.dismiss'],
     destructiveCommandKinds: ['presentedCard.dismiss'],
+    uiStatus: 'no-ui-action',
+    uiNote: 'No presented-card action exists in the user-campaign store; capability/UI gap, legacy-owned.',
   },
   {
     scope: 'userCampaign.placement',
@@ -89,8 +121,30 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['placement.place', 'placement.move', 'placement.remove'],
     destructiveCommandKinds: ['placement.remove'],
+    uiStatus: 'wired',
+    uiNote: 'updatePlacement(pure x/y) -> move and removePlacement -> remove are durable. Create (addPlacement) is excluded (store-generated id).',
   },
 ];
+
+/**
+ * The scopes a real, normal UI action durably routes through Stage 16 (uiStatus
+ * === 'wired'). This is the app's TRUTHFUL ownership allowlist: the store only
+ * routes these through the complex sink, and the provider narrows the router's
+ * owned scopes to this set. Every other scope is engine-capable (proven in the
+ * core harness in isolation) but legacy-owned in the real UI — the store never
+ * routes it, so there is no permanent Stage 16 fallback.
+ */
+export const UI_OWNED_COMPLEX_SCOPES: readonly ComplexAuthorityScope[] = DESCRIPTORS
+  .filter((d) => d.uiStatus === 'wired')
+  .map((d) => d.scope);
+
+/** Narrow an arbitrary allowlist to only the truthfully UI-owned scopes. */
+export function narrowToUiOwned(scopes: Iterable<ComplexAuthorityScope>): Set<ComplexAuthorityScope> {
+  const uiOwned = new Set<ComplexAuthorityScope>(UI_OWNED_COMPLEX_SCOPES);
+  const out = new Set<ComplexAuthorityScope>();
+  for (const s of scopes) if (uiOwned.has(s)) out.add(s);
+  return out;
+}
 
 const BY_SCOPE = new Map<ComplexAuthorityScope, AggregateOwnershipDescriptor>(
   DESCRIPTORS.map((descriptor) => [descriptor.scope, descriptor]),

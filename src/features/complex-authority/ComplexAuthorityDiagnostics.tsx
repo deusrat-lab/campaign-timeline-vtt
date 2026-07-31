@@ -58,10 +58,16 @@ export function ComplexAuthorityDiagnostics() {
         <ul>
           {allAggregateDescriptors().map((d) => (
             <li key={d.scope}>
-              <code>{d.scope}</code> → {d.ownership} · commands: {d.commandKinds.join(', ')}
+              <code>{d.scope}</code> → engine: {d.ownership} · <strong>UI: {d.uiStatus}</strong>
+              {d.uiStatus === 'wired' ? ' ✅' : ' (legacy-owned in UI)'} · {d.uiNote}
             </li>
           ))}
         </ul>
+        <p>
+          The app router owns only <strong>UI-wired</strong> scopes; every other scope is engine-capable (proven in the
+          core harness) but legacy-owned in the real UI — the store never routes it, so there is no permanent Stage 16
+          fallback.
+        </p>
       </details>
       {statuses.length === 0 ? (
         <p>No allowlisted complex commands have run yet.</p>
