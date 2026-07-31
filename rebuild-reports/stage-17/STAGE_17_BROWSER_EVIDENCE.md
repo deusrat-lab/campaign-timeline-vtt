@@ -2,6 +2,18 @@
 
 Captured locally against `npm run dev` (vite, port 5175). No production, no deploy, no network.
 
+## Fixture provenance (honest)
+Three distinct things must not be conflated:
+- **Canonical archived Caldran fixture** — 66 NPC / 78 enemies / 4 boards / 16 tokens etc. (used by the
+  Node harness via `scripts/stage16/lib.mjs` `caldranComplex()`).
+- **Current instantiated Caldran template** — the local User Campaign "Stage14 UC Test"
+  (`camp-ms7krgk7-einpb`); as instantiated it had **0 battle boards**.
+- **Browser-seeded battle setup** — for Part B/C I seeded, *in the in-app browser's localStorage only*,
+  4 custom boards × 4 tokens (Caldran) and one active battle `gb-test-1` (Greyholm), as the DM-setup
+  precondition. The MUTATIONS (token move, turn advance) then ran through the real UI. This seed is NOT
+  in production code (`grep` for the literals in `src/` finds only the dev-only fixture flag), is not a
+  hidden runtime dependency, and the app after reload needs no re-seed (durable + legacy state persist).
+
 ---
 
 ## PART A — OFF state (all Stage 17 flags unset)
@@ -67,6 +79,17 @@ Fixture `stage17.test.failBattleCompatOnce`, then "Следующий ход":
   gc-bandit2/round1 → `universal_committed_legacy_pending`, pending record written.
 - **reload** → recovery applied the legacy transition (turn→gc-hero, round 2 == universal); **pending 0**;
   durable revision **unchanged at 3** (no second universal commit, no duplicate advance).
+
+---
+
+---
+
+## PART D — live diagnostics + campaign isolation
+`/diagnostics/stage-17` with cutover ON reads the **real** Stage 17 battle namespace (no placeholders):
+- engine active=true, 0 dual-authority, **2 durable battle records**, 0 pending.
+- Two distinct campaign-scoped rows coexisting: `camp-ms7krgk7-einpb / custom-alpha` rev 3 (4 tokens,
+  hash `b21e19ca`) and `camp:greyholm:main / bm-market` rev 3 (3 tokens, hash `47ecef61`).
+- Distinct hashes per campaign → genuine Greyholm/Caldran durable isolation, live.
 
 ---
 
