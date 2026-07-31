@@ -93,6 +93,28 @@ Fixture `stage17.test.failBattleCompatOnce`, then "Следующий ход":
 
 ---
 
+## PART E — import/export UI round-trip + second-UC isolation
+DM management panel on `/campaigns` (real UI: "Экспорт (DM)" / "Экспорт (Player Safe)" / import
+textarea + file + dry-run preview + apply-as-new-campaign).
+
+**Caldran export → import as new campaign** (source A `camp-ms7krgk7-einpb`):
+- "Экспорт (DM)" → universal envelope, kind portable, **4 boards / 16 tokens**, hash `77812e6d`, carries snapshot.
+- Import dry-run preview: "universal-user-campaign · portable · 4 boards · 16 tokens · ✅ ready".
+- Apply → registry 1→2, new campaign **B `camp-ms9grj2s-rzmwc`** ("… (import)"), navigated to it.
+- B verified: campaignId rewritten (data+runtime), 4 boards / 16 tokens, t1 @ (75, 78.57) — **moved token
+  position preserved through round-trip**, same tokenId `t1` (campaign-scoped identity), isolated from A.
+
+**Second-UC isolation** (real teleport move in B):
+- B move → B's OWN durable record `camp-ms9grj2s-rzmwc:custom-alpha` rev **1**; A's durable record
+  `camp-ms7krgk7-einpb:custom-alpha` **unchanged at rev 3**; A.t1 (75,79) vs B.t1 (25,50) — moved
+  independently. Same tokenId, different campaignId, separate durable records.
+
+Negative import safety proven in harness (302 assertions): malformed JSON, unknown format, duplicate
+entity id, duplicate battle token id, player-safe-as-import all rejected; DM export deterministic (stable
+hash modulo the documented volatile export timestamp); player-safe export carries no DM snapshot/legacy blob.
+
+---
+
 ## What this establishes (real, non-fabricated)
 The **#1 mandatory vertical slice is done and browser-proven**: a real Caldran battle token move runs
 universal-first with a durable expected-revision commit, a matching legacy compatibility projection,

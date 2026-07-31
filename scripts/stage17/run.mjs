@@ -8,10 +8,12 @@ import { runMigration } from './runMigration.mjs';
 import { runCutover } from './runCutover.mjs';
 import { runApplication } from './runApplication.mjs';
 import { runBattleAuthority } from './runBattleAuthority.mjs';
+import { runPortabilityUC } from './runPortabilityUC.mjs';
 
 const groups = [
   ['battles', runBattles],
   ['battle authority (durable move path)', runBattleAuthority],
+  ['user-campaign import/export round-trip', runPortabilityUC],
   ['import/export/backup/restore', runImportExport],
   ['sync', runSync],
   ['migration rehearsal', runMigration],

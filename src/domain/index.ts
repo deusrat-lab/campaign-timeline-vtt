@@ -14,6 +14,7 @@ export * from './maps/types';
 export * from './migration/migrationEngine';
 export * from './persistence/serialization';
 export * from './portability/portability';
+export * from './portability/userCampaignPortability';
 export * from './sync/universalSync';
 export * from './cutover/ownershipRegistry';
 export * from './projection/projectCampaign';

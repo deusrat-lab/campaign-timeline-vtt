@@ -18,6 +18,7 @@ import type {
 } from '../types/userCampaign';
 import { getRegionPreset } from '../data/regionPresets';
 import { mergeScenarioIntoData, scenarioForCampaign } from '../data/scenarioMerge';
+import { exportUserCampaignDM, exportUserCampaignPlayerSafe, reconstructUserCampaign } from '../domain';
 import { emitUserCommand } from './commandShadowSink';
 import { routeUserAuthority } from './commandAuthoritySink';
 import { routeUserDurable } from './durableAuthoritySink';
@@ -206,6 +207,10 @@ interface UserCampaignValue {
 
   exportCampaign: (id: string, includeRuntime: boolean) => string;
   importCampaign: (json: string) => string | null;
+  /** Stage 17 — universal DM / player-safe export of a campaign. */
+  exportUniversal: (id: string, playerSafe: boolean) => string | null;
+  /** Stage 17 — import a universal (or legacy) export as a NEW isolated campaign. */
+  importUniversalApply: (text: string) => string | null;
 
   /**
    * Stage 9 shadow integration — side-effect-free snapshot of the in-memory
@@ -657,6 +662,31 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
       return JSON.stringify(payload, null, 2);
     },
 
+    exportUniversal: (id, playerSafe) => {
+      const data = readData(id);
+      if (!data) return null;
+      const runtime = readRuntime(id);
+      return playerSafe ? exportUserCampaignPlayerSafe(data, runtime) : exportUserCampaignDM(data, runtime);
+    },
+    importUniversalApply: (text) => {
+      const newId = uid('camp');
+      const rec = reconstructUserCampaign(text, newId);
+      if (!rec.ok || !rec.data) return null;
+      const now = new Date().toISOString();
+      const data: UserCampaignData = { ...rec.data, campaignId: newId };
+      const entry: UserCampaignRegistryEntry = {
+        campaignId: newId, title: `${data.title} (import)`, type: data.type,
+        baseMapId: data.baseMapId, regionIds: data.regionIds, createdAt: now, updatedAt: now,
+      };
+      persistRegistry([...registry, entry]);
+      writeJson(dataKey(newId), data);
+      setDataCache((prev) => ({ ...prev, [newId]: data }));
+      const rt = rec.runtime ? { ...rec.runtime, campaignId: newId } : emptyRuntime(newId, data.baseMapId);
+      writeJson(runtimeKey(newId), rt);
+      setRuntimeCache((prev) => ({ ...prev, [newId]: rt }));
+      pushBlob(newId);
+      return newId;
+    },
     importCampaign: (json) => {
       try {
         const parsed = JSON.parse(json) as { kind?: string; data?: UserCampaignData; runtime?: UserCampaignRuntime };

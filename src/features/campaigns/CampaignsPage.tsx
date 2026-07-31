@@ -6,6 +6,7 @@ import { getAtlasMapById } from '../../data/worldAtlasMaps';
 import { CAMPAIGN_TYPE_LABELS } from '../../types/campaign';
 import { USER_CAMPAIGN_TYPE_LABELS } from '../../types/userCampaign';
 import { useUserCampaigns } from '../../state/userCampaignStore';
+import { CampaignManagementPanel } from './CampaignManagementPanel';
 
 export function CampaignsPage() {
   const navigate = useNavigate();
@@ -73,6 +74,8 @@ export function CampaignsPage() {
           </div>
         )}
       </div>
+
+      <CampaignManagementPanel />
     </div>
   );
 }
