@@ -11,6 +11,9 @@ import {
   snapshotHash,
   canonicalHash,
   reconcile,
+  createBrowserRepositoryStorage,
+  listBattleRecords,
+  totalPendingCount,
 } from '../domain';
 import type { MainCampaignOverlayInput } from '../domain';
 
@@ -47,6 +50,11 @@ export function Stage17DiagnosticsPage() {
     ? reconcile({ revision: snapshot.revision, hash: dmHash }, { revision: snapshot.revision, hash: dmHash })
     : 'unknown';
 
+  // Live durable battle state (read from the actual Stage 17 battle namespace).
+  const battleStorage = typeof window !== 'undefined' ? createBrowserRepositoryStorage(window.localStorage) : null;
+  const battleRecords = battleStorage ? listBattleRecords(battleStorage) : [];
+  const pendingTotal = battleStorage ? totalPendingCount(battleStorage) : 0;
+
   return (
     <section className="page-panel stage17-diagnostics">
       <h1>Stage 17 diagnostics — universal Campaign Engine</h1>
@@ -67,8 +75,10 @@ export function Stage17DiagnosticsPage() {
           <p>reconciliation: {reconcileState}</p>
         </article>
         <article>
-          <h2>Battle / repository</h2>
+          <h2>Battle / repository (live)</h2>
           <p>universal battles in snapshot: {battleCount}</p>
+          <p data-testid="s17-durable-battles">durable battle records: <strong>{battleRecords.length}</strong></p>
+          <p data-testid="s17-pending-total">pending projections: <strong>{pendingTotal}</strong></p>
           <p>adapter: {adapted.source.kind} / {adapted.diagnostics.length} diagnostics</p>
         </article>
         <article>
@@ -79,6 +89,29 @@ export function Stage17DiagnosticsPage() {
           <p>snapshot: {dmHash}</p>
         </article>
       </div>
+
+      <h2>Durable battle records (live, campaign-scoped)</h2>
+      {battleRecords.length === 0 ? (
+        <p>No durable battle records yet.</p>
+      ) : (
+        <table className="stage17-battles">
+          <thead>
+            <tr><th>Campaign</th><th>Battle</th><th>Revision</th><th>Round</th><th>Tokens</th><th>Hash</th></tr>
+          </thead>
+          <tbody>
+            {battleRecords.map((r) => (
+              <tr key={`${r.campaignId}:${r.battleId}`} data-testid={`battle-${r.campaignId}-${r.battleId}`}>
+                <td>{r.campaignId}</td>
+                <td>{r.battleId}</td>
+                <td>{r.revision}</td>
+                <td>{r.round ?? '—'}</td>
+                <td>{r.tokenCount}</td>
+                <td>{r.hash}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
       <h2>Ownership registry</h2>
       <table className="stage17-ownership">

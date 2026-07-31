@@ -227,3 +227,56 @@ export function pendingProjectionCount(storage: RepositoryStorage, campaignId: C
   const prefix = `${UNIVERSAL_BATTLE_PENDING_NAMESPACE}:${campaignId}:`;
   return storage.keys().filter((key) => key.startsWith(prefix)).length;
 }
+
+export interface BattleRecordSummary {
+  campaignId: string;
+  battleId: string;
+  revision: number;
+  hash: string;
+  currentTurnTokenId?: string;
+  round?: number;
+  tokenCount: number;
+}
+
+/** Enumerate all durable battle records (for live diagnostics). Campaign-scoped
+ * keys are parsed, not guessed. */
+export function listBattleRecords(storage: RepositoryStorage): BattleRecordSummary[] {
+  const prefix = `${UNIVERSAL_BATTLE_NAMESPACE}:`;
+  const out: BattleRecordSummary[] = [];
+  for (const key of storage.keys()) {
+    if (!key.startsWith(prefix)) continue;
+    const raw = storage.getItem(key);
+    if (!raw) continue;
+    try {
+      const rec = JSON.parse(raw) as StoredBattle;
+      const rt = rec.runtime;
+      out.push({
+        campaignId: String(rt.campaignId),
+        battleId: rt.battleMapRef,
+        revision: rec.revision,
+        hash: fnvHash(raw),
+        currentTurnTokenId: rt.initiative?.currentTurnTokenId,
+        round: rt.initiative?.round,
+        tokenCount: rt.board.tokens.length,
+      });
+    } catch {
+      /* skip corrupt */
+    }
+  }
+  return out.sort((a, b) => (a.campaignId + a.battleId).localeCompare(b.campaignId + b.battleId));
+}
+
+/** Total pending compatibility projections across all campaigns. */
+export function totalPendingCount(storage: RepositoryStorage): number {
+  const prefix = `${UNIVERSAL_BATTLE_PENDING_NAMESPACE}:`;
+  return storage.keys().filter((key) => key.startsWith(prefix)).length;
+}
+
+function fnvHash(input: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}

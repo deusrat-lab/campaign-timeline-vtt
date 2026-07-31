@@ -3,6 +3,7 @@ import {
   createMemoryRepositoryStorage,
   routeUserTokenMove, routeSetTurn, commitBattle, readStoredBattle, battleRevision,
   recordPendingProjection, readPendingProjection, clearPendingProjection, pendingProjectionCount,
+  listBattleRecords, totalPendingCount,
   userBoardToUniversal, greyholmBattleToUniversal, executeBattleCommand,
 } from './.dist/domain/index.js';
 import { Checks } from '../stage08/lib.mjs';
@@ -117,6 +118,23 @@ export function runBattleAuthority(c = new Checks()) {
     const tokenId = rt.board.tokens[1].id;
     const res = executeBattleCommand(rt, { kind: 'set-turn', campaignId: GREYHOLM_ID, battleId: rt.battleMapRef, currentTurnTokenId: tokenId, round: 5, expectedRevision: 0 });
     c.ok('set-turn: applies round + current token', res.ok && res.next.initiative.round === 5 && res.next.initiative.currentTurnTokenId === tokenId);
+  }
+
+  // --- live diagnostics enumeration (listBattleRecords) ---
+  {
+    const storage = createMemoryRepositoryStorage();
+    routeUserTokenMove(storage, CALDRAN_ID, 'custom-alpha', board, tokenId, { x: 1, y: 1 });
+    routeUserTokenMove(storage, OTHER_UC_ID, 'custom-beta', boards['custom-beta'], boards['custom-beta'].tokens[0].id, { x: 2, y: 2 });
+    const active = greyholmActiveBattle();
+    routeSetTurn(storage, GREYHOLM_ID, active.id, greyholmBattleToUniversal(GREYHOLM_ID, active), 'cmb-bandit-1', 2);
+    const records = listBattleRecords(storage);
+    c.eq('diagnostics: 3 durable battle records', records.length, 3);
+    c.ok('diagnostics: records campaign-scoped + distinct', new Set(records.map((r) => r.campaignId)).size === 3);
+    c.ok('diagnostics: each record carries revision + hash', records.every((r) => r.revision >= 1 && !!r.hash));
+    c.ok('diagnostics: distinct hashes per record', new Set(records.map((r) => r.hash)).size === 3);
+    c.eq('diagnostics: no pending across campaigns', totalPendingCount(storage), 0);
+    recordPendingProjection(storage, { campaignId: CALDRAN_ID, battleId: 'custom-alpha', tokenId, position: { x: 1, y: 1 }, committedRevision: 1 });
+    c.eq('diagnostics: total pending reflects records', totalPendingCount(storage), 1);
   }
 
   // --- pending recovery lifecycle ---
