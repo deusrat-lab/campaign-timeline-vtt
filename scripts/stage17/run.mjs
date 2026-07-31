@@ -6,6 +6,7 @@ import { runImportExport } from './runImportExport.mjs';
 import { runSync } from './runSync.mjs';
 import { runMigration } from './runMigration.mjs';
 import { runCutover } from './runCutover.mjs';
+import { runApplication } from './runApplication.mjs';
 
 const groups = [
   ['battles', runBattles],
@@ -13,6 +14,7 @@ const groups = [
   ['sync', runSync],
   ['migration rehearsal', runMigration],
   ['cutover + ownership', runCutover],
+  ['application wiring + privacy', runApplication],
 ];
 
 const c = new Checks();

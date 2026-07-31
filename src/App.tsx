@@ -26,6 +26,8 @@ import { CampaignBattlePage } from './features/campaigns/CampaignBattlePage';
 import { CampaignEntryRedirect } from './features/campaigns/CampaignEntryRedirect';
 import { canPlayerOpenCampaignPath } from './features/campaigns/playerSafe';
 import { UniversalDiagnosticsPage } from './pages/UniversalDiagnosticsPage';
+import { Stage17DiagnosticsPage } from './pages/Stage17DiagnosticsPage';
+import { CampaignEngineProvider } from './features/campaign-engine/CampaignEngineProvider';
 import { ReadPathDiagnosticsPage } from './pages/ReadPathDiagnosticsPage';
 import { ShadowIntegrationProvider } from './features/shadow-integration/ShadowIntegrationProvider';
 import { ReadPathProvider } from './features/read-path/ReadPathProvider';
@@ -169,6 +171,7 @@ function AppShell() {
                workspace (never a raw PNG). Shares the world atlas data only. */}
             <Route path="/atlas/maps/:mapId" element={<DmOnlyRoute><AtlasMapWorkspace /></DmOnlyRoute>} />
             <Route path="/diagnostics/universal" element={<DmOnlyRoute><UniversalDiagnosticsPage /></DmOnlyRoute>} />
+            <Route path="/diagnostics/stage-17" element={<DmOnlyRoute><Stage17DiagnosticsPage /></DmOnlyRoute>} />
             <Route path="/diagnostics/read-path" element={<DmOnlyRoute><ReadPathDiagnosticsPage /></DmOnlyRoute>} />
             <Route path="/campaigns" element={<DmOnlyRoute><CampaignsPage /></DmOnlyRoute>} />
             <Route path="/campaigns/new" element={<DmOnlyRoute><NewCampaignWizard /></DmOnlyRoute>} />
@@ -215,9 +218,15 @@ function App() {
                      own default-off flag is unset. Consulted before Stage 15 for
                      its owned aggregate scopes. Independent of every earlier flag. */}
                   <ComplexAuthorityProvider>
-                    <ReadPathProvider>
-                      <AppShell />
-                    </ReadPathProvider>
+                    {/* Stage 17 — unified Campaign Engine ownership context.
+                       Inert by default: describes ownership only; all four
+                       Stage 17 flags default off, so `active` is false and the
+                       resolved ownership equals the Stage 16 baseline. */}
+                    <CampaignEngineProvider>
+                      <ReadPathProvider>
+                        <AppShell />
+                      </ReadPathProvider>
+                    </CampaignEngineProvider>
                   </ComplexAuthorityProvider>
                 </DurableAuthorityProvider>
               </CommandAuthorityProvider>

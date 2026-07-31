@@ -1,5 +1,12 @@
 # Stage 17 — Interim Status
 
+> **Update (2nd pass):** application-integration foundation added and browser-verified.
+> The default-off `CampaignEngineProvider`, the Stage 17 flag layer, and the DM-only
+> `/diagnostics/stage-17` route are wired into the real app and proven in a live browser
+> (see STAGE_17_BROWSER_EVIDENCE.md). Harness expanded 171 → **231**. Regression **15/15**.
+> Still NOT a full STAGE_17_PASS: battle-command UI cutover, import/export/backup/restore/sync
+> UI flows, and pending-recovery browser injection remain pending (details below).
+
 ## Verdict: STAGE_17_ARCHITECTURE_COMPLETE — application integration + browser evidence PENDING
 
 This is **not** `STAGE_17_PASS`. Per the honest-verdict policy, PASS is not claimable while real

@@ -290,3 +290,41 @@ export const UNIVERSAL_COMPLEX_AUTHORITY_ENABLED: boolean =
  */
 export const UNIVERSAL_COMPLEX_AUTHORITY_SCOPES: string =
   import.meta.env.VITE_UNIVERSAL_COMPLEX_AUTHORITY_SCOPES ?? '';
+
+/**
+ * Stage 17 — universal Campaign Engine local cutover flags (see
+ * rebuild-reports/stage-17). SEPARATE and INDEPENDENT from every earlier flag.
+ * All default OFF and MUST NOT be set in any committed env file or
+ * production/Railway environment.
+ *
+ * These four flags feed the typed Stage 17 ownership registry
+ * (`src/domain/cutover/ownershipRegistry.ts`). A family only becomes universal-
+ * owned when BOTH the master `localCutover` switch AND its family flag are on;
+ * legacy is then demoted to a compatibility view (never a second authoritative
+ * writer). When all four are OFF the application renders and behaves exactly as
+ * the Stage 16 baseline: zero Stage 17 activity, no battle cutover, no universal
+ * sync, no cutover initialization. Sync stays LOCAL/COMPATIBILITY only — no
+ * production request is ever issued (no `API_BASE_URL`, no network).
+ */
+const flagOn = (value: string | boolean | undefined): boolean => value === '1' || value === 'true';
+
+export const UNIVERSAL_BATTLE_AUTHORITY_ENABLED: boolean = flagOn(import.meta.env.VITE_UNIVERSAL_BATTLE_AUTHORITY);
+export const UNIVERSAL_IMPORT_EXPORT_ENABLED: boolean = flagOn(import.meta.env.VITE_UNIVERSAL_IMPORT_EXPORT);
+export const UNIVERSAL_SYNC_ENABLED: boolean = flagOn(import.meta.env.VITE_UNIVERSAL_SYNC);
+export const UNIVERSAL_LOCAL_CUTOVER_ENABLED: boolean = flagOn(import.meta.env.VITE_UNIVERSAL_LOCAL_CUTOVER);
+
+/** The live Stage 17 flag set, read from the environment (all default OFF). */
+export function stage17Flags(): { battleAuthority: boolean; importExport: boolean; sync: boolean; localCutover: boolean } {
+  return {
+    battleAuthority: UNIVERSAL_BATTLE_AUTHORITY_ENABLED,
+    importExport: UNIVERSAL_IMPORT_EXPORT_ENABLED,
+    sync: UNIVERSAL_SYNC_ENABLED,
+    localCutover: UNIVERSAL_LOCAL_CUTOVER_ENABLED,
+  };
+}
+
+/** True when any Stage 17 application activity is permitted (master + a family). */
+export function stage17Active(): boolean {
+  const f = stage17Flags();
+  return f.localCutover && (f.battleAuthority || f.importExport || f.sync);
+}
