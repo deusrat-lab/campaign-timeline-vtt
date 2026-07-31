@@ -31,6 +31,7 @@ const GATES = [
   'verify:stage15',
   'verify:stage16',
   'verify:stage16-1',
+  'verify:stage17',
   'verify:stage06',
   'verify:stage07',
   'verify:stage05',
