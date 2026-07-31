@@ -99,5 +99,21 @@ export function runPortabilityUC(c = new Checks()) {
   dupData.npcs.push({ id: 'npc-1', name: 'Dup' });
   c.ok('uc negative: duplicate entity id rejected', !previewUserCampaignImport(exportUserCampaignDM(dupData, runtime)).ok);
 
+  // --- backup/restore guard logic (store wires window.localStorage; here the
+  // domain guarantees the store relies on) ---
+  {
+    const backup = exportUserCampaignDM(data, runtime); // "backup" of src campaign
+    // restore into the SAME id reconstructs identical content
+    const same = reconstructUserCampaign(backup, data.campaignId);
+    c.ok('backup: restore into same id ok', same.ok && same.data.campaignId === data.campaignId);
+    const rtBoards = Object.keys(same.runtime.battleBoards).length;
+    c.eq('backup: restore preserves 4 boards', rtBoards, 4);
+    // wrong-campaign guard: the backup carries the source campaignId, so a store
+    // restoring it to a different id can detect the mismatch via preview.campaignId
+    const pv = previewUserCampaignImport(backup);
+    c.eq('backup: preview exposes source campaignId for wrong-campaign guard', pv.campaignId, data.campaignId);
+    c.ok('backup: corrupt backup rejected by preview', !previewUserCampaignImport('{"format":"campaign-timeline-vtt/universal-export","kind":"portable"}').ok);
+  }
+
   return c;
 }

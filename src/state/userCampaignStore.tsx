@@ -18,7 +18,10 @@ import type {
 } from '../types/userCampaign';
 import { getRegionPreset } from '../data/regionPresets';
 import { mergeScenarioIntoData, scenarioForCampaign } from '../data/scenarioMerge';
-import { exportUserCampaignDM, exportUserCampaignPlayerSafe, reconstructUserCampaign } from '../domain';
+import { exportUserCampaignDM, exportUserCampaignPlayerSafe, reconstructUserCampaign, previewUserCampaignImport, userCampaignExportHash } from '../domain';
+
+const UC_BACKUP_NS = 'campaign-timeline-vtt:uc-backup:v1';
+const UC_ROLLBACK_NS = 'campaign-timeline-vtt:uc-rollback:v1';
 import { emitUserCommand } from './commandShadowSink';
 import { routeUserAuthority } from './commandAuthoritySink';
 import { routeUserDurable } from './durableAuthoritySink';
@@ -211,6 +214,10 @@ interface UserCampaignValue {
   exportUniversal: (id: string, playerSafe: boolean) => string | null;
   /** Stage 17 — import a universal (or legacy) export as a NEW isolated campaign. */
   importUniversalApply: (text: string) => string | null;
+  /** Stage 17 — create a campaign-scoped backup (universal export + hash). */
+  createUniversalBackup: (id: string) => { ok: boolean; hash: string; at: string } | null;
+  /** Stage 17 — restore a campaign from its backup (same id) with a rollback checkpoint. */
+  restoreUniversalBackup: (id: string) => { ok: boolean; restoredHash?: string; rollbackHash?: string; errors: string[] };
 
   /**
    * Stage 9 shadow integration — side-effect-free snapshot of the in-memory
@@ -686,6 +693,39 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
       setRuntimeCache((prev) => ({ ...prev, [newId]: rt }));
       pushBlob(newId);
       return newId;
+    },
+    createUniversalBackup: (id) => {
+      const text = readData(id) ? exportUserCampaignDM(readData(id)!, readRuntime(id)) : null;
+      if (!text) return null;
+      const at = new Date().toISOString();
+      const hash = userCampaignExportHash(text);
+      try { window.localStorage.setItem(`${UC_BACKUP_NS}:${id}`, JSON.stringify({ at, hash, text })); } catch { return null; }
+      return { ok: true, hash, at };
+    },
+    restoreUniversalBackup: (id) => {
+      let backup: { at: string; hash: string; text: string } | null = null;
+      try { backup = JSON.parse(window.localStorage.getItem(`${UC_BACKUP_NS}:${id}`) || 'null'); } catch { backup = null; }
+      if (!backup?.text) return { ok: false, errors: ['no backup found for campaign'] };
+      const preview = previewUserCampaignImport(backup.text);
+      if (!preview.ok) return { ok: false, errors: ['corrupt backup: ' + preview.errors.join('; ')] };
+      if (preview.campaignId && preview.campaignId !== id) return { ok: false, errors: [`wrong-campaign backup (${preview.campaignId} != ${id})`] };
+      // rollback checkpoint of the CURRENT state before overwriting
+      const rollbackText = readData(id) ? exportUserCampaignDM(readData(id)!, readRuntime(id)) : null;
+      const rollbackHash = rollbackText ? userCampaignExportHash(rollbackText) : undefined;
+      if (rollbackText) { try { window.localStorage.setItem(`${UC_ROLLBACK_NS}:${id}`, JSON.stringify({ at: new Date().toISOString(), hash: rollbackHash, text: rollbackText })); } catch { /* best effort */ } }
+      // reconstruct into the SAME id and write
+      const rec = reconstructUserCampaign(backup.text, id);
+      if (!rec.ok || !rec.data) return { ok: false, errors: ['restore reconstruct failed'] };
+      writeJson(dataKey(id), rec.data);
+      setDataCache((prev) => ({ ...prev, [id]: rec.data! }));
+      const rt = rec.runtime ?? emptyRuntime(id, rec.data.baseMapId);
+      writeJson(runtimeKey(id), rt);
+      setRuntimeCache((prev) => ({ ...prev, [id]: rt }));
+      pushBlob(id);
+      // read-after-write
+      const back = readData(id);
+      if (!back) return { ok: false, errors: ['read-after-write returned null'] };
+      return { ok: true, restoredHash: backup.hash, rollbackHash, errors: [] };
     },
     importCampaign: (json) => {
       try {

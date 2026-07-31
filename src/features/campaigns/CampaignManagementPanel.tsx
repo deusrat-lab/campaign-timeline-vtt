@@ -13,11 +13,12 @@ import { previewUserCampaignImport, userCampaignExportHash, type UserCampaignImp
  */
 export function CampaignManagementPanel() {
   const navigate = useNavigate();
-  const { registry, exportUniversal, importUniversalApply } = useUserCampaigns();
+  const { registry, exportUniversal, importUniversalApply, createUniversalBackup, restoreUniversalBackup } = useUserCampaigns();
   const [exportText, setExportText] = useState('');
   const [exportInfo, setExportInfo] = useState('');
   const [importText, setImportText] = useState('');
   const [preview, setPreview] = useState<UserCampaignImportPreview | null>(null);
+  const [backupInfo, setBackupInfo] = useState('');
 
   function download(name: string, text: string) {
     try {
@@ -66,11 +67,14 @@ export function CampaignManagementPanel() {
                   <strong>{c.title}</strong>
                   <button className="atlas-btn small" data-testid={`export-dm-${c.campaignId}`} onClick={() => doExport(c.campaignId, c.title, false)}>Экспорт (DM)</button>
                   <button className="atlas-btn ghost small" data-testid={`export-ps-${c.campaignId}`} onClick={() => doExport(c.campaignId, c.title, true)}>Экспорт (Player Safe)</button>
+                  <button className="atlas-btn ghost small" data-testid={`backup-${c.campaignId}`} onClick={() => { const r = createUniversalBackup(c.campaignId); setBackupInfo(r ? `Резервная копия «${c.title}»: hash ${r.hash} @ ${r.at}` : 'Резервная копия не удалась.'); }}>Создать бэкап</button>
+                  <button className="atlas-btn small" data-testid={`restore-${c.campaignId}`} onClick={() => { const r = restoreUniversalBackup(c.campaignId); setBackupInfo(r.ok ? `Восстановлено «${c.title}»: hash ${r.restoredHash}, rollback ${r.rollbackHash ?? '—'}` : `Восстановление отклонено: ${r.errors.join('; ')}`); }}>Восстановить бэкап</button>
                 </div>
               ))}
             </div>
           )}
           {exportInfo && <p data-testid="export-info" style={{ marginBottom: 4 }}>{exportInfo}</p>}
+          {backupInfo && <p data-testid="backup-info" style={{ marginBottom: 4 }}>{backupInfo}</p>}
           {exportText && <textarea data-testid="export-output" readOnly value={exportText} rows={4} style={{ width: '100%', fontFamily: 'monospace', fontSize: 11 }} />}
         </div>
 

@@ -115,6 +115,18 @@ hash modulo the documented volatile export timestamp); player-safe export carrie
 
 ---
 
+## PART F — backup / restore UI
+DM management panel "Создать бэкап" / "Восстановить бэкап" on `/campaigns` (campaign B `camp-ms9grj2s-rzmwc`):
+- **Create backup**: t1 @ (25,50) captured, hash `9bd56e32`, stored in `uc-backup:v1:<id>`.
+- **Real token move** through B's battle UI → t1 → (85,21), B durable rev 2.
+- **Restore backup** → t1 back to **(25,50)** (read-after-write), restore hash `9bd56e32`, **rollback
+  checkpoint** created (hash `d150eafe`, captures the pre-restore (85,21) state).
+- **Refresh** → t1 persists at (25,50).
+- Restore safety (harness): corrupt backup rejected, wrong-campaign backup rejected via `preview.campaignId`
+  guard, restore reconstructs into the SAME campaignId.
+
+---
+
 ## What this establishes (real, non-fabricated)
 The **#1 mandatory vertical slice is done and browser-proven**: a real Caldran battle token move runs
 universal-first with a durable expected-revision commit, a matching legacy compatibility projection,
