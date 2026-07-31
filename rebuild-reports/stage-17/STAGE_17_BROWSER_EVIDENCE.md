@@ -42,6 +42,34 @@ Set dev fixture `localStorage['stage17.test.failBattleCompatOnce']='1'`, then mo
 
 ---
 
+---
+
+## PART C — real Greyholm battle mutation (advance turn)
+Greyholm's single `ActiveBattleState` via the normal embedded battle overlay's **"Следующий ход"**
+button. Battle *setup* seeded (a DM-started battle `gb-test-1`, 3 combatants) as the precondition —
+the MUTATION runs through the real button. campaignId `camp:greyholm:main`.
+
+| Step | durable key `universal-battle:v1:camp:greyholm:main:gb-test-1` | legacy overlay activeBattle | universal runtime |
+|---|---|---|---|
+| before | (none) | turn=gc-hero, round 1 | — |
+| "Следующий ход" #1 | **revision 1** | turn=gc-bandit1, round 1 | turn=gc-bandit1, round 1 — **match** |
+| "Следующий ход" #2 | **revision 2** | turn=gc-bandit2, round 1 | round 1 — match |
+| refresh | revision 2 (persisted) | UI shows "Ход: Бандит 2" | — |
+
+Proven: normal Greyholm UI → typed universal `set-turn` command → exact greyholm campaignId + battleId
+→ expected-revision durable commit → **one commit per advance** → compatibility projection (legacy
+overlay == universal durable state) → read-after-write → refresh persistence. No active-campaign /
+first-battle fallback, no guessed battleId, no debug button.
+
+### Greyholm battle recovery (real browser failure injection)
+Fixture `stage17.test.failBattleCompatOnce`, then "Следующий ход":
+- **universal committed** (revision **3**, turn=gc-hero, round 2 wrapped) but legacy stayed at
+  gc-bandit2/round1 → `universal_committed_legacy_pending`, pending record written.
+- **reload** → recovery applied the legacy transition (turn→gc-hero, round 2 == universal); **pending 0**;
+  durable revision **unchanged at 3** (no second universal commit, no duplicate advance).
+
+---
+
 ## What this establishes (real, non-fabricated)
 The **#1 mandatory vertical slice is done and browser-proven**: a real Caldran battle token move runs
 universal-first with a durable expected-revision commit, a matching legacy compatibility projection,

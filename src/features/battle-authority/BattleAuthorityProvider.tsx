@@ -2,6 +2,8 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import {
   createBrowserRepositoryStorage,
   routeUserTokenMove,
+  routeSetTurn,
+  greyholmBattleToUniversal,
   battleRevision,
   recordPendingProjection,
   readPendingProjection,
@@ -9,9 +11,12 @@ import {
   pendingProjectionCount,
   type RepositoryStorage,
   type BattleMoveOutcome,
+  type TurnAdvanceOutcome,
   type PendingBattleProjection,
+  type CampaignId,
 } from '../../domain';
 import type { CampaignBattleBoard } from '../../types/userCampaign';
+import type { ActiveBattleState } from '../../types';
 import { UNIVERSAL_BATTLE_AUTHORITY_ENABLED, UNIVERSAL_LOCAL_CUTOVER_ENABLED } from '../../config';
 
 /**
@@ -38,6 +43,13 @@ export interface BattleAuthorityContextValue {
     tokenId: string,
     position: { x: number; y: number },
   ): BattleMoveOutcome | null;
+  /** Greyholm turn advance (single ActiveBattleState) through universal authority. */
+  advanceGreyholmTurn(
+    campaignId: string,
+    activeBattle: ActiveBattleState,
+    nextCombatantId: string,
+    round: number,
+  ): TurnAdvanceOutcome | null;
   revisionOf(campaignId: string, battleId: string): number;
   consumeFailCompatOnce(): boolean;
   recordPending(pending: PendingBattleProjection): void;
@@ -49,6 +61,7 @@ export interface BattleAuthorityContextValue {
 const DISABLED: BattleAuthorityContextValue = {
   active: false,
   moveUserToken: () => null,
+  advanceGreyholmTurn: () => null,
   revisionOf: () => 0,
   consumeFailCompatOnce: () => false,
   recordPending: () => {},
@@ -71,6 +84,11 @@ export function BattleAuthorityProvider({ children }: { children: ReactNode }) {
       active: true,
       moveUserToken: (campaignId, battleId, legacyBoard, tokenId, position) =>
         routeUserTokenMove(storage, campaignId as never, battleId, legacyBoard, tokenId, position),
+      advanceGreyholmTurn: (campaignId, activeBattle, nextCombatantId, round) => {
+        const cid = campaignId as unknown as CampaignId;
+        const seed = greyholmBattleToUniversal(cid, activeBattle);
+        return routeSetTurn(storage, cid, activeBattle.id, seed, nextCombatantId, round);
+      },
       revisionOf: (campaignId, battleId) => battleRevision(storage, campaignId as never, battleId),
       recordPending: (pending) => recordPendingProjection(storage, pending),
       readPending: (campaignId, battleId) => readPendingProjection(storage, campaignId as never, battleId),

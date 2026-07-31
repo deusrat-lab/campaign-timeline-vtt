@@ -1,12 +1,12 @@
 // Stage 17 — durable battle authority (the real UI move path routes through this).
 import {
   createMemoryRepositoryStorage,
-  routeUserTokenMove, commitBattle, readStoredBattle, battleRevision,
+  routeUserTokenMove, routeSetTurn, commitBattle, readStoredBattle, battleRevision,
   recordPendingProjection, readPendingProjection, clearPendingProjection, pendingProjectionCount,
-  userBoardToUniversal,
+  userBoardToUniversal, greyholmBattleToUniversal, executeBattleCommand,
 } from './.dist/domain/index.js';
 import { Checks } from '../stage08/lib.mjs';
-import { CALDRAN_ID, OTHER_UC_ID, caldranBoards } from './fixtures.mjs';
+import { CALDRAN_ID, OTHER_UC_ID, GREYHOLM_ID, caldranBoards, greyholmActiveBattle } from './fixtures.mjs';
 
 export function runBattleAuthority(c = new Checks()) {
   const boards = caldranBoards();
@@ -77,6 +77,46 @@ export function runBattleAuthority(c = new Checks()) {
     const a = readStoredBattle(storage, CALDRAN_ID, 'custom-alpha');
     const b = readStoredBattle(storage, OTHER_UC_ID, 'custom-alpha');
     c.ok('authority: distinct campaign runtimes', a.runtime.campaignId !== b.runtime.campaignId);
+  }
+
+  // --- Greyholm turn advance via routeSetTurn (single ActiveBattleState) ---
+  {
+    const storage = createMemoryRepositoryStorage();
+    const active = greyholmActiveBattle(); // combatants: cmb-hero, cmb-bandit-1, cmb-bandit-2
+    const seed = () => greyholmBattleToUniversal(GREYHOLM_ID, active);
+    // advance turn to bandit-1, round stays 2
+    const r1 = routeSetTurn(storage, GREYHOLM_ID, active.id, seed(), 'cmb-bandit-1', 2);
+    c.ok('greyholm turn: first advance ok', r1.ok);
+    c.eq('greyholm turn: revision 1', r1.newRevision, 1);
+    const stored1 = readStoredBattle(storage, GREYHOLM_ID, active.id);
+    const cur1 = stored1.runtime.initiative.currentTurnTokenId;
+    const bandit1Universal = stored1.runtime.board.tokens.find((t) => t.extensions['legacy:greyholm-active']?.legacyId === 'cmb-bandit-1');
+    c.ok('greyholm turn: current turn set to bandit-1 (universal id)', cur1 === bandit1Universal.id);
+
+    // advance again to bandit-2, round 2 -> then wrap to hero round 3
+    const r2 = routeSetTurn(storage, GREYHOLM_ID, active.id, seed(), 'cmb-bandit-2', 2);
+    c.eq('greyholm turn: revision 2', r2.newRevision, 2);
+    const r3 = routeSetTurn(storage, GREYHOLM_ID, active.id, seed(), 'cmb-hero', 3);
+    c.eq('greyholm turn: revision 3', r3.newRevision, 3);
+    c.eq('greyholm turn: round advanced to 3', readStoredBattle(storage, GREYHOLM_ID, active.id).runtime.initiative.round, 3);
+
+    // set-turn to unknown combatant rejected, no durable write
+    const bad = routeSetTurn(storage, GREYHOLM_ID, active.id, seed(), 'ghost', 3);
+    c.ok('greyholm turn: unknown combatant rejected', !bad.ok);
+    c.eq('greyholm turn: revision unchanged after rejection', battleRevision(storage, GREYHOLM_ID, active.id), 3);
+
+    // isolation: same battle id would-be, but Greyholm scoped distinctly from Caldran
+    c.ok('greyholm turn: campaign-scoped record', readStoredBattle(storage, GREYHOLM_ID, active.id).runtime.campaignId === GREYHOLM_ID);
+    c.ok('greyholm turn: caldran unaffected', readStoredBattle(storage, CALDRAN_ID, active.id) === null);
+  }
+
+  // --- set-turn command semantics ---
+  {
+    const rt = greyholmBattleToUniversal(GREYHOLM_ID, greyholmActiveBattle());
+    rt.revision = 0;
+    const tokenId = rt.board.tokens[1].id;
+    const res = executeBattleCommand(rt, { kind: 'set-turn', campaignId: GREYHOLM_ID, battleId: rt.battleMapRef, currentTurnTokenId: tokenId, round: 5, expectedRevision: 0 });
+    c.ok('set-turn: applies round + current token', res.ok && res.next.initiative.round === 5 && res.next.initiative.currentTurnTokenId === tokenId);
   }
 
   // --- pending recovery lifecycle ---

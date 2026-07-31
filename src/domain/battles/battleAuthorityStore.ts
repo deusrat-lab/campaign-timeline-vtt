@@ -128,6 +128,50 @@ export function routeUserTokenMove(
   return { ok: true, newRevision: commit.newRevision, compatBoard: universalToUserBoard(result.next) };
 }
 
+export interface TurnAdvanceOutcome {
+  ok: boolean;
+  newRevision?: number;
+  currentTurnTokenId?: string;
+  round?: number;
+  error?: string;
+}
+
+/**
+ * Route a turn advance (Greyholm "Следующий ход") through universal authority:
+ * seed-or-read the universal battle runtime, apply a typed `set-turn` command
+ * (the next combatant + round chosen by the legacy UI), durably commit under an
+ * expected-revision guard. `seedRuntime` is used only when this battle has never
+ * been committed (so it is seeded from the true current legacy state).
+ */
+export function routeSetTurn(
+  storage: RepositoryStorage,
+  campaignId: CampaignId,
+  battleId: string,
+  seedRuntime: BattleRuntime,
+  nextLegacyTokenId: string,
+  round: number,
+): TurnAdvanceOutcome {
+  const stored = readStoredBattle(storage, campaignId, battleId);
+  const runtime = stored ? stored.runtime : seedRuntime;
+  const expectedRevision = stored?.revision ?? 0;
+  if (!stored) runtime.revision = 0;
+
+  const universalTokenId = battleTokenId(campaignId, battleId, nextLegacyTokenId);
+  const result = executeBattleCommand(runtime, {
+    kind: 'set-turn',
+    campaignId,
+    battleId,
+    currentTurnTokenId: universalTokenId,
+    round,
+    expectedRevision,
+  });
+  if (!result.ok) return { ok: false, error: (result as BattleCommandFail).error.message };
+
+  const commit = commitBattle(storage, campaignId, battleId, result.next, expectedRevision);
+  if (!commit.ok) return { ok: false, error: commit.message };
+  return { ok: true, newRevision: commit.newRevision, currentTurnTokenId: nextLegacyTokenId, round };
+}
+
 /** Current durable revision for a battle (0 when never committed). */
 export function battleRevision(storage: RepositoryStorage, campaignId: CampaignId, battleId: string): number {
   return readStoredBattle(storage, campaignId, battleId)?.revision ?? 0;

@@ -82,7 +82,7 @@ function base() {
 
 {
   // command kind allowlist is closed and complete
-  c.eq('commands: 10 typed kinds', allBattleCommandKinds().length, 10);
+  c.eq('commands: 11 typed kinds', allBattleCommandKinds().length, 11);
 
   // expected-revision guard
   const stale = executeBattleCommand(base(), { kind: 'start-battle', campaignId: CALDRAN_ID, battleId: 'custom-alpha', expectedRevision: 5 });

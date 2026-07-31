@@ -21,6 +21,7 @@ export type BattleCommand =
   | { kind: 'set-initiative'; campaignId: CampaignId; battleId: string; order: string[]; round: number; expectedRevision: number }
   | { kind: 'advance-turn'; campaignId: CampaignId; battleId: string; expectedRevision: number }
   | { kind: 'advance-round'; campaignId: CampaignId; battleId: string; expectedRevision: number }
+  | { kind: 'set-turn'; campaignId: CampaignId; battleId: string; currentTurnTokenId: string; round: number; expectedRevision: number }
   | { kind: 'set-runtime'; campaignId: CampaignId; battleId: string; tokenId: string; patch: TokenRuntimePatch; expectedRevision: number }
   | { kind: 'set-visibility'; campaignId: CampaignId; battleId: string; presented: boolean; expectedRevision: number };
 
@@ -52,7 +53,7 @@ export type BattleCommandResult = BattleCommandOk | BattleCommandFail;
 
 const ALL_KINDS: readonly BattleCommandKind[] = [
   'start-battle', 'end-battle', 'place-token', 'move-token', 'remove-token',
-  'set-initiative', 'advance-turn', 'advance-round', 'set-runtime', 'set-visibility',
+  'set-initiative', 'advance-turn', 'advance-round', 'set-turn', 'set-runtime', 'set-visibility',
 ];
 export function allBattleCommandKinds(): readonly BattleCommandKind[] {
   return ALL_KINDS;
@@ -128,6 +129,12 @@ function apply(runtime: BattleRuntime, command: BattleCommand): BattleCommandRes
     case 'advance-round': {
       if (!runtime.active) return fail({ code: 'not-active', message: 'battle is not active' });
       runtime.initiative = { round: (runtime.initiative?.round ?? 1) + 1, currentTurnTokenId: runtime.initiative?.currentTurnTokenId };
+      return done();
+    }
+    case 'set-turn': {
+      const exists = runtime.board.tokens.some((token) => token.id === command.currentTurnTokenId);
+      if (!exists) return fail({ code: 'unknown-token', message: `set-turn references unknown token ${command.currentTurnTokenId}` });
+      runtime.initiative = { round: command.round, currentTurnTokenId: command.currentTurnTokenId };
       return done();
     }
     case 'set-runtime': {
