@@ -144,6 +144,20 @@ lifecycle` harness assertions exercising the exact functions the provider calls
 
 ---
 
+## PART H — presented Player-Safe / Observer + campaign-switch privacy
+- **Closed board** (un-presented): player/observer route → "Бой не открыт мастером", 0 tokens (baseline).
+- **Presented** (DM clicks "Открыть бой игрокам" on Caldran A `custom-beta` → `presentedBattle.mapId`):
+  player/observer route (`?as=player&observer=1`) now shows the board **read-only** — 4 tokens visible,
+  **no DM controls** (Телепорт / Очистить / Закончить бой / Бросить всем / terrain all absent), "Режим игрока".
+- **Campaign switch clears previous**: switching to campaign B's player route (B not presented) → closed
+  board, **0 tokens**, no Greyholm leak. The presented state of A does not bleed into B.
+
+(User-campaign boards share one observer-capable player route; the closed/presented toggle is the
+privacy boundary. Projection-hash distinctness — DM vs Player-Safe vs Observer — is proven separately
+on real Greyholm in Part D.)
+
+---
+
 ## What this establishes (real, non-fabricated)
 The **#1 mandatory vertical slice is done and browser-proven**: a real Caldran battle token move runs
 universal-first with a durable expected-revision commit, a matching legacy compatibility projection,
