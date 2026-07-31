@@ -10,6 +10,7 @@ import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
 import type { CampaignBattleToken, BattleTokenSide, CampaignBattleBoard } from '../../types/userCampaign';
 import { patchBattleBoardRemote } from '../../state/userCampaignSync';
 import { ImageLightbox } from '../embedded-dm-companion/ImageLightbox';
+import { useBattleAuthority } from '../battle-authority/BattleAuthorityProvider';
 
 const norm = (s: string) => s.trim().toLowerCase();
 const FEET_PER_CELL = 5;
@@ -20,6 +21,7 @@ export function CampaignBattlePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const store = useUserCampaigns();
+  const battleAuth = useBattleAuthority();
   const [catalog, setCatalog] = useState<BattleMapManifestEntry[] | null>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -139,6 +141,50 @@ export function CampaignBattlePage() {
     });
     if (isPlayer && syncPlayerRemote && nextBoard) patchBattleBoardRemote(campaignId, mapId, nextBoard);
   };
+
+  /**
+   * Stage 17 — move a token. When universal battle authority is active (both
+   * cutover flags on), the move is committed durably to the universal battle
+   * store FIRST (typed command + expected revision + read-after-write); the
+   * legacy board update then runs as the compatibility projection. A dev-only
+   * fixture can make the compatibility projection fail after the durable commit,
+   * leaving a pending record that reload-recovery resolves. When inactive this
+   * is exactly the legacy board update.
+   */
+  const applyLegacyMove = (tokenId: string, x: number, y: number) =>
+    patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => (t.id === tokenId ? { ...t, x, y } : t)) }));
+
+  const moveTokenTo = (tokenId: string, x: number, y: number) => {
+    if (battleAuth.active && campaignId && mapId) {
+      const outcome = battleAuth.moveUserToken(campaignId, mapId, board, tokenId, { x, y });
+      if (outcome && outcome.ok) {
+        // durable universal commit succeeded — now the legacy compat projection.
+        if (battleAuth.consumeFailCompatOnce()) {
+          battleAuth.recordPending({ campaignId: campaignId as never, battleId: mapId, tokenId, position: { x, y }, committedRevision: outcome.newRevision ?? 0 });
+          return; // universal committed, legacy pending (recovered on reload)
+        }
+        applyLegacyMove(tokenId, x, y);
+        return;
+      }
+      // universal path rejected → safe legacy fallback (no durable write happened)
+    }
+    applyLegacyMove(tokenId, x, y);
+  };
+
+  // Stage 17 — reload recovery for a pending battle compatibility projection.
+  // If the universal commit succeeded but the legacy projection failed last
+  // session, re-apply the (idempotent) legacy transition and clear the record.
+  // Never triggers a second universal commit.
+  const battleRecoveredRef = useRef(false);
+  useEffect(() => {
+    if (!battleAuth.active || !campaignId || !mapId || battleRecoveredRef.current) return;
+    const pending = battleAuth.readPending(campaignId, mapId);
+    if (!pending) return;
+    battleRecoveredRef.current = true;
+    applyLegacyMove(pending.tokenId, pending.position.x, pending.position.y);
+    battleAuth.clearPending(campaignId, mapId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [battleAuth.active, campaignId, mapId, runtime]);
 
   const fit = () => {
     const vp = viewportRef.current, img = imgRef.current;
@@ -389,12 +435,12 @@ export function CampaignBattlePage() {
       const pct = snapPct(raw.x, raw.y);
       const targetCell = cellAt(pct.x, pct.y);
       if (terrainAt(targetCell) === 'blocked' || tokenAtCell(targetCell, selTok.id)) return;
-      patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, x: pct.x, y: pct.y } : t) }));
+      moveTokenTo(selTok.id, pct.x, pct.y);
       setTeleportMode(false);
       setHoverCell(null);
     } else if (!d.moved && !placing && selTok && route?.status === 'valid' && selectedCanAct) {
       const center = cellCenterPct(route.cells[route.cells.length - 1]);
-      patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => t.id === selTok.id ? { ...t, x: center.x, y: center.y } : t) }));
+      moveTokenTo(selTok.id, center.x, center.y);
       setPostMovePrompt({ id: selTok.id, name: selTok.name });
       setHoverCell(null);
     } else if (d.moved) {

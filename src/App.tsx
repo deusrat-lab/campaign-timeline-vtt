@@ -28,6 +28,7 @@ import { canPlayerOpenCampaignPath } from './features/campaigns/playerSafe';
 import { UniversalDiagnosticsPage } from './pages/UniversalDiagnosticsPage';
 import { Stage17DiagnosticsPage } from './pages/Stage17DiagnosticsPage';
 import { CampaignEngineProvider } from './features/campaign-engine/CampaignEngineProvider';
+import { BattleAuthorityProvider } from './features/battle-authority/BattleAuthorityProvider';
 import { ReadPathDiagnosticsPage } from './pages/ReadPathDiagnosticsPage';
 import { ShadowIntegrationProvider } from './features/shadow-integration/ShadowIntegrationProvider';
 import { ReadPathProvider } from './features/read-path/ReadPathProvider';
@@ -223,9 +224,11 @@ function App() {
                        Stage 17 flags default off, so `active` is false and the
                        resolved ownership equals the Stage 16 baseline. */}
                     <CampaignEngineProvider>
-                      <ReadPathProvider>
-                        <AppShell />
-                      </ReadPathProvider>
+                      <BattleAuthorityProvider>
+                        <ReadPathProvider>
+                          <AppShell />
+                        </ReadPathProvider>
+                      </BattleAuthorityProvider>
                     </CampaignEngineProvider>
                   </ComplexAuthorityProvider>
                 </DurableAuthorityProvider>
