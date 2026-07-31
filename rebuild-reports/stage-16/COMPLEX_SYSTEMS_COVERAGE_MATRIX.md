@@ -83,3 +83,28 @@ overwrite maps, battle state, timeline, hotspot geometry or faction geometry.
 A durable universal write may only change paths inside the owned region of the
 command's aggregate for the exact resolved target; any other changed path forces
 a pre-commit fallback (`candidate_scope_violation`).
+
+---
+
+## Stage 16 Completion addendum — truthful UI ownership (formalized)
+
+Each scope now carries a `uiStatus` in the ownership registry, and the app router
+narrows its owned scopes to the UI-wired set. Browser-proven durable commits:
+Greyholm `reveal.entity`, Caldran `placement.remove` (see
+`rebuild-reports/stage-16-completion/BROWSER_COMPLETION_VERIFICATION.md`).
+
+| Scope | Engine | uiStatus | Durable from real UI |
+| --- | --- | --- | --- |
+| `greyholm.reveal` | universal | **wired** | ✅ browser-proven |
+| `greyholm.presentedCard` | universal | **wired** | ✅ (resolvable entity) |
+| `userCampaign.placement` (move/remove) | universal | **wired** | ✅ browser-proven |
+| `greyholm.placement` | universal | patch-merge-deferred | — not routed |
+| `greyholm.partyLocation` | universal | excluded-coupled | — legacy-owned in UI |
+| `greyholm.routeProgress` | universal | excluded-coupled | — legacy-owned in UI |
+| `userCampaign.reveal` | universal | excluded-coupled | — legacy-owned in UI |
+| `userCampaign.presentedCard` | universal | no-ui-action | — no store action |
+| `userCampaign.placement` **create** | universal | excluded (id coordination) | — legacy-owned in UI |
+
+Excluded scopes are engine-capable (proven in the 397-assertion core harness) but
+NOT owned by the app router — the store never routes them, so there is no
+permanent Stage 16 fallback. They stay legacy-owned until a later stage.

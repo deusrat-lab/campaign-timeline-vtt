@@ -14,6 +14,10 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import {
   ComplexAuthorityRouter,
   ALL_COMPLEX_AUTHORITY_SCOPES,
+  UI_OWNED_COMPLEX_SCOPES,
+  narrowToUiOwned,
+  allAggregateDescriptors,
+  aggregateDescriptor,
   resolveComplexScopes,
   adaptMainCampaignToUniversal,
   adaptUserCampaignToUniversal,
@@ -403,6 +407,102 @@ function groupPrivacy() {
   checks.ok('diagnostic changed paths are dotted redacted', Array.isArray(rec.changedAggregatePaths));
 }
 
+// ===========================================================================
+// I — Completion gate: truthful UI ownership + excluded scopes
+// ===========================================================================
+function groupOwnershipTruthfulness() {
+  // The UI-owned allowlist is exactly the three wired scopes.
+  const uiOwned = new Set(UI_OWNED_COMPLEX_SCOPES);
+  checks.eq('UI-owned set size 3', uiOwned.size, 3);
+  checks.ok('greyholm.reveal UI-owned', uiOwned.has('greyholm.reveal'));
+  checks.ok('greyholm.presentedCard UI-owned', uiOwned.has('greyholm.presentedCard'));
+  checks.ok('userCampaign.placement UI-owned', uiOwned.has('userCampaign.placement'));
+  // The four decided zones are EXCLUDED from UI ownership.
+  checks.ok('greyholm.partyLocation excluded from UI', !uiOwned.has('greyholm.partyLocation'));
+  checks.ok('greyholm.routeProgress excluded from UI', !uiOwned.has('greyholm.routeProgress'));
+  checks.ok('userCampaign.reveal excluded from UI', !uiOwned.has('userCampaign.reveal'));
+  checks.ok('greyholm.placement excluded from UI (patch-merge)', !uiOwned.has('greyholm.placement'));
+  checks.ok('userCampaign.presentedCard excluded from UI (no action)', !uiOwned.has('userCampaign.presentedCard'));
+
+  // narrowToUiOwned only ever narrows.
+  checks.eq('narrow(all) == UI-owned size', narrowToUiOwned(ALL_COMPLEX_AUTHORITY_SCOPES).size, 3);
+  checks.eq('narrow(party only) empty', narrowToUiOwned(['greyholm.partyLocation']).size, 0);
+  checks.eq('narrow(reveal only) size 1', narrowToUiOwned(['greyholm.reveal']).size, 1);
+
+  // uiStatus is honest for every descriptor.
+  const byScope = Object.fromEntries(allAggregateDescriptors().map((d) => [d.scope, d.uiStatus]));
+  checks.eq('greyholm.reveal uiStatus wired', byScope['greyholm.reveal'], 'wired');
+  checks.eq('greyholm.presentedCard uiStatus wired', byScope['greyholm.presentedCard'], 'wired');
+  checks.eq('userCampaign.placement uiStatus wired', byScope['userCampaign.placement'], 'wired');
+  checks.eq('greyholm.partyLocation uiStatus excluded-coupled', byScope['greyholm.partyLocation'], 'excluded-coupled');
+  checks.eq('greyholm.routeProgress uiStatus excluded-coupled', byScope['greyholm.routeProgress'], 'excluded-coupled');
+  checks.eq('userCampaign.reveal uiStatus excluded-coupled', byScope['userCampaign.reveal'], 'excluded-coupled');
+  checks.eq('userCampaign.presentedCard uiStatus no-ui-action', byScope['userCampaign.presentedCard'], 'no-ui-action');
+  checks.eq('greyholm.placement uiStatus patch-merge-deferred', byScope['greyholm.placement'], 'patch-merge-deferred');
+
+  // A router narrowed to UI-owned scopes does NOT own an excluded scope: routing
+  // an excluded scope is a bare fallback (not handled, no repo, no diagnostics).
+  const repo = instrumentedStorage();
+  const diag = instrumentedStorage();
+  const router = new ComplexAuthorityRouter({
+    repositoryStorage: repo.storage,
+    diagnosticsStorage: diag.storage,
+    recoveryStorage: instrumentedStorage().storage,
+    allowedScopes: narrowToUiOwned(ALL_COMPLEX_AUTHORITY_SCOPES),
+    enabled: true,
+  });
+  const grey = greyholmHarness();
+  const calls = { commit: 0, fallback: 0 };
+  const handled = routeMainComplexThrough(router, grey.mergedData, 'greyholm.partyLocation', grey.request('greyholm.partyLocation', { aggregate: 'partyLocation', locationStateId: 'loc-mine__arc-1-peace' }, calls));
+  checks.eq('excluded scope not handled (bridge returns false before router)', handled, false);
+  checks.eq('excluded scope zero repo write', repo.writeCount(), 0);
+  checks.eq('excluded scope zero diagnostics', diag.writeCount(), 0);
+  // The bridge does NOT run the fallback closure for an excluded scope — it never
+  // touches the router; the STORE dispatches the legacy action when handled=false.
+  checks.eq('excluded scope: no Stage 16 commit attempt', calls.commit, 0);
+  checks.eq('excluded scope: no Stage 16 fallback attempt', calls.fallback, 0);
+
+  // The same router DOES own a wired scope (greyholm.reveal) durably.
+  const g2 = greyholmHarness();
+  const c2 = { commit: 0, fallback: 0 };
+  const h2 = routeMainComplexThrough(router, g2.mergedData, 'greyholm.reveal', g2.request('greyholm.reveal', { aggregate: 'reveal', reveal: true, entityKind: 'locationState', legacyEntityId: 'loc-mine__arc-1-peace' }, c2));
+  checks.eq('wired scope handled by UI router', h2, true);
+  checks.eq('wired scope durable committed', router.getStatus(g2.campaignId).lastDecision, 'durable_committed');
+}
+
+// ===========================================================================
+// J — Completion gate: reload recovery variants (real provider fixture path)
+// ===========================================================================
+function groupReloadRecovery() {
+  // "Universal committed / legacy applied then verification failed" — the
+  // dev-fixture path: commit applies the legacy action THEN throws. On reload the
+  // legacy state already matches -> recovery resolves WITHOUT re-projecting.
+  const { router } = makeRouter();
+  const grey = greyholmHarness();
+  const calls = { commit: 0, fallback: 0 };
+  // Simulate the provider's withFailFixture: commit applies then throws once.
+  const req = grey.request('greyholm.reveal', { aggregate: 'reveal', reveal: true, entityKind: 'locationState', legacyEntityId: 'loc-mine__arc-1-peace' }, calls);
+  const origCommit = req.commit;
+  req.commit = () => { const r = origCommit(); throw new Error('fixture: legacy failed after apply'); };
+  routeMainComplexThrough(router, grey.mergedData, 'greyholm.reveal', req);
+  checks.eq('fixture: pending created (universal committed, legacy failed)', router.readPendingRecovery(grey.campaignId).length, 1);
+  checks.eq('fixture: revision advanced to 1', router.currentRevision(grey.campaignId), 1);
+  checks.eq('fixture: legacy was applied (dispatch ran)', calls.commit, 1);
+
+  // Reload recovery: legacy already applied -> recognised, resolved, no project.
+  const rec = router.runRecovery(grey.campaignId, {
+    readLegacySlot: (aggregateKind, targetId) => readAggregateSlot(grey.snapshot ? grey.snapshot() : adaptMainCampaignToUniversal({ data: grey.mergedData(), overlay: grey.overlay() }).snapshot, aggregateKind, targetId),
+    project: () => { throw new Error('must not re-project an already-applied legacy action'); },
+  });
+  checks.eq('reload recovery resolved already-applied', rec.resolved, 1);
+  checks.eq('no pending remaining', router.readPendingRecovery(grey.campaignId).length, 0);
+  checks.eq('revision NOT advanced twice (still 1)', router.currentRevision(grey.campaignId), 1);
+
+  // StrictMode double-run: a second recovery pass is a safe no-op.
+  const rec2 = router.runRecovery(grey.campaignId, { readLegacySlot: () => null, project: () => { throw new Error('x'); } });
+  checks.eq('second recovery pass no-op', rec2.resolved, 0);
+}
+
 // ---- run ------------------------------------------------------------------
 groupDescriptorTranslation();
 groupProviderLifecycle();
@@ -412,6 +512,8 @@ groupStateCapture();
 groupIsolation();
 groupFailureRecovery();
 groupPrivacy();
+groupOwnershipTruthfulness();
+groupReloadRecovery();
 
 const summary = checks.summary();
 const failures = checks.results.filter((r) => !r.pass);
