@@ -57,10 +57,12 @@
 
 ## 5. Публічна PWA
 
-**Не опубліковано.** Середовище не має `gh`/git remote. Підготовлено все для
-публікації одним проходом: `.github/workflows/deploy-pages.yml` +
-`scripts/setup-github-pages.sh` + інструкції в `DEPLOYMENT.md`. Публічний URL
-з'явиться після кроків користувача й має бути вписаний у README/RUN_STATUS.
+✅ **Опубліковано:** https://deusrat-lab.github.io/campaign-timeline-vtt/
+Репозиторій: https://github.com/deusrat-lab/campaign-timeline-vtt
+(гілки `deploy/budget-pwa` — код, `gh-pages` — статика; метод deploy-from-branch,
+бо токен без scope `workflow`). LIVE перевірено: ресурси 200, SW зареєстровано,
+офлайн-shell у precache, HashRouter deep-link, IndexedDB зберігає дані.
+Інструкція встановлення — `INSTALL_ON_PHONE.md`.
 
 ## 6. Фінальні артефакти
 
