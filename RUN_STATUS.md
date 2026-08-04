@@ -59,11 +59,18 @@
 - ⬜ ru/en локалі (шар готовий; лишаємо лише uk за вимогою).
 - ⬜ PIN-код/автоблокування (є `hideAmounts`; архітектура сумісна).
 
-## Публікація — чесно
+## Публікація — виконано ✅
 
-**Фактичної публікації НЕ виконано**: у середовищі немає `gh` CLI та git remote.
-Підготовлено все для публікації одним проходом (workflow + скрипт + інструкції в
-`DEPLOYMENT.md`). Публічний URL відсутній до виконання кроків користувачем.
+- **Публічний URL:** https://deusrat-lab.github.io/campaign-timeline-vtt/
+- Репозиторій: https://github.com/deusrat-lab/campaign-timeline-vtt
+- Гілки: `deploy/budget-pwa` (код), `gh-pages` (статика). Гілку `master`
+  (застосунок campaign-timeline-vtt) НЕ чіпав — апки не змішані.
+- Метод: **deploy-from-branch** (токен scope `repo` без `workflow`; Actions-workflow
+  збережено як референс у `docs/ci/`).
+- GitHub Pages: статус `built`. LIVE перевірено: усі ресурси 200, SW зареєстровано
+  й керує сторінкою, офлайн-shell у precache, HashRouter deep-link рендериться,
+  IndexedDB зберігає дані після reload, без 404/помилок у консолі.
+- Офлайн-автотест (Playwright, production build): 2/2 (Chromium desktop+mobile).
 
 ## Потребує ручної перевірки на пристрої
 

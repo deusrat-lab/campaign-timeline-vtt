@@ -103,8 +103,12 @@ git push -u origin main
 (Netlify/Cloudflare), встановлення на iPhone/Android/Mac, оновлення й відкат — у
 [DEPLOYMENT.md](DEPLOYMENT.md).
 
-**Публічний URL:** _не опубліковано в цьому середовищі (немає авторизації GitHub);
-з'явиться після кроків вище._
+**Публічний URL:** 👉 https://deusrat-lab.github.io/campaign-timeline-vtt/
+(інструкція встановлення на телефон — [INSTALL_ON_PHONE.md](INSTALL_ON_PHONE.md))
+
+> Публікація виконана методом **deploy-from-branch** (гілка `gh-pages`), бо
+> доступний токен має scope `repo` без `workflow`. Готовий Actions-workflow —
+> у `docs/ci/` як референс.
 
 ## PWA
 

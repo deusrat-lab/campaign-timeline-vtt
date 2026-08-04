@@ -2,6 +2,23 @@
 
 Формат за принципами [Keep a Changelog](https://keepachangelog.com/uk/).
 
+## [0.2.1] — 2026-08-04
+
+### Додано
+- **Публікація PWA на GitHub Pages**: https://deusrat-lab.github.io/campaign-timeline-vtt/
+  (метод deploy-from-branch, гілки `deploy/budget-pwa` + `gh-pages`).
+- `INSTALL_ON_PHONE.md` — інструкція встановлення на Android/iPhone (укр.).
+- Офлайн-автотест на production-збірці (`playwright.offline.config.ts`,
+  `e2e/offline.spec.ts`) — SW-оболонка + збереження IndexedDB офлайн.
+
+### Змінено
+- **HashRouter** замість BrowserRouter — надійні вкладені маршрути на статичному
+  хостингу без 404 (`…/#/settings/categories`).
+- `index.html`: іконки через `%BASE_URL%` (коректно для base path GitHub Pages),
+  `apple-mobile-web-app-status-bar-style: default`, додано `mobile-web-app-capable`.
+- E2E-маршрути переведено на hash-навігацію.
+- Actions-workflow перенесено у `docs/ci/` як референс (токен без scope `workflow`).
+
 ## [0.2.0] — 2026-08-04
 
 ### Змінено (критично)

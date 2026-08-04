@@ -6,12 +6,28 @@ IndexedDB браузера/встановленої PWA.
 
 ## Стан публікації
 
-На момент підготовки середовище **не авторизоване в GitHub** (немає `gh` CLI та
-git remote), тому фактична публікація **не виконувалася**. Нижче — усе потрібне,
-щоб опублікувати за один прохід. Публічний URL з'явиться після кроків нижче й
-має бути вписаний сюди та в `RUN_STATUS.md`.
+✅ **Опубліковано** (2026-08-04).
 
-`Публічний URL: <заповнити після публікації>`
+- **Публічний URL:** https://deusrat-lab.github.io/campaign-timeline-vtt/
+- **Репозиторій:** https://github.com/deusrat-lab/campaign-timeline-vtt
+- **Гілка з кодом:** `deploy/budget-pwa`
+- **Гілка публікації (статика):** `gh-pages`
+- **GitHub Pages:** статус `built`, Source = `Deploy from a branch` → `gh-pages` `/`.
+
+### Чому deploy-from-branch, а не GitHub Actions
+
+Токен, доступний для публікації, має scope `repo`, але **не** `workflow`. GitHub
+забороняє пушити файли в `.github/workflows/` без scope `workflow`, тож
+Actions-workflow не використовувався. Публікація виконана надійним методом
+**deploy-from-branch**: локальна збірка → гілка `gh-pages` → GitHub Pages з цієї
+гілки. Готовий Actions-workflow збережено як референс у `docs/ci/` (див.
+`docs/ci/README.md`), його можна активувати токеном зі scope `workflow`.
+
+### Маршрутизація
+
+Застосунок використовує **HashRouter** — вкладені маршрути виглядають як
+`…/campaign-timeline-vtt/#/settings/categories` і не повертають 404 після
+перезавантаження (окремий `404.html` не потрібен).
 
 ## Автоматична публікація (GitHub Pages + Actions)
 

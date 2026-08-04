@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  // offline.spec.ts потребує production-збірки з SW — має власний конфіг.
+  testIgnore: 'offline.spec.ts',
   fullyParallel: true,
   retries: 0,
   reporter: 'list',

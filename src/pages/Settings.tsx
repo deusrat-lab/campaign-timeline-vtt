@@ -147,7 +147,7 @@ export function SettingsPage() {
         <ConfirmButton className="btn danger block" label="Очистити всі дані" confirmText="Натисніть ще раз для остаточного очищення" onConfirm={wipeAll} />
       </div>
 
-      <p className="center muted small mt">Мій бюджет · v0.2.0 · дані зберігаються лише на цьому пристрої</p>
+      <p className="center muted small mt">Мій бюджет · v0.2.1 · дані зберігаються лише на цьому пристрої</p>
     </>
   );
 }
