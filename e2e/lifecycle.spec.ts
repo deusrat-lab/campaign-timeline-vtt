@@ -20,7 +20,7 @@ test('перший запуск: суми нульові, placeholder не вх�
   await page.goto('/');
   await expect(page.getByText('Ще немає активного місяця')).toBeVisible();
 
-  await page.goto('/new-month');
+  await page.goto('/#/new-month');
   await page.getByPlaceholder('0').first().fill('60000');
   await page.getByRole('button', { name: 'Далі' }).click();
 
@@ -31,7 +31,7 @@ test('перший запуск: суми нульові, placeholder не вх�
 });
 
 test('користувач сам вводить бюджет, дані переживають перезавантаження', async ({ page }) => {
-  await page.goto('/new-month');
+  await page.goto('/#/new-month');
   await page.getByPlaceholder('0').first().fill('60000');
   await page.getByRole('button', { name: 'Далі' }).click();
   // Ввести суму лише для першої категорії.
@@ -48,7 +48,7 @@ test('користувач сам вводить бюджет, дані пере
 });
 
 test('редактор категорій: створення категорії зберігається', async ({ page }) => {
-  await page.goto('/settings/categories');
+  await page.goto('/#/settings/categories');
   await page.getByRole('button', { name: /Додати категорію/ }).click();
   await page.getByPlaceholder('Напр., Продукти').fill('Книги');
   await page.getByRole('button', { name: 'Зберегти категорію' }).click();
@@ -58,24 +58,24 @@ test('редактор категорій: створення категорії
 });
 
 test('демо-дані ізольовані та видаляються окремо', async ({ page }) => {
-  await page.goto('/settings');
+  await page.goto('/#/settings');
   await page.getByRole('button', { name: /Завантажити демонстраційні дані/ }).click();
   await page.getByRole('button', { name: /Підтвердити/ }).click();
   await expect(page.getByText('Активний')).toBeVisible({ timeout: 10000 });
 
-  await page.goto('/settings');
+  await page.goto('/#/settings');
   await expect(page.getByRole('button', { name: /Видалити демо-дані/ })).toBeVisible();
 });
 
 test('експорт даних формує коректне ім’я файлу', async ({ page }) => {
-  await page.goto('/new-month');
+  await page.goto('/#/new-month');
   await page.getByPlaceholder('0').first().fill('50000');
   await page.getByRole('button', { name: 'Далі' }).click();
   await page.getByRole('button', { name: 'Далі' }).click();
   await page.getByRole('button', { name: 'Далі' }).click();
   await page.getByRole('button', { name: 'Підтвердити бюджет' }).click();
 
-  await page.goto('/settings');
+  await page.goto('/#/settings');
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: /Експортувати дані/ }).click();
   const download = await downloadPromise;

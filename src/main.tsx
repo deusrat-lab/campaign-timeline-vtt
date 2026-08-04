@@ -1,16 +1,16 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import App from './app/App';
 import './styles/global.css';
 
-// basename із Vite BASE_URL — коректний роутінг у корені й у підпапці GitHub Pages.
-const basename = import.meta.env.BASE_URL.replace(/\/$/, '');
-
+// HashRouter — найнадійніший для статичного хостингу (GitHub Pages): вкладені
+// маршрути (напр. #/settings/categories) не повертають 404 після перезавантаження,
+// і не потрібен окремий 404.html fallback. Ассети адресуються через BASE_URL.
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter basename={basename}>
+    <HashRouter>
       <App />
-    </BrowserRouter>
+    </HashRouter>
   </React.StrictMode>,
 );
