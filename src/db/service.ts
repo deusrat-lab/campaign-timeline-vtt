@@ -98,7 +98,9 @@ export async function categoryHistory(
 export async function buildSuggestions(
   monthId: Id,
 ): Promise<Map<Id, Suggestion>> {
-  const cats = (await db.categories.toArray()).filter((c) => c.active && !c.deletedAt);
+  const cats = (await db.categories.toArray()).filter(
+    (c) => c.active && !c.archived && !c.deletedAt,
+  );
   const result = new Map<Id, Suggestion>();
   for (const cat of cats) {
     const history = await categoryHistory(cat.id, monthId);

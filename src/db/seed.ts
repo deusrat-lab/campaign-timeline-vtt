@@ -56,6 +56,13 @@ const SEED: SeedCat[] = [
   { name: 'Розваги', emoji: '🎉', section: 'Розваги', priority: 6, min: 0, desired: 1000 },
 ];
 
+/**
+ * ВАЖЛИВО (нульовий старт): стартовий шаблон — це ЛИШЕ структура (назви, emoji,
+ * розділ, пріоритет). Усі грошові суми нової чистої установки дорівнюють 0 грн.
+ * Числа `min`/`desired` із SEED використовуються ВИКЛЮЧНО як необов'язкові
+ * приклади-підказки (placeholder), не зберігаються у грошові поля й не беруть
+ * участі в розрахунках.
+ */
 export function buildSeedCategories(): Category[] {
   const ts = nowIso();
   return SEED.map((s, i) => ({
@@ -68,8 +75,8 @@ export function buildSeedCategories(): Category[] {
     section: s.section,
     priority: s.priority,
     kind: 'spending',
-    minAmount: toMoney(s.min),
-    desiredAmount: toMoney(s.desired),
+    minAmount: 0, // нульовий старт — користувач вводить сам
+    desiredAmount: 0, // нульовий старт — користувач вводить сам
     regular: s.regular ?? false,
     rollover: s.rollover ?? s.priority <= 2,
     active: true,
@@ -77,6 +84,18 @@ export function buildSeedCategories(): Category[] {
     notes: '',
   }));
 }
+
+/**
+ * Необов'язкові приклади сум (у гривнях) для показу як placeholder у полях.
+ * Ключ — назва стартової категорії. НЕ зберігати ці значення в IndexedDB.
+ */
+export const CATEGORY_EXAMPLE_HINTS: Record<string, number> = Object.fromEntries(
+  SEED.filter((s) => s.desired > 0).map((s) => [s.name, s.desired]),
+);
+
+/** Старі значення сум стартового шаблону — для ідемпотентної міграції на нуль. */
+export const LEGACY_SEED_AMOUNTS: Record<string, { min: number; desired: number }> =
+  Object.fromEntries(SEED.map((s) => [s.name, { min: toMoney(s.min), desired: toMoney(s.desired) }]));
 
 export function buildSeedReserves(): Reserve[] {
   const ts = nowIso();
@@ -99,8 +118,8 @@ export function buildSeedSavings(): SavingsGoal[] {
       name: 'Фінансова подушка',
       emoji: '🪙',
       currentAmount: 0,
-      targetAmount: toMoney(100000),
-      monthlyContribution: toMoney(3000),
+      targetAmount: 0, // нульовий старт — користувач задає ціль сам
+      monthlyContribution: 0,
       targetDate: null,
       status: 'active',
       sortOrder: 0,

@@ -21,6 +21,7 @@ export interface SuggestionInput {
 export interface Suggestion {
   amount: Money;
   explanation: string[];
+  hasHistory: boolean; // чи є реальна історія закритих місяців для цієї категорії
   reserveTopUp?: Money; // окреме поповнення цільового резерву для рідкісних великих витрат
 }
 
@@ -50,9 +51,10 @@ export function suggestForCategory(input: SuggestionInput): Suggestion {
   const monthsWithData = actuals.length;
 
   if (monthsWithData === 0) {
-    const base = maxMoney(category.desiredAmount, category.minAmount);
-    explanation.push('Немає історії за цією категорією — використано бажану суму.');
-    return { amount: base, explanation };
+    // Нульовий старт: без історії НЕ вигадуємо «розраховану» суму. Пропозиція = 0,
+    // рішення за користувачем. Бажана сума (якщо задана) — лише орієнтир.
+    explanation.push('Ще немає історії витрат.');
+    return { amount: 0, explanation, hasHistory: false };
   }
 
   const last3 = actuals.slice(0, 3);
@@ -101,7 +103,7 @@ export function suggestForCategory(input: SuggestionInput): Suggestion {
     explanation.push(`За останні ${Math.min(3, monthsWithData)} місяці середня витрата — ${fmtHint(avg3)}.`);
   }
 
-  const result: Suggestion = { amount: clampNonNegative(base), explanation };
+  const result: Suggestion = { amount: clampNonNegative(base), explanation, hasHistory: true };
 
   // Для рідкісних великих витрат пропонуємо окреме поповнення цільового резерву.
   if (outliers.length > 0) {

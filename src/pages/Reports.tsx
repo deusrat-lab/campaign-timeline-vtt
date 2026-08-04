@@ -3,6 +3,7 @@ import { db } from '../db/db';
 import { useMoneyFormat } from '../hooks/useFormat';
 import { uk } from '../i18n';
 import type { ClosureSummary } from '../domain/models';
+import { buildInsights, type ClosedMonthPoint } from '../domain/calculations/insights';
 
 export function ReportsPage() {
   const fmt = useMoneyFormat();
@@ -29,6 +30,12 @@ export function ReportsPage() {
         </div>
       )}
 
+      {closures.length > 0 && (
+        <Insights
+          points={closures.map((c) => ({ monthKey: c.month!.monthKey, title: c.month!.title, summary: c.closure.summary }))}
+        />
+      )}
+
       {closures.length >= 2 && <Comparison items={closures.map((c) => ({ key: c.month!.monthKey, s: c.closure.summary }))} fmt={fmt} />}
 
       {closures.map(({ closure, month }) => {
@@ -52,6 +59,22 @@ export function ReportsPage() {
         );
       })}
     </>
+  );
+}
+
+function Insights({ points }: { points: ClosedMonthPoint[] }) {
+  const insights = buildInsights(points);
+  if (insights.length === 0) return null;
+  return (
+    <div className="card" style={{ background: 'var(--info-bg)' }}>
+      <div className="section-title" style={{ margin: '0 0 8px' }}>Короткі висновки</div>
+      {insights.map((i, idx) => (
+        <div key={idx} className="row" style={{ padding: '4px 0', alignItems: 'flex-start' }}>
+          <span aria-hidden>{i.icon}</span>
+          <span className="small" style={{ flex: 1 }}>{i.text}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 

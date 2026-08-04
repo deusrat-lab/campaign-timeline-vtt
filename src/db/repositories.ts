@@ -352,12 +352,104 @@ export async function saveCategory(cat: Partial<Category> & { id?: Id }): Promis
     desiredAmount: cat.desiredAmount ?? 0,
     regular: cat.regular ?? false,
     rollover: cat.rollover ?? false,
+    usableAsSource: cat.usableAsSource ?? (cat.priority ?? 5) !== 1,
     active: cat.active ?? true,
+    archived: cat.archived ?? false,
+    favorite: cat.favorite ?? false,
     sortOrder: cat.sortOrder ?? 999,
     notes: cat.notes ?? '',
   };
   await db.categories.put(created);
+  await logAudit('category', created.id, 'create');
   return created;
+}
+
+/** Чи використовується категорія (плани, операції, переноси, рекомендації). */
+export async function isCategoryInUse(id: Id): Promise<boolean> {
+  const [plans, txs, transfersTo, transfersFrom, recs] = await Promise.all([
+    db.monthlyCategoryPlans.where('categoryId').equals(id).count(),
+    db.transactions.where('categoryId').equals(id).count(),
+    db.transfers.where('destinationCategoryId').equals(id).count(),
+    db.transfers.filter((t) => t.sourceCategoryId === id).count(),
+    db.recommendations.where('categoryId').equals(id).count(),
+  ]);
+  return plans + txs + transfersTo + transfersFrom + recs > 0;
+}
+
+export async function setCategoryActive(id: Id, active: boolean): Promise<void> {
+  await db.categories.update(id, { active, updatedAt: ts() });
+  await logAudit('category', id, 'update', active ? 'activate' : 'deactivate');
+}
+
+export async function archiveCategory(id: Id): Promise<void> {
+  await db.categories.update(id, { archived: true, active: false, updatedAt: ts() });
+  await logAudit('category', id, 'update', 'archive');
+}
+
+export async function restoreCategory(id: Id): Promise<void> {
+  await db.categories.update(id, { archived: false, active: true, updatedAt: ts() });
+  await logAudit('category', id, 'update', 'restore');
+}
+
+/**
+ * Безпечне видалення. Якщо категорія використовується в історії — архівує
+ * (не видаляє фізично), щоб не зламати закриті місяці й звіти.
+ * Повертає, що фактично сталося.
+ */
+export async function deleteCategorySafe(id: Id): Promise<'deleted' | 'archived'> {
+  if (await isCategoryInUse(id)) {
+    await archiveCategory(id);
+    return 'archived';
+  }
+  await db.categories.delete(id);
+  await logAudit('category', id, 'delete', 'hard');
+  return 'deleted';
+}
+
+export async function duplicateCategory(id: Id): Promise<Category | null> {
+  const src = await db.categories.get(id);
+  if (!src) return null;
+  const now = ts();
+  const copy: Category = {
+    ...src,
+    id: newId(),
+    name: `${src.name} (копія)`,
+    archived: false,
+    active: true,
+    sortOrder: src.sortOrder + 1,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await db.categories.put(copy);
+  await logAudit('category', copy.id, 'create', 'duplicate');
+  return copy;
+}
+
+/** Пересунути категорію в межах свого пріоритету (обмін sortOrder із сусідом). */
+export async function moveCategory(id: Id, dir: 'up' | 'down'): Promise<void> {
+  const all = (await db.categories.toArray()).filter((c) => !c.archived);
+  const cat = all.find((c) => c.id === id);
+  if (!cat) return;
+  const siblings = all
+    .filter((c) => c.priority === cat.priority)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const idx = siblings.findIndex((c) => c.id === id);
+  const swapWith = dir === 'up' ? siblings[idx - 1] : siblings[idx + 1];
+  if (!swapWith) return;
+  const now = ts();
+  await db.categories.update(cat.id, { sortOrder: swapWith.sortOrder, updatedAt: now });
+  await db.categories.update(swapWith.id, { sortOrder: cat.sortOrder, updatedAt: now });
+}
+
+/** Перейменувати розділ у всіх категоріях (розділи — це рядки на категоріях). */
+export async function renameSection(oldName: string, newName: string): Promise<void> {
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed === oldName) return;
+  const cats = await db.categories.where('section').equals(oldName).toArray();
+  const now = ts();
+  await Promise.all(
+    cats.map((c) => db.categories.update(c.id, { section: trimmed, updatedAt: now })),
+  );
 }
 
 export const helperCurrentMonthKey = () => monthKeyOf(new Date());

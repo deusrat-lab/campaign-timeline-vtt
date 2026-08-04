@@ -31,7 +31,10 @@ export const categorySchema = z.object({
   desiredAmount: money,
   regular: z.boolean(),
   rollover: z.boolean(),
+  usableAsSource: z.boolean().optional(),
   active: z.boolean(),
+  archived: z.boolean().optional(),
+  favorite: z.boolean().optional(),
   sortOrder: z.number(),
   notes: z.string().optional(),
 });
@@ -151,6 +154,7 @@ export const settingsSchema = z.object({
   lastMonthKey: z.string().nullish(),
   onboardingDone: z.boolean(),
   backupReminderAt: z.string().nullish(),
+  demoMonthId: z.string().nullish(),
   schemaVersion: z.number().int(),
 });
 

@@ -22,10 +22,11 @@ describe('median / mean', () => {
 });
 
 describe('suggestForCategory', () => {
-  it('без історії використовує бажану суму', () => {
+  it('без історії НЕ вигадує суму (нульовий старт): amount=0, hasHistory=false', () => {
     const s = suggestForCategory({ category: cat(), history: [] });
-    expect(s.amount).toBe(toMoney(5000));
-    expect(s.explanation.length).toBeGreaterThan(0);
+    expect(s.amount).toBe(0);
+    expect(s.hasHistory).toBe(false);
+    expect(s.explanation.join(' ')).toContain('Ще немає історії');
   });
 
   it('регулярна стабільна категорія: зважене 60/40', () => {

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db, updateSettings } from '../db/db';
 import { useSettings } from '../hooks/useDb';
 import { ConfirmButton, useToast } from '../components/ui';
@@ -10,14 +11,18 @@ import {
   type ImportMode,
   type ImportPreview,
 } from '../features/backup/backup';
-import { loadDemoData } from '../features/backup/demo';
+import { isDemoLoaded, loadDemoData, removeDemoData } from '../features/backup/demo';
 import { uk } from '../i18n';
+import { useEffect } from 'react';
 
 export function SettingsPage() {
   const settings = useSettings();
   const toast = useToast();
+  const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [demoLoaded, setDemoLoaded] = useState(false);
+  useEffect(() => { isDemoLoaded().then(setDemoLoaded); }, []);
   const [pendingRaw, setPendingRaw] = useState('');
   const [mode, setMode] = useState<ImportMode>('replace');
 
@@ -71,6 +76,13 @@ export function SettingsPage() {
         </label>
       </div>
 
+      <div className="section-title">Структура бюджету</div>
+      <div className="card">
+        <button className="btn block" onClick={() => navigate('/settings/categories')}>
+          🗂️ Категорії та пріоритети
+        </button>
+      </div>
+
       <div className="section-title">{uk.backup.title}</div>
       <div className="card">
         <p className="small" style={{ color: 'var(--warn)' }}>⚠️ {uk.backup.warning}</p>
@@ -101,11 +113,32 @@ export function SettingsPage() {
         )}
       </div>
 
-      <div className="section-title">Розробка</div>
+      <div className="section-title">Демонстраційні дані</div>
       <div className="card">
-        <button className="btn block" onClick={async () => { await loadDemoData(); toast({ message: 'Демо-дані завантажено' }); location.assign('/'); }}>
-          🧪 Завантажити демонстраційні дані
-        </button>
+        <p className="small muted">
+          Додасть окремий демонстраційний місяць з прикладами. Ці дані позначені як
+          демо й не змішуються з вашим реальним бюджетом.
+        </p>
+        {demoLoaded ? (
+          <ConfirmButton
+            className="btn danger block"
+            label="🗑️ Видалити демо-дані"
+            confirmText="Натисніть ще раз, щоб видалити лише демо"
+            onConfirm={async () => { await removeDemoData(); setDemoLoaded(false); toast({ message: 'Демо-дані видалено' }); }}
+          />
+        ) : (
+          <ConfirmButton
+            className="btn block"
+            label="🧪 Завантажити демонстраційні дані"
+            confirmText="Підтвердити: додати демонстраційний місяць"
+            onConfirm={async () => {
+              const r = await loadDemoData();
+              setDemoLoaded(true);
+              toast({ message: r === 'already' ? 'Демо вже завантажено' : 'Демо-дані завантажено' });
+              navigate('/');
+            }}
+          />
+        )}
       </div>
 
       <div className="section-title" style={{ color: 'var(--danger)' }}>Небезпечна зона</div>
@@ -114,7 +147,7 @@ export function SettingsPage() {
         <ConfirmButton className="btn danger block" label="Очистити всі дані" confirmText="Натисніть ще раз для остаточного очищення" onConfirm={wipeAll} />
       </div>
 
-      <p className="center muted small mt">Мій бюджет · v0.1.0 · дані зберігаються лише на цьому пристрої</p>
+      <p className="center muted small mt">Мій бюджет · v0.2.0 · дані зберігаються лише на цьому пристрої</p>
     </>
   );
 }

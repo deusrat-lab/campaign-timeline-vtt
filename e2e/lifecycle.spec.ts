@@ -1,48 +1,79 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * E2E приймальний сценарій (мобільні розміри). Покриває основний шлях MVP.
- * Запуск: npx playwright install && npm run test:e2e
+ * E2E приймальні сценарії. Запуск: npx playwright install && npm run test:e2e
+ * Проєкти: Desktop Chrome, Mobile Chrome (Pixel), Mobile Safari (iPhone).
  */
 
 test.beforeEach(async ({ page }) => {
+  // Очищаємо базу ЛИШЕ один раз на початку тесту (не на кожному reload/navigate),
+  // інакше перевірки збереження даних після перезавантаження хибно падатимуть.
   await page.addInitScript(() => {
-    indexedDB.deleteDatabase('budget-db');
+    if (!sessionStorage.getItem('__db_wiped')) {
+      indexedDB.deleteDatabase('budget-db');
+      sessionStorage.setItem('__db_wiped', '1');
+    }
   });
 });
 
-test('перший запуск → створення бюджету через демо → активний місяць', async ({ page }) => {
+test('перший запуск: суми нульові, placeholder не входить у розрахунок', async ({ page }) => {
   await page.goto('/');
-  // 1. Перший запуск: пустий стан.
   await expect(page.getByText('Ще немає активного місяця')).toBeVisible();
 
-  // Швидкий шлях до наповненого стану — демонстраційні дані.
-  await page.goto('/settings');
-  await page.getByRole('button', { name: /демонстраційні дані/ }).click();
+  await page.goto('/new-month');
+  await page.getByPlaceholder('0').first().fill('60000');
+  await page.getByRole('button', { name: 'Далі' }).click();
 
-  // 9. Побачити залишки: активний місяць із доходом.
-  await expect(page.getByText('Активний')).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText('Отриманий дохід')).toBeVisible();
+  // Крок 2: без історії — поля порожні, показано «Ще немає історії витрат».
+  await expect(page.getByText('Ще немає історії витрат').first()).toBeVisible();
+  const firstPlan = page.locator('input.amount').first();
+  await expect(firstPlan).toHaveValue(''); // placeholder не є значенням
+});
+
+test('користувач сам вводить бюджет, дані переживають перезавантаження', async ({ page }) => {
+  await page.goto('/new-month');
+  await page.getByPlaceholder('0').first().fill('60000');
+  await page.getByRole('button', { name: 'Далі' }).click();
+  // Ввести суму лише для першої категорії.
+  await page.locator('input.amount').first().fill('3000');
+  // Пройти майстер до кінця.
+  await page.getByRole('button', { name: 'Далі' }).click(); // крок 3
+  await page.getByRole('button', { name: 'Далі' }).click(); // крок 4
+  await page.getByRole('button', { name: 'Підтвердити бюджет' }).click();
+
+  await expect(page.getByText('Активний')).toBeVisible();
+
+  await page.reload();
   await expect(page.getByText('60 000,00 ₴').first()).toBeVisible();
 });
 
-test('додавання витрати оновлює залишок', async ({ page }) => {
-  await page.goto('/settings');
-  await page.getByRole('button', { name: /демонстраційні дані/ }).click();
-  await expect(page.getByText('Активний')).toBeVisible({ timeout: 10000 });
-
-  await page.goto('/');
-  await page.getByRole('button', { name: '+ Витрата' }).first().click();
-  await page.getByPlaceholder('0').first().fill('500');
-  await page.getByRole('button', { name: /Продукти/ }).first().click();
-  await page.getByRole('button', { name: 'Зберегти витрату' }).click();
-  await expect(page.getByText(/Витрату збережено/)).toBeVisible();
+test('редактор категорій: створення категорії зберігається', async ({ page }) => {
+  await page.goto('/settings/categories');
+  await page.getByRole('button', { name: /Додати категорію/ }).click();
+  await page.getByPlaceholder('Напр., Продукти').fill('Книги');
+  await page.getByRole('button', { name: 'Зберегти категорію' }).click();
+  await expect(page.getByText('Збережено')).toBeVisible();
+  await page.reload();
+  await expect(page.getByText('Книги')).toBeVisible();
 });
 
-test('експорт даних доступний', async ({ page }) => {
+test('демо-дані ізольовані та видаляються окремо', async ({ page }) => {
   await page.goto('/settings');
-  await page.getByRole('button', { name: /демонстраційні дані/ }).click();
+  await page.getByRole('button', { name: /Завантажити демонстраційні дані/ }).click();
+  await page.getByRole('button', { name: /Підтвердити/ }).click();
   await expect(page.getByText('Активний')).toBeVisible({ timeout: 10000 });
+
+  await page.goto('/settings');
+  await expect(page.getByRole('button', { name: /Видалити демо-дані/ })).toBeVisible();
+});
+
+test('експорт даних формує коректне ім’я файлу', async ({ page }) => {
+  await page.goto('/new-month');
+  await page.getByPlaceholder('0').first().fill('50000');
+  await page.getByRole('button', { name: 'Далі' }).click();
+  await page.getByRole('button', { name: 'Далі' }).click();
+  await page.getByRole('button', { name: 'Далі' }).click();
+  await page.getByRole('button', { name: 'Підтвердити бюджет' }).click();
 
   await page.goto('/settings');
   const downloadPromise = page.waitForEvent('download');

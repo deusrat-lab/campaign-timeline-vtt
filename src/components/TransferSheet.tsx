@@ -46,6 +46,7 @@ export function TransferSheet({
       const cat = view.categories.find((c) => c.id === catId);
       if (!cat || catId === destId) continue;
       if (PROTECTED_PRIORITIES.includes(cat.priority)) continue; // не чіпаємо критичні
+      if (cat.usableAsSource === false) continue; // користувач заборонив як джерело
       if (st.available <= 0) continue;
       list.push({ label: cat.name, emoji: cat.emoji, source: { type: 'category', categoryId: catId }, balance: st.available, priority: cat.priority });
     }

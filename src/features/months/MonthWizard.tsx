@@ -10,6 +10,7 @@ import {
   upsertPlan,
 } from '../../db/repositories';
 import { buildSuggestions } from '../../db/service';
+import { CATEGORY_EXAMPLE_HINTS } from '../../db/seed';
 import { useReserves, useSavings } from '../../hooks/useDb';
 import { useMoneyFormat } from '../../hooks/useFormat';
 import { parseUahInput, toMoney } from '../../domain/money';
@@ -56,7 +57,9 @@ export function MonthWizard() {
       const m = await getOrCreateMonth(key);
       setMonth(m);
       await updateSettings({ lastMonthKey: key });
-      const cats = (await db.categories.toArray()).filter((c) => c.active && !c.deletedAt);
+      const cats = (await db.categories.toArray()).filter(
+        (c) => c.active && !c.archived && !c.deletedAt,
+      );
       setCategories(cats.sort((a, b) => a.priority - b.priority || a.sortOrder - b.sortOrder));
       const s = await buildSuggestions(m.id);
       setSuggestions(s);
@@ -64,7 +67,9 @@ export function MonthWizard() {
       for (const c of cats) {
         d[c.id] = {
           categoryId: c.id,
-          amountRaw: String((s.get(c.id)?.amount ?? 0) / 100),
+          // Нульовий старт: поле порожнє. Користувач вводить або приймає сам —
+          // рекомендація НЕ стає планом автоматично.
+          amountRaw: '',
           disabled: false,
           critical: c.priority === 1,
         };
@@ -175,9 +180,11 @@ export function MonthWizard() {
                 <div className="row">
                   <input className="input amount" style={{ maxWidth: 160 }} inputMode="decimal"
                     value={d.amountRaw} disabled={d.disabled}
+                    placeholder={placeholderFor(c.name, s)}
                     onChange={(e) => setDraft(c.id, { amountRaw: e.target.value })} />
                   <div className="chip-row">
-                    {s && !d.disabled && (
+                    {/* «Прийняти» лише коли є реальна історія закритих місяців. */}
+                    {s && s.hasHistory && s.amount > 0 && !d.disabled && (
                       <button className="chip" onClick={() => setDraft(c.id, { amountRaw: String(s.amount / 100) })}>
                         {uk.wizard.accept} {fmt(s.amount)}
                       </button>
@@ -265,6 +272,16 @@ export function MonthWizard() {
   function updateIncome(i: number, patch: Partial<{ name: string; amountRaw: string; date: string }>) {
     setIncomes((prev) => prev.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
   }
+}
+
+/**
+ * Placeholder для поля плану. Показує приклад (з історії, якщо є; інакше —
+ * необов'язкову підказку зі стартового шаблону). НЕ підставляється у значення.
+ */
+function placeholderFor(name: string, s?: Suggestion): string {
+  if (s?.hasHistory && s.amount > 0) return `Напр., ${Math.round(s.amount / 100)}`;
+  const hint = CATEGORY_EXAMPLE_HINTS[name];
+  return hint ? `Напр., ${hint}` : '0';
 }
 
 function NavRow({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {

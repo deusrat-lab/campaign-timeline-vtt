@@ -11,6 +11,9 @@ import { ReportsPage } from '../pages/Reports';
 import { SettingsPage } from '../pages/Settings';
 import { MonthWizard } from '../features/months/MonthWizard';
 import { CloseMonthPage } from '../features/months/CloseMonth';
+import { CategoriesPage } from '../features/categories/CategoriesPage';
+import { PwaBanners } from '../pwa/PwaBanners';
+import { requestPersistentStorage } from '../pwa/usePwa';
 
 export default function App() {
   const ready = useEnsureSeeded();
@@ -25,6 +28,11 @@ export default function App() {
     if (theme === 'system') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', theme);
   }, [settings?.locale, settings?.theme]);
+
+  useEffect(() => {
+    // Просимо постійне сховище, щоб браузер не витер фінансові дані.
+    requestPersistentStorage();
+  }, []);
 
   if (!ready) {
     return (
@@ -44,6 +52,7 @@ export default function App() {
           <Route path="/budget" element={<BudgetPage monthId={monthId} />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings/categories" element={<CategoriesPage />} />
           <Route path="/new-month" element={<MonthWizard />} />
           <Route path="/close/:monthId" element={<CloseMonthPage />} />
         </Routes>
@@ -51,6 +60,7 @@ export default function App() {
 
       <ExpenseSheet monthId={monthId} open={expenseOpen} onClose={() => setExpenseOpen(false)} />
 
+      <PwaBanners />
       <BottomNav onAddExpense={() => setExpenseOpen(true)} disableExpense={!monthId} />
     </ToastProvider>
   );

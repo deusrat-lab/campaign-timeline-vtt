@@ -10,8 +10,10 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    { name: 'iphone', use: { ...devices['iPhone 15 Pro'] } },
-    { name: 'android', use: { ...devices['Pixel 7'] } },
+    { name: 'desktop-chrome', use: { ...devices['Desktop Chrome'] } },
+    { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
+    // iPhone 15 Plus ≈ 430×932; devices['iPhone 15 Pro Max'] близький до нього (WebKit).
+    { name: 'mobile-safari', use: { ...devices['iPhone 15 Pro Max'] } },
   ],
   webServer: {
     command: 'npm run dev -- --port 5173',

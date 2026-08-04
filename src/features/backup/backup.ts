@@ -2,7 +2,7 @@
 import { db } from '../../db/db';
 import { backupSchema, EXPORT_FORMAT_VERSION, type Backup } from '../../domain/validation';
 
-const APP_VERSION = '0.1.0';
+const APP_VERSION = '0.2.0';
 
 export async function exportBackup(): Promise<Backup> {
   const [

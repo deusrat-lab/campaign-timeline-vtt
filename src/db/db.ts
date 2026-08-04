@@ -14,8 +14,15 @@ import type {
 } from '../domain/models';
 import { buildSeedCategories, buildSeedReserves, buildSeedSavings } from './seed';
 import { nowIso } from '../utils/id';
+import { runMigrations } from './migrations';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
+
+export interface AppMigrationRecord {
+  id: string;
+  appliedAt: string;
+  description: string;
+}
 
 /**
  * Версіонована схема IndexedDB через Dexie. Усі фінансові дані зберігаються тут.
@@ -34,12 +41,13 @@ export class BudgetDB extends Dexie {
   monthlyClosures!: Table<MonthlyClosure, string>;
   recommendations!: Table<Recommendation, string>;
   auditLog!: Table<AuditLogEntry, string>;
+  appMigrations!: Table<AppMigrationRecord, string>;
 
   constructor(name = 'budget-db') {
     super(name);
-    this.version(1).stores({
+    const v1Stores = {
       settings: 'id',
-      categories: 'id, section, priority, active, sortOrder',
+      categories: 'id, section, priority, active, archived, sortOrder',
       monthlyBudgets: 'id, &monthKey, status, createdAt',
       monthlyCategoryPlans: 'id, monthId, categoryId, [monthId+categoryId]',
       transactions: 'id, monthId, categoryId, type, date, createdAt, [monthId+type], [monthId+categoryId]',
@@ -49,6 +57,16 @@ export class BudgetDB extends Dexie {
       monthlyClosures: 'id, monthId, closedAt',
       recommendations: 'id, monthId, categoryId',
       auditLog: 'id, entity, entityId, action, createdAt',
+    };
+    // v1 без appMigrations та без індексу archived (сумісність зі старими базами).
+    this.version(1).stores({
+      ...v1Stores,
+      categories: 'id, section, priority, active, sortOrder',
+    });
+    // v2: додає таблицю appMigrations та індекс archived. Дані не очищаються.
+    this.version(2).stores({
+      ...v1Stores,
+      appMigrations: 'id, appliedAt',
     });
   }
 }
@@ -68,27 +86,31 @@ const DEFAULT_SETTINGS: Settings = {
 
 /** Ідемпотентна ініціалізація: створює налаштування та стартовий шаблон один раз. */
 export async function ensureSeeded(database: BudgetDB = db): Promise<Settings> {
-  return database.transaction(
+  const settings = await database.transaction(
     'rw',
     database.settings,
     database.categories,
     database.reserves,
     database.savingsGoals,
     async () => {
-      let settings = await database.settings.get('app');
-      if (!settings) {
-        settings = { ...DEFAULT_SETTINGS };
-        await database.settings.put(settings);
+      let s = await database.settings.get('app');
+      if (!s) {
+        s = { ...DEFAULT_SETTINGS };
+        await database.settings.put(s);
       }
       const catCount = await database.categories.count();
       if (catCount === 0) {
+        // Нова чиста установка: суми стартують з нуля (див. buildSeedCategories).
         await database.categories.bulkPut(buildSeedCategories());
         await database.reserves.bulkPut(buildSeedReserves());
         await database.savingsGoals.bulkPut(buildSeedSavings());
       }
-      return settings;
+      return s;
     },
   );
+  // Міграції (ідемпотентні) — поза seed-транзакцією, бо потребують кількох таблиць.
+  await runMigrations(database);
+  return settings;
 }
 
 export async function updateSettings(patch: Partial<Settings>): Promise<void> {

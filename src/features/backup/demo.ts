@@ -1,4 +1,8 @@
-/** Opt-in демонстраційний сценарій. Суми — лише шаблон, не обов'язкові значення. */
+/**
+ * Демонстраційний сценарій (opt-in). Суми — лише шаблон, не обов'язкові
+ * значення. Демо-дані ізольовані в окремому місяці й позначені у settings,
+ * щоб не змішуватися з реальними та їх можна було видалити окремо.
+ */
 import { db, ensureSeeded, updateSettings } from '../../db/db';
 import { addExpense, addIncome, getOrCreateMonth, setMonthStatus, upsertPlan } from '../../db/repositories';
 import { toMoney } from '../../domain/money';
@@ -18,14 +22,22 @@ const DEMO_PLAN: Record<string, number> = {
   Косметика: 3000,
 };
 
-export async function loadDemoData(): Promise<void> {
+export async function isDemoLoaded(): Promise<boolean> {
+  const s = await db.settings.get('app');
+  return !!s?.demoMonthId;
+}
+
+/** Завантажити демо-дані. Повторно не завантажує, якщо демо вже присутнє. */
+export async function loadDemoData(): Promise<'loaded' | 'already'> {
   await ensureSeeded();
+  if (await isDemoLoaded()) return 'already';
+
   const key = monthKeyOf(new Date());
   const month = await getOrCreateMonth(key);
-  await updateSettings({ lastMonthKey: key, onboardingDone: true });
+  await updateSettings({ lastMonthKey: key, demoMonthId: month.id });
 
-  await addIncome({ monthId: month.id, amount: toMoney(40000), note: 'Зарплата' });
-  await addIncome({ monthId: month.id, amount: toMoney(20000), note: 'Друга частина' });
+  await addIncome({ monthId: month.id, amount: toMoney(40000), note: 'Зарплата (демо)' });
+  await addIncome({ monthId: month.id, amount: toMoney(20000), note: 'Друга частина (демо)' });
 
   const cats = await db.categories.toArray();
   for (const [name, amount] of Object.entries(DEMO_PLAN)) {
@@ -35,12 +47,34 @@ export async function loadDemoData(): Promise<void> {
 
   await setMonthStatus(month.id, 'active');
 
-  // Кілька демонстраційних витрат.
   const food = cats.find((c) => c.name === 'Продукти');
   const cafe = cats.find((c) => c.name === 'Кафе та доставка');
   if (food) {
-    await addExpense({ monthId: month.id, categoryId: food.id, amount: toMoney(2340) });
-    await addExpense({ monthId: month.id, categoryId: food.id, amount: toMoney(1870) });
+    await addExpense({ monthId: month.id, categoryId: food.id, amount: toMoney(2340), note: 'демо' });
+    await addExpense({ monthId: month.id, categoryId: food.id, amount: toMoney(1870), note: 'демо' });
   }
-  if (cafe) await addExpense({ monthId: month.id, categoryId: cafe.id, amount: toMoney(650) });
+  if (cafe) await addExpense({ monthId: month.id, categoryId: cafe.id, amount: toMoney(650), note: 'демо' });
+
+  return 'loaded';
+}
+
+/** Видалити ЛИШЕ демо-дані (демо-місяць та пов'язані записи). */
+export async function removeDemoData(): Promise<void> {
+  const s = await db.settings.get('app');
+  const demoMonthId = s?.demoMonthId;
+  if (!demoMonthId) return;
+  await db.transaction(
+    'rw',
+    [db.monthlyBudgets, db.monthlyCategoryPlans, db.transactions, db.transfers, db.monthlyClosures, db.recommendations, db.settings],
+    async () => {
+      await db.transactions.where('monthId').equals(demoMonthId).delete();
+      await db.transfers.where('monthId').equals(demoMonthId).delete();
+      await db.monthlyCategoryPlans.where('monthId').equals(demoMonthId).delete();
+      await db.monthlyClosures.where('monthId').equals(demoMonthId).delete();
+      await db.recommendations.where('monthId').equals(demoMonthId).delete();
+      await db.monthlyBudgets.delete(demoMonthId);
+      const cur = await db.settings.get('app');
+      if (cur) await db.settings.put({ ...cur, demoMonthId: null, lastMonthKey: null });
+    },
+  );
 }

@@ -1,0 +1,69 @@
+name: Deploy PWA to GitHub Pages
+
+# Публікація статичної PWA. Backend немає — віддається лише статика (HTML/CSS/JS/
+# іконки/service worker). Фінансові дані користувача нікуди не надсилаються.
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Compute base path
+        id: base
+        run: |
+          REPO="${{ github.event.repository.name }}"
+          # Для user/organization site (<name>.github.io) base = '/', інакше '/<repo>/'.
+          if [[ "$REPO" == *.github.io ]]; then
+            echo "path=/" >> "$GITHUB_OUTPUT"
+          else
+            echo "path=/$REPO/" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Type-check & tests
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: Build
+        env:
+          VITE_BASE_PATH: ${{ steps.base.outputs.path }}
+        run: npm run build:pages
+
+      - name: Verify PWA artifacts
+        run: node scripts/check-pwa.mjs dist
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -42,7 +42,10 @@ export interface Category extends BaseEntity {
   desiredAmount: Money; // бажана сума
   regular: boolean; // регулярна витрата
   rollover: boolean; // чи можна переносити залишок на наступний місяць
-  active: boolean;
+  usableAsSource?: boolean; // чи можна брати кошти цієї категорії як джерело переносу
+  active: boolean; // тимчасово вимкнена, якщо false
+  archived?: boolean; // заархівована: не пропонується в нових місяцях, лишається в історії
+  favorite?: boolean; // обрана категорія (швидкий доступ)
   sortOrder: number;
   notes?: string;
 }
@@ -193,5 +196,6 @@ export interface Settings {
   lastMonthKey?: string | null;
   onboardingDone: boolean;
   backupReminderAt?: IsoDate | null;
+  demoMonthId?: string | null; // id місяця з демо-даними (щоб не змішувати з реальними)
   schemaVersion: number;
 }

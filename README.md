@@ -88,6 +88,24 @@ e2e/              Playwright E2E
   «Замінити» / «Об’єднати». Перед імпортом автоматично зберігається копія
   поточної бази.
 
+## Публікація (GitHub Pages)
+
+Статична PWA публікується через GitHub Actions (`.github/workflows/deploy-pages.yml`).
+Base path обчислюється автоматично з імені репозиторію (`VITE_BASE_PATH`), нічого
+хардкодити не треба. Разова підготовка:
+
+```bash
+./scripts/setup-github-pages.sh <github-username> <repo-name>
+git push -u origin main
+```
+
+Потім увімкніть **Settings → Pages → Source: GitHub Actions**. Деталі, альтернативи
+(Netlify/Cloudflare), встановлення на iPhone/Android/Mac, оновлення й відкат — у
+[DEPLOYMENT.md](DEPLOYMENT.md).
+
+**Публічний URL:** _не опубліковано в цьому середовищі (немає авторизації GitHub);
+з'явиться після кроків вище._
+
 ## PWA
 
 - `display: standalone`, portrait, тема під світлий/темний режим.
