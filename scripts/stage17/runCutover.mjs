@@ -22,8 +22,13 @@ export function runCutover(c = new Checks()) {
   c.eq('cutover: npc universal (Stage 15)', ownerOf(baseline, 'npc'), 'universal');
   c.eq('cutover: battle-runtime legacy at baseline', ownerOf(baseline, 'battle-runtime'), 'legacy');
   c.eq('cutover: imports legacy at baseline', ownerOf(baseline, 'imports'), 'legacy');
-  c.eq('cutover: party deferred (honest)', ownerOf(baseline, 'party'), 'deferred');
-  c.eq('cutover: routes deferred (honest)', ownerOf(baseline, 'routes'), 'deferred');
+  // Universal-rebuild completion pass: party/routes are no longer honestly
+  // deferred — Stage 16 partyLocation.move/routeProgress.advance/clear now
+  // atomically express the real coupled Greyholm legacy transitions (arrival,
+  // direct move, route advance/clear) and are wired to the real UI (see
+  // aggregateOwnership.ts greyholm.partyLocation / greyholm.routeProgress).
+  c.eq('cutover: party universal (Stage 16, no longer deferred)', ownerOf(baseline, 'party'), 'universal');
+  c.eq('cutover: routes universal (Stage 16, no longer deferred)', ownerOf(baseline, 'routes'), 'universal');
 
   // --- OFF changes nothing ---
   const off = resolveOwnership(STAGE_17_DEFAULT_FLAGS);
@@ -51,9 +56,11 @@ export function runCutover(c = new Checks()) {
   const battleRow = on.find((e) => e.system === 'battle-runtime');
   c.eq('cutover: legacy demoted to compatibility for battles', battleRow.legacyRole, 'compatibility');
 
-  // deferred families are NOT auto-claimed even under full cutover
-  c.eq('cutover: party stays deferred under full cutover', ownerOf(on, 'party'), 'deferred');
-  c.eq('cutover: routes stay deferred under full cutover', ownerOf(on, 'routes'), 'deferred');
+  // party/routes are baseline-universal (no `family`, never flipped by a
+  // Stage 17 flag) — they stay universal under full cutover too, unaffected
+  // by the battle/import-export/sync family switches.
+  c.eq('cutover: party stays universal under full cutover', ownerOf(on, 'party'), 'universal');
+  c.eq('cutover: routes stay universal under full cutover', ownerOf(on, 'routes'), 'universal');
 
   // --- partial cutover: only battle family ---
   const battleOnly = resolveOwnership({ battleAuthority: true, importExport: false, sync: false, localCutover: true });
