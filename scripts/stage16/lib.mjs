@@ -132,15 +132,30 @@ export function caldranComplex() {
     const d = clone(d0);
     const r = clone(r0);
     switch (kind) {
-      case 'reveal.entity': {
+      case 'reveal.entity':
+      case 'reveal.hide': {
+        // Mirrors the REAL `toggleReveal` legacy action (userCampaignStore.tsx):
+        // a coupled multi-slot transition — runtime.revealedToPlayers, EVERY
+        // mapPlacement linked to the entity (both directions), and — reveal
+        // direction only, matching the legacy asymmetry — the entity's single
+        // linked image's playerSafe flag.
+        const reveal = kind === 'reveal.entity';
         const set = new Set(r.revealedToPlayers ?? []);
-        set.add(args.rawId);
+        if (reveal) set.add(args.rawId); else set.delete(args.rawId);
         r.revealedToPlayers = Array.from(set);
+        const imageId =
+          d.locations.find((e) => e.id === args.rawId)?.imageId ??
+          d.npcs.find((e) => e.id === args.rawId)?.imageId ??
+          d.quests.find((e) => e.id === args.rawId)?.imageId ??
+          d.enemies.find((e) => e.id === args.rawId)?.imageId ??
+          d.factions?.find((e) => e.id === args.rawId)?.imageId ??
+          d.party?.find((e) => e.id === args.rawId)?.imageId;
+        d.mapPlacements = d.mapPlacements.map((mp) => (mp.entityId === args.rawId ? { ...mp, visibleToPlayers: reveal } : mp));
+        if (reveal && imageId) {
+          d.images = d.images.map((im) => (im.id === imageId ? { ...im, playerSafe: true } : im));
+        }
         break;
       }
-      case 'reveal.hide':
-        r.revealedToPlayers = (r.revealedToPlayers ?? []).filter((id) => id !== args.rawId);
-        break;
       case 'presentedCard.present':
         r.presentedCard = { entityType: args.type, entityId: args.id };
         break;

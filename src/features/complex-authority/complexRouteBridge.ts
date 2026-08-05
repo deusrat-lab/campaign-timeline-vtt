@@ -34,9 +34,14 @@ export function descriptorToCommand(descriptor: ComplexActionDescriptor): Comple
     case 'presentedCard': {
       if (descriptor.present) {
         if (!descriptor.cardType || !descriptor.cardId) return null;
-        return { kind: 'presentedCard.present', targetUniversalId: entityIdFromLegacy(descriptor.cardType, descriptor.cardId), entityKind: descriptor.cardType };
+        return {
+          kind: 'presentedCard.present',
+          targetUniversalId: entityIdFromLegacy(descriptor.cardType, descriptor.cardId),
+          entityKind: descriptor.cardType,
+          clearPresentedBattle: descriptor.clearPresentedBattle,
+        };
       }
-      return { kind: 'presentedCard.dismiss' };
+      return { kind: 'presentedCard.dismiss', clearPresentedBattle: descriptor.clearPresentedBattle };
     }
     case 'partyLocation': {
       return {
@@ -44,10 +49,15 @@ export function descriptorToCommand(descriptor: ComplexActionDescriptor): Comple
         currentLocationRef: descriptor.locationStateId ? entityIdFromLegacy('locationState', descriptor.locationStateId) : undefined,
         currentMapId: descriptor.mapRawId ? mapIdFromLegacy(descriptor.mapRawId) : undefined,
         currentMapPosition: typeof descriptor.x === 'number' && typeof descriptor.y === 'number' ? { x: descriptor.x, y: descriptor.y } : undefined,
+        clearMapPosition: descriptor.clearMapPosition,
+        clearLocation: descriptor.clearLocation,
+        clearRouteProgress: descriptor.clearRouteProgress,
       };
     }
     case 'routeProgress':
-      return descriptor.progress ? { kind: 'routeProgress.advance', routeProgress: descriptor.progress } : { kind: 'routeProgress.clear' };
+      return descriptor.progress
+        ? { kind: 'routeProgress.advance', routeProgress: descriptor.progress, clearMapPosition: descriptor.clearMapPosition }
+        : { kind: 'routeProgress.clear' };
     case 'placement': {
       if (descriptor.op === 'remove') return { kind: 'placement.remove', placementId: descriptor.placementId };
       if (descriptor.op === 'move') {

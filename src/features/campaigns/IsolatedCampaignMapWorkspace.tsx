@@ -378,13 +378,7 @@ export function IsolatedCampaignMapWorkspace() {
   const hasParty = data.mapPlacements.some((mp) => mp.entityType === 'party' && mp.mapId === runtime.activeMapId);
   const isPresenting = (entityType: CampaignEntityType, entityId: string) => runtime.presentedCard?.entityType === entityType && runtime.presentedCard?.entityId === entityId;
   const togglePresentedCard = (entityType: CampaignEntityType, entityId: string) => {
-    store.updateRuntime(campaignId, (prev) => ({
-      ...prev,
-      presentedBattle: null,
-      presentedCard: prev.presentedCard?.entityType === entityType && prev.presentedCard?.entityId === entityId
-        ? null
-        : { entityType, entityId },
-    }));
+    store.togglePresentedCard(campaignId, entityType, entityId);
   };
 
   const entityLabel = (type: CampaignEntityType, id: string): string => {

@@ -46,6 +46,25 @@ function assertId(value: string, label: string): string {
   return value;
 }
 
+/**
+ * Single shared placement-id authority for BOTH the Greyholm and user-campaign
+ * legacy stores. Previously each store independently minted its own id
+ * (`` `placement-${Date.now()}` `` in `campaignStore.tsx`, `uid('pin')` — a
+ * `Date.now()` + `Math.random()` composite — in `userCampaignStore.tsx`), so
+ * the same "new placement" intent could resolve to two unrelated ids depending
+ * on which stack handled it. Routing both stacks' placement-create action
+ * through this one function means the id is decided exactly once, before the
+ * legacy dispatch AND the universal `placement.place` command are built, so
+ * they always agree — no independent re-generation, no drift.
+ */
+let placementIdSequence = 0;
+export function mintPlacementId(): string {
+  placementIdSequence += 1;
+  const time = Date.now().toString(36);
+  const random = Math.random().toString(36).slice(2, 8);
+  return `placement-${time}-${placementIdSequence}-${random}`;
+}
+
 export function sourceScopedId(prefix: string, sourceId: string): string {
   const normalized = sourceId
     .trim()

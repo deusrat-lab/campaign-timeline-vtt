@@ -25,9 +25,18 @@
  * to the typed universal `ComplexCommand`. */
 export type ComplexActionDescriptor =
   | { aggregate: 'reveal'; reveal: boolean; entityKind: string; legacyEntityId: string }
-  | { aggregate: 'presentedCard'; present: boolean; cardType?: string; cardId?: string }
-  | { aggregate: 'partyLocation'; locationStateId?: string; mapRawId?: string; x?: number; y?: number }
-  | { aggregate: 'routeProgress'; progress: Record<string, unknown> | null }
+  | { aggregate: 'presentedCard'; present: boolean; cardType?: string; cardId?: string; clearPresentedBattle?: boolean }
+  | {
+      aggregate: 'partyLocation';
+      locationStateId?: string;
+      mapRawId?: string;
+      x?: number;
+      y?: number;
+      clearMapPosition?: boolean;
+      clearLocation?: boolean;
+      clearRouteProgress?: boolean;
+    }
+  | { aggregate: 'routeProgress'; progress: Record<string, unknown> | null; clearMapPosition?: boolean }
   | { aggregate: 'placement'; op: 'place' | 'move' | 'remove'; placementId: string; mapRawId?: string; entityKind?: string; entityId?: string; x?: number; y?: number; title?: string; visibleToPlayers?: boolean };
 
 export interface MainComplexRequest {

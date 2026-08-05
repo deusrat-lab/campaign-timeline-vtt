@@ -64,13 +64,7 @@ export function CampaignLibraryPage() {
   const isPresenting = (entityType: CampaignEntityType, entityId: string) => runtime?.presentedCard?.entityType === entityType && runtime?.presentedCard?.entityId === entityId;
   const togglePresentedCard = (entityType: CampaignEntityType, entityId: string) => {
     if (!campaignId) return;
-    store.updateRuntime(campaignId, (prev) => ({
-      ...prev,
-      presentedBattle: null,
-      presentedCard: prev.presentedCard?.entityType === entityType && prev.presentedCard?.entityId === entityId
-        ? null
-        : { entityType, entityId },
-    }));
+    store.togglePresentedCard(campaignId, entityType, entityId);
   };
 
   const q = query.trim().toLowerCase();

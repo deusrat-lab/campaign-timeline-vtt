@@ -18,7 +18,7 @@ import type {
 } from '../types/userCampaign';
 import { getRegionPreset } from '../data/regionPresets';
 import { mergeScenarioIntoData, scenarioForCampaign } from '../data/scenarioMerge';
-import { exportUserCampaignDM, exportUserCampaignPlayerSafe, reconstructUserCampaign, previewUserCampaignImport, userCampaignExportHash } from '../domain';
+import { exportUserCampaignDM, exportUserCampaignPlayerSafe, reconstructUserCampaign, previewUserCampaignImport, userCampaignExportHash, mintPlacementId } from '../domain';
 
 const UC_BACKUP_NS = 'campaign-timeline-vtt:uc-backup:v1';
 const UC_ROLLBACK_NS = 'campaign-timeline-vtt:uc-rollback:v1';
@@ -181,6 +181,10 @@ interface UserCampaignValue {
    * revealed to players. Player View only lists revealed entities. */
   toggleReveal: (id: string, entityId: string) => void;
   isRevealed: (id: string, entityId: string) => boolean;
+  /** Toggle presenting an entity card to players (closing any open presented
+   * battle at the same time, matching the legacy mutual-exclusion). Centralizes
+   * what was previously 3 identical raw `updateRuntime` call sites. */
+  togglePresentedCard: (id: string, entityType: CampaignEntityType, entityId: string) => void;
   /** Non-destructively upsert the matching scenario template into a campaign
    * (fill missing images/relations, add new cards). Returns a summary, or null
    * if no scenario matches the campaign's base map. */
@@ -464,44 +468,93 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     toggleReveal: (id, entityId) => {
     const __pre = captureUc(id);
     const __wasRevealed = (__pre.runtime?.revealedToPlayers ?? []).includes(entityId);
-    patchRuntime(id, (prev) => {
-      const set = new Set(prev.revealedToPlayers ?? []);
-      const reveal = !set.has(entityId);
+    const reveal = !__wasRevealed;
+    // Pure computation of the FULL coupled transition (runtime.revealedToPlayers
+    // + data.mapPlacements[].visibleToPlayers + — reveal direction only, matching
+    // the legacy asymmetry exactly — the entity's single linked image's
+    // playerSafe flag). Building this as one pure function lets the universal
+    // `reveal` command's cascade (placements + image) be compared for real
+    // parity instead of taking a direct legacy-only write for a coupled action.
+    const computeNext = (): { runtime: UserCampaignRuntime | null; data: UserCampaignData | null } => {
+      const set = new Set(__pre.runtime?.revealedToPlayers ?? []);
       if (reveal) set.add(entityId); else set.delete(entityId);
-      const current = readJson<UserCampaignData>(dataKey(id));
-      if (current) {
+      const nextRuntime = __pre.runtime ? { ...__pre.runtime, revealedToPlayers: [...set] } : __pre.runtime;
+      let nextData = __pre.data;
+      if (__pre.data) {
         const imageId =
-          current.locations.find((e) => e.id === entityId)?.imageId ??
-          current.npcs.find((e) => e.id === entityId)?.imageId ??
-          current.quests.find((e) => e.id === entityId)?.imageId ??
-          current.enemies.find((e) => e.id === entityId)?.imageId ??
-          current.factions?.find((e) => e.id === entityId)?.imageId ??
-          current.party?.find((e) => e.id === entityId)?.imageId;
-        const nextData = {
-          ...current,
-          mapPlacements: current.mapPlacements.map((mp) => (mp.entityId === entityId ? { ...mp, visibleToPlayers: reveal } : mp)),
+          __pre.data.locations.find((e) => e.id === entityId)?.imageId ??
+          __pre.data.npcs.find((e) => e.id === entityId)?.imageId ??
+          __pre.data.quests.find((e) => e.id === entityId)?.imageId ??
+          __pre.data.enemies.find((e) => e.id === entityId)?.imageId ??
+          __pre.data.factions?.find((e) => e.id === entityId)?.imageId ??
+          __pre.data.party?.find((e) => e.id === entityId)?.imageId;
+        nextData = {
+          ...__pre.data,
+          mapPlacements: __pre.data.mapPlacements.map((mp) => (mp.entityId === entityId ? { ...mp, visibleToPlayers: reveal } : mp)),
           images: reveal && imageId
-            ? current.images.map((im) => (im.id === imageId ? { ...im, playerSafe: true } : im))
-            : current.images,
+            ? __pre.data.images.map((im) => (im.id === imageId ? { ...im, playerSafe: true } : im))
+            : __pre.data.images,
         };
-        writeJson(dataKey(id), nextData);
-        setDataCache((prevData) => ({ ...prevData, [id]: nextData }));
       }
-      return { ...prev, revealedToPlayers: [...set] };
-    });
-    // Emit only the reveal (add) direction, and only when the target resolves
-    // unambiguously to a single kind (never first-match). The universal reveal
-    // command models the runtime revealedToPlayers -> visibility.entities delta;
-    // when the legacy toggle also flips a placement/image, the comparison will
-    // honestly report the wider legacy effect rather than a false success.
-    if (!__wasRevealed) {
-      const kind = resolveUcKind(__pre.data, entityId);
-      if (kind) {
-        emitUcCommand(id, 'userCampaign.reveal.update', { scope: 'userCampaign.reveal.update', kind, legacyId: entityId }, __pre);
-      }
+      return { runtime: nextRuntime, data: nextData };
+    };
+    const applyReal = (): void => {
+      const next = computeNext();
+      if (next.data) { writeJson(dataKey(id), next.data); setDataCache((prevData) => ({ ...prevData, [id]: next.data as UserCampaignData })); }
+      patchRuntime(id, (prev) => ({ ...prev, revealedToPlayers: next.runtime?.revealedToPlayers ?? prev.revealedToPlayers }));
+    };
+    // Only route through the universal reveal command when the target resolves
+    // unambiguously to a single kind (never first-match / guessed identity).
+    const kind = resolveUcKind(__pre.data, entityId);
+    const handled = kind
+      ? routeUserComplex({
+          legacyCampaignId: id,
+          complexScope: 'userCampaign.reveal',
+          descriptor: { aggregate: 'reveal', reveal, entityKind: kind, legacyEntityId: entityId },
+          preData: __pre.data,
+          preRuntime: __pre.runtime,
+          predict: computeNext,
+          commit: () => { applyReal(); return captureUc(id); },
+          fallback: applyReal,
+        })
+      : false;
+    if (!handled) applyReal();
+    if (!__wasRevealed && kind) {
+      emitUcCommand(id, 'userCampaign.reveal.update', { scope: 'userCampaign.reveal.update', kind, legacyId: entityId }, __pre);
     }
     },
     isRevealed: (id, entityId) => (readRuntime(id).revealedToPlayers ?? []).includes(entityId),
+    togglePresentedCard: (id, entityType, entityId) => {
+      const pre = captureUc(id);
+      const wasPresenting = pre.runtime?.presentedCard?.entityType === entityType && pre.runtime?.presentedCard?.entityId === entityId;
+      const present = !wasPresenting;
+      // The real legacy mutation always clears `presentedBattle` in the same
+      // write (mutual exclusion between "showing a card" and "showing a battle
+      // board") — that field is Stage 17 battle-authority scope, not modeled in
+      // the universal presentation aggregate, so it is performed here exactly
+      // as before, in the SAME one legacy commit (never a second write).
+      const computeNext = (): { runtime: UserCampaignRuntime | null } => ({
+        runtime: pre.runtime
+          ? { ...pre.runtime, presentedBattle: null, presentedCard: present ? { entityType, entityId } : null }
+          : pre.runtime,
+      });
+      const applyReal = (): void => {
+        patchRuntime(id, (prev) => ({ ...prev, presentedBattle: null, presentedCard: present ? { entityType, entityId } : null }));
+      };
+      const handled = routeUserComplex({
+        legacyCampaignId: id,
+        complexScope: 'userCampaign.presentedCard',
+        descriptor: present
+          ? { aggregate: 'presentedCard', present: true, cardType: entityType, cardId: entityId, clearPresentedBattle: true }
+          : { aggregate: 'presentedCard', present: false, clearPresentedBattle: true },
+        preData: pre.data,
+        preRuntime: pre.runtime,
+        predict: () => ({ data: pre.data, runtime: computeNext().runtime }),
+        commit: () => { applyReal(); return captureUc(id); },
+        fallback: applyReal,
+      });
+      if (!handled) applyReal();
+    },
     upgradeFromScenario: (id) => {
       const data = readData(id);
       if (!data) return null;
@@ -614,7 +667,37 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
       return { ...p, [key]: list, mapPlacements: p.mapPlacements.filter((mp) => !(mp.entityType === entityType && mp.entityId === entityId)) } as UserCampaignData;
     }),
 
-    addPlacement: (id, placement) => patchData(id, (p) => ({ ...p, mapPlacements: [...p.mapPlacements, { ...placement, id: uid('pin') }] })),
+    addPlacement: (id, placement) => {
+      // The placement id is minted ONCE here, before either the universal
+      // command or the legacy patch is built — the same shared authority
+      // function Greyholm's addPlacement uses — so there is never a second,
+      // independent id generated for the same create action.
+      const placementId = mintPlacementId();
+      const full: CampaignMapPlacement = { ...placement, id: placementId };
+      const pre = captureUc(id);
+      const updater = (p: UserCampaignData): UserCampaignData => ({ ...p, mapPlacements: [...p.mapPlacements, full] });
+      const handled = routeUserComplex({
+        legacyCampaignId: id,
+        complexScope: 'userCampaign.placement',
+        descriptor: {
+          aggregate: 'placement',
+          op: 'place',
+          placementId,
+          mapRawId: placement.mapId,
+          entityKind: placement.entityType,
+          entityId: placement.entityId,
+          x: placement.x,
+          y: placement.y,
+          visibleToPlayers: placement.visibleToPlayers,
+        },
+        preData: pre.data,
+        preRuntime: pre.runtime,
+        predict: () => ({ data: pre.data ? updater(pre.data) : pre.data, runtime: pre.runtime }),
+        commit: () => { patchData(id, updater); return captureUc(id); },
+        fallback: () => patchData(id, updater),
+      });
+      if (!handled) patchData(id, updater);
+    },
     updatePlacement: (id, placementId, patch) => {
       const pre = captureUc(id);
       const updater = (p: UserCampaignData): UserCampaignData => ({ ...p, mapPlacements: p.mapPlacements.map((mp) => (mp.id === placementId ? { ...mp, ...patch } : mp)) });

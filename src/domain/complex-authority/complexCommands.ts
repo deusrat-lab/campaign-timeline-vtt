@@ -15,8 +15,17 @@ import { resolveIdentity } from './aggregateIdentity';
 export type ComplexCommand =
   | { kind: 'reveal.entity'; targetUniversalId: string }
   | { kind: 'reveal.hide'; targetUniversalId: string }
-  | { kind: 'presentedCard.present'; targetUniversalId: string; entityKind: string }
-  | { kind: 'presentedCard.dismiss' }
+  | {
+      kind: 'presentedCard.present';
+      targetUniversalId: string;
+      entityKind: string;
+      /** User-campaign-only: the real legacy action also clears any
+       * currently-presented battle in the SAME write (mutual exclusion between
+       * showing a card and showing a battle board). Greyholm's presentedCard is
+       * genuinely single-slot (no such coupling), so this defaults to false. */
+      clearPresentedBattle?: boolean;
+    }
+  | { kind: 'presentedCard.dismiss'; clearPresentedBattle?: boolean }
   | {
       kind: 'placement.place';
       placementId: string;
@@ -34,8 +43,18 @@ export type ComplexCommand =
       currentLocationRef?: string;
       currentMapId?: string;
       currentMapPosition?: UniversalPoint;
+      /** Legacy `SET_CURRENT_LOCATION` semantics: arriving at a location always
+       * clears any in-flight map position + route progress atomically. */
+      clearMapPosition?: boolean;
+      /** Legacy `SET_PARTY_MAP_POSITION` semantics: a direct map move always
+       * clears the current location reference (no location while free-moving). */
+      clearLocation?: boolean;
+      /** Both legacy transitions above always clear route progress; kept as its
+       * own flag so a bare partyLocation.move (no arrival/direct-move) can still
+       * leave existing route progress untouched (backward compatible default). */
+      clearRouteProgress?: boolean;
     }
-  | { kind: 'routeProgress.advance'; routeProgress: Record<string, unknown> }
+  | { kind: 'routeProgress.advance'; routeProgress: Record<string, unknown>; clearMapPosition?: boolean }
   | { kind: 'routeProgress.clear' };
 
 export interface ComplexCommandResult {
@@ -82,6 +101,28 @@ function reject(
   return { accepted: false, rejectionCode: code, rejectionMessage: message, snapshot: null, changedPaths: [], slotKey: null, targetId: null };
 }
 
+/**
+ * Real legacy `presentedCard` mutations (both stacks) always clear ANY
+ * currently-presented battle in the same write (`presentedBattle: null` /
+ * mutual exclusion between "showing a card" and "showing a battle board").
+ * `runtime.battles[mapId].presentedToPlayers` is derived from that legacy
+ * field, so a durable presentedCard commit must clear it too — one-directional
+ * only (this aggregate only ever CLEARS the flag; Stage 17 battle authority
+ * remains the exclusive owner of SETTING it), so there is no ambiguous dual
+ * ownership.
+ */
+function clearPresentedBattles(snapshot: CampaignSnapshot): { battles: CampaignSnapshot['runtime']['battles']; changedPaths: string[] } {
+  const entries = Object.entries(snapshot.runtime.battles);
+  const changedPaths: string[] = [];
+  const battles = Object.fromEntries(
+    entries.map(([battleId, battle]) => {
+      if (battle.presentedToPlayers) changedPaths.push(`runtime.battles:${battleId}`);
+      return [battleId, battle.presentedToPlayers ? { ...battle, presentedToPlayers: false } : battle];
+    }),
+  );
+  return { battles, changedPaths };
+}
+
 function isFinitePoint(point: unknown): point is UniversalPoint {
   return (
     !!point &&
@@ -104,13 +145,53 @@ export function executeComplexCommand(base: CampaignSnapshot, command: ComplexCo
       const id = command.targetUniversalId;
       const identity = resolveIdentity(snapshot, { aggregateKind: 'reveal', entityId: id });
       if (identity.status !== 'ok') return reject('mapping_failed', `reveal target ${id}: ${identity.status}`);
+      const reveal = command.kind === 'reveal.entity';
       const next = { ...snapshot.visibility.entities };
-      if (command.kind === 'reveal.entity') next[id] = PUBLIC_VISIBILITY;
+      if (reveal) next[id] = PUBLIC_VISIBILITY;
       else delete next[id];
+      const changedPaths = [`visibility.entities:${id}`];
+
+      // The real user-campaign `toggleReveal` legacy action is a coupled
+      // multi-slot transition: it ALSO flips visibility on any map placement
+      // linked to this entity (both directions), and — reveal direction only,
+      // matching the legacy asymmetry exactly — the entity's own linked
+      // image(s). Expressing this as one atomic candidate (rather than a
+      // direct legacy-only write) is required for a durable universal commit to
+      // ever match the real legacy post-state. A no-op for campaigns/entities
+      // with no linked placements/images (e.g. Greyholm locationState reveal
+      // targets, which never resolve a placement/image here).
+      const targetVisibility = reveal ? PUBLIC_VISIBILITY : HIDDEN_VISIBILITY;
+      let placements = snapshot.durable.placements;
+      const linkedPlacementIds = placements.filter((p) => p.entityRef === id).map((p) => p.id);
+      if (linkedPlacementIds.length > 0) {
+        placements = placements.map((p) => (p.entityRef === id ? { ...p, visibility: targetVisibility } : p));
+        for (const pid of linkedPlacementIds) changedPaths.push(`durable.placements:${pid}`);
+      }
+      let entities = snapshot.durable.entities;
+      if (reveal) {
+        const target = entities.find((e) => e.id === id) as (typeof entities)[number] & {
+          imageRef?: { entityId: string };
+          imageRefs?: { entityId: string }[];
+        };
+        const linkedImageIds = new Set<string>();
+        if (target?.imageRef) linkedImageIds.add(target.imageRef.entityId);
+        if (target?.imageRefs) for (const ref of target.imageRefs) linkedImageIds.add(ref.entityId);
+        if (linkedImageIds.size > 0) {
+          entities = entities.map((e) =>
+            linkedImageIds.has(e.id) ? { ...e, visibility: PUBLIC_VISIBILITY, safeForPlayers: true } : e,
+          );
+          for (const iid of linkedImageIds) changedPaths.push(`durable.entities:${iid}`);
+        }
+      }
+
       return {
         accepted: true,
-        snapshot: { ...snapshot, visibility: { ...snapshot.visibility, entities: next } },
-        changedPaths: [`visibility.entities:${id}`],
+        snapshot: {
+          ...snapshot,
+          visibility: { ...snapshot.visibility, entities: next },
+          durable: { ...snapshot.durable, placements, entities },
+        },
+        changedPaths,
         slotKey: `reveal:${id}`,
         targetId: id,
       };
@@ -119,6 +200,9 @@ export function executeComplexCommand(base: CampaignSnapshot, command: ComplexCo
       const id = command.targetUniversalId;
       const identity = resolveIdentity(snapshot, { aggregateKind: 'presentedCard', entityId: id, entityKind: command.entityKind });
       if (identity.status !== 'ok') return reject('mapping_failed', `presented card target ${id}: ${identity.status}`);
+      const { battles, changedPaths: battleChangedPaths } = command.clearPresentedBattle
+        ? clearPresentedBattles(snapshot)
+        : { battles: snapshot.runtime.battles, changedPaths: [] as string[] };
       return {
         accepted: true,
         snapshot: {
@@ -126,21 +210,25 @@ export function executeComplexCommand(base: CampaignSnapshot, command: ComplexCo
           runtime: {
             ...snapshot.runtime,
             presentation: { ...snapshot.runtime.presentation, presentedCard: { entityRef: id as UniversalPlacement['entityRef'], kind: command.entityKind } },
+            battles,
           },
         },
-        changedPaths: ['runtime.presentation.presentedCard'],
+        changedPaths: ['runtime.presentation.presentedCard', ...battleChangedPaths],
         slotKey: 'presentedCard:current',
         targetId: id,
       };
     }
     case 'presentedCard.dismiss': {
+      const { battles, changedPaths: battleChangedPaths } = command.clearPresentedBattle
+        ? clearPresentedBattles(snapshot)
+        : { battles: snapshot.runtime.battles, changedPaths: [] as string[] };
       return {
         accepted: true,
         snapshot: {
           ...snapshot,
-          runtime: { ...snapshot.runtime, presentation: { ...snapshot.runtime.presentation, presentedCard: null } },
+          runtime: { ...snapshot.runtime, presentation: { ...snapshot.runtime.presentation, presentedCard: null }, battles },
         },
-        changedPaths: ['runtime.presentation.presentedCard'],
+        changedPaths: ['runtime.presentation.presentedCard', ...battleChangedPaths],
         slotKey: 'presentedCard:current',
         targetId: 'none',
       };
@@ -222,18 +310,32 @@ export function executeComplexCommand(base: CampaignSnapshot, command: ComplexCo
       if (command.currentMapPosition !== undefined && !isFinitePoint(command.currentMapPosition)) {
         return reject('invalid_payload', 'party map position must be finite');
       }
+      const clearMapPosition = !!command.clearMapPosition;
+      const clearLocation = !!command.clearLocation;
+      const clearRouteProgress = !!command.clearRouteProgress;
       const party = {
         ...snapshot.runtime.party,
-        currentLocationRef: (command.currentLocationRef ?? snapshot.runtime.party.currentLocationRef) as CampaignSnapshot['runtime']['party']['currentLocationRef'],
-        currentMapId: (command.currentMapId ?? snapshot.runtime.party.currentMapId) as UniversalMapId | undefined,
-        currentMapPosition: command.currentMapPosition
-          ? { x: command.currentMapPosition.x, y: command.currentMapPosition.y }
-          : snapshot.runtime.party.currentMapPosition,
+        currentLocationRef: clearLocation
+          ? undefined
+          : ((command.currentLocationRef ?? snapshot.runtime.party.currentLocationRef) as CampaignSnapshot['runtime']['party']['currentLocationRef']),
+        currentMapId: clearMapPosition ? undefined : ((command.currentMapId ?? snapshot.runtime.party.currentMapId) as UniversalMapId | undefined),
+        currentMapPosition: clearMapPosition
+          ? undefined
+          : command.currentMapPosition
+            ? { x: command.currentMapPosition.x, y: command.currentMapPosition.y }
+            : snapshot.runtime.party.currentMapPosition,
+        routeProgress: clearRouteProgress ? null : snapshot.runtime.party.routeProgress,
       };
+      const changedPaths = ['runtime.party'];
+      let durable = snapshot.durable;
+      if (clearRouteProgress) {
+        durable = { ...snapshot.durable, travel: { ...snapshot.durable.travel, partyRouteProgress: null } };
+        changedPaths.push('durable.travel.partyRouteProgress');
+      }
       return {
         accepted: true,
-        snapshot: { ...snapshot, runtime: { ...snapshot.runtime, party } },
-        changedPaths: ['runtime.party'],
+        snapshot: { ...snapshot, runtime: { ...snapshot.runtime, party }, durable },
+        changedPaths,
         slotKey: 'partyLocation:party',
         targetId: command.currentLocationRef ?? 'none',
       };
@@ -245,12 +347,19 @@ export function executeComplexCommand(base: CampaignSnapshot, command: ComplexCo
       // The legacy adapter writes party route progress to BOTH runtime.party and
       // durable.travel.partyRouteProgress, so the owned region spans both to keep
       // the durable candidate at parity with the legacy projection.
-      const party = { ...snapshot.runtime.party, routeProgress: { ...command.routeProgress } };
+      const clearMapPosition = !!command.clearMapPosition;
+      const party = {
+        ...snapshot.runtime.party,
+        routeProgress: { ...command.routeProgress },
+        currentMapPosition: clearMapPosition ? undefined : snapshot.runtime.party.currentMapPosition,
+      };
       const travel = { ...snapshot.durable.travel, partyRouteProgress: { ...command.routeProgress } };
+      const changedPaths = ['runtime.party.routeProgress', 'durable.travel.partyRouteProgress'];
+      if (clearMapPosition) changedPaths.push('runtime.party.currentMapPosition');
       return {
         accepted: true,
         snapshot: { ...snapshot, runtime: { ...snapshot.runtime, party }, durable: { ...snapshot.durable, travel } },
-        changedPaths: ['runtime.party.routeProgress', 'durable.travel.partyRouteProgress'],
+        changedPaths,
         slotKey: 'routeProgress:party',
         targetId: 'party',
       };
@@ -276,15 +385,29 @@ export function executeComplexCommand(base: CampaignSnapshot, command: ComplexCo
 export function ownedPathPrefixes(aggregateKind: ComplexAggregateKind, targetId: string): string[] {
   switch (aggregateKind) {
     case 'reveal':
-      return [`visibility.entities:${targetId}`];
+      // reveal.entity/hide may ALSO cascade to any linked placement(s) (both
+      // directions) and, reveal-direction only, the entity's own linked
+      // image(s) — the coarser `durable.placements`/`durable.entities`
+      // collection-level prefixes are needed because the affected ids (linked
+      // placements/images) are not known ahead of the target entity id itself.
+      return [`visibility.entities:${targetId}`, 'durable.placements', 'durable.entities'];
     case 'presentedCard':
-      return ['runtime.presentation.presentedCard'];
+      // present/dismiss always clear any currently-presented battle in the same
+      // write (see `clearPresentedBattles`) — one-directional only.
+      return ['runtime.presentation.presentedCard', 'runtime.battles'];
     case 'placement':
       return [`durable.placements:${targetId}`];
     case 'partyLocation':
-      return ['runtime.party'];
+      // Arrival/direct-move transitions atomically clear route progress as part
+      // of the SAME command (see `clearRouteProgress` above), which mirrors into
+      // `durable.travel.partyRouteProgress` — the owned region therefore spans
+      // both `runtime.party` and that durable mirror for this aggregate.
+      return ['runtime.party', 'durable.travel.partyRouteProgress'];
     case 'routeProgress':
-      return ['runtime.party.routeProgress', 'durable.travel.partyRouteProgress'];
+      // `routeProgress.advance` may additionally clear `currentMapPosition`
+      // (legacy `SET_PARTY_ROUTE_PROGRESS` semantics) as part of the same atomic
+      // transition.
+      return ['runtime.party.routeProgress', 'durable.travel.partyRouteProgress', 'runtime.party.currentMapPosition'];
   }
 }
 

@@ -1125,8 +1125,19 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       isDmView: state.mode !== 'player-view',
       arc2RevealedToPlayers,
       saveStatus,
-      setCurrentLocation: (locationStateId, routeId) =>
-        dispatch({ type: 'SET_CURRENT_LOCATION', locationStateId, routeId }),
+      setCurrentLocation: (locationStateId, routeId) => {
+        const action: Action = { type: 'SET_CURRENT_LOCATION', locationStateId, routeId };
+        // Legacy SET_CURRENT_LOCATION always atomically clears the in-flight map
+        // position + route progress on arrival (see reducer above) — the
+        // universal command must express the SAME single transaction, not a
+        // bare location patch, or the prediction parity check would mismatch
+        // and this would silently stay legacy-only forever.
+        routeGreyComplex(
+          'greyholm.partyLocation',
+          { aggregate: 'partyLocation', locationStateId, clearMapPosition: true, clearRouteProgress: true },
+          action,
+        );
+      },
       markVisited: (locationStateId) => dispatch({ type: 'MARK_VISITED', locationStateId }),
       setKnown: (locationStateId) => dispatch({ type: 'SET_KNOWN', locationStateId }),
       setRevealed: (locationStateId) => {
@@ -1156,7 +1167,17 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       patchHotspot: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'hotspot', id, patch: patch as Patch<unknown> }),
       patchRoute: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'route', id, patch: patch as Patch<unknown> }),
       patchTravelEvent: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'travelEvent', id, patch: patch as Patch<unknown> }),
-      patchPlacement: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'placement', id, patch: patch as Patch<unknown> }),
+      patchPlacement: (id, patch) => {
+        const action: Action = { type: 'PATCH_ENTITY', kind: 'placement', id, patch: patch as Patch<unknown> };
+        const keys = patch && patch !== DELETED ? Object.keys(patch as Record<string, unknown>) : [];
+        const isPureMove = keys.length === 1 && keys[0] === 'position';
+        if (isPureMove) {
+          const position = (patch as { position: { x: number; y: number } }).position;
+          routeGreyComplex('greyholm.placement', { aggregate: 'placement', op: 'move', placementId: id, x: position.x, y: position.y }, action);
+        } else {
+          dispatch(action);
+        }
+      },
       patchNpc: (id, patch) => {
         const action: Action = { type: 'PATCH_ENTITY', kind: 'npc', id, patch: patch as Patch<unknown> };
         // Allowlisted slice only: a single-field `role` or `name` edit maps 1:1 to
@@ -1226,7 +1247,10 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       deleteLocationState: (id) => dispatch({ type: 'PATCH_ENTITY', kind: 'locationState', id, patch: DELETED }),
       deleteHotspot: (id) => dispatch({ type: 'PATCH_ENTITY', kind: 'hotspot', id, patch: DELETED }),
       deleteRoute: (id) => dispatch({ type: 'PATCH_ENTITY', kind: 'route', id, patch: DELETED }),
-      deletePlacement: (id) => dispatch({ type: 'PATCH_ENTITY', kind: 'placement', id, patch: DELETED }),
+      deletePlacement: (id) => {
+        const action: Action = { type: 'PATCH_ENTITY', kind: 'placement', id, patch: DELETED };
+        routeGreyComplex('greyholm.placement', { aggregate: 'placement', op: 'remove', placementId: id }, action);
+      },
       addTimeline: (timeline) => dispatch({ type: 'ADD_TIMELINE', timeline }),
       addWorldMap: (map) => dispatch({ type: 'ADD_WORLD_MAP', map }),
       addWorldMapState: (mapState) => dispatch({ type: 'ADD_WORLD_MAP_STATE', state: mapState }),
@@ -1234,7 +1258,25 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       addHotspot: (hotspot) => dispatch({ type: 'ADD_HOTSPOT', hotspot }),
       addRoute: (route) => dispatch({ type: 'ADD_ROUTE', route }),
       addTravelEvent: (event) => dispatch({ type: 'ADD_TRAVEL_EVENT', event }),
-      addPlacement: (placement) => dispatch({ type: 'ADD_PLACEMENT', placement }),
+      addPlacement: (placement) => {
+        const action: Action = { type: 'ADD_PLACEMENT', placement };
+        routeGreyComplex(
+          'greyholm.placement',
+          {
+            aggregate: 'placement',
+            op: 'place',
+            placementId: placement.id,
+            mapRawId: placement.mapId,
+            entityKind: placement.entityKind,
+            entityId: placement.entityId,
+            x: placement.position.x,
+            y: placement.position.y,
+            title: placement.title,
+            visibleToPlayers: placement.visibleInPlayerView,
+          },
+          action,
+        );
+      },
       addNpc: (npc) => dispatch({ type: 'ADD_NPC', npc }),
       addEnemy: (enemy) => dispatch({ type: 'ADD_ENEMY', enemy }),
       setPlacementLayerVisible: (visible) => dispatch({ type: 'SET_PLACEMENT_LAYER_VISIBLE', visible }),
@@ -1286,8 +1328,28 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
         const action: Action = { type: 'SET_PRESENTED_CARD', card: null };
         routeGreyComplex('greyholm.presentedCard', { aggregate: 'presentedCard', present: false }, action);
       },
-      setPartyMapPosition: (position) => dispatch({ type: 'SET_PARTY_MAP_POSITION', position }),
-      setPartyRouteProgress: (progress) => dispatch({ type: 'SET_PARTY_ROUTE_PROGRESS', progress }),
+      setPartyMapPosition: (position) => {
+        const action: Action = { type: 'SET_PARTY_MAP_POSITION', position };
+        // Legacy SET_PARTY_MAP_POSITION always atomically clears the current
+        // location + route progress (a direct free-map move ends any tracked
+        // arrival/travel) — same single-transaction requirement as arrival.
+        routeGreyComplex(
+          'greyholm.partyLocation',
+          { aggregate: 'partyLocation', mapRawId: position.mapId, x: position.x, y: position.y, clearLocation: true, clearRouteProgress: true },
+          action,
+        );
+      },
+      setPartyRouteProgress: (progress) => {
+        const action: Action = { type: 'SET_PARTY_ROUTE_PROGRESS', progress };
+        // Legacy SET_PARTY_ROUTE_PROGRESS also clears currentMapPosition when
+        // advancing (see reducer above); routeProgress:null (pause/cancel) does
+        // not touch map position.
+        routeGreyComplex(
+          'greyholm.routeProgress',
+          { aggregate: 'routeProgress', progress: progress as unknown as Record<string, unknown> | null, clearMapPosition: !!progress },
+          action,
+        );
+      },
       confirmBattleMapLink: (locationStateId, battleMapId) => {
         const key = `${locationStateId}__${battleMapId}`;
         const existing = state.battleMapLocationLinkOverrides[key];

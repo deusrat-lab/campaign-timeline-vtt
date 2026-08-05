@@ -71,8 +71,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['placement.place', 'placement.move', 'placement.remove'],
     destructiveCommandKinds: ['placement.remove'],
-    uiStatus: 'patch-merge-deferred',
-    uiNote: 'Greyholm placements use the overlay patch-merge; not routed through Stage 16 (no permanent fallback).',
+    uiStatus: 'wired',
+    uiNote: 'addPlacement/patchPlacement(pure position)/deletePlacement -> place/move/remove via routeGreyComplex, using the shared mintPlacementId() authority; single-slot, durable.',
   },
   {
     scope: 'greyholm.partyLocation',
@@ -81,8 +81,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['partyLocation.move'],
     destructiveCommandKinds: [],
-    uiStatus: 'excluded-coupled',
-    uiNote: 'SET_CURRENT_LOCATION also clears currentMapPosition + partyRouteProgress (multi-slot); excluded from UI ownership, legacy-owned.',
+    uiStatus: 'wired',
+    uiNote: 'setCurrentLocation/setPartyMapPosition -> partyLocation.move with clearMapPosition/clearLocation/clearRouteProgress flags, so the arrival/direct-move + route-progress clear commit as ONE atomic candidate matching SET_CURRENT_LOCATION/SET_PARTY_MAP_POSITION exactly (owned region extended to include durable.travel.partyRouteProgress).',
   },
   {
     scope: 'greyholm.routeProgress',
@@ -91,8 +91,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['routeProgress.advance', 'routeProgress.clear'],
     destructiveCommandKinds: ['routeProgress.clear'],
-    uiStatus: 'excluded-coupled',
-    uiNote: 'SET_PARTY_ROUTE_PROGRESS advance also clears currentMapPosition (multi-slot); excluded from UI ownership, legacy-owned.',
+    uiStatus: 'wired',
+    uiNote: 'setPartyRouteProgress -> routeProgress.advance/clear; advance sets clearMapPosition:true (matching SET_PARTY_ROUTE_PROGRESS exactly), owned region extended to include runtime.party.currentMapPosition.',
   },
   {
     scope: 'userCampaign.reveal',
@@ -101,8 +101,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['reveal.entity', 'reveal.hide'],
     destructiveCommandKinds: ['reveal.hide'],
-    uiStatus: 'excluded-coupled',
-    uiNote: 'toggleReveal also flips mapPlacements[e].visibleToPlayers + images[i].playerSafe (multi-slot); excluded from UI ownership, legacy-owned.',
+    uiStatus: 'wired',
+    uiNote: 'toggleReveal -> reveal.entity/hide; the executor cascades to linked placements (both directions) and the linked image (reveal direction only, matching the legacy asymmetry) as ONE atomic candidate (owned region extended to durable.placements + durable.entities).',
   },
   {
     scope: 'userCampaign.presentedCard',
@@ -111,8 +111,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['presentedCard.present', 'presentedCard.dismiss'],
     destructiveCommandKinds: ['presentedCard.dismiss'],
-    uiStatus: 'no-ui-action',
-    uiNote: 'No presented-card action exists in the user-campaign store; capability/UI gap, legacy-owned.',
+    uiStatus: 'wired',
+    uiNote: 'Centralized togglePresentedCard store action (replacing 3 scattered raw updateRuntime call sites) -> presentedCard.present/dismiss via routeUserComplex. The legacy commit also clears the separate `presentedBattle` field in the SAME one legacy write — presentedBattle is Stage 17 battle-authority scope (its own subsystem), not modeled in the universal presentation aggregate, analogous to Greyholm’s currentPartyRouteId legacy-only echo.',
   },
   {
     scope: 'userCampaign.placement',
@@ -122,7 +122,7 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     commandKinds: ['placement.place', 'placement.move', 'placement.remove'],
     destructiveCommandKinds: ['placement.remove'],
     uiStatus: 'wired',
-    uiNote: 'updatePlacement(pure x/y) -> move and removePlacement -> remove are durable. Create (addPlacement) is excluded (store-generated id).',
+    uiNote: 'addPlacement -> place (id minted once via the shared mintPlacementId() authority, before either the universal command or the legacy write), updatePlacement(pure x/y) -> move, removePlacement -> remove; all durable.',
   },
 ];
 

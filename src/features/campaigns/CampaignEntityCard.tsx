@@ -77,7 +77,7 @@ export function CampaignEntityCard({
   const presented = runtime.presentedCard;
   const presenting = presented?.entityType === current.type && presented?.entityId === current.id;
   const clearPresentingCurrent = () => {
-    if (presenting) store.updateRuntime(campaignId, (prev) => ({ ...prev, presentedCard: null }));
+    if (presenting) store.togglePresentedCard(campaignId, current.type, current.id);
   };
   const editing = editingFor === currentKey && canEdit;
   useEffect(() => {
@@ -111,13 +111,7 @@ export function CampaignEntityCard({
     isPlaced: (entityType, entityId) => data.mapPlacements.some((mp) => mp.entityType === entityType && mp.entityId === entityId),
     isRevealed: (entityId) => store.isRevealed(campaignId, entityId),
     isPresenting: (entityType, entityId) => store.getRuntime(campaignId)?.presentedCard?.entityType === entityType && store.getRuntime(campaignId)?.presentedCard?.entityId === entityId,
-    onPresent: (entityType, entityId) => store.updateRuntime(campaignId, (prev) => ({
-      ...prev,
-      presentedBattle: null,
-      presentedCard: prev.presentedCard?.entityType === entityType && prev.presentedCard?.entityId === entityId
-        ? null
-        : { entityType: entityType as CampaignEntityType, entityId },
-    })),
+    onPresent: (entityType, entityId) => store.togglePresentedCard(campaignId, entityType as CampaignEntityType, entityId),
     onToggleReveal: (entityId) => store.toggleReveal(campaignId, entityId),
     match: () => true,
     isPlayer,
@@ -195,11 +189,7 @@ export function CampaignEntityCard({
               onEdit: canEditCurrent ? () => setEditingFor(currentKey) : undefined,
               onPlace: canDmAct && onPlaceOnMap && !placement ? () => { onPlaceOnMap(current.type, current.id); onClose(); } : undefined,
               placed: !!placement,
-              onPresent: canDmAct ? () => store.updateRuntime(campaignId, (prev) => ({
-                ...prev,
-                presentedBattle: null,
-                presentedCard: presenting ? null : { entityType: current.type, entityId: current.id },
-              })) : undefined,
+              onPresent: canDmAct ? () => store.togglePresentedCard(campaignId, current.type, current.id) : undefined,
               presenting,
               onToggleReveal: canDmAct ? () => store.toggleReveal(campaignId, current.id) : undefined,
               revealed,

@@ -36,6 +36,7 @@ import {
 } from '../data/routeUtils';
 import type { TravelSpeedPresetKey } from '../data/routeUtils';
 import type { PartyRouteProgress } from '../types';
+import { mintPlacementId } from '../domain';
 import { buildRouteGraph, findPathBetweenLocations, findPathBetweenPoints } from '../data/routeNetwork';
 import type { RoutePathResult } from '../data/routeNetwork';
 import { validateRouteAgainstZones, getBlockingZoneIds } from '../data/zoneValidation';
@@ -2559,7 +2560,7 @@ export function MapWorkspacePage() {
       const x = Math.min(1, Math.max(0, Math.round(((e.clientX - rect.left) / rect.width) * 1000) / 1000));
       const y = Math.min(1, Math.max(0, Math.round(((e.clientY - rect.top) / rect.height) * 1000) / 1000));
       const newPlacement: MapObjectPlacement = {
-        id: `placement-${Date.now()}`,
+        id: mintPlacementId(),
         arcId: activeTimelineForPlacements?.arcId ?? store.currentTimelineId,
         mapLevel: scope,
         mapId: map.id,
@@ -3831,7 +3832,7 @@ export function MapWorkspacePage() {
     if (!progress || !map) return;
     const now = new Date().toISOString();
     const pin: MapObjectPlacement = {
-      id: `placement-camp-${Date.now()}`,
+      id: mintPlacementId(),
       arcId: store.currentTimelineId,
       mapLevel: scope,
       mapId: map.id,

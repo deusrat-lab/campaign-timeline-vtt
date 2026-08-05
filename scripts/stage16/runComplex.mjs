@@ -248,7 +248,14 @@ function groupDurableHappy() {
   // Caldran
   {
     const { router } = makeRouter();
-    durableCommit(router, caldranComplex(), CALD.revealNew, 'CALD reveal.entity', ['visibility.entities:entity:npc:npc-seed-1-y212']);
+    // Stage 16.1 addendum: reveal.entity/hide now cascades to the target's own
+    // linked image (reveal direction only) and any linked placements, matching
+    // the real user-campaign `toggleReveal` legacy action exactly. This fixture
+    // NPC has a linked image but no linked map placement.
+    durableCommit(router, caldranComplex(), CALD.revealNew, 'CALD reveal.entity', [
+      'visibility.entities:entity:npc:npc-seed-1-y212',
+      'durable.entities:entity:image:img-mri2a0d9-ihhy7',
+    ]);
   }
   {
     const { router } = makeRouter();
@@ -376,7 +383,11 @@ function groupInvariants() {
 function groupScope() {
   // ownedPathPrefixes contract.
   checks.ok('reveal prefix', ownedPathPrefixes('reveal', 'X')[0] === 'visibility.entities:X');
-  checks.ok('routeProgress owns two regions', ownedPathPrefixes('routeProgress', 'party').length === 2);
+  // Stage 16.1 addendum: routeProgress.advance may ALSO clear currentMapPosition
+  // (legacy SET_PARTY_ROUTE_PROGRESS semantics), so the owned region grew from 2
+  // to 3 prefixes (runtime.party.routeProgress, durable.travel.partyRouteProgress,
+  // runtime.party.currentMapPosition).
+  checks.ok('routeProgress owns three regions', ownedPathPrefixes('routeProgress', 'party').length === 3);
   checks.ok('placement prefix', ownedPathPrefixes('placement', 'p1')[0] === 'durable.placements:p1');
 
   // A synthetic executor that also mutates an unrelated region would be caught by

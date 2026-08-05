@@ -411,37 +411,32 @@ function groupPrivacy() {
 // I — Completion gate: truthful UI ownership + excluded scopes
 // ===========================================================================
 function groupOwnershipTruthfulness() {
-  // The UI-owned allowlist is exactly the three wired scopes.
+  // Universal-rebuild completion pass: all 8 registry scopes are now genuinely
+  // wired to real UI actions (Greyholm placement create/move/remove,
+  // partyLocation.move (arrival + direct-move + atomic route-progress clear),
+  // routeProgress.advance/clear, and user-campaign reveal + presentedCard were
+  // the remaining gaps — see docs/universal-rebuild/FINAL_REMAINING_WORK_AUDIT.md
+  // and aggregateOwnership.ts for the file:line evidence per scope).
   const uiOwned = new Set(UI_OWNED_COMPLEX_SCOPES);
-  checks.eq('UI-owned set size 3', uiOwned.size, 3);
-  checks.ok('greyholm.reveal UI-owned', uiOwned.has('greyholm.reveal'));
-  checks.ok('greyholm.presentedCard UI-owned', uiOwned.has('greyholm.presentedCard'));
-  checks.ok('userCampaign.placement UI-owned', uiOwned.has('userCampaign.placement'));
-  // The four decided zones are EXCLUDED from UI ownership.
-  checks.ok('greyholm.partyLocation excluded from UI', !uiOwned.has('greyholm.partyLocation'));
-  checks.ok('greyholm.routeProgress excluded from UI', !uiOwned.has('greyholm.routeProgress'));
-  checks.ok('userCampaign.reveal excluded from UI', !uiOwned.has('userCampaign.reveal'));
-  checks.ok('greyholm.placement excluded from UI (patch-merge)', !uiOwned.has('greyholm.placement'));
-  checks.ok('userCampaign.presentedCard excluded from UI (no action)', !uiOwned.has('userCampaign.presentedCard'));
+  checks.eq('UI-owned set size 8 (all scopes wired)', uiOwned.size, 8);
+  for (const scope of ALL_COMPLEX_AUTHORITY_SCOPES) {
+    checks.ok(`${scope} UI-owned`, uiOwned.has(scope));
+  }
 
-  // narrowToUiOwned only ever narrows.
-  checks.eq('narrow(all) == UI-owned size', narrowToUiOwned(ALL_COMPLEX_AUTHORITY_SCOPES).size, 3);
-  checks.eq('narrow(party only) empty', narrowToUiOwned(['greyholm.partyLocation']).size, 0);
+  // narrowToUiOwned only ever narrows, and never invents membership for a
+  // scope outside its input.
+  checks.eq('narrow(all) == UI-owned size', narrowToUiOwned(ALL_COMPLEX_AUTHORITY_SCOPES).size, 8);
   checks.eq('narrow(reveal only) size 1', narrowToUiOwned(['greyholm.reveal']).size, 1);
+  checks.eq('narrow(unknown scope) empty', narrowToUiOwned(['not.a.real.scope']).size, 0);
 
-  // uiStatus is honest for every descriptor.
+  // uiStatus is honest for every descriptor — all wired now.
   const byScope = Object.fromEntries(allAggregateDescriptors().map((d) => [d.scope, d.uiStatus]));
-  checks.eq('greyholm.reveal uiStatus wired', byScope['greyholm.reveal'], 'wired');
-  checks.eq('greyholm.presentedCard uiStatus wired', byScope['greyholm.presentedCard'], 'wired');
-  checks.eq('userCampaign.placement uiStatus wired', byScope['userCampaign.placement'], 'wired');
-  checks.eq('greyholm.partyLocation uiStatus excluded-coupled', byScope['greyholm.partyLocation'], 'excluded-coupled');
-  checks.eq('greyholm.routeProgress uiStatus excluded-coupled', byScope['greyholm.routeProgress'], 'excluded-coupled');
-  checks.eq('userCampaign.reveal uiStatus excluded-coupled', byScope['userCampaign.reveal'], 'excluded-coupled');
-  checks.eq('userCampaign.presentedCard uiStatus no-ui-action', byScope['userCampaign.presentedCard'], 'no-ui-action');
-  checks.eq('greyholm.placement uiStatus patch-merge-deferred', byScope['greyholm.placement'], 'patch-merge-deferred');
+  for (const scope of ALL_COMPLEX_AUTHORITY_SCOPES) {
+    checks.eq(`${scope} uiStatus wired`, byScope[scope], 'wired');
+  }
 
-  // A router narrowed to UI-owned scopes does NOT own an excluded scope: routing
-  // an excluded scope is a bare fallback (not handled, no repo, no diagnostics).
+  // A router narrowed to UI-owned scopes DOES own every real scope, including
+  // the ones that were excluded before this completion pass.
   const repo = instrumentedStorage();
   const diag = instrumentedStorage();
   const router = new ComplexAuthorityRouter({
@@ -453,14 +448,24 @@ function groupOwnershipTruthfulness() {
   });
   const grey = greyholmHarness();
   const calls = { commit: 0, fallback: 0 };
-  const handled = routeMainComplexThrough(router, grey.mergedData, 'greyholm.partyLocation', grey.request('greyholm.partyLocation', { aggregate: 'partyLocation', locationStateId: 'loc-mine__arc-1-peace' }, calls));
-  checks.eq('excluded scope not handled (bridge returns false before router)', handled, false);
-  checks.eq('excluded scope zero repo write', repo.writeCount(), 0);
-  checks.eq('excluded scope zero diagnostics', diag.writeCount(), 0);
-  // The bridge does NOT run the fallback closure for an excluded scope — it never
-  // touches the router; the STORE dispatches the legacy action when handled=false.
-  checks.eq('excluded scope: no Stage 16 commit attempt', calls.commit, 0);
-  checks.eq('excluded scope: no Stage 16 fallback attempt', calls.fallback, 0);
+  const handled = routeMainComplexThrough(router, grey.mergedData, 'greyholm.partyLocation', grey.request('greyholm.partyLocation', { aggregate: 'partyLocation', locationStateId: 'loc-mine__arc-1-peace', clearMapPosition: true, clearRouteProgress: true }, calls));
+  checks.eq('greyholm.partyLocation now wired: handled by the UI router', handled, true);
+  checks.ok('greyholm.partyLocation durable commit wrote the repo', repo.writeCount() > 0);
+  checks.ok('greyholm.partyLocation durable commit wrote diagnostics', diag.writeCount() > 0);
+  checks.eq('greyholm.partyLocation: legacy committed exactly once', calls.commit, 1);
+  checks.eq('greyholm.partyLocation: no pre-commit fallback', calls.fallback, 0);
+
+  // A genuinely unknown scope (not in the registry at all) is still never
+  // routed — the narrowing/allowlist mechanism itself remains sound.
+  const repo2 = instrumentedStorage();
+  const router2 = new ComplexAuthorityRouter({
+    repositoryStorage: repo2.storage,
+    diagnosticsStorage: instrumentedStorage().storage,
+    recoveryStorage: instrumentedStorage().storage,
+    allowedScopes: narrowToUiOwned(['not.a.real.scope']),
+    enabled: true,
+  });
+  checks.eq('unknown scope not allowlisted', router2.isAllowlisted('not.a.real.scope'), false);
 
   // The same router DOES own a wired scope (greyholm.reveal) durably.
   const g2 = greyholmHarness();
