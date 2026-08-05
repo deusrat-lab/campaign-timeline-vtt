@@ -24,7 +24,12 @@ export function Sheet({
   return (
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        {title && <h2>{title}</h2>}
+        <div className="sheet-head">
+          {title ? <h2>{title}</h2> : <span />}
+          <button className="sheet-close btn sm ghost" aria-label={uk.common.close} onClick={onClose}>
+            ✕
+          </button>
+        </div>
         {children}
       </div>
     </div>

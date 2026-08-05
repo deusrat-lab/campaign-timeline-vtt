@@ -75,6 +75,10 @@ test('експорт даних формує коректне ім’я файл
   await page.getByRole('button', { name: 'Далі' }).click();
   await page.getByRole('button', { name: 'Підтвердити бюджет' }).click();
 
+  // Дочекатися, поки майстер завершиться й перенаправить на головну, інакше
+  // його navigate('/') може перекрити подальший перехід у налаштування.
+  await expect(page.getByText('Активний')).toBeVisible();
+
   await page.goto('/#/settings');
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: /Експортувати дані/ }).click();

@@ -92,6 +92,8 @@ export function BudgetPage({ monthId }: { monthId: string | null }) {
           <Link className="btn primary mt" to="/new-month">Скласти бюджет</Link>
         </div>
       )}
+
+      <Link className="btn block mt" to="/settings/categories">🗂️ Керувати категоріями</Link>
     </>
   );
 }

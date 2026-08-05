@@ -81,7 +81,7 @@ export function TransferSheet({
     <Sheet open={open} onClose={onClose} title={uk.transfer.title}>
       <div className="field">
         <label>{uk.common.amount}, ₴</label>
-        <input className="input amount" inputMode="decimal" value={amountRaw} onChange={(e) => setAmountRaw(e.target.value)} placeholder="0" />
+        <input className="input amount lg" inputMode="decimal" value={amountRaw} onChange={(e) => setAmountRaw(e.target.value)} placeholder="0" />
       </div>
 
       <div className="field">

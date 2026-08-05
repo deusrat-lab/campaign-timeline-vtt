@@ -73,7 +73,10 @@ export function CloseMonthPage() {
 
   return (
     <>
-      <h1>{uk.close.title}</h1>
+      <div className="row" style={{ marginBottom: 'var(--sp-2)' }}>
+        <button className="btn sm ghost" aria-label={uk.common.back} onClick={() => navigate('/')} style={{ minWidth: 40, marginLeft: -8 }}>←</button>
+        <h1 style={{ flex: 1, margin: '0 0 0 4px', fontSize: 20 }}>{uk.close.title}</h1>
+      </div>
 
       {status === 'active' && checklist && (
         <>

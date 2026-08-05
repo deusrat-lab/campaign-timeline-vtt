@@ -19,6 +19,7 @@ import { PRIORITY_LABELS, type Priority } from '../../domain/models';
 import type { Suggestion } from '../../domain/calculations/recommendations';
 import { isoDateOf, monthKeyOf } from '../../utils/id';
 import { uk } from '../../i18n';
+import { CategoryForm } from '../categories/CategoryForm';
 
 interface PlanDraft {
   categoryId: Id;
@@ -51,31 +52,43 @@ export function MonthWizard() {
   const [savingsRaw, setSavingsRaw] = useState('');
   const [deficitSource, setDeficitSource] = useState('');
 
+  const [showCatForm, setShowCatForm] = useState(false);
+
+  async function loadData(monthId: Id) {
+    const cats = (await db.categories.toArray()).filter(
+      (c) => c.active && !c.archived && !c.deletedAt,
+    );
+    cats.sort((a, b) => a.priority - b.priority || a.sortOrder - b.sortOrder);
+    setCategories(cats);
+    const s = await buildSuggestions(monthId);
+    setSuggestions(s);
+    // Зберігаємо вже введені значення; для нових категорій — порожнє поле.
+    setDrafts((prev) => {
+      const d: Record<Id, PlanDraft> = {};
+      for (const c of cats) {
+        d[c.id] =
+          prev[c.id] ??
+          ({
+            categoryId: c.id,
+            // Нульовий старт: поле порожнє. Користувач вводить або приймає сам.
+            amountRaw: '',
+            disabled: false,
+            critical: c.priority === 1,
+          } as PlanDraft);
+      }
+      return d;
+    });
+  }
+
   useEffect(() => {
     (async () => {
       const key = monthKeyOf(new Date());
       const m = await getOrCreateMonth(key);
       setMonth(m);
       await updateSettings({ lastMonthKey: key });
-      const cats = (await db.categories.toArray()).filter(
-        (c) => c.active && !c.archived && !c.deletedAt,
-      );
-      setCategories(cats.sort((a, b) => a.priority - b.priority || a.sortOrder - b.sortOrder));
-      const s = await buildSuggestions(m.id);
-      setSuggestions(s);
-      const d: Record<Id, PlanDraft> = {};
-      for (const c of cats) {
-        d[c.id] = {
-          categoryId: c.id,
-          // Нульовий старт: поле порожнє. Користувач вводить або приймає сам —
-          // рекомендація НЕ стає планом автоматично.
-          amountRaw: '',
-          disabled: false,
-          critical: c.priority === 1,
-        };
-      }
-      setDrafts(d);
+      await loadData(m.id);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const totalIncome = incomes.reduce((a, i) => a + toMoney(parseUahInput(i.amountRaw)), 0);
@@ -120,10 +133,18 @@ export function MonthWizard() {
     navigate('/');
   }
 
+  const sections = Array.from(new Set(categories.map((c) => c.section)));
+
+  function goBack() {
+    if (step > 1) setStep(step - 1);
+    else navigate('/');
+  }
+
   return (
     <>
-      <div className="row">
-        <h1>{month.title}</h1>
+      <div className="row" style={{ marginBottom: 'var(--sp-2)' }}>
+        <button className="btn sm ghost" aria-label={uk.common.back} onClick={goBack} style={{ minWidth: 40, marginLeft: -8 }}>←</button>
+        <h1 style={{ flex: 1, margin: '0 0 0 4px', fontSize: 20 }}>{month.title}</h1>
         <span className="badge info">Крок {step}/4</span>
       </div>
 
@@ -140,7 +161,7 @@ export function MonthWizard() {
               <div className="grid-2">
                 <div className="field">
                   <label>{uk.common.amount}, ₴</label>
-                  <input className="input amount" inputMode="decimal" value={inc.amountRaw}
+                  <input className="input amount lg" inputMode="decimal" value={inc.amountRaw}
                     onChange={(e) => updateIncome(i, { amountRaw: e.target.value })} placeholder="0" />
                 </div>
                 <div className="field">
@@ -207,7 +228,8 @@ export function MonthWizard() {
               </div>
             );
           })}
-          <div className="card"><div className="row"><span className="muted">Заплановано</span><strong>{fmt(totalPlanned)}</strong></div></div>
+          <button className="btn block" onClick={() => setShowCatForm(true)}>＋ Додати категорію</button>
+          <div className="card mt"><div className="row"><span className="muted">Заплановано</span><strong>{fmt(totalPlanned)}</strong></div></div>
           <NavRow onBack={() => setStep(1)} onNext={() => setStep(3)} />
         </section>
       )}
@@ -219,11 +241,11 @@ export function MonthWizard() {
           <div className="card">
             <div className="field">
               <label>{uk.home.reserve} ({reserves?.[0]?.name ?? '—'})</label>
-              <input className="input amount" inputMode="decimal" value={reserveRaw} onChange={(e) => setReserveRaw(e.target.value)} placeholder="0" />
+              <input className="input amount lg" inputMode="decimal" value={reserveRaw} onChange={(e) => setReserveRaw(e.target.value)} placeholder="0" />
             </div>
             <div className="field">
               <label>Накопичення ({savings?.[0]?.name ?? '—'})</label>
-              <input className="input amount" inputMode="decimal" value={savingsRaw} onChange={(e) => setSavingsRaw(e.target.value)} placeholder="0" />
+              <input className="input amount lg" inputMode="decimal" value={savingsRaw} onChange={(e) => setSavingsRaw(e.target.value)} placeholder="0" />
             </div>
           </div>
           <NavRow onBack={() => setStep(2)} onNext={() => setStep(4)} />
@@ -265,6 +287,18 @@ export function MonthWizard() {
             </button>
           </div>
         </section>
+      )}
+
+      {showCatForm && month && (
+        <CategoryForm
+          category={null}
+          sections={sections}
+          onClose={() => setShowCatForm(false)}
+          onSaved={async () => {
+            setShowCatForm(false);
+            await loadData(month.id);
+          }}
+        />
       )}
     </>
   );

@@ -126,7 +126,7 @@ export function CategoriesPage() {
                     {cat.favorite ? ' · ⭐' : ''}
                   </div>
                 </button>
-                <button className="btn" style={{ minHeight: 40, padding: '0 12px' }} onClick={() => setMenuFor(menuFor === cat.id ? null : cat.id)}>
+                <button className="btn sm ghost" aria-label="Дії" style={{ minWidth: 40 }} onClick={() => setMenuFor(menuFor === cat.id ? null : cat.id)}>
                   ⋯
                 </button>
               </div>

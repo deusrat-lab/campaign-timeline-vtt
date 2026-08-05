@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react';
 import { Sheet, useToast } from './ui';
 import { useMonthView } from '../hooks/useDb';
 import { useMoneyFormat } from '../hooks/useFormat';
-import { addExpense, softDeleteTransaction } from '../db/repositories';
+import { addExpense, softDeleteTransaction, upsertPlan } from '../db/repositories';
 import { parseUahInput, toMoney } from '../domain/money';
 import { isoDateOf } from '../utils/id';
 import { uk } from '../i18n';
 import { computeCategoryState } from '../domain/calculations/balances';
+import { CategoryForm } from '../features/categories/CategoryForm';
 
 export function ExpenseSheet({
   monthId,
@@ -26,6 +27,11 @@ export function ExpenseSheet({
   const [categoryId, setCategoryId] = useState<string | undefined>(initialCategoryId);
   const [date, setDate] = useState(isoDateOf(new Date()));
   const [note, setNote] = useState('');
+  const [showCatForm, setShowCatForm] = useState(false);
+  const sections = useMemo(
+    () => (view ? Array.from(new Set(view.categories.map((c) => c.section))) : []),
+    [view],
+  );
 
   const activeCats = useMemo(() => {
     if (!view) return [];
@@ -65,7 +71,7 @@ export function ExpenseSheet({
       <div className="field">
         <label>{uk.common.amount}, ₴</label>
         <input
-          className="input amount"
+          className="input amount lg"
           inputMode="decimal"
           autoFocus
           placeholder="0"
@@ -87,6 +93,7 @@ export function ExpenseSheet({
               {c.name}
             </button>
           ))}
+          <button className="chip" onClick={() => setShowCatForm(true)}>＋ Нова</button>
         </div>
       </div>
 
@@ -127,6 +134,21 @@ export function ExpenseSheet({
       <button className="btn primary block mt" disabled={!categoryId || amount <= 0} onClick={save}>
         {uk.expense.save}
       </button>
+
+      {showCatForm && (
+        <CategoryForm
+          category={null}
+          sections={sections}
+          onClose={() => setShowCatForm(false)}
+          onSaved={async (saved) => {
+            setShowCatForm(false);
+            // Додаємо план (0 грн) на поточний місяць, щоб категорія одразу зʼявилась,
+            // і одразу обираємо її для витрати.
+            if (monthId) await upsertPlan(monthId, saved.id, { planned: 0 });
+            setCategoryId(saved.id);
+          }}
+        />
+      )}
     </Sheet>
   );
 }

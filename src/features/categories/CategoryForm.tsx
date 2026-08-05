@@ -15,7 +15,7 @@ export function CategoryForm({
   category: Category | null;
   sections: string[];
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (saved: Category) => void;
 }) {
   const toast = useToast();
   const isNew = !category;
@@ -53,7 +53,7 @@ export function CategoryForm({
     setSaving(true);
     try {
       const finalSection = newSection.trim() || section;
-      await saveCategory({
+      const saved = await saveCategory({
         id: category?.id,
         name: name.trim(),
         emoji,
@@ -71,7 +71,7 @@ export function CategoryForm({
       // «Збережено» показуємо ЛИШЕ після успішного завершення транзакції.
       toast({ message: 'Збережено' });
       setDirty(false);
-      onSaved();
+      onSaved(saved);
     } catch {
       toast({ message: 'Не вдалося зберегти. Спробуйте ще раз.' });
     } finally {
