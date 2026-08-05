@@ -67,8 +67,9 @@ Legend — Owner: L=legacy, U=universal, C=compatibility-only, D=deferred.
 | Migration | both | `migrationEngine` | rehearsal harness | tooling | U (rehearsal only) | source untouched |
 | Reveal / presented cards | Greyholm | overlay | S16 complex authority | **U (Stage 16)** | U | preserve |
 | Placement move/remove | UC | runtime | S16 complex authority | **U (Stage 16)** | U | preserve |
-| Placement create | UC | store-gen id | — | **L (honest, S16 deferred)** | D | store-generated id; deterministic id coordination not done |
-| Party location / route progress | Greyholm | overlay | — | **L (honest, S16 deferred)** | D | multi-region runtime |
+| Placement create | Greyholm + UC | store-gen id / patch-merge | — | **L (honest, S16 deferred)** | D | store-generated id; deterministic id coordination not done, both campaigns |
+| Placement move/remove | Greyholm | overlay patch-merge | — | **L (honest, deferred)** | D | Greyholm side never routed through complex authority (`aggregateOwnership.ts` uiStatus `patch-merge-deferred`); only UC move/remove is universal-owned in the real UI — see correction below |
+| Party location / route progress | Greyholm | overlay | — | **L (honest, S16 deferred)** | D | `SET_CURRENT_LOCATION`/`SET_PARTY_ROUTE_PROGRESS` are coupled multi-slot legacy actions (`excluded-coupled`); real decomposition work, deferred by choice — see `docs/universal-rebuild/FINAL_REMAINING_WORK_AUDIT.md` §4 |
 | Scalar/text fields (10 scopes) | both | overlay/runtime | S15 durable authority | **U (Stage 15)** | U | preserve |
 
 ---

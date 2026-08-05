@@ -1,21 +1,33 @@
-# Stage 17 — Interim Status
+# Stage 17 — Status
 
-> **Update (2nd pass):** application-integration foundation added and browser-verified.
-> The default-off `CampaignEngineProvider`, the Stage 17 flag layer, and the DM-only
-> `/diagnostics/stage-17` route are wired into the real app and proven in a live browser
-> (see STAGE_17_BROWSER_EVIDENCE.md). Harness expanded 171 → **231**. Regression **15/15**.
-> Still NOT a full STAGE_17_PASS: battle-command UI cutover, import/export/backup/restore/sync
-> UI flows, and pending-recovery browser injection remain pending (details below).
+> **Update (3rd pass, audit session):** this file was stale — it was last written at `0be5c2d`
+> and still listed three items as "remaining" (real-browser UI wiring, application-level local
+> cutover, recovery/reconciliation pending-record stores). An independent code audit confirmed all
+> three were completed in the subsequent commits `cd767c6`…`88df2b9` (Stage 17c–17i) and are real,
+> non-aspirational, wired code — see `STAGE_17_BROWSER_EVIDENCE.md` Parts B–H and
+> `docs/universal-rebuild/FINAL_REMAINING_WORK_AUDIT.md` §2 for the file:line verification.
+> Verdict upgraded accordingly.
 
-## Verdict: STAGE_17_ARCHITECTURE_COMPLETE — application integration + browser evidence PENDING
+## Verdict: STAGE_17_PASS (local, browser-verified) — production activation remains external
 
-This is **not** `STAGE_17_PASS`. Per the honest-verdict policy, PASS is not claimable while real
-UI integration and application-level local cutover are undone. What is committed is the complete,
-independently-verified, Node-provable Stage 17 core.
+All three items below that previously blocked `STAGE_17_PASS` are done and re-verified against
+current code in this session:
+1. Real-browser UI wiring for battles (Greyholm `EmbeddedBattleOverlay` "Следующий ход", Caldran
+   `CampaignBattlePage` "Телепорт"), import/export and backup/restore
+   (`CampaignManagementPanel`) — all real UI, not test-only.
+2. Application-level local cutover: `CampaignEngineProvider` + `BattleAuthorityProvider` mounted in
+   the real app tree (`src/App.tsx`), default-off via `VITE_UNIVERSAL_*` flags.
+3. Recovery/reconciliation pending-record store: `src/domain/battles/battleAuthorityStore.ts`
+   (`recordPendingProjection`/`readPendingProjection`/`clearPendingProjection`), invoked on mount in
+   both battle overlays; `/diagnostics/stage-17` reads live pending/sync counters.
+
+Remaining known gaps (party/route/placement parity, presented-card for UC) were never claimed as
+Stage 17 scope — see `FINAL_REMAINING_WORK_AUDIT.md` §4/§6 for the honest breakdown. Production
+activation of the flags is explicitly out of local scope (external/manual step).
 
 ## Git checkpoint
 - Repo `campaign-timeline-vtt-universal-rebuild`, branch `master`.
-- Starting HEAD `d497809` → final HEAD `0be5c2d` (1 new local commit). Ahead 45, behind 0.
+- Starting HEAD `d497809` → HEAD at last Stage 17 commit `88df2b9` (audit session started here).
 - Working tree clean. **No push. No deploy. No Railway. No production mutation.**
 
 ## Baseline (reproduced green)

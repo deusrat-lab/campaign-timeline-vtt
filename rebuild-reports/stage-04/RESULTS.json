@@ -1,8 +1,8 @@
 {
   "stage": 4,
   "verdict": "PASS_WITH_WARNINGS",
-  "inputs": 90,
-  "realInputs": 82,
+  "inputs": 158,
+  "realInputs": 150,
   "repositoryFixtures": 7,
   "syntheticFixtures": 1,
   "droppedCollections": [],

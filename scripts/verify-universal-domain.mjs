@@ -42,7 +42,20 @@ const requiredTerms = [
 
 const combined = requiredFiles.map((file) => readFileSync(resolve(root, file), 'utf8')).join('\n');
 const missingTerms = requiredTerms.filter((term) => !combined.includes(term));
-const anyMatches = combined.match(/\bany\b/g) ?? [];
+
+// The `any` check must only flag TypeScript's `any` type, not the English word
+// "any" appearing in comments, docstrings, or string literals (e.g. "does not
+// match any source entity"). Strip comments and string literals before matching.
+function stripCommentsAndStrings(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '')
+    .replace(/`(?:\\.|[^`\\])*`/g, '``')
+    .replace(/"(?:\\.|[^"\\])*"/g, '""')
+    .replace(/'(?:\\.|[^'\\])*'/g, "''");
+}
+const codeOnly = stripCommentsAndStrings(combined);
+const anyMatches = codeOnly.match(/\bany\b/g) ?? [];
 const reactMatches = combined.match(/from ['"]react['"]/g) ?? [];
 const adapterText = requiredFiles
   .filter((file) => file.includes('/adapters/'))
