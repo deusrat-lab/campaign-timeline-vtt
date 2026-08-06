@@ -34,6 +34,7 @@ import projectOverlaySnapshot from '../data/campaignOverlaySnapshot.json';
 import type { DmTavern, DmShop, DmImageItem, DmLocation, DmQuest, DmCustomEnemy, DmPlayer, DmEconomyReferenceItem } from '../types/dmCompanion';
 import { DELETED, EMPTY_OVERLAY, DEFAULT_CALENDAR } from './overlay';
 import type { CampaignOverlay, Patch, PresentedCard } from './overlay';
+import type { UniversalCapabilityKey } from '../domain/campaign/capabilities';
 import { createHttpOverlayAdapter, createLocalStorageOverlayAdapter, readLegacyOverlayRaw } from './persistence/overlayStorage';
 import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
 import { API_BASE_URL } from '../config';
@@ -293,6 +294,7 @@ type Action =
   | { type: 'SET_LOCATION_NOTE'; locationStateId: string; note: string }
   | { type: 'SET_TIMELINE'; timelineId: string }
   | { type: 'SET_MODE'; mode: AppMode }
+  | { type: 'SET_CAPABILITY'; key: UniversalCapabilityKey; enabled: boolean }
   | { type: 'SET_ARC2_REVEALED'; revealed: boolean }
   | { type: 'PATCH_ENTITY'; kind: EntityKind; id: string; patch: Patch<unknown> }
   | { type: 'RESET_PATCH'; kind: EntityKind; id: string }
@@ -502,6 +504,8 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
     }
     case 'SET_MODE':
       return { ...state, mode: action.mode };
+    case 'SET_CAPABILITY':
+      return { ...state, capabilities: { ...state.capabilities, [action.key]: action.enabled } };
     case 'SET_ARC2_REVEALED': {
       const arc2 = TIMELINES.find((t) => t.arcId === 'arc-2');
       if (!arc2) return state;
@@ -910,6 +914,7 @@ interface CampaignStoreValue extends CampaignOverlay {
   setTimeline: (timelineId: string) => void;
   setMode: (mode: AppMode) => void;
   toggleDmView: () => void;
+  setCapability: (key: UniversalCapabilityKey, enabled: boolean) => void;
   setArc2Revealed: (revealed: boolean) => void;
   patchTimeline: (id: string, patch: Patch<Timeline>) => void;
   patchWorldMap: (id: string, patch: Patch<WorldMap>) => void;
@@ -1157,6 +1162,7 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       setTimeline: (timelineId) => dispatch({ type: 'SET_TIMELINE', timelineId }),
       setMode: (mode) => dispatch({ type: 'SET_MODE', mode }),
       toggleDmView: () => dispatch({ type: 'SET_MODE', mode: state.mode === 'player-view' ? 'dm-view' : 'player-view' }),
+      setCapability: (key, enabled) => dispatch({ type: 'SET_CAPABILITY', key, enabled }),
       setArc2Revealed: (revealed) => dispatch({ type: 'SET_ARC2_REVEALED', revealed }),
       patchTimeline: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'timeline', id, patch: patch as Patch<unknown> }),
       patchWorldMap: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'worldMap', id, patch: patch as Patch<unknown> }),

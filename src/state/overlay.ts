@@ -32,6 +32,7 @@ import type {
   ActiveBattleState,
 } from '../types';
 import type { DmTavern, DmShop, DmImageItem, DmLocation, DmQuest, DmCustomEnemy, DmPlayer, DmEconomyReferenceItem } from '../types/dmCompanion';
+import type { CapabilityToggles } from '../domain/campaign/capabilities';
 
 export const DELETED = '__deleted__' as const;
 
@@ -197,6 +198,17 @@ export interface CampaignOverlay {
    * data other than position, calendars) are never touched by this.
    */
   canonMapVersion: number;
+
+  /**
+   * Block D — per-campaign capability toggles, keyed by the single shared
+   * `UNIVERSAL_CAPABILITY_KEYS` list (src/domain/campaign/capabilities.ts) so
+   * there is never a parallel UI-only key list to drift out of sync. Absent
+   * key = enabled (matches `defaultCapabilities(true)` at the adapter layer);
+   * explicit `false` = disabled. Disabling a capability only hides UI and
+   * rejects the corresponding commands — it never deletes data, so
+   * re-enabling always shows everything that was there before.
+   */
+  capabilities: CapabilityToggles;
 }
 
 export const EMPTY_OVERLAY: CampaignOverlay = {
@@ -247,6 +259,7 @@ export const EMPTY_OVERLAY: CampaignOverlay = {
   mode: 'dm-view',
   routeEditorVersion: 0,
   canonMapVersion: 0,
+  capabilities: {},
 };
 
 /** Merge a base array of entities with id-keyed patches + brand-new entities. */

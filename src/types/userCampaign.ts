@@ -9,6 +9,8 @@
  * (0–100) of the base map image, so they stay correct under any zoom/pan.
  */
 
+import type { CapabilityToggles } from '../domain/campaign/capabilities';
+
 export type UserCampaignType = 'campaign' | 'oneShot' | 'miniArc' | 'sandbox';
 
 export type CampaignEntityType = 'location' | 'npc' | 'quest' | 'enemy' | 'image' | 'party' | 'faction' | 'custom';
@@ -177,6 +179,16 @@ export interface UserCampaignData {
   factions?: CampaignFaction[];
 
   mapPlacements: CampaignMapPlacement[];
+
+  /**
+   * Block D — per-campaign capability toggles, same sparse `key -> boolean`
+   * shape and same shared `UNIVERSAL_CAPABILITY_KEYS` list as the Greyholm
+   * overlay (src/state/overlay.ts's `capabilities` field) — read with
+   * `isCapabilityEnabled()`, never a parallel UI-only key list. Optional
+   * (added after initial schema) — always read with `?? {}`/isCapabilityEnabled's
+   * own `undefined`-safe default (absent key = enabled).
+   */
+  capabilities?: CapabilityToggles;
 }
 
 export type UserCampaignMode = 'dmView' | 'dmEdit' | 'playerView';

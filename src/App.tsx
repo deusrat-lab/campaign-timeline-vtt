@@ -10,9 +10,11 @@ import { ServicesPage } from './pages/ServicesPage';
 import { ImagesPage } from './pages/ImagesPage';
 import { SearchPage } from './pages/SearchPage';
 import { PlayerVisibilityPage } from './pages/PlayerVisibilityPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { CampaignDataProvider } from './state/campaignDataContext';
 import { CampaignStoreProvider, useCampaignStore } from './state/campaignStore';
-import { UserCampaignProvider } from './state/userCampaignStore';
+import { UserCampaignProvider, useUserCampaigns } from './state/userCampaignStore';
+import { isCapabilityEnabled, type UniversalCapabilityKey } from './domain/campaign/capabilities';
 import { WorldAtlasPage } from './features/world-atlas/WorldAtlasPage';
 import { AtlasMapWorkspace } from './features/world-atlas/AtlasMapWorkspace';
 import { WorldHomePage } from './features/world-home/WorldHomePage';
@@ -24,6 +26,7 @@ import { CampaignBattleMapsPage } from './features/campaigns/CampaignBattleMapsP
 import { CampaignBestiaryPage } from './features/campaigns/CampaignBestiaryPage';
 import { CampaignBattlePage } from './features/campaigns/CampaignBattlePage';
 import { CampaignEntryRedirect } from './features/campaigns/CampaignEntryRedirect';
+import { CampaignSettingsPage } from './features/campaigns/CampaignSettingsPage';
 import { canPlayerOpenCampaignPath } from './features/campaigns/playerSafe';
 import { UniversalDiagnosticsPage } from './pages/UniversalDiagnosticsPage';
 import { Stage17DiagnosticsPage } from './pages/Stage17DiagnosticsPage';
@@ -76,6 +79,27 @@ function UserCampaignDmRoute({ children }: { children: ReactElement }) {
   const observer = new URLSearchParams(location.search).get('observer') === '1';
   if (observer) return <Navigate to={`/campaigns/${campaignId ?? ''}/map?as=player&observer=1`} replace />;
   return <DmOnlyRoute>{children}</DmOnlyRoute>;
+}
+
+/**
+ * Block D command-layer enforcement: a disabled capability blocks the whole
+ * route, not just its nav link — so a direct URL/bookmark to a disabled
+ * module's page (and every mutating action on it) is rejected the same way
+ * DmOnlyRoute rejects a Player View direct hit, redirecting to `/map` rather
+ * than throwing. Data is never touched by this — only reachability.
+ */
+function RequireCapability({ capability, children }: { capability: UniversalCapabilityKey; children: ReactElement }) {
+  const store = useCampaignStore();
+  if (!isCapabilityEnabled(store.capabilities, capability)) return <Navigate to="/map" replace />;
+  return children;
+}
+
+function UserCampaignRequireCapability({ capability, children }: { capability: UniversalCapabilityKey; children: ReactElement }) {
+  const { campaignId } = useParams<{ campaignId: string }>();
+  const store = useUserCampaigns();
+  const data = campaignId ? store.getData(campaignId) : null;
+  if (data && !isCapabilityEnabled(data.capabilities, capability)) return <Navigate to={`/campaigns/${campaignId}/map`} replace />;
+  return children;
 }
 
 function UserCampaignLibraryRoute({ children }: { children: ReactElement }) {
@@ -149,15 +173,16 @@ function AppShell() {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/location/:id" element={<LocationRedirect />} />
             <Route path="/visibility" element={<DmOnlyRoute><PlayerVisibilityPage /></DmOnlyRoute>} />
+            <Route path="/settings" element={<DmOnlyRoute><SettingsPage /></DmOnlyRoute>} />
             <Route path="/quests" element={<DmOnlyRoute><EntityLibraryPage kind="quests" /></DmOnlyRoute>} />
             <Route path="/npc" element={<DmOnlyRoute><EntityLibraryPage kind="npc" /></DmOnlyRoute>} />
             <Route path="/enemies" element={<DmOnlyRoute><EntityLibraryPage kind="enemies" /></DmOnlyRoute>} />
             <Route path="/bestiary" element={<DmOnlyRoute><EntityLibraryPage kind="bestiary" /></DmOnlyRoute>} />
             <Route path="/players" element={<DmOnlyRoute><EntityLibraryPage kind="players" /></DmOnlyRoute>} />
-            <Route path="/economy" element={<DmOnlyRoute><EconomyPage /></DmOnlyRoute>} />
-            <Route path="/services" element={<DmOnlyRoute><ServicesPage /></DmOnlyRoute>} />
-            <Route path="/shops" element={<DmOnlyRoute><ServicesPage initialKind="shop" /></DmOnlyRoute>} />
-            <Route path="/taverns" element={<DmOnlyRoute><ServicesPage initialKind="tavern" /></DmOnlyRoute>} />
+            <Route path="/economy" element={<DmOnlyRoute><RequireCapability capability="economy"><EconomyPage /></RequireCapability></DmOnlyRoute>} />
+            <Route path="/services" element={<DmOnlyRoute><RequireCapability capability="economy"><ServicesPage /></RequireCapability></DmOnlyRoute>} />
+            <Route path="/shops" element={<DmOnlyRoute><RequireCapability capability="economy"><ServicesPage initialKind="shop" /></RequireCapability></DmOnlyRoute>} />
+            <Route path="/taverns" element={<DmOnlyRoute><RequireCapability capability="economy"><ServicesPage initialKind="tavern" /></RequireCapability></DmOnlyRoute>} />
             <Route path="/images" element={<DmOnlyRoute><ImagesPage /></DmOnlyRoute>} />
             <Route path="/battle-maps" element={<DmOnlyRoute><EntityLibraryPage kind="battleMaps" /></DmOnlyRoute>} />
             <Route path="/factions" element={<DmOnlyRoute><EntityLibraryPage kind="factions" /></DmOnlyRoute>} />
@@ -177,7 +202,8 @@ function AppShell() {
             <Route path="/campaigns" element={<DmOnlyRoute><CampaignsPage /></DmOnlyRoute>} />
             <Route path="/campaigns/new" element={<DmOnlyRoute><NewCampaignWizard /></DmOnlyRoute>} />
             <Route path="/campaigns/:campaignId/map" element={<UserCampaignPlayerCapableRoute><IsolatedCampaignMapWorkspace /></UserCampaignPlayerCapableRoute>} />
-            <Route path="/campaigns/:campaignId/library/battle-maps" element={<UserCampaignDmRoute><CampaignBattleMapsPage /></UserCampaignDmRoute>} />
+            <Route path="/campaigns/:campaignId/library/battle-maps" element={<UserCampaignDmRoute><UserCampaignRequireCapability capability="battleMaps"><CampaignBattleMapsPage /></UserCampaignRequireCapability></UserCampaignDmRoute>} />
+            <Route path="/campaigns/:campaignId/settings" element={<UserCampaignDmRoute><CampaignSettingsPage /></UserCampaignDmRoute>} />
             <Route path="/campaigns/:campaignId/library/bestiary" element={<UserCampaignDmRoute><CampaignBestiaryPage /></UserCampaignDmRoute>} />
             <Route path="/campaigns/:campaignId/library/:kind" element={<UserCampaignLibraryRoute><CampaignLibraryPage /></UserCampaignLibraryRoute>} />
             <Route path="/campaigns/:campaignId/battle/:mapId" element={<UserCampaignPlayerCapableRoute><CampaignBattlePage /></UserCampaignPlayerCapableRoute>} />

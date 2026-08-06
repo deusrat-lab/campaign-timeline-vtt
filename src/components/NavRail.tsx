@@ -1,12 +1,18 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useCampaignStore } from '../state/campaignStore';
 import { useUserCampaigns } from '../state/userCampaignStore';
+import { isCapabilityEnabled, type UniversalCapabilityKey } from '../domain/campaign/capabilities';
 
 interface RailItem {
   key: string;
   label: string;
   icon: string;
   to?: string;
+  /** Block D — when set, this nav item is hidden if the campaign's
+   * capability is disabled. Proof-of-wiring case: 'economy' gates the
+   * Greyholm and UC "Экономика"/"Торговля" links; the rest of the rail is
+   * unaffected until the same one-line addition is made per item. */
+  capability?: UniversalCapabilityKey;
 }
 
 const RAIL_ITEMS: RailItem[] = [
@@ -21,8 +27,8 @@ const RAIL_ITEMS: RailItem[] = [
   { key: 'enemies', label: 'Враги', icon: '☠', to: '/enemies' },
   { key: 'players', label: 'Игроки', icon: '🎭', to: '/players' },
   { key: 'visibility', label: 'Показ', icon: '👁', to: '/visibility' },
-  { key: 'economy', label: 'Экономика', icon: '💰', to: '/economy' },
-  { key: 'services', label: 'Торговля', icon: '🛒', to: '/services' },
+  { key: 'economy', label: 'Экономика', icon: '💰', to: '/economy', capability: 'economy' },
+  { key: 'services', label: 'Торговля', icon: '🛒', to: '/services', capability: 'economy' },
   { key: 'images', label: 'Картинки', icon: '🖼', to: '/images' },
   { key: 'battle-maps', label: 'Карты боя', icon: '▦', to: '/battle-maps' },
   { key: 'bestiary', label: 'Бестиарий', icon: '📖', to: '/bestiary' },
@@ -30,7 +36,7 @@ const RAIL_ITEMS: RailItem[] = [
   { key: 'notes', label: 'Заметки', icon: '📝' },
   { key: 'calendar', label: 'Календарь', icon: '📅' },
   { key: 'resources', label: 'Ресурсы', icon: '🎒' },
-  { key: 'settings', label: 'Настройки', icon: '⚙' },
+  { key: 'settings', label: 'Настройки', icon: '⚙', to: '/settings' },
 ];
 
 export function NavRail() {
@@ -54,7 +60,8 @@ export function NavRail() {
     if (asPlayer) return null;
     const isPlayerView = userStore.getRuntime(campaignId).mode === 'playerView';
     if (isPlayerView) return null;
-    const cItems: RailItem[] = [
+    const campaignData = userStore.getData(campaignId);
+    const cItemsAll: RailItem[] = [
       { key: 'home', label: 'Дом мира', icon: '🌍', to: '/' },
       { key: 'campaigns', label: 'Кампании', icon: '🎲', to: '/campaigns' },
       { key: 'c-map', label: 'Карта', icon: '🗺', to: `/campaigns/${campaignId}/map` },
@@ -65,11 +72,13 @@ export function NavRail() {
       { key: 'c-bestiary', label: 'Бестиарий', icon: '📖', to: `/campaigns/${campaignId}/library/bestiary` },
       { key: 'c-players', label: 'Игроки', icon: '🎭', to: `/campaigns/${campaignId}/library/players` },
       { key: 'c-factions', label: 'Фракции', icon: '⚔', to: `/campaigns/${campaignId}/library/factions` },
-      { key: 'c-battle', label: 'Карты боя', icon: '▦', to: `/campaigns/${campaignId}/library/battle-maps` },
+      { key: 'c-battle', label: 'Карты боя', icon: '▦', to: `/campaigns/${campaignId}/library/battle-maps`, capability: 'battleMaps' },
       { key: 'c-images', label: 'Картинки', icon: '🖼', to: `/campaigns/${campaignId}/library/images` },
       { key: 'c-notes', label: 'Заметки', icon: '📝', to: `/campaigns/${campaignId}/library/notes` },
+      { key: 'c-settings', label: 'Настройки', icon: '⚙', to: `/campaigns/${campaignId}/settings` },
       { key: 'world', label: 'Атлас', icon: '📖', to: '/world' },
     ];
+    const cItems = cItemsAll.filter((item) => !item.capability || !campaignData || isCapabilityEnabled(campaignData.capabilities, item.capability));
     return (
       <nav className="nav-rail" aria-label="Навигация кампании">
         {cItems.map((item) => {
@@ -84,7 +93,7 @@ export function NavRail() {
       </nav>
     );
   }
-  const items = RAIL_ITEMS;
+  const items = RAIL_ITEMS.filter((item) => !item.capability || isCapabilityEnabled(store.capabilities, item.capability));
 
   return (
     <nav className="nav-rail" aria-label="Основная навигация">

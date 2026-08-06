@@ -17,6 +17,7 @@ import type {
   CampaignImage,
 } from '../types/userCampaign';
 import { getRegionPreset } from '../data/regionPresets';
+import type { UniversalCapabilityKey } from '../domain/campaign/capabilities';
 import { mergeScenarioIntoData, scenarioForCampaign } from '../data/scenarioMerge';
 import { exportUserCampaignDM, exportUserCampaignPlayerSafe, reconstructUserCampaign, previewUserCampaignImport, userCampaignExportHash, mintPlacementId } from '../domain';
 
@@ -168,6 +169,7 @@ interface UserCampaignValue {
   registry: UserCampaignRegistryEntry[];
   createCampaign: (input: { title: string; type: UserCampaignType; baseMapId: string; regionIds: string[]; seed?: CampaignSeed }) => string;
   renameCampaign: (id: string, title: string) => void;
+  setCapability: (id: string, key: UniversalCapabilityKey, enabled: boolean) => void;
   deleteCampaign: (id: string) => void;
 
   getData: (id: string) => UserCampaignData | null;
@@ -448,6 +450,10 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
         return next;
       });
       patchData(id, (p) => ({ ...p, title }));
+    },
+
+    setCapability: (id, key, enabled) => {
+      patchData(id, (p) => ({ ...p, capabilities: { ...p.capabilities, [key]: enabled } }));
     },
 
     deleteCampaign: (id) => {

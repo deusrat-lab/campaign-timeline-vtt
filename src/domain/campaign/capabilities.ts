@@ -59,3 +59,18 @@ export function defaultCapabilities(enabled = true): CampaignCapabilities {
 export function capabilityEnabled(capabilities: CampaignCapabilities, key: UniversalCapabilityKey): boolean {
   return capabilities[key]?.enabled === true;
 }
+
+/**
+ * Block D — the lightweight, directly-persisted form used by the Greyholm
+ * overlay and the UC campaign record: a sparse `key -> boolean` map instead
+ * of the full `CampaignCapabilities` shape above (no `readonly`/`reason`
+ * metadata needed for a simple DM-facing toggle). Absent key = enabled,
+ * matching `defaultCapabilities(true)`'s all-on default — so old persisted
+ * state with no `capabilities` field at all behaves exactly as before this
+ * feature existed.
+ */
+export type CapabilityToggles = Partial<Record<UniversalCapabilityKey, boolean>>;
+
+export function isCapabilityEnabled(toggles: CapabilityToggles | undefined, key: UniversalCapabilityKey): boolean {
+  return toggles?.[key] !== false;
+}
