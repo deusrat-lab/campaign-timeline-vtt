@@ -39,4 +39,5 @@ export * from './visibility/types';
 export * from './visibility/presentedCardAuthorityStore';
 export * from './visibility/revealAuthorityStore';
 export * from './party/partyPositionAuthorityStore';
+export * from './placements/mapPlacementAuthorityStore';
 export * from './workspace/index';

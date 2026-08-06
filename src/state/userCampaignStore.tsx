@@ -35,12 +35,13 @@ import {
   createBrowserRepositoryStorage,
   campaignIdFromLegacy,
   type FieldAuthorityKind,
+  commitMapPlacements,
+  type MapPlacementSnapshotEntry,
 } from '../domain';
 
 const UC_BACKUP_NS = 'campaign-timeline-vtt:uc-backup:v1';
 const UC_ROLLBACK_NS = 'campaign-timeline-vtt:uc-rollback:v1';
 import { emitUserCommand } from './commandShadowSink';
-import { routeUserComplex } from './complexAuthoritySink';
 import { syncEnabled, pushCampaign, deleteCampaignRemote, fetchRegistry, fetchCampaign, subscribeUc, patchPlayerRemote } from './userCampaignSync';
 
 // Block I — universal field-authority storage handle for the user-campaign
@@ -790,76 +791,47 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     }),
 
     addPlacement: (id, placement) => {
-      // The placement id is minted ONCE here, before either the universal
-      // command or the legacy patch is built — the same shared authority
-      // function Greyholm's addPlacement uses — so there is never a second,
-      // independent id generated for the same create action.
+      // The placement id is minted ONCE here, before the universal commit is
+      // built — the same shared authority function Greyholm's addPlacement
+      // uses — so there is never a second, independent id generated for the
+      // same create action.
       const placementId = mintPlacementId();
       const full: CampaignMapPlacement = { ...placement, id: placementId };
       const pre = captureUc(id);
-      const updater = (p: UserCampaignData): UserCampaignData => ({ ...p, mapPlacements: [...p.mapPlacements, full] });
-      const handled = routeUserComplex({
-        legacyCampaignId: id,
-        complexScope: 'userCampaign.placement',
-        descriptor: {
-          aggregate: 'placement',
-          op: 'place',
-          placementId,
-          mapRawId: placement.mapId,
-          entityKind: placement.entityType,
-          entityId: placement.entityId,
-          x: placement.x,
-          y: placement.y,
-          visibleToPlayers: placement.visibleToPlayers,
-        },
-        preData: pre.data,
-        preRuntime: pre.runtime,
-        predict: () => ({ data: pre.data ? updater(pre.data) : pre.data, runtime: pre.runtime }),
-        commit: () => { patchData(id, updater); return captureUc(id); },
-        fallback: () => patchData(id, updater),
-      });
-      if (!handled) patchData(id, updater);
+      const candidate: MapPlacementSnapshotEntry[] = [...(pre.data?.mapPlacements ?? []), full];
+      const outcome = commitMapPlacements(ucFieldStorage(), campaignIdFromLegacy('user', id), 'userCampaign.placements', candidate);
+      if (!outcome.ok || !outcome.placements) {
+        throw new Error(`addPlacement: universal map-placements commit failed: ${outcome.error ?? 'unknown error'}`);
+      }
+      const committed = outcome.placements as CampaignMapPlacement[];
+      patchData(id, (p) => ({ ...p, mapPlacements: committed }));
     },
     updatePlacement: (id, placementId, patch) => {
       const pre = captureUc(id);
-      const updater = (p: UserCampaignData): UserCampaignData => ({ ...p, mapPlacements: p.mapPlacements.map((mp) => (mp.id === placementId ? { ...mp, ...patch } : mp)) });
       const keys = Object.keys(patch);
       const isPureMove = typeof patch.x === 'number' && typeof patch.y === 'number' && keys.every((k) => k === 'x' || k === 'y');
+      const candidate: MapPlacementSnapshotEntry[] = (pre.data?.mapPlacements ?? []).map((mp) => (mp.id === placementId ? { ...mp, ...patch } : mp));
+      const outcome = commitMapPlacements(ucFieldStorage(), campaignIdFromLegacy('user', id), 'userCampaign.placements', candidate);
+      if (!outcome.ok || !outcome.placements) {
+        throw new Error(`updatePlacement: universal map-placements commit failed: ${outcome.error ?? 'unknown error'}`);
+      }
+      const committed = outcome.placements as CampaignMapPlacement[];
+      patchData(id, (p) => ({ ...p, mapPlacements: committed }));
+      // Stage 13 shadow diagnostics remain independent, best-effort, and never
+      // gate the (now unconditional) universal commit above.
       if (isPureMove) {
-        // Stage 16.1 — a pure position move maps 1:1 to the universal placement
-        // command; route it through the (default off) complex-authority sink
-        // first (durable universal commit + this exact patchData once as the
-        // compatibility projection). Flag off / scope not owned -> false -> normal.
-        const handled = routeUserComplex({
-          legacyCampaignId: id,
-          complexScope: 'userCampaign.placement',
-          descriptor: { aggregate: 'placement', op: 'move', placementId, x: patch.x as number, y: patch.y as number },
-          preData: pre.data,
-          preRuntime: pre.runtime,
-          predict: () => ({ data: pre.data ? updater(pre.data) : pre.data, runtime: pre.runtime }),
-          commit: () => { patchData(id, updater); return captureUc(id); },
-          fallback: () => patchData(id, updater),
-        });
-        if (!handled) patchData(id, updater);
         emitUcCommand(id, 'userCampaign.mapPlacement.update', { scope: 'userCampaign.mapPlacement.update', placementId, x: patch.x, y: patch.y }, pre);
-      } else {
-        patchData(id, updater);
       }
     },
     removePlacement: (id, placementId) => {
       const pre = captureUc(id);
-      const updater = (p: UserCampaignData): UserCampaignData => ({ ...p, mapPlacements: p.mapPlacements.filter((mp) => mp.id !== placementId) });
-      const handled = routeUserComplex({
-        legacyCampaignId: id,
-        complexScope: 'userCampaign.placement',
-        descriptor: { aggregate: 'placement', op: 'remove', placementId },
-        preData: pre.data,
-        preRuntime: pre.runtime,
-        predict: () => ({ data: pre.data ? updater(pre.data) : pre.data, runtime: pre.runtime }),
-        commit: () => { patchData(id, updater); return captureUc(id); },
-        fallback: () => patchData(id, updater),
-      });
-      if (!handled) patchData(id, updater);
+      const candidate: MapPlacementSnapshotEntry[] = (pre.data?.mapPlacements ?? []).filter((mp) => mp.id !== placementId);
+      const outcome = commitMapPlacements(ucFieldStorage(), campaignIdFromLegacy('user', id), 'userCampaign.placements', candidate);
+      if (!outcome.ok || !outcome.placements) {
+        throw new Error(`removePlacement: universal map-placements commit failed: ${outcome.error ?? 'unknown error'}`);
+      }
+      const committed = outcome.placements as CampaignMapPlacement[];
+      patchData(id, (p) => ({ ...p, mapPlacements: committed }));
     },
 
     addRoute: (id, route) => { const rid = uid('rte'); patchData(id, (p) => ({ ...p, routes: [...p.routes, { ...route, id: rid }] })); return rid; },

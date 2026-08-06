@@ -27,6 +27,7 @@
     "verify:no-legacy-presentedcard-write": "node scripts/final-cutover/verify-no-legacy-presentedcard-write.mjs",
     "verify:no-legacy-reveal-write": "node scripts/final-cutover/verify-no-legacy-reveal-write.mjs",
     "verify:no-legacy-party-position-write": "node scripts/final-cutover/verify-no-legacy-party-position-write.mjs",
+    "verify:no-legacy-map-placements-write": "node scripts/final-cutover/verify-no-legacy-map-placements-write.mjs",
     "verify:no-workspace-split": "node scripts/final-cutover/verify-no-workspace-split.mjs",
     "verify:stage04": "node scripts/verify-stage-04-parity.mjs",
     "verify:stage05": "node scripts/verify-stage-05-projections.mjs",
