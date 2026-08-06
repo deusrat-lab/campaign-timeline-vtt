@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-06T15:30:00.000Z",
-  "currentHead": "d08ac91",
+  "generatedAt": "2026-08-06T16:45:00.000Z",
+  "currentHead": "168338b",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -97,11 +97,26 @@
         "63a68ea",
         "150f61b"
       ]
+    },
+    {
+      "block": "F: Maps/Atlas bundle",
+      "status": "CORE_MECHANISMS_PROVEN_BOTH_STACKS",
+      "evidence": "Party marker create/move/reload/Player-View for Greyholm (overlay.party.currentMapPosition) AND Caldran/UC (mapPlacements, singleton-per-map replace-on-move), map switching + zoom/pan persistence (Caldran survived a full dev-server restart, not just in-page reload), hotspot/placement create-move-remove proven at the mechanism level (same addPlacement/removePlacement store calls). See FINAL_FUNCTIONAL_PARITY_REPORT.md Maps section for full evidence. Real finding: Greyholm's view mode (DM View/DM Edit/Player View) is NOT persisted anywhere in overlay localStorage at all (confirmed by grep -- no mode/viewMode key exists) -- it is pure in-memory React state, reset to DM View on every full page load/navigate. This is a stronger version of the Block G/H note below: it's not just 'shared, not tab-scoped', it doesn't survive reload either. Relevant for Block H's design.",
+      "notExercised": "Layers, routes/route-progress, visited-locations, overlays, filters, search, linked-entity-card rendering, capability off/on specifically for map nav -- not yet independently verified this session.",
+      "commits": ["ed486c3"]
+    },
+    {
+      "block": "F: Content Group A (reveal mechanism only)",
+      "status": "REVEAL_MECHANISM_PROVEN_BOTH_STACKS",
+      "evidence": "EntityLibraryPage.tsx is one shared editor for npc/quests/enemies/factions on Greyholm (visibleToPlayers checkbox, same pattern as locations); UC uses the same generic toggleReveal/revealedToPlayers proven for locations, entityType is just a parameter. Live-verified: Greyholm NPC 'Аверн Колд' toggle+save -> overlay.npcPatches[...].visibleToPlayers true->false; Caldran NPC 'Вилья Кривой Пилот' toggle -> revealedToPlayers -> Player View '1 · NPC' (of 66) -> restored.",
+      "selfCorrection": "First two Greyholm save attempts silently failed because a raw CSS selector `.reveal-toggle input[type=checkbox]` matched the WRONG element first (an unrelated 'Открыть Арку 2 игрокам' top-nav toggle that happens to share the same class name) instead of the NPC's own checkbox further down the form. The stray Arc-2 toggle was caught and reverted (confirmed overlay.timelinePatches['arc-2-war'].visibleToPlayers back to false) before it was ever scored as evidence. Lesson for future passes in this codebase: `.reveal-toggle` is not a unique class, always disambiguate by index/position or a more specific selector.",
+      "notExercised": "Create/edit/delete lifecycle, relations, search/filters, arc scope, DM-only vs player-safe field separation -- only the reveal toggle itself was verified, not full CRUD, for npc/quests/enemies/factions.",
+      "commits": ["168338b"]
     }
   ],
   "currentBlock": null,
   "nextConcreteStep": {
-    "description": "Continue Block F Maps/Atlas group: (1) work out the real party-placement interaction (likely needs a drag from the 'Поставить партию' button onto the map, or a second distinct click state -- inspect IsolatedCampaignMapWorkspace.tsx / MapWorkspacePage.tsx placement handlers before retrying blindly) and prove it persists + reloads for both Greyholm and Caldran; (2) zoom/pan controls; (3) map-switching reload persistence (does the active atlas map id survive reload?); (4) hotspot create/move/remove for locations on both stacks; (5) capability off/on for maps. Then move to Content (NPC/quest/enemy/faction reveal -- same toggleReveal/isEntityPlayerVisible mechanism already proven for locations, should be fast to batch-verify), then Timeline/Economy/Zones/Battles per the original row list in FINAL_FUNCTIONAL_PARITY_REPORT.md. Keep working subsystem-by-subsystem in coherent committed blocks; do not ask permission between them.",
+    "description": "Continue Block F Content bundle: (1) Group A remaining -- CRUD (create/edit/delete) for npc/quests/enemies/factions/locations on both stacks, relations, search/filters, arc scope, DM-only vs player-safe field split; (2) Group B -- images (asset integrity, playerSafe flag), bestiary, players, linked cards, export compatibility. Then move to Timeline/Events, Economy, Zones/Overlays/Movable-Entities as one or two coherent passes each (both stacks), then the full Battles lifecycle (this is the subsystem most likely to reveal Greyholm/Caldran running genuinely different runtimes -- budget real time here, do not rubber-stamp it). Only after Block F's remaining rows are closed should Blocks G-M (unified workspace, tab-scoped view mode -- note the Greyholm reload-loses-mode finding above, new-campaign proof, import/export, universal-repository cutover, legacy removal) begin. Keep committing after each coherent bundle; update this file and the parity report each time, don't wait until everything is done.",
     "targetFiles": [
       "rebuild-reports/final-cutover/FINAL_FUNCTIONAL_PARITY_REPORT.md"
     ]
