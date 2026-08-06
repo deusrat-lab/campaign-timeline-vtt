@@ -1,0 +1,69 @@
+{
+  "generatedAt": "2026-08-06T08:26:19.898Z",
+  "engine": "src/domain/migration/migrationEngine.ts (runUniversalMigration / rollbackUniversalMigration) — real production code, not reimplemented.",
+  "repository": "createProductionCampaignRepository + createMemoryRepositoryStorage (in-memory Map, same repository implementation the browser app uses over localStorage).",
+  "results": [
+    {
+      "campaignId": "greyholm:main",
+      "dryRun": {
+        "ok": true,
+        "alreadyMigrated": false,
+        "committed": false
+      },
+      "commit": {
+        "ok": true,
+        "committed": true,
+        "revisionAfterCommit": 1
+      },
+      "readBack": {
+        "ok": true,
+        "matchesCommitted": true
+      },
+      "rollback": {
+        "ok": true,
+        "revisionAfterRollback": 1,
+        "matchesPreCommit": true
+      },
+      "entityCounts": {
+        "maps": 4,
+        "hotspots": 22,
+        "placements": 0,
+        "routes": 0,
+        "entities": 979,
+        "battleMaps": 139
+      },
+      "lostEntities": 0
+    },
+    {
+      "campaignId": "user:caldran-captivity",
+      "dryRun": {
+        "ok": true,
+        "alreadyMigrated": false,
+        "committed": false
+      },
+      "commit": {
+        "ok": true,
+        "committed": true,
+        "revisionAfterCommit": 1
+      },
+      "readBack": {
+        "ok": true,
+        "matchesCommitted": true
+      },
+      "rollback": {
+        "ok": true,
+        "revisionAfterRollback": 1,
+        "matchesPreCommit": true
+      },
+      "entityCounts": {
+        "maps": 1,
+        "hotspots": 0,
+        "placements": 17,
+        "routes": 1,
+        "entities": 407,
+        "battleMaps": 0
+      },
+      "lostEntities": 0
+    }
+  ]
+}
