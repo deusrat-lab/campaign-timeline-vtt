@@ -3139,7 +3139,7 @@ export function MapWorkspacePage() {
     if (!quickPinDraft || !map) return;
     const title = quickPinDraft.title.trim() || 'Заметка';
     const newPin: MapObjectPlacement = {
-      id: `placement-${Date.now()}`,
+      id: mintPlacementId(),
       arcId: activeTimelineForPlacements?.arcId ?? store.currentTimelineId,
       mapLevel: scope,
       mapId: map.id,
