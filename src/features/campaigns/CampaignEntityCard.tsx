@@ -8,6 +8,26 @@ import { getBattleMapCatalog, battleMapImageUrl } from '../../data/battleMapCata
 import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
 import { scenarioForCampaign } from '../../data/scenarioMerge';
 import { isEntityPlayerVisible, playerSafeImageSrc } from './playerSafe';
+import { runContentDeletePolicy, type BlockingRelation } from '../../shared/entity/contentDeletePolicy';
+import type { UserCampaignData } from '../../types/userCampaign';
+
+/** Universal Content delete policy (Decision 1) — same shared confirm/block
+ * mechanism as Greyholm's EntityLibraryPage.tsx, adapted to UC's simpler
+ * relation graph (CampaignQuest.npcIds, *.locationIds/locationId). */
+export function findUcBlockingRelations(data: UserCampaignData, entityType: CampaignEntityType, entityId: string): BlockingRelation[] {
+  const relations: BlockingRelation[] = [];
+  if (entityType === 'npc') {
+    data.quests.forEach((q) => { if (q.npcIds?.includes(entityId)) relations.push({ kind: 'Квест', label: q.title }); });
+  } else if (entityType === 'location') {
+    data.npcs.forEach((n) => { if (n.locationId === entityId) relations.push({ kind: 'NPC', label: n.name }); });
+    data.quests.forEach((q) => { if (q.locationId === entityId) relations.push({ kind: 'Квест', label: q.title }); });
+    data.enemies.forEach((e) => { if (e.locationIds?.includes(entityId)) relations.push({ kind: 'Враг', label: e.title }); });
+  }
+  // No CampaignQuest<->enemy back-reference exists in the UC data model
+  // (types/userCampaign.ts has no quest.enemyIds) — enemies have no
+  // blocking relations to check today.
+  return relations;
+}
 
 const TYPE_LABEL: Record<string, string> = {
   location: 'Локация', npc: 'NPC', quest: 'Квест', enemy: 'Враг', image: 'Картинка', party: 'Игрок', faction: 'Фракция',
@@ -139,6 +159,14 @@ export function CampaignEntityCard({
 
   if (!data) return null;
 
+  const handleDeleteCurrent = () => {
+    const relations = findUcBlockingRelations(data, current.type, current.id);
+    const name = detailVm?.title ?? current.id;
+    if (!runContentDeletePolicy(TYPE_LABEL[current.type] ?? current.type, name, relations)) return;
+    store.deleteEntity(campaignId, current.type, current.id);
+    onClose();
+  };
+
   const placement = data.mapPlacements.find((mp) => mp.entityType === current.type && mp.entityId === current.id);
   const revealed = store.isRevealed(campaignId, current.id);
   const upd = (patch: Record<string, unknown>) => store.updateEntity(campaignId, current.type, current.id, patch);
@@ -193,7 +221,7 @@ export function CampaignEntityCard({
               presenting,
               onToggleReveal: canDmAct ? () => store.toggleReveal(campaignId, current.id) : undefined,
               revealed,
-              onDelete: canDmAct ? () => { store.deleteEntity(campaignId, current.type, current.id); onClose(); } : undefined,
+              onDelete: canDmAct ? handleDeleteCurrent : undefined,
             }}
           />
         ) : (
@@ -347,7 +375,7 @@ export function CampaignEntityCard({
                     <button className="atlas-btn ghost small" onClick={() => store.removePlacement(campaignId, placement.id)}>Снять с карты</button>
                   </>
                 )}
-                <button className="atlas-btn danger small" onClick={() => { store.deleteEntity(campaignId, current.type, current.id); onClose(); }}>Удалить</button>
+                <button className="atlas-btn danger small" onClick={handleDeleteCurrent}>Удалить</button>
               </>
             )}
           </div>

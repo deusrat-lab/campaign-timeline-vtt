@@ -6,7 +6,8 @@ import '../../shared/entity/sharedEntity.css';
 import { getCampaignById } from '../../data/campaignModules';
 import { useUserCampaigns } from '../../state/userCampaignStore';
 import type { CampaignEntityType, UserCampaignMode } from '../../types/userCampaign';
-import { CampaignEntityCard } from './CampaignEntityCard';
+import { CampaignEntityCard, findUcBlockingRelations } from './CampaignEntityCard';
+import { runContentDeletePolicy } from '../../shared/entity/contentDeletePolicy';
 import { RichEntityLibrary } from '../../shared/entity/RichEntityLibrary';
 import { buildListItems, buildDetail, type LibraryKind } from '../../shared/entity/userCampaignEntityVM';
 import type { EntityKind, FilterConfig } from '../../shared/entity/types';
@@ -281,7 +282,13 @@ export function CampaignLibraryPage() {
             onToggleReveal: !isPlayer && activeId ? () => store.toggleReveal(campaignId, activeId) : undefined,
             revealed: activeId ? revealed.has(activeId) : false,
             placed: activeId ? data.mapPlacements.some((mp) => mp.entityType === type && mp.entityId === activeId) : false,
-            onDelete: !isPlayer && activeId ? () => { store.deleteEntity(campaignId, type, activeId); setSelectedId(null); } : undefined,
+            onDelete: !isPlayer && activeId ? () => {
+              const relations = findUcBlockingRelations(data, type, activeId);
+              const name = detail?.title ?? activeId;
+              if (!runContentDeletePolicy(KIND_LABEL[k], name, relations)) return;
+              store.deleteEntity(campaignId, type, activeId);
+              setSelectedId(null);
+            } : undefined,
           } : undefined}
         />
       )}

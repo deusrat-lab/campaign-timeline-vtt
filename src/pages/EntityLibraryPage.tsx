@@ -16,6 +16,36 @@ import type { BattleMapManifestEntry } from '../data/battleMapManifest';
 import { GreyholmUniversalSections } from '../features/universal-sections/GreyholmUniversalSections';
 import { GreyholmWorkspace } from '../features/campaign-workspace/GreyholmWorkspace';
 import { isSharedWorkspaceEnabledForKind } from '../config';
+import { runContentDeletePolicy, type BlockingRelation } from '../shared/entity/contentDeletePolicy';
+import { DELETED } from '../state/overlay';
+
+/** Universal Content delete — Decision 1: Greyholm now supports delete for
+ * npc/quests/enemies through the same shared confirm/block policy Caldran
+ * uses (contentDeletePolicy.ts), routed through the existing generic
+ * patchXxx(id, DELETED) mechanism (already used by RESET_PATCH/PATCH_ENTITY
+ * and already filtered out by applyOverlayToList on every read path — see
+ * CONTINUATION_STATE.json for the discovery that this mechanism pre-existed
+ * and only needed UI wiring, not a new reducer). Faction/location delete are
+ * intentionally out of scope here: factions are a read-only derived roster
+ * (no create/edit exists either) and locations use a structurally different
+ * LocationState-based editor this pass doesn't touch. */
+function findNpcBlockingRelations(data: CampaignData, npcId: string): BlockingRelation[] {
+  const relations: BlockingRelation[] = [];
+  data.quests.forEach((q) => { if (q.giver === npcId) relations.push({ kind: 'Квест (даёт задание)', label: getEntityTitle(q) }); });
+  data.locationStates.forEach((ls) => { if (ls.npcIds.includes(npcId)) relations.push({ kind: 'Локация (размещён)', label: ls.title }); });
+  return relations;
+}
+function findQuestBlockingRelations(data: CampaignData, questId: string): BlockingRelation[] {
+  const relations: BlockingRelation[] = [];
+  data.locationStates.forEach((ls) => { if (ls.questIds.includes(questId)) relations.push({ kind: 'Локация (размещён)', label: ls.title }); });
+  return relations;
+}
+function findEnemyBlockingRelations(data: CampaignData, enemyId: string): BlockingRelation[] {
+  const relations: BlockingRelation[] = [];
+  data.quests.forEach((q) => { if (q.enemies?.includes(enemyId)) relations.push({ kind: 'Квест (враг квеста)', label: getEntityTitle(q) }); });
+  data.locationStates.forEach((ls) => { if (ls.enemyIds.includes(enemyId)) relations.push({ kind: 'Локация (размещён)', label: ls.title }); });
+  return relations;
+}
 
 export type EntityLibraryKind = 'npc' | 'quests' | 'enemies' | 'bestiary' | 'players' | 'battleMaps' | 'factions';
 
@@ -830,6 +860,27 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
                 {kind !== 'players' && (
                   <button onClick={() => openMapLibrary(selected as DmNpc | DmQuest | DmCustomEnemy)}>
                     {kind === 'quests' ? 'Разместить цель на карте' : 'Разместить на карте'}
+                  </button>
+                )}
+                {(kind === 'npc' || kind === 'quests' || kind === 'enemies') && (
+                  <button
+                    className="atlas-btn danger small"
+                    onClick={() => {
+                      const entityKind = kind === 'npc' ? 'npc' : kind === 'quests' ? 'quest' : 'enemy';
+                      const label = kind === 'npc' ? 'NPC' : kind === 'quests' ? 'квест' : 'врага';
+                      const name = getEntityTitle(selected as DmNpc | DmQuest | DmCustomEnemy);
+                      const relations =
+                        entityKind === 'npc' ? findNpcBlockingRelations(data, selected.id)
+                        : entityKind === 'quest' ? findQuestBlockingRelations(data, selected.id)
+                        : findEnemyBlockingRelations(data, selected.id);
+                      if (!runContentDeletePolicy(label, name, relations)) return;
+                      if (entityKind === 'npc') store.patchNpc(selected.id, DELETED);
+                      else if (entityKind === 'quest') store.patchQuest(selected.id, DELETED);
+                      else store.patchEnemy(selected.id, DELETED);
+                      setSelectedId(null);
+                    }}
+                  >
+                    Удалить
                   </button>
                 )}
               </div>
