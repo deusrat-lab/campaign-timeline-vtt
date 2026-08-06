@@ -28,6 +28,7 @@ import {
   userCampaignExportHash,
   mintPlacementId,
   commitField,
+  commitPresentedCard,
   createBrowserRepositoryStorage,
   campaignIdFromLegacy,
   type FieldAuthorityKind,
@@ -669,32 +670,33 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
       const pre = captureUc(id);
       const wasPresenting = pre.runtime?.presentedCard?.entityType === entityType && pre.runtime?.presentedCard?.entityId === entityId;
       const present = !wasPresenting;
-      // The real legacy mutation always clears `presentedBattle` in the same
-      // write (mutual exclusion between "showing a card" and "showing a battle
-      // board") — that field is Stage 17 battle-authority scope, not modeled in
-      // the universal presentation aggregate, so it is performed here exactly
-      // as before, in the SAME one legacy commit (never a second write).
-      const computeNext = (): { runtime: UserCampaignRuntime | null } => ({
-        runtime: pre.runtime
-          ? { ...pre.runtime, presentedBattle: null, presentedCard: present ? { entityType, entityId } : null }
-          : pre.runtime,
-      });
-      const applyReal = (): void => {
-        patchRuntime(id, (prev) => ({ ...prev, presentedBattle: null, presentedCard: present ? { entityType, entityId } : null }));
-      };
-      const handled = routeUserComplex({
-        legacyCampaignId: id,
-        complexScope: 'userCampaign.presentedCard',
-        descriptor: present
-          ? { aggregate: 'presentedCard', present: true, cardType: entityType, cardId: entityId, clearPresentedBattle: true }
-          : { aggregate: 'presentedCard', present: false, clearPresentedBattle: true },
-        preData: pre.data,
-        preRuntime: pre.runtime,
-        predict: () => ({ data: pre.data, runtime: computeNext().runtime }),
-        commit: () => { applyReal(); return captureUc(id); },
-        fallback: applyReal,
-      });
-      if (!handled) applyReal();
+      // Block I — universal presented-card authority is the SOLE active
+      // authority: the candidate value is durably committed first (expected-
+      // revision guard, read-after-write verified), and only the committed
+      // value is projected into the legacy runtime patch as a compatibility
+      // write. No flag, no optional fallback path.
+      //
+      // The real legacy mutation additionally clears `presentedBattle` in the
+      // same write (mutual exclusion between "showing a card" and "showing a
+      // battle board") — that field is Stage 17 battle-authority scope, not
+      // modeled in this store's committed value, so it is performed here
+      // exactly as before, in the SAME one legacy commit (never a second
+      // universal write).
+      const candidate = present ? { type: entityType, id: entityId } : null;
+      const outcome = commitPresentedCard(ucFieldStorage(), campaignIdFromLegacy('user', id), 'userCampaign.presentedCard', candidate);
+      if (!outcome.ok) {
+        throw new Error(`togglePresentedCard: universal presented-card commit failed for campaign ${id}: ${outcome.error ?? 'unknown error'}`);
+      }
+      const committed = outcome.card ?? null;
+      // Project the committed value back using the caller's own strongly-typed
+      // `entityType`/`entityId` (the store's `card.type` is a plain string —
+      // `committed` here only gates whether the commit landed as "present" or
+      // "dismissed", never supplies the value itself).
+      patchRuntime(id, (prev) => ({
+        ...prev,
+        presentedBattle: null,
+        presentedCard: committed ? { entityType, entityId } : null,
+      }));
     },
     upgradeFromScenario: (id) => {
       const data = readData(id);

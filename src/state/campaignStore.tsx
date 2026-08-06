@@ -40,7 +40,7 @@ import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
 import { API_BASE_URL } from '../config';
 import { emitMainCommand } from './commandShadowSink';
 import { routeMainComplex, type ComplexActionDescriptor } from './complexAuthoritySink';
-import { commitGreyholmBattle, commitField, type FieldAuthorityKind, createBrowserRepositoryStorage, campaignIdFromLegacy } from '../domain';
+import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, createBrowserRepositoryStorage, campaignIdFromLegacy } from '../domain';
 
 // Decision 2 — the SAME universal campaign id EmbeddedBattleOverlay.tsx
 // already uses for its (now-superseded) shadow turn-advance path. Must be
@@ -1440,17 +1440,31 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       },
       endActiveBattle: () => dispatch({ type: 'END_ACTIVE_BATTLE' }),
       presentCard: (card) => {
-        const action: Action = { type: 'SET_PRESENTED_CARD', card };
-        if (card && typeof card.type === 'string' && typeof card.id === 'string') {
-          routeGreyComplex('greyholm.presentedCard', { aggregate: 'presentedCard', present: true, cardType: card.type, cardId: card.id }, action);
-          emitCommand('greyholm.presentedCard.set', { scope: 'greyholm.presentedCard.set', card: { type: card.type, id: card.id } }, action);
-        } else {
-          dispatch(action);
+        // Block I — universal presented-card authority is the SOLE active
+        // authority: the candidate value is durably committed first
+        // (expected-revision guard, read-after-write verified), and only the
+        // committed value is projected into the existing legacy dispatch as a
+        // compatibility write. No flag, no optional fallback path — mirrors
+        // the unconditional field/battle cutovers above.
+        const candidate = card && typeof card.type === 'string' && typeof card.id === 'string' ? { type: card.type, id: card.id } : null;
+        const outcome = commitPresentedCard(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.presentedCard', candidate);
+        if (!outcome.ok) {
+          throw new Error(`presentCard: universal presented-card commit failed: ${outcome.error ?? 'unknown error'}`);
+        }
+        const committedCard = (outcome.card ?? null) as PresentedCard | null;
+        const action: Action = { type: 'SET_PRESENTED_CARD', card: committedCard };
+        dispatch(action);
+        if (committedCard) {
+          emitCommand('greyholm.presentedCard.set', { scope: 'greyholm.presentedCard.set', card: { type: committedCard.type, id: committedCard.id } }, action);
         }
       },
       clearPresentedCard: () => {
+        const outcome = commitPresentedCard(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.presentedCard', null);
+        if (!outcome.ok) {
+          throw new Error(`clearPresentedCard: universal presented-card commit failed: ${outcome.error ?? 'unknown error'}`);
+        }
         const action: Action = { type: 'SET_PRESENTED_CARD', card: null };
-        routeGreyComplex('greyholm.presentedCard', { aggregate: 'presentedCard', present: false }, action);
+        dispatch(action);
       },
       setPartyMapPosition: (position) => {
         const action: Action = { type: 'SET_PARTY_MAP_POSITION', position };
