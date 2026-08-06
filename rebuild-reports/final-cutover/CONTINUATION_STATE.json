@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-06T09:00:00.000Z",
-  "currentHead": "591166d",
+  "generatedAt": "2026-08-06T10:15:00.000Z",
+  "currentHead": "7c5ee20",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -16,90 +16,69 @@
     "verify:universal-regression": "15/15",
     "verify:referential-integrity": "PASS (0 broken)",
     "build:greyholm-runtime-shape": "PASS (0 broken, 34 typed orphans)",
-    "verify:final-migration": "PASS (dry-run/commit/read-back/rollback all OK, 0 lost entities, both campaigns)"
+    "verify:final-migration": "PASS (dry-run/commit/read-back/rollback all OK, 0 lost entities, 100% id coverage, both campaigns)"
   },
   "completedBlocks": [
     {
       "block": "Greyholm battle-map placement create fix",
-      "commits": [
-        "739dd51",
-        "db9dfda"
-      ],
+      "commits": ["739dd51", "db9dfda"],
       "status": "IMPLEMENTED_AND_BROWSER_VERIFIED"
     },
     {
       "block": "A: production reference manifest",
-      "commits": [
-        "2bdf09f",
-        "0c7fde3"
-      ],
+      "commits": ["2bdf09f", "0c7fde3"],
       "status": "PARTIAL_IMPROVED",
-      "files": [
-        "rebuild-reports/final-cutover/PRODUCTION_REFERENCE_MANIFEST.json",
-        "rebuild-reports/final-cutover/GREYHOLM_RUNTIME_SHAPE.json"
-      ],
-      "stillMissing": [
-        "arcs/capabilities/settings metadata block per campaign in the manifest itself",
-        "battle/battle-map runtime records (activeBattle, battleEntriesById) for Greyholm -- localStorage-only, needs a live browser read",
-        "presentedCard/reveal/party runtime state for Greyholm -- localStorage-only",
-        "GREYHOLM_RUNTIME_SHAPE.json is a separate file from PRODUCTION_REFERENCE_MANIFEST.json -- not yet merged into one document"
-      ]
+      "stillMissing": ["battle/presentedCard/reveal/party runtime state -- localStorage-only, needs a live browser read", "GREYHOLM_RUNTIME_SHAPE.json not yet merged into the main manifest file"]
     },
     {
       "block": "B: final data migration",
-      "commit": "2ae17ac",
+      "commits": ["2ae17ac", "591166d"],
       "status": "CORE_ENGINE_AND_ID_PARITY_PROVEN",
-      "file": "rebuild-reports/final-cutover/FINAL_DATA_PARITY_REPORT.json",
-      "evidence": "Real adapters + real migrationEngine.ts (Stage-7-proven) + real repository (in-memory-backed) migrated real Greyholm (979 entities/139 battleMaps/22 hotspots/4 maps) and real Caldran (407 entities/17 placements/1 route/1 map). dry-run/commit/read-back/rollback all genuinely exercised, not mocked. Per-type id-coverage diff against PRODUCTION_REFERENCE_MANIFEST.json: 100% coverage, 0 missing ids, across npcs/quests/enemies/images/factions (+players/shops/taverns for Greyholm) in both campaigns.",
-      "stillMissing": [
-        "Migration was run against an in-memory repository, not the browser's real localStorage-backed production repository -- the actual local cutover (Block K) still needs to run this against the real browser app.",
-        "'other existing campaigns' (only Greyholm + Caldran exist locally; no third campaign found in this repo to migrate).",
-        "arcs/capabilities/settings are not yet part of what gets migrated (adapters already carry defaultCapabilities(true) but arc-scoping of content is not verified end to end)."
-      ],
-      "commits": [
-        "2ae17ac",
-        "591166d"
-      ]
+      "stillMissing": ["run against the real browser/localStorage repository (not just in-memory) -- that's Block K's job", "no third campaign exists locally to prove 'other campaigns' beyond Greyholm+Caldran"]
     },
     {
       "block": "C: referential integrity",
-      "commits": [
-        "1beee17",
-        "0c7fde3"
-      ],
+      "commits": ["1beee17", "0c7fde3"],
       "status": "PARTIAL_IMPROVED",
-      "file": "rebuild-reports/final-cutover/REFERENTIAL_INTEGRITY_REPORT.json",
-      "covers": "20 Greyholm + 9 Caldran statically-checkable relations (14+6 from the first pass, +6 from GREYHOLM_RUNTIME_SHAPE.json), 0 broken, 34 correctly-classified typed orphans",
-      "stillMissing": "placement->entity (Greyholm has none by design), battle->*, zone->faction, arc->entity, presentedCard->entity, observerFocus->entity -- all localStorage/runtime-only, need a live browser read to close."
+      "stillMissing": "battle->*, zone->faction, arc->entity, presentedCard->entity, observerFocus->entity -- all runtime-only, need a live browser read"
     },
     {
       "block": "D: campaign capabilities",
-      "commit": "1beee17",
-      "status": "DOMAIN_CONTRACT_DONE_UI_NOT_STARTED",
-      "done": "UNIVERSAL_CAPABILITY_KEYS covers the full task-named set (additive).",
-      "notDone": [
-        "No UI surface (DM Edit / Settings) to view/toggle capabilities.",
-        "No persisted per-campaign capabilities record distinct from the hardcoded defaultCapabilities(true).",
-        "No command-layer enforcement gating a command on its capability being enabled."
+      "commit": "f385052",
+      "status": "IMPLEMENTED_AND_BROWSER_VERIFIED",
+      "evidence": "Persisted CapabilityToggles on both Greyholm overlay and UserCampaignData, shared CapabilitiesPanel UI at /settings and /campaigns/:id/settings, NavRail hides gated links, RequireCapability/UserCampaignRequireCapability route guards reject direct URLs to a disabled module. Browser-verified live for Greyholm economy AND a real Caldran one-shot's battleMaps: toggle off -> nav+route gone, survives reload, data untouched, toggle back on -> restored, cross-campaign isolation confirmed, no console errors.",
+      "stillMissing": [
+        "Only 2 of 26 capability keys (economy, battleMaps) are actually wired to a nav item or route guard -- the rest of UNIVERSAL_CAPABILITY_KEYS exist in the toggle UI and persist correctly but don't yet gate anything (arcs, atlas, maps, locations, placements, party, routes, timeline, calendar, events, triggers, npc, quests, enemies, factions, images, zones, overlays, movableEntities, playerView, observer, importExport).",
+        "No command-layer rejection for a mutating action reachable without navigating through a gated route (e.g. a button on an already-open page).",
+        "No automated Node harness for capability toggle/enforce -- only live-browser-verified."
+      ]
+    },
+    {
+      "block": "E: universal arcs",
+      "commit": "7c5ee20",
+      "status": "CREATE_AND_SAFE_DELETE_DONE_BROWSER_VERIFIED",
+      "discovery": "Greyholm arcs already existed end-to-end under the name `Timeline` (src/types.ts) BEFORE this session: switch (SET_TIMELINE), the header segmented control (already generic over data.timelines), reveal-to-players, reload persistence. Only CREATE (dead `addTimeline`/ADD_TIMELINE action, zero UI callers) and DELETE (didn't exist at all) were missing.",
+      "evidence": "Added DELETE_TIMELINE (only removes a DM-created arc, only if unreferenced by any locationState/hotspot/worldMapState -- structurally can never touch arc-1/arc-2) + a '+ Арка' create button and per-arc '×' delete button in NavBar.tsx. Browser-verified: created an arc, appeared immediately, no crash on empty content, persisted, survived reload, deleted cleanly, no console errors, seed arcs never show a delete control.",
+      "stillMissing": [
+        "reorder (no order-editing UI)",
+        "archive (soft-disable) as distinct from hard delete",
+        "direct URL with an arcId query/path param (currently only in-app switching)",
+        "arc-specific vs shared vs campaign-wide SCOPE is implicit (an entity's own timelineId field) but there is no UI to declare/change an entity's scope, and 'shared between arcs' has no representation at all",
+        "Caldran/user campaigns have NO arc/Timeline-equivalent concept whatsoever -- UserCampaignData has no field for it. This needs a design decision (add a parallel Timeline-like array to UserCampaignData + wire the same CRUD, or explicitly document single-arc-by-design as an intentional difference) before it can be called done for 'any new campaign'."
       ]
     }
   ],
   "currentBlock": null,
   "nextConcreteStep": {
-    "description": "Block D UI: add a capabilities record to src/types/userCampaign.ts (UC) and a Greyholm-equivalent persisted overlay slot, a new command (not raw store mutation) to read/write it, a minimal Settings panel component with checkboxes gated by capabilityEnabled(), gate 1-2 nav links on it as proof, then a small Node harness proving toggle-off hides UI without deleting data. This is the first remaining block requiring real React component work + a live browser check, not pure data/script work like the blocks just closed.",
-    "targetFiles": [
-      "src/types/userCampaign.ts",
-      "src/state/campaignStore.tsx (Greyholm capabilities slot)",
-      "a new src/features/settings/ or src/pages/SettingsPage.tsx",
-      "src/App.tsx (route + nav gating)"
-    ]
+    "description": "Two independent options, pick based on what's more valuable to close first: (1) Wire the remaining ~24 capability keys to their actual nav items/routes (Block D finish) -- mechanical, low-risk, follows the exact pattern already proven for economy/battleMaps in NavRail.tsx + App.tsx. (2) Decide and implement the UC-side arc story (Block E finish) -- either port Timeline to UserCampaignData or explicitly document Caldran/new-campaigns as intentionally single-arc in FINAL_FUNCTIONAL_PARITY_REPORT.md as INTENTIONALLY_IMPROVED/architecture-appropriate rather than MISSING.",
+    "recommendedOrder": "(1) first -- it's the same mechanical pattern repeated ~24 times with no design ambiguity, highest confidence-per-minute. Then (2), which needs a real design call. After both, move to Block F (functional parity matrix) which can now cite D and E as PARITY_CONFIRMED/INTENTIONALLY_IMPROVED with real evidence instead of starting from nothing."
   },
   "remainingBlocks": [
-    "D (finish): capabilities UI + command-layer enforcement",
-    "E: universal arcs (create/edit/reorder/archive/delete/direct URL/scope)",
-    "F: full functional parity matrix across campaign mgmt/maps/content/timeline/economy/battles",
-    "G: unified workspace (shared components across Greyholm/Caldran/new campaign)",
-    "H: view modes + multi-window isolation (DM View/DM Edit/Player View/Observer, 3 real tabs)",
+    "D (finish): wire remaining capability keys to nav/routes; command-layer enforcement for non-route-gated actions",
+    "E (finish): reorder, archive, direct URL, scope UI, UC-side arc decision",
+    "F: full functional parity matrix (FINAL_FUNCTIONAL_PARITY_REPORT.md) across campaign mgmt/maps/content/timeline/economy/battles",
+    "G: unified workspace (shared components across Greyholm/Caldran/new campaign) -- NOTE: view mode (`mode`/`dm-view`|`dm-edit`|`player-view`) is currently a single shared overlay field, NOT tab-scoped; this is a real, load-bearing finding for Block H, discovered this session",
+    "H: view modes + multi-window isolation (DM View/DM Edit/Player View/Observer, 3 real tabs) -- requires making view mode tab/session-scoped first (see G note)",
     "I: new empty campaign proof via UI, then cleanup or fixture-mark",
     "J: import/export round-trip parity (Greyholm, Caldran, new campaign)",
     "K: universal source-of-truth cutover (run the proven migration engine against the REAL browser/localStorage repository, then eliminate active legacy write paths)",
@@ -111,5 +90,5 @@
   "knownFailures": [],
   "externalBlockers": [],
   "honestVerdict": "UNIVERSAL_LOCAL_REBUILD_INCOMPLETE",
-  "note": "This checkpoint exists per the task's own 'Допустимое управление объёмом' protocol -- not a request for permission to continue. Work resumes at nextConcreteStep without re-running the full Stage 4-18 audit. No external blocker exists; remaining blocks are real engineering volume (React UI work + live multi-tab browser verification), not a missing dependency or unreachable resource."
+  "note": "Checkpoint per the task's own 'Допустимое управление объёмом' protocol -- not a request for permission to continue. No external blocker exists. A real architectural finding this session: view mode is currently GLOBAL/shared overlay state, not tab-scoped, which Block H will need to fix before multi-tab isolation can be proven; flagged here so the next pass doesn't have to rediscover it."
 }

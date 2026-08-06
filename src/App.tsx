@@ -102,6 +102,17 @@ function UserCampaignRequireCapability({ capability, children }: { capability: U
   return children;
 }
 
+/** Block D: which capability gates each `/campaigns/:id/library/:kind` page.
+ * A kind with no entry here (e.g. 'notes') is not yet capability-gated. */
+const LIBRARY_KIND_CAPABILITY: Record<string, UniversalCapabilityKey> = {
+  locations: 'locations',
+  npc: 'npc',
+  quests: 'quests',
+  enemies: 'enemies',
+  factions: 'factions',
+  images: 'images',
+};
+
 function UserCampaignLibraryRoute({ children }: { children: ReactElement }) {
   const { campaignId, kind } = useParams<{ campaignId: string; kind: string }>();
   const location = useLocation();
@@ -114,7 +125,9 @@ function UserCampaignLibraryRoute({ children }: { children: ReactElement }) {
   if (observer && !canPlayerOpenCampaignPath(kind)) return <Navigate to={`/campaigns/${campaignId ?? ''}/map?as=player&observer=1`} replace />;
   if (observer && params.get('as') !== 'player') return <Navigate to={`${location.pathname}?as=player&observer=1`} replace />;
   if (asPlayer) return children;
-  return <DmOnlyRoute>{children}</DmOnlyRoute>;
+  const capability = kind ? LIBRARY_KIND_CAPABILITY[kind] : undefined;
+  const gated = capability ? <UserCampaignRequireCapability capability={capability}>{children}</UserCampaignRequireCapability> : children;
+  return <DmOnlyRoute>{gated}</DmOnlyRoute>;
 }
 
 function UserCampaignPlayerCapableRoute({ children }: { children: ReactElement }) {
@@ -174,18 +187,18 @@ function AppShell() {
             <Route path="/location/:id" element={<LocationRedirect />} />
             <Route path="/visibility" element={<DmOnlyRoute><PlayerVisibilityPage /></DmOnlyRoute>} />
             <Route path="/settings" element={<DmOnlyRoute><SettingsPage /></DmOnlyRoute>} />
-            <Route path="/quests" element={<DmOnlyRoute><EntityLibraryPage kind="quests" /></DmOnlyRoute>} />
-            <Route path="/npc" element={<DmOnlyRoute><EntityLibraryPage kind="npc" /></DmOnlyRoute>} />
-            <Route path="/enemies" element={<DmOnlyRoute><EntityLibraryPage kind="enemies" /></DmOnlyRoute>} />
-            <Route path="/bestiary" element={<DmOnlyRoute><EntityLibraryPage kind="bestiary" /></DmOnlyRoute>} />
-            <Route path="/players" element={<DmOnlyRoute><EntityLibraryPage kind="players" /></DmOnlyRoute>} />
+            <Route path="/quests" element={<DmOnlyRoute><RequireCapability capability="quests"><EntityLibraryPage kind="quests" /></RequireCapability></DmOnlyRoute>} />
+            <Route path="/npc" element={<DmOnlyRoute><RequireCapability capability="npc"><EntityLibraryPage kind="npc" /></RequireCapability></DmOnlyRoute>} />
+            <Route path="/enemies" element={<DmOnlyRoute><RequireCapability capability="enemies"><EntityLibraryPage kind="enemies" /></RequireCapability></DmOnlyRoute>} />
+            <Route path="/bestiary" element={<DmOnlyRoute><RequireCapability capability="enemies"><EntityLibraryPage kind="bestiary" /></RequireCapability></DmOnlyRoute>} />
+            <Route path="/players" element={<DmOnlyRoute><RequireCapability capability="party"><EntityLibraryPage kind="players" /></RequireCapability></DmOnlyRoute>} />
             <Route path="/economy" element={<DmOnlyRoute><RequireCapability capability="economy"><EconomyPage /></RequireCapability></DmOnlyRoute>} />
             <Route path="/services" element={<DmOnlyRoute><RequireCapability capability="economy"><ServicesPage /></RequireCapability></DmOnlyRoute>} />
             <Route path="/shops" element={<DmOnlyRoute><RequireCapability capability="economy"><ServicesPage initialKind="shop" /></RequireCapability></DmOnlyRoute>} />
             <Route path="/taverns" element={<DmOnlyRoute><RequireCapability capability="economy"><ServicesPage initialKind="tavern" /></RequireCapability></DmOnlyRoute>} />
-            <Route path="/images" element={<DmOnlyRoute><ImagesPage /></DmOnlyRoute>} />
-            <Route path="/battle-maps" element={<DmOnlyRoute><EntityLibraryPage kind="battleMaps" /></DmOnlyRoute>} />
-            <Route path="/factions" element={<DmOnlyRoute><EntityLibraryPage kind="factions" /></DmOnlyRoute>} />
+            <Route path="/images" element={<DmOnlyRoute><RequireCapability capability="images"><ImagesPage /></RequireCapability></DmOnlyRoute>} />
+            <Route path="/battle-maps" element={<DmOnlyRoute><RequireCapability capability="battleMaps"><EntityLibraryPage kind="battleMaps" /></RequireCapability></DmOnlyRoute>} />
+            <Route path="/factions" element={<DmOnlyRoute><RequireCapability capability="factions"><EntityLibraryPage kind="factions" /></RequireCapability></DmOnlyRoute>} />
             {/* New-location creation + the prefill/needs-review report still live here
                until they're migrated into the Map Workspace side panel. */}
             <Route path="/admin" element={<DmOnlyRoute><HomePage /></DmOnlyRoute>} />
@@ -204,7 +217,7 @@ function AppShell() {
             <Route path="/campaigns/:campaignId/map" element={<UserCampaignPlayerCapableRoute><IsolatedCampaignMapWorkspace /></UserCampaignPlayerCapableRoute>} />
             <Route path="/campaigns/:campaignId/library/battle-maps" element={<UserCampaignDmRoute><UserCampaignRequireCapability capability="battleMaps"><CampaignBattleMapsPage /></UserCampaignRequireCapability></UserCampaignDmRoute>} />
             <Route path="/campaigns/:campaignId/settings" element={<UserCampaignDmRoute><CampaignSettingsPage /></UserCampaignDmRoute>} />
-            <Route path="/campaigns/:campaignId/library/bestiary" element={<UserCampaignDmRoute><CampaignBestiaryPage /></UserCampaignDmRoute>} />
+            <Route path="/campaigns/:campaignId/library/bestiary" element={<UserCampaignDmRoute><UserCampaignRequireCapability capability="enemies"><CampaignBestiaryPage /></UserCampaignRequireCapability></UserCampaignDmRoute>} />
             <Route path="/campaigns/:campaignId/library/:kind" element={<UserCampaignLibraryRoute><CampaignLibraryPage /></UserCampaignLibraryRoute>} />
             <Route path="/campaigns/:campaignId/battle/:mapId" element={<UserCampaignPlayerCapableRoute><CampaignBattlePage /></UserCampaignPlayerCapableRoute>} />
             <Route path="/campaigns/:campaignId" element={<UserCampaignDmRoute><CampaignEntryRedirect /></UserCampaignDmRoute>} />
