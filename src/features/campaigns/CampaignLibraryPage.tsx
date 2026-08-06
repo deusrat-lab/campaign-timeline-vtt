@@ -12,10 +12,8 @@ import { RichEntityLibrary } from '../../shared/entity/RichEntityLibrary';
 import { buildListItems, buildDetail, type LibraryKind } from '../../shared/entity/userCampaignEntityVM';
 import type { EntityKind, FilterConfig } from '../../shared/entity/types';
 import { isEntityPlayerVisible, playerSafeImageSrc } from './playerSafe';
-import { UserCampaignUniversalSections } from '../universal-sections/UserCampaignUniversalSections';
 import { UserCampaignWorkspace } from '../campaign-workspace/UserCampaignWorkspace';
 import type { CampaignWorkspaceAudience } from '../../domain';
-import { isSharedWorkspaceEnabledForKind } from '../../config';
 
 type Kind = LibraryKind | 'images' | 'notes';
 
@@ -309,31 +307,23 @@ export function CampaignLibraryPage() {
 
   const workspaceAudience: CampaignWorkspaceAudience = observer ? 'observer' : asPlayer ? 'player' : 'dm';
 
-  // Stage 12 — when the default-off shared-workspace flag is on for user
-  // campaigns, compose the SAME header + Stage 11 read-only sections + legacy
-  // body through the shared workspace shell + descriptor. When off, render the
-  // exact pre-Stage-12 baseline composition with no DOM change. Strict
-  // campaignId isolation — the shell requires a real campaign id (no Greyholm
-  // fallback). All legacy write handlers inside `legacyBody` are untouched.
+  // Block G — the Stage 12 shared workspace composition (header + Stage 11
+  // read-only sections + legacy body through the ONE shell + descriptor both
+  // stacks use) is now the unconditional active rendering, not a flag-gated
+  // alternative. Strict campaignId isolation is unchanged — the shell requires
+  // a real campaign id (no Greyholm fallback). Legacy write handlers inside
+  // `legacyBody` are untouched.
   return (
     <div className="ucw-lib-page entity-library-page--wide">
-      {isSharedWorkspaceEnabledForKind('userCampaign') ? (
-        <UserCampaignWorkspace
-          legacyCampaignId={campaignId}
-          title={data.title}
-          kind={k}
-          activeRoute={`/campaigns/${campaignId}/library/${k}`}
-          audience={workspaceAudience}
-          legacyHeader={legacyHeader}
-          legacyBody={legacyBody}
-        />
-      ) : (
-        <>
-          {legacyHeader}
-          <UserCampaignUniversalSections legacyCampaignId={campaignId} isPlayer={asPlayer || isPlayer} />
-          {legacyBody}
-        </>
-      )}
+      <UserCampaignWorkspace
+        legacyCampaignId={campaignId}
+        title={data.title}
+        kind={k}
+        activeRoute={`/campaigns/${campaignId}/library/${k}`}
+        audience={workspaceAudience}
+        legacyHeader={legacyHeader}
+        legacyBody={legacyBody}
+      />
     </div>
   );
 }

@@ -345,9 +345,16 @@ function sourceSafety() {
   // 53. sections only ever read the Stage 9 shadow namespace (via the read-path provider).
   checks.ok('safe-53 read gateway reads shadow namespace', /STAGE_09_SHADOW_NAMESPACE/.test(readSrc('src/features/read-path/ReadPathProvider.tsx')));
   // 54. sections are mounted ONLY in the two real pages + diagnostics (no leak elsewhere).
+  // Block G: the two pages now compose Stage 11 sections THROUGH the shared
+  // Stage 12 workspace (GreyholmWorkspace/UserCampaignWorkspace), which
+  // internally renders the same UniversalSection scopes the standalone
+  // GreyholmUniversalSections/UserCampaignUniversalSections components used
+  // to render directly -- see GreyholmWorkspace.tsx/UserCampaignWorkspace.tsx
+  // readSlots. Assert the new composition point instead of the superseded
+  // standalone component names.
   const consumers = ['src/pages/EntityLibraryPage.tsx', 'src/features/campaigns/CampaignLibraryPage.tsx'];
-  checks.ok('safe-54 EntityLibrary mounts Greyholm sections', /GreyholmUniversalSections/.test(readSrc(consumers[0])));
-  checks.ok('safe-55 CampaignLibrary mounts UC sections', /UserCampaignUniversalSections/.test(readSrc(consumers[1])));
+  checks.ok('safe-54 EntityLibrary mounts Greyholm sections (via GreyholmWorkspace)', /GreyholmWorkspace/.test(readSrc(consumers[0])));
+  checks.ok('safe-55 CampaignLibrary mounts UC sections (via UserCampaignWorkspace)', /UserCampaignWorkspace/.test(readSrc(consumers[1])));
   // 56. Stage 10 diag-62 stays green: the modified pages do NOT reference the read-path dir/identifiers.
   checks.ok('safe-56 EntityLibrary does not import read-path (Stage 10 diag-62)', !/useUniversalRead|PilotCard|read-path/.test(readSrc(consumers[0])));
   // 57. the write path in the host pages is untouched by the section (section carries no handlers).

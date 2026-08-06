@@ -41,6 +41,8 @@ import { DurableAuthorityProvider } from './features/durable-authority/DurableAu
 import { ComplexAuthorityProvider } from './features/complex-authority/ComplexAuthorityProvider';
 import { MainCampaignShadowBridge } from './features/shadow-integration/MainCampaignShadowBridge';
 import { UserCampaignShadowBridge } from './features/shadow-integration/UserCampaignShadowBridge';
+import { GreyholmWorkspace } from './features/campaign-workspace/GreyholmWorkspace';
+import { UserCampaignWorkspace } from './features/campaign-workspace/UserCampaignWorkspace';
 
 /** Legacy /location/:id deep links now resolve inside the Map Workspace instead of a standalone page. */
 function LocationRedirect() {
@@ -145,7 +147,92 @@ function PlayerWorkspaceRoute() {
     // mode is intentionally local to this tab; campaignStore does not persist it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  return <MapWorkspacePage />;
+  return (
+    <GreyholmWorkspace
+      activeRoute="/map"
+      audience="player"
+      bodyModuleId="map.workspace"
+      legacyHeader={<></>}
+      legacyBody={<MapWorkspacePage />}
+    />
+  );
+}
+
+/**
+ * Block G — Greyholm's Maps route (which also hosts the embedded battle
+ * overlay -- Greyholm has no separate battle route, see EmbeddedBattleOverlay
+ * mounted conditionally inside MapWorkspacePage) now mounts through the same
+ * GreyholmWorkspace shell EntityLibraryPage already uses. MapWorkspacePage's
+ * own internal toolbar/header is untouched (passed whole as legacyBody); the
+ * shell's default title line is the only thing layered above it. Audience is
+ * derived from the store's own mode (DM/player), NOT hardcoded 'dm' -- unlike
+ * the DM-only content routes, /map serves both.
+ */
+function GreyholmMapRoute() {
+  const store = useCampaignStore();
+  const audience: 'dm' | 'player' = store.mode === 'player-view' ? 'player' : 'dm';
+  return (
+    <GreyholmWorkspace
+      activeRoute="/map"
+      audience={audience}
+      bodyModuleId="map.workspace"
+      legacyHeader={<></>}
+      legacyBody={<MapWorkspacePage />}
+    />
+  );
+}
+
+/**
+ * Block G — Caldran's Maps and Battle routes now mount through the same
+ * UserCampaignWorkspace shell CampaignLibraryPage already uses. Audience is
+ * derived from the route the same way the existing pages already compute it
+ * (as=player / observer=1 query params), so Player View / Observer framing
+ * is unchanged.
+ */
+function CaldranMapRoute() {
+  const { campaignId } = useParams<{ campaignId: string }>();
+  const location = useLocation();
+  const store = useUserCampaigns();
+  const data = campaignId ? store.getData(campaignId) : null;
+  const params = new URLSearchParams(location.search);
+  const observer = params.get('observer') === '1';
+  const asPlayer = params.get('as') === 'player' || observer;
+  const audience: 'dm' | 'player' | 'observer' = observer ? 'observer' : asPlayer ? 'player' : 'dm';
+  return (
+    <UserCampaignWorkspace
+      legacyCampaignId={campaignId}
+      title={data?.title ?? ''}
+      kind="map"
+      activeRoute={`/campaigns/${campaignId ?? ''}/map`}
+      audience={audience}
+      bodyModuleId="map.workspace"
+      legacyHeader={<></>}
+      legacyBody={<IsolatedCampaignMapWorkspace />}
+    />
+  );
+}
+
+function CaldranBattleRoute() {
+  const { campaignId } = useParams<{ campaignId: string; mapId: string }>();
+  const location = useLocation();
+  const store = useUserCampaigns();
+  const data = campaignId ? store.getData(campaignId) : null;
+  const params = new URLSearchParams(location.search);
+  const observer = params.get('observer') === '1';
+  const asPlayer = params.get('as') === 'player' || observer;
+  const audience: 'dm' | 'player' | 'observer' = observer ? 'observer' : asPlayer ? 'player' : 'dm';
+  return (
+    <UserCampaignWorkspace
+      legacyCampaignId={campaignId}
+      title={data?.title ?? ''}
+      kind="battle"
+      activeRoute={`/campaigns/${campaignId ?? ''}/battle`}
+      audience={audience}
+      bodyModuleId="battle.board"
+      legacyHeader={<></>}
+      legacyBody={<CampaignBattlePage />}
+    />
+  );
 }
 
 /** /observer opens the same usable workspace in Player View. */
@@ -182,7 +269,7 @@ function AppShell() {
             <Route path="/" element={<DmOnlyRoute><WorldHomePage /></DmOnlyRoute>} />
             <Route path="/home" element={<DmOnlyRoute><WorldHomePage /></DmOnlyRoute>} />
             <Route path="/world-home" element={<DmOnlyRoute><WorldHomePage /></DmOnlyRoute>} />
-            <Route path="/map" element={<MapWorkspacePage />} />
+            <Route path="/map" element={<GreyholmMapRoute />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/location/:id" element={<LocationRedirect />} />
             <Route path="/visibility" element={<DmOnlyRoute><PlayerVisibilityPage /></DmOnlyRoute>} />
@@ -214,12 +301,12 @@ function AppShell() {
             <Route path="/diagnostics/read-path" element={<DmOnlyRoute><ReadPathDiagnosticsPage /></DmOnlyRoute>} />
             <Route path="/campaigns" element={<DmOnlyRoute><CampaignsPage /></DmOnlyRoute>} />
             <Route path="/campaigns/new" element={<DmOnlyRoute><NewCampaignWizard /></DmOnlyRoute>} />
-            <Route path="/campaigns/:campaignId/map" element={<UserCampaignPlayerCapableRoute><IsolatedCampaignMapWorkspace /></UserCampaignPlayerCapableRoute>} />
+            <Route path="/campaigns/:campaignId/map" element={<UserCampaignPlayerCapableRoute><CaldranMapRoute /></UserCampaignPlayerCapableRoute>} />
             <Route path="/campaigns/:campaignId/library/battle-maps" element={<UserCampaignDmRoute><UserCampaignRequireCapability capability="battleMaps"><CampaignBattleMapsPage /></UserCampaignRequireCapability></UserCampaignDmRoute>} />
             <Route path="/campaigns/:campaignId/settings" element={<UserCampaignDmRoute><CampaignSettingsPage /></UserCampaignDmRoute>} />
             <Route path="/campaigns/:campaignId/library/bestiary" element={<UserCampaignDmRoute><UserCampaignRequireCapability capability="enemies"><CampaignBestiaryPage /></UserCampaignRequireCapability></UserCampaignDmRoute>} />
             <Route path="/campaigns/:campaignId/library/:kind" element={<UserCampaignLibraryRoute><CampaignLibraryPage /></UserCampaignLibraryRoute>} />
-            <Route path="/campaigns/:campaignId/battle/:mapId" element={<UserCampaignPlayerCapableRoute><CampaignBattlePage /></UserCampaignPlayerCapableRoute>} />
+            <Route path="/campaigns/:campaignId/battle/:mapId" element={<UserCampaignPlayerCapableRoute><CaldranBattleRoute /></UserCampaignPlayerCapableRoute>} />
             <Route path="/campaigns/:campaignId" element={<UserCampaignDmRoute><CampaignEntryRedirect /></UserCampaignDmRoute>} />
           </Routes>
         </main>

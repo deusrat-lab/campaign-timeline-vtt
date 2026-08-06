@@ -13,9 +13,7 @@ import { CompanionQuestCard } from '../features/embedded-dm-companion/CompanionQ
 import { CompanionShopCard } from '../features/embedded-dm-companion/CompanionShopCard';
 import { BATTLE_MAP_ASSET_ORIGIN } from '../config';
 import type { BattleMapManifestEntry } from '../data/battleMapManifest';
-import { GreyholmUniversalSections } from '../features/universal-sections/GreyholmUniversalSections';
 import { GreyholmWorkspace } from '../features/campaign-workspace/GreyholmWorkspace';
-import { isSharedWorkspaceEnabledForKind } from '../config';
 import { runContentDeletePolicy, type BlockingRelation } from '../shared/entity/contentDeletePolicy';
 import { DELETED } from '../state/overlay';
 
@@ -952,26 +950,17 @@ export function EntityLibraryPage({ kind }: { kind: EntityLibraryKind }) {
     </>
   );
 
-  // Stage 12 — when the default-off shared-workspace flag is on for Greyholm,
-  // compose the SAME header + Stage 11 read-only sections + legacy body through
-  // the shared workspace shell + descriptor. When off, render the exact
-  // pre-Stage-12 baseline composition (header, sections band, body) with no DOM
-  // change. The legacy write path inside `legacyBody` is untouched either way.
+  // Block G — the Stage 12 shared workspace composition (header + Stage 11
+  // read-only sections + legacy body through the ONE shell + descriptor both
+  // stacks use) is now the unconditional active rendering, not a flag-gated
+  // alternative. The legacy write path inside `legacyBody` is untouched.
   return (
     <div className="page entity-library-page">
-      {isSharedWorkspaceEnabledForKind('greyholm') ? (
-        <GreyholmWorkspace
-          activeRoute={GREYHOLM_ROUTE_BY_KIND[kind]}
-          legacyHeader={legacyHeader}
-          legacyBody={legacyBody}
-        />
-      ) : (
-        <>
-          {legacyHeader}
-          <GreyholmUniversalSections />
-          {legacyBody}
-        </>
-      )}
+      <GreyholmWorkspace
+        activeRoute={GREYHOLM_ROUTE_BY_KIND[kind]}
+        legacyHeader={legacyHeader}
+        legacyBody={legacyBody}
+      />
     </div>
   );
 }

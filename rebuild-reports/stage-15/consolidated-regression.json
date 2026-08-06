@@ -1,97 +1,97 @@
 {
   "verdict": "UNIVERSAL_REGRESSION_PASS",
-  "ranAt": "2026-08-06T18:31:24.004Z",
+  "ranAt": "2026-08-06T19:09:38.135Z",
   "total": 15,
   "failed": 0,
   "results": [
     {
       "gate": "verify:stage08",
       "ok": true,
-      "ms": 2034,
+      "ms": 2048,
       "tail": "Negative fixtures: 18/18 behaving as expected"
     },
     {
       "gate": "verify:stage08d",
       "ok": true,
-      "ms": 2374,
+      "ms": 2314,
       "tail": "Real overlay ingested: true (valid=true)"
     },
     {
       "gate": "verify:stage09",
       "ok": true,
-      "ms": 2579,
+      "ms": 2631,
       "tail": "Stage 9 harness: 44/44 PASS -> STAGE_09_HARNESS_PASS"
     },
     {
       "gate": "verify:stage10",
       "ok": true,
-      "ms": 2190,
+      "ms": 2203,
       "tail": "Stage 10 harness: 74/74 PASS -> STAGE_10_HARNESS_PASS"
     },
     {
       "gate": "verify:stage11",
       "ok": true,
-      "ms": 2272,
+      "ms": 2231,
       "tail": "Stage 11 harness: 72/72 PASS -> STAGE_11_HARNESS_PASS"
     },
     {
       "gate": "verify:stage12",
       "ok": true,
-      "ms": 1669,
+      "ms": 1633,
       "tail": "Stage 12 harness: 97/97 PASS -> STAGE_12_HARNESS_PASS"
     },
     {
       "gate": "verify:stage13",
       "ok": true,
-      "ms": 2264,
+      "ms": 1984,
       "tail": "Stage 13 harness: 93/93 PASS -> STAGE_13_HARNESS_PASS"
     },
     {
       "gate": "verify:stage14",
       "ok": true,
-      "ms": 1967,
+      "ms": 1987,
       "tail": "Stage 14 harness: 120/120 PASS -> STAGE_14_HARNESS_PASS"
     },
     {
       "gate": "verify:stage15",
       "ok": true,
-      "ms": 3736,
+      "ms": 3691,
       "tail": "Stage 15 harness: 268/268 PASS -> STAGE_15_HARNESS_PASS"
     },
     {
       "gate": "verify:stage16",
       "ok": true,
-      "ms": 2343,
+      "ms": 2342,
       "tail": "Stage 16 harness: 405/405 PASS -> STAGE_16_HARNESS_PASS"
     },
     {
       "gate": "verify:stage16-1",
       "ok": true,
-      "ms": 2141,
+      "ms": 2098,
       "tail": "Stage 16.1 integration harness: 149/149 PASS -> STAGE_16_1_HARNESS_PASS"
     },
     {
       "gate": "verify:stage17",
       "ok": true,
-      "ms": 2182,
+      "ms": 1909,
       "tail": "Stage 17 harness: 384/384 PASS -> STAGE_17_HARNESS_PASS"
     },
     {
       "gate": "verify:stage06",
       "ok": true,
-      "ms": 2380,
+      "ms": 1746,
       "tail": "{\"ok\":true,\"verdict\":\"PASS\",\"checks\":[{\"name\":\"repository behavioral test compiles\",\"ok\":true},{\"name\":\"repository behavioral cases pass\",\"ok\":true,\"output\":\"{\\\"ok\\\":true,\\\"cases\\\":15}\"},{\"name\":\"revision contract exposes expected/current/new revisions\",\"ok\":true},{\"name\":\"conflicts use CONFLICT code\",\"ok\":true},{\"name\":\"shadow namespace does not use legacy overlay keys\",\"ok\":true},{\"name\":\"production repository exists without UI switch\",\"ok\":true}],\"failed\":[]}"
     },
     {
       "gate": "verify:stage07",
       "ok": true,
-      "ms": 2222,
+      "ms": 2054,
       "tail": "{\"ok\":true,\"verdict\":\"PASS\",\"checks\":[{\"name\":\"migration behavioral test compiles\",\"ok\":true},{\"name\":\"migration behavioral cases pass\",\"ok\":true,\"output\":\"{\\\"ok\\\":true,\\\"cases\\\":11}\"},{\"name\":\"migration engine requires explicit target campaign id\",\"ok\":true},{\"name\":\"migration engine supports dry-run and commit\",\"ok\":true},{\"name\":\"migration engine validates read-back\",\"ok\":true},{\"name\":\"migration engine supports rollback\",\"ok\":true},{\"name\":\"universal store exposes required state buckets\",\"ok\":true},{\"name\":\"campaign-scoped commands exist\",\"ok\":true},{\"name\":\"commands enforce campaign scope\",\"ok\":true},{\"name\":\"campaign switch clears selected entity\",\"ok\":true}],\"failed\":[]}"
     },
     {
       "gate": "verify:stage05",
       "ok": true,
-      "ms": 198,
+      "ms": 202,
       "tail": "{\"ok\":true,\"verdict\":\"PASS\",\"checks\":[{\"name\":\"pure projection has no React dependency\",\"ok\":true},{\"name\":\"pure projection has no storage or network side effects\",\"ok\":true},{\"name\":\"DM workspace projection exists\",\"ok\":true},{\"name\":\"map projection exists\",\"ok\":true},{\"name\":\"entity card projection exists\",\"ok\":true},{\"name\":\"timeline projection exists\",\"ok\":true},{\"name\":\"travel projection exists\",\"ok\":true},{\"name\":\"battle projection exists\",\"ok\":true},{\"name\":\"player-safe projection exists\",\"ok\":true},{\"name\":\"observer projection exists\",\"ok\":true},{\"name\":\"player-safe projection does not expose DM-only notes\",\"ok\":true},{\"name\":\"diagnostics feature flag is present\",\"ok\":true},{\"name\":\"diagnostics route is guarded as DM-only\",\"ok\":true},{\"name\":\"diagnostics page uses real main adapter and direct projections\",\"ok\":true},{\"name\":\"diagnostics page is read-only\",\"ok\":true}],\"failed\":[]}"
     }
   ]

@@ -37,6 +37,7 @@ export function UserCampaignWorkspace({
   audience,
   legacyHeader,
   legacyBody,
+  bodyModuleId = 'library.body',
 }: {
   legacyCampaignId: string | undefined;
   title: string;
@@ -45,6 +46,9 @@ export function UserCampaignWorkspace({
   audience: CampaignWorkspaceAudience;
   legacyHeader: ReactNode;
   legacyBody: ReactNode;
+  /** Block G — 'library.body' for Content pages, 'map.workspace' / 'battle.board'
+   * for Maps/Battle callers, so registry classification/labels stay accurate. */
+  bodyModuleId?: WorkspaceModuleId;
 }) {
   const store = useUserCampaigns();
 
@@ -74,14 +78,14 @@ export function UserCampaignWorkspace({
       audience,
       activeRoute,
       navigationItems: buildUserCampaignNavigation(legacyCampaignId, kind, activeRoute, audience),
-      requestedModules: ['campaign.summary', 'library.playerSafe', 'observer.status', 'library.body'],
+      requestedModules: ['campaign.summary', 'library.playerSafe', 'observer.status', bodyModuleId],
       status: {
         hydrated: !!store.getData(legacyCampaignId ?? ''),
         usingLegacyFallback: !UNIVERSAL_READ_PATH_ENABLED || !legacySnapshot,
         note: null,
       },
     });
-  }, [legacyCampaignId, universalId, title, audience, activeRoute, kind, store, legacySnapshot]);
+  }, [legacyCampaignId, universalId, title, audience, activeRoute, kind, store, legacySnapshot, bodyModuleId]);
 
   if (!descriptor) {
     // No campaignId: reject the composition, render the legacy body alone.
@@ -121,7 +125,7 @@ export function UserCampaignWorkspace({
 
   const slotContent: Partial<Record<CampaignWorkspaceModuleSlot['moduleId'], ReactNode>> = {
     ...readSlots,
-    'library.body': legacyBody,
+    [bodyModuleId]: legacyBody,
   };
 
   return (

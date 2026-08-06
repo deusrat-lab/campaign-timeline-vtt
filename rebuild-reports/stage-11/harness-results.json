@@ -244,11 +244,11 @@
       "pass": true
     },
     {
-      "name": "safe-54 EntityLibrary mounts Greyholm sections",
+      "name": "safe-54 EntityLibrary mounts Greyholm sections (via GreyholmWorkspace)",
       "pass": true
     },
     {
-      "name": "safe-55 CampaignLibrary mounts UC sections",
+      "name": "safe-55 CampaignLibrary mounts UC sections (via UserCampaignWorkspace)",
       "pass": true
     },
     {
