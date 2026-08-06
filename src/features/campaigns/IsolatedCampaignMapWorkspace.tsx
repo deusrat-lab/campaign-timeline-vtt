@@ -307,7 +307,7 @@ export function IsolatedCampaignMapWorkspace() {
         if (route) store.updateRoute(campaignId, routeEditId, { points: [...route.points, pct] });
       } else if (zoneEditId) {
         const zone = data.zones.find((z) => z.id === zoneEditId);
-        if (zone) store.updateData(campaignId, (p) => ({ ...p, zones: p.zones.map((z) => (z.id === zoneEditId ? { ...z, points: [...z.points, pct] } : z)) }));
+        if (zone) store.updateZone(campaignId, zoneEditId, { points: [...zone.points, pct] });
       }
     } else {
       persistView(zoom, { x: d.startPan.x + (e.clientX - d.x), y: d.startPan.y + (e.clientY - d.y) });
@@ -353,7 +353,10 @@ export function IsolatedCampaignMapWorkspace() {
     try { el.setPointerCapture?.(e.pointerId); } catch { /* best-effort */ }
     const onMove = (ev: PointerEvent) => {
       const pct = clientToPct(ev.clientX, ev.clientY);
-      store.updateData(campaignId, (p) => ({ ...p, zones: p.zones.map((z) => (z.id === zoneId ? { ...z, points: z.points.map((pt, i) => (i === index ? pct : pt)) } : z)) }));
+      const zone = data.zones.find((z) => z.id === zoneId);
+      if (!zone) return;
+      const points = zone.points.map((pt, i) => (i === index ? pct : pt));
+      store.updateZone(campaignId, zoneId, { points });
     };
     const onUp = () => { el.releasePointerCapture?.(e.pointerId); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
     window.addEventListener('pointermove', onMove);
@@ -602,7 +605,7 @@ export function IsolatedCampaignMapWorkspace() {
                   {isEdit && zoneInEdit?.points.map((p, i) => (
                     <circle key={i} cx={p.x} cy={p.y} r={0.8} className="ucw-routept"
                       onPointerDown={(e) => startZonePointDrag(e, zoneInEdit.id, i)}
-                      onDoubleClick={(e) => { e.stopPropagation(); store.updateData(campaignId, (prev) => ({ ...prev, zones: prev.zones.map((zz) => (zz.id === zoneInEdit.id ? { ...zz, points: zz.points.filter((_, idx) => idx !== i) } : zz)) })); }} />
+                      onDoubleClick={(e) => { e.stopPropagation(); store.updateZone(campaignId, zoneInEdit.id, { points: zoneInEdit.points.filter((_, idx) => idx !== i) }); }} />
                   ))}
                 </svg>
               )}
@@ -805,8 +808,7 @@ function LibraryPanel(props: {
             style={{ width: '100%', marginTop: 6 }}
             onClick={() => {
               if (zoneEditId) { setZoneEditId(null); return; }
-              const zid = `zone-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-              store.updateData(campaignId, (p) => ({ ...p, zones: [...p.zones, { id: zid, title: `Зона ${p.zones.length + 1}`, mapId: runtime.activeMapId, points: [], color: 'var(--gold)', visibleToPlayers: false }] }));
+              const zid = store.addZone(campaignId, { title: `Зона ${data.zones.length + 1}`, mapId: runtime.activeMapId, points: [], color: 'var(--gold)', visibleToPlayers: false });
               setZoneEditId(zid);
             }}
           >
@@ -842,8 +844,8 @@ function LibraryPanel(props: {
               {isEdit && (
                 <div className="row-actions">
                   <button onClick={() => setZoneEditId(zoneEditId === z.id ? null : z.id)}>{zoneEditId === z.id ? 'Готово' : 'Точки'}</button>
-                  <button onClick={() => store.updateData(campaignId, (p) => ({ ...p, zones: p.zones.map((zz) => (zz.id === z.id ? { ...zz, visibleToPlayers: !zz.visibleToPlayers } : zz)) }))}>{z.visibleToPlayers ? '👁' : '🚫'}</button>
-                  <button onClick={() => { store.updateData(campaignId, (p) => ({ ...p, zones: p.zones.filter((zz) => zz.id !== z.id) })); if (zoneEditId === z.id) setZoneEditId(null); }}>✕</button>
+                  <button onClick={() => store.updateZone(campaignId, z.id, { visibleToPlayers: !z.visibleToPlayers })}>{z.visibleToPlayers ? '👁' : '🚫'}</button>
+                  <button onClick={() => { store.removeZone(campaignId, z.id); if (zoneEditId === z.id) setZoneEditId(null); }}>✕</button>
                 </div>
               )}
             </div>

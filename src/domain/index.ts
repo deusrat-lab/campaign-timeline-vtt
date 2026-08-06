@@ -41,4 +41,5 @@ export * from './visibility/revealAuthorityStore';
 export * from './party/partyPositionAuthorityStore';
 export * from './placements/mapPlacementAuthorityStore';
 export * from './routes/routeAuthorityStore';
+export * from './zones/zoneAuthorityStore';
 export * from './workspace/index';

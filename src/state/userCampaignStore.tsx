@@ -10,6 +10,7 @@ import type {
   CampaignQuest,
   CampaignEnemy,
   CampaignRoute,
+  CampaignZone,
   CampaignMapPlacement,
   CampaignEntityType,
   CampaignPlayer,
@@ -39,6 +40,8 @@ import {
   type MapPlacementSnapshotEntry,
   commitRoutes,
   type RouteSnapshotEntry,
+  commitZones,
+  type ZoneSnapshotEntry,
 } from '../domain';
 
 const UC_BACKUP_NS = 'campaign-timeline-vtt:uc-backup:v1';
@@ -300,6 +303,10 @@ interface UserCampaignValue {
   addRoute: (id: string, route: Omit<CampaignRoute, 'id'>) => string;
   updateRoute: (id: string, routeId: string, patch: Partial<CampaignRoute>) => void;
   removeRoute: (id: string, routeId: string) => void;
+
+  addZone: (id: string, zone: Omit<CampaignZone, 'id'>) => string;
+  updateZone: (id: string, zoneId: string, patch: Partial<CampaignZone>) => void;
+  removeZone: (id: string, zoneId: string) => void;
 
   exportCampaign: (id: string, includeRuntime: boolean) => string;
   importCampaign: (json: string) => string | null;
@@ -868,6 +875,40 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
       }
       const committed = outcome.routes as CampaignRoute[];
       patchData(id, (p) => ({ ...p, routes: committed }));
+    },
+
+    addZone: (id, zone) => {
+      const zid = uid('zone');
+      const full: CampaignZone = { ...zone, id: zid };
+      const pre = captureUc(id);
+      const candidate: ZoneSnapshotEntry[] = [...(pre.data?.zones ?? []), full];
+      const outcome = commitZones(ucFieldStorage(), campaignIdFromLegacy('user', id), 'userCampaign.zones', candidate);
+      if (!outcome.ok || !outcome.zones) {
+        throw new Error(`addZone: universal zones commit failed: ${outcome.error ?? 'unknown error'}`);
+      }
+      const committed = outcome.zones as CampaignZone[];
+      patchData(id, (p) => ({ ...p, zones: committed }));
+      return zid;
+    },
+    updateZone: (id, zoneId, patch) => {
+      const pre = captureUc(id);
+      const candidate: ZoneSnapshotEntry[] = (pre.data?.zones ?? []).map((z) => (z.id === zoneId ? { ...z, ...patch } : z));
+      const outcome = commitZones(ucFieldStorage(), campaignIdFromLegacy('user', id), 'userCampaign.zones', candidate);
+      if (!outcome.ok || !outcome.zones) {
+        throw new Error(`updateZone: universal zones commit failed: ${outcome.error ?? 'unknown error'}`);
+      }
+      const committed = outcome.zones as CampaignZone[];
+      patchData(id, (p) => ({ ...p, zones: committed }));
+    },
+    removeZone: (id, zoneId) => {
+      const pre = captureUc(id);
+      const candidate: ZoneSnapshotEntry[] = (pre.data?.zones ?? []).filter((z) => z.id !== zoneId);
+      const outcome = commitZones(ucFieldStorage(), campaignIdFromLegacy('user', id), 'userCampaign.zones', candidate);
+      if (!outcome.ok || !outcome.zones) {
+        throw new Error(`removeZone: universal zones commit failed: ${outcome.error ?? 'unknown error'}`);
+      }
+      const committed = outcome.zones as CampaignZone[];
+      patchData(id, (p) => ({ ...p, zones: committed }));
     },
 
     exportCampaign: (id, includeRuntime) => {
