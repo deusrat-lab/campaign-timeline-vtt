@@ -82,7 +82,10 @@ function base() {
 
 {
   // command kind allowlist is closed and complete
-  c.eq('commands: 11 typed kinds', allBattleCommandKinds().length, 11);
+  // Decision 2 cutover-prep: added set-variant/set-grid/paint-terrain/clear-terrain
+  // (board-presentation commands the legacy Caldran patchBoard call sites need
+  // a typed home for before their writes can route through universal authority).
+  c.eq('commands: 15 typed kinds', allBattleCommandKinds().length, 15);
 
   // expected-revision guard
   const stale = executeBattleCommand(base(), { kind: 'start-battle', campaignId: CALDRAN_ID, battleId: 'custom-alpha', expectedRevision: 5 });
@@ -144,6 +147,32 @@ function base() {
   c.ok('commands: visibility set', vis.ok && vis.next.presentedToPlayers === true);
   const end = executeBattleCommand(vis.next, { kind: 'end-battle', campaignId: CALDRAN_ID, battleId: 'custom-alpha', expectedRevision: 1 });
   c.ok('commands: end clears presentation', end.ok && end.next.active === false && end.next.presentedToPlayers === false);
+
+  // set-runtime name/extensions (Decision 2 prep: needed to route Caldran's
+  // token rename / speedFeet edit through universal instead of raw patchBoard)
+  const rn = executeBattleCommand(base(), { kind: 'set-runtime', campaignId: CALDRAN_ID, battleId: 'custom-alpha', tokenId: tid, patch: { name: 'Ренамед', extensions: { speedFeet: 40 } }, expectedRevision: 0 });
+  c.ok('commands: set-runtime name applied', rn.ok && rn.next.board.tokens.find((t) => t.id === tid).name === 'Ренамед');
+  c.ok('commands: set-runtime extensions merged', rn.ok && rn.next.board.tokens.find((t) => t.id === tid).extensions?.speedFeet === 40);
+
+  // set-variant (day/night)
+  const sv = executeBattleCommand(base(), { kind: 'set-variant', campaignId: CALDRAN_ID, battleId: 'custom-alpha', variant: 'night', expectedRevision: 0 });
+  c.ok('commands: set-variant applied', sv.ok && sv.next.board.variant === 'night');
+
+  // set-grid (partial patch preserves existing fields)
+  const g1 = executeBattleCommand(base(), { kind: 'set-grid', campaignId: CALDRAN_ID, battleId: 'custom-alpha', grid: { columns: 30, snap: false }, expectedRevision: 0 });
+  c.ok('commands: set-grid applied', g1.ok && g1.next.board.grid.columns === 30 && g1.next.board.grid.snap === false);
+  const g2 = executeBattleCommand(g1.next, { kind: 'set-grid', campaignId: CALDRAN_ID, battleId: 'custom-alpha', grid: { snap: true }, expectedRevision: g1.newRevision });
+  c.ok('commands: set-grid partial patch preserves columns', g2.ok && g2.next.board.grid.columns === 30 && g2.next.board.grid.snap === true);
+
+  // paint-terrain / clear-terrain
+  const pt = executeBattleCommand(base(), { kind: 'paint-terrain', campaignId: CALDRAN_ID, battleId: 'custom-alpha', cellKey: '3,4', type: 'blocked', expectedRevision: 0 });
+  c.ok('commands: paint-terrain adds cell', pt.ok && pt.next.board.terrain.some((cell) => cell.cellKey === '3,4' && cell.type === 'blocked'));
+  const pt2 = executeBattleCommand(pt.next, { kind: 'paint-terrain', campaignId: CALDRAN_ID, battleId: 'custom-alpha', cellKey: '3,4', type: 'difficult', expectedRevision: pt.newRevision });
+  c.ok('commands: paint-terrain overwrites same cell (no duplicate)', pt2.ok && pt2.next.board.terrain.filter((cell) => cell.cellKey === '3,4').length === 1 && pt2.next.board.terrain.find((cell) => cell.cellKey === '3,4').type === 'difficult');
+  const pt3 = executeBattleCommand(pt2.next, { kind: 'paint-terrain', campaignId: CALDRAN_ID, battleId: 'custom-alpha', cellKey: '3,4', type: null, expectedRevision: pt2.newRevision });
+  c.ok('commands: paint-terrain erase (type null) removes cell', pt3.ok && !pt3.next.board.terrain.some((cell) => cell.cellKey === '3,4'));
+  const ct = executeBattleCommand(pt.next, { kind: 'clear-terrain', campaignId: CALDRAN_ID, battleId: 'custom-alpha', expectedRevision: pt.newRevision });
+  c.ok('commands: clear-terrain empties board', ct.ok && ct.next.board.terrain.length === 0);
 }
 
 // --- Invariants -------------------------------------------------------------

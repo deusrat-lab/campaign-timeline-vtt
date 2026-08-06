@@ -8,7 +8,7 @@
  */
 import type { CampaignId } from '../campaign/ids';
 import type { UniversalPoint } from '../maps/types';
-import type { BattleRuntime, BattleToken } from './types';
+import type { BattleRuntime, BattleToken, TerrainType } from './types';
 import { assertBattleCampaign, resolveToken, findDuplicateTokenIds } from './battleIdentity';
 import type { BattleIdentityError } from './battleIdentity';
 
@@ -23,15 +23,29 @@ export type BattleCommand =
   | { kind: 'advance-round'; campaignId: CampaignId; battleId: string; expectedRevision: number }
   | { kind: 'set-turn'; campaignId: CampaignId; battleId: string; currentTurnTokenId: string; round: number; expectedRevision: number }
   | { kind: 'set-runtime'; campaignId: CampaignId; battleId: string; tokenId: string; patch: TokenRuntimePatch; expectedRevision: number }
-  | { kind: 'set-visibility'; campaignId: CampaignId; battleId: string; presented: boolean; expectedRevision: number };
+  | { kind: 'set-visibility'; campaignId: CampaignId; battleId: string; presented: boolean; expectedRevision: number }
+  | { kind: 'set-variant'; campaignId: CampaignId; battleId: string; variant: string; expectedRevision: number }
+  | { kind: 'set-grid'; campaignId: CampaignId; battleId: string; grid: GridPatch; expectedRevision: number }
+  | { kind: 'paint-terrain'; campaignId: CampaignId; battleId: string; cellKey: string; type: TerrainType | null; expectedRevision: number }
+  | { kind: 'clear-terrain'; campaignId: CampaignId; battleId: string; expectedRevision: number };
 
 export type BattleCommandKind = BattleCommand['kind'];
 
 export interface TokenRuntimePatch {
+  name?: string;
   currentHp?: number;
   maxHp?: number;
   ac?: number;
   statuses?: string[];
+  extensions?: Record<string, unknown>;
+}
+
+/** Partial `GridDefinition` -- undefined fields leave the current grid value untouched. */
+export interface GridPatch {
+  columns?: number;
+  rows?: number;
+  snap?: boolean;
+  unit?: string;
 }
 
 export type BattleCommandError =
@@ -54,6 +68,7 @@ export type BattleCommandResult = BattleCommandOk | BattleCommandFail;
 const ALL_KINDS: readonly BattleCommandKind[] = [
   'start-battle', 'end-battle', 'place-token', 'move-token', 'remove-token',
   'set-initiative', 'advance-turn', 'advance-round', 'set-turn', 'set-runtime', 'set-visibility',
+  'set-variant', 'set-grid', 'paint-terrain', 'clear-terrain',
 ];
 export function allBattleCommandKinds(): readonly BattleCommandKind[] {
   return ALL_KINDS;
@@ -140,11 +155,37 @@ function apply(runtime: BattleRuntime, command: BattleCommand): BattleCommandRes
     case 'set-runtime': {
       const found = resolveToken(runtime, command.tokenId);
       if ('error' in found) return fail(found.error);
-      Object.assign(found.token, prunePatch(command.patch));
+      const patch = prunePatch(command.patch);
+      if (patch.extensions) {
+        found.token.extensions = { ...found.token.extensions, ...patch.extensions };
+        delete patch.extensions;
+      }
+      Object.assign(found.token, patch);
       return done();
     }
     case 'set-visibility':
       runtime.presentedToPlayers = command.presented;
+      return done();
+    case 'set-variant':
+      runtime.board.variant = command.variant;
+      return done();
+    case 'set-grid': {
+      const current = runtime.board.grid ?? { columns: 24, snap: true };
+      runtime.board.grid = {
+        columns: command.grid.columns ?? current.columns,
+        rows: command.grid.rows ?? current.rows,
+        snap: command.grid.snap ?? current.snap,
+        unit: command.grid.unit ?? current.unit,
+      };
+      return done();
+    }
+    case 'paint-terrain': {
+      const rest = (runtime.board.terrain ?? []).filter((cell) => cell.cellKey !== command.cellKey);
+      runtime.board.terrain = command.type ? [...rest, { cellKey: command.cellKey, type: command.type }] : rest;
+      return done();
+    }
+    case 'clear-terrain':
+      runtime.board.terrain = [];
       return done();
   }
 }
@@ -195,10 +236,12 @@ function applyInitiativeOrder(runtime: BattleRuntime, order: string[]): void {
 }
 function prunePatch(patch: TokenRuntimePatch): TokenRuntimePatch {
   const out: TokenRuntimePatch = {};
+  if (patch.name !== undefined) out.name = patch.name;
   if (patch.currentHp !== undefined) out.currentHp = patch.currentHp;
   if (patch.maxHp !== undefined) out.maxHp = patch.maxHp;
   if (patch.ac !== undefined) out.ac = patch.ac;
   if (patch.statuses !== undefined) out.statuses = patch.statuses;
+  if (patch.extensions !== undefined) out.extensions = patch.extensions;
   return out;
 }
 function finite(value: number): boolean {
