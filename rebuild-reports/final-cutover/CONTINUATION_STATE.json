@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-06T21:00:00.000Z",
-  "currentHead": "b83f979",
+  "generatedAt": "2026-08-06T21:30:00.000Z",
+  "currentHead": "a469859",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -8,7 +8,8 @@
   "productionWrites": 0,
   "lastGreenGates": {
     "typecheck": "PASS",
-    "build": "PASS",
+    "build": "tsc -b PASS",
+    "verify:block-i-configuration": "18/18",
     "verify:domain": "PASS",
     "verify:stage16": "405/405",
     "verify:stage16-1": "149/149",
@@ -164,9 +165,11 @@
   ],
   "currentBlock": null,
   "nextConcreteStep": {
-    "description": "Decision 1 (Content delete) is real, implemented, and verified -- the other two architectural decisions from this session (Decision 2: universal battle model; Decision 3: Timeline/Economy as universal capabilities) and ALL of Blocks G-N (unified workspace, tab-scoped view mode, universal battle implementation, repository authority cutover, new-campaign proof, import/export round trips, legacy removal) are NOT started. These are not verification passes -- they are multi-file architectural implementations (a new normalized battle schema with adapters for two incompatible existing schemas; a policy/capability contract read generically by UI instead of any hardcoded campaign-id branch; a real workspace-shell merge of two independently-evolved React component trees; a tab-scoped session-state mechanism; an audit-then-delete of legacy write paths) that each deserve their own careful, tested implementation pass -- attempting all of them in one session would produce exactly the unverified, rushed architecture this whole project has been trying to avoid. Recommended next concrete step, in order: (1) Block I first (module/policy contracts) since Decision 1 already proved the pattern -- add a small campaignCapabilities/campaignPolicies read model that both stacks consult (start read-only, migration defaults = current behavior, i.e. Caldran timeline/economy=false, Greyholm timeline/economy=true) before touching any UI; (2) Decision 2 (universal battle model) as its own dedicated session -- start with the BattleDefinition/BattleRuntime/BattleCombatant/BattleToken/BattleTurnState/BattlePresentation contracts from this task plus one adapter per existing stack, prove it with a Node harness BEFORE wiring any UI, exactly like Stage 5b/5c/5d did for the original universal repository work (see completedBlocks history) -- do not skip the harness step for battles given how different the two existing schemas are; (3) Block G (unified workspace) only after Decision 2 and the policy contract exist, since a real unified workspace needs both to avoid becoming a third hardcoded branch. Block H (tab-scoped view mode) can be done independently and earlier if a quick win is wanted -- it does not depend on Decisions 2/3.",
+    "description": "Block I is now DONE (this checkpoint's commit): src/domain/campaign/configuration.ts is a read-only CampaignConfiguration contract (metadata/capabilities/contentPolicies/battleCapabilities/projectionCapabilities/schemaVersion) with real, evidence-derived defaults for Greyholm, Caldran, and a new campaign -- 18/18 in scripts/final-cutover/verify-block-i-configuration.ts (npm run verify:block-i-configuration), tsc -b clean, verify:domain unaffected. It is NOT wired into any UI or store yet -- greyholmContentPolicies()/caldranContentPolicies() etc. are pure functions nothing calls at runtime. IMPORTANT CORRECTION found this pass: Decision 2's battle domain (BattleDefinition/BattleRuntime/BattleToken/BattleCombatant, Greyholm+UC adapters, battleCommands) was NOT actually un-started -- it already exists at src/domain/battles/*.ts (957 lines) with a Stage 17 Node harness (npm run verify:stage17, 326/326 passing per lastGreenGates) that round-trips both legacy battle shapes through it losslessly via `extensions` bags. What's genuinely still missing for Decision 2 is the UI/store CUTOVER: Greyholm's ActiveBattleState store and Caldran's CampaignBattleBoard store are still the two separate active runtimes real components read/write -- src/domain/battles/battleAuthorityStore.ts and battleCommands.ts exist but are not called from CampaignBattlePage.tsx or the Greyholm battle UI. Recommended next concrete step, in order: (1) read src/domain/battles/battleAuthorityStore.ts + battleCommands.ts + battleAdapters.ts fully, and CampaignBattlePage.tsx (the real Caldran battle UI, referenced in earlier notes at ~line 559 for the finish-battle confirm), to build an exact 'what would change' diff BEFORE touching UI; (2) Decision 2 UI cutover for ONE stack first (Caldran is smaller/simpler -- CampaignBattleBoard/CampaignBattleToken -- start there), behind the existing capabilities.battleRuntime toggle so it can be reverted instantly if wrong, prove with the same live-browser lifecycle already scripted once this project (place token, initiative, turn advance, round rollover, reload recovery, Player View, finish) before touching Greyholm's ActiveBattleState; (3) only then Block G (unified workspace), now that both the configuration contract (Block I) and one real battle-authority cutover exist as patterns to generalize from.",
     "targetFiles": [
-      "rebuild-reports/final-cutover/FINAL_FUNCTIONAL_PARITY_REPORT.md"
+      "src/domain/battles/battleAuthorityStore.ts",
+      "src/domain/battles/battleCommands.ts",
+      "src/features/campaigns/CampaignBattlePage.tsx"
     ]
   },
   "remainingBlocks": [
@@ -186,7 +189,8 @@
     "Greyholm has zero delete actions for any Group A content entity (locations/npc/quests/enemies/factions) -- confirmed by exhaustive grep, not a per-kind gap.",
     "Greyholm and Caldran run structurally incompatible battle-runtime data shapes (see Battles matrix in FINAL_FUNCTIONAL_PARITY_REPORT.md) -- not unified, unification not yet designed.",
     "Grid-toggle persistence in Caldran battle board was not confirmed (toggled but no showGrid field appeared in the saved board) -- needs follow-up.",
-    "Decision 2 (universal battle model) and Decision 3 (Timeline/Economy as universal capabilities) are architectural decisions accepted by the user this session but NOT yet implemented in any code -- do not report them as done in any future summary."
+    "Decision 2 (universal battle model): the DOMAIN (src/domain/battles/*.ts, adapters, Stage 17 harness, 326/326) already exists and is proven in isolation -- what's missing is the UI/store CUTOVER, i.e. CampaignBattlePage.tsx and Greyholm's battle UI still read/write the old ActiveBattleState/CampaignBattleBoard stores directly, not through battleAuthorityStore.ts/battleCommands.ts. Do not report Decision 2 as fully done OR as fully unstarted -- it is domain-complete, cutover-not-started.",
+    "Decision 3 (Timeline/Economy as universal capabilities): src/domain/campaign/configuration.ts (Block I, this checkpoint) now expresses this as data (capabilities.timeline/economy default per stack) but nothing reads this contract at runtime yet -- still not implemented in active code."
   ],
   "externalBlockers": [],
   "honestVerdict": "UNIVERSAL_LOCAL_REBUILD_INCOMPLETE",
