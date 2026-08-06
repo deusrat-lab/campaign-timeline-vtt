@@ -170,6 +170,39 @@ export const WORKSPACE_MODULE_REGISTRY: readonly WorkspaceModuleRegistryEntry[] 
   },
 ]);
 
+/**
+ * Block G — explicit, documented classification for workspace concerns that do
+ * NOT get their own `WorkspaceModuleId`. This is not a fallback/omission list;
+ * it is a deliberate architectural decision recorded so the registry stays the
+ * single source of truth for "what is a module" instead of leaving anything
+ * unaccounted for.
+ *
+ * `visibilityPresentation` (reveal/hide via `visibleToPlayers`/`revealedToPlayers`,
+ * and present/dismiss via the `presentedCard` runtime field) is intentionally
+ * FOLDED IN, not given a dedicated module id, because on both stacks it has no
+ * page/route of its own — it is inline controls rendered inside the same body
+ * that already mounts through an existing module slot:
+ *   - reveal/hide toggles live inside the entity library editor body
+ *     (`EntityLibraryPage.tsx` / `CampaignEntityCard.tsx`), which is the
+ *     `library.body` slot;
+ *   - present/dismiss (`presentedCard`) is surfaced from the same library body
+ *     and, for Greyholm, additionally reflected read-only through the
+ *     `runtime.presentation` shared-read-only slot.
+ * Splitting it into its own `WorkspaceModuleId` would describe a slot that no
+ * route composes independently — the same reasoning that ruled out a separate
+ * Zones module (Zones is in-page tooling inside `map.workspace`). If either
+ * stack ever grows a dedicated reveal/present page, promote this entry to a
+ * real `WorkspaceModuleId` at that point.
+ */
+export const FOLDED_IN_WORKSPACE_CONCERNS = Object.freeze([
+  {
+    concern: 'visibilityPresentation',
+    foldedIntoModuleIds: ['library.body', 'runtime.presentation'] as const,
+    reason:
+      'No dedicated route/page on either stack; reveal/hide and present/dismiss are inline controls inside the entity library body, and (Greyholm only) mirrored read-only through runtime.presentation.',
+  },
+]);
+
 const BY_ID = new Map(WORKSPACE_MODULE_REGISTRY.map((entry) => [entry.moduleId, entry]));
 
 export function getWorkspaceModule(moduleId: WorkspaceModuleId): WorkspaceModuleRegistryEntry | undefined {

@@ -81,6 +81,19 @@ function read(path) {
   }
 }
 
+// --- moduleRegistry.ts: visibilityPresentation must have an explicit,
+// documented "folded in, not a separate module" classification -- Block G's
+// final open moduleStatus item. Fails if the documented decision regresses. ---
+{
+  const file = 'src/domain/workspace/moduleRegistry.ts';
+  const text = read(file);
+  if (!/FOLDED_IN_WORKSPACE_CONCERNS/.test(text)) {
+    failed.push(`${file}: missing FOLDED_IN_WORKSPACE_CONCERNS -- visibilityPresentation must have a documented module classification`);
+  } else if (!/concern:\s*'visibilityPresentation'/.test(text)) {
+    failed.push(`${file}: FOLDED_IN_WORKSPACE_CONCERNS exists but no longer documents 'visibilityPresentation'`);
+  }
+}
+
 if (failed.length) {
   console.error('WORKSPACE_SPLIT_GUARD_FAIL:');
   for (const f of failed) console.error(`  - ${f}`);
