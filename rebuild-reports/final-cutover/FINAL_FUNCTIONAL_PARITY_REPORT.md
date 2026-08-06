@@ -116,6 +116,24 @@ intentionally left `MISSING` (meaning "not yet scored", not "confirmed absent") 
 exercised live per this report's own evidence rule — filling these in from memory or
 prior-stage reports without a fresh verification would violate the report's own standard.
 
+## Content — Group A (locations, NPC, quests, enemies, factions)
+
+Both stacks gate all four non-location entity kinds through one generic mechanism each
+(not four separate implementations per kind), so a single live verification per stack
+covers the mechanism for all of them; per-kind UI presence was still spot-checked.
+
+| Function | Status | Evidence |
+|---|---|---|
+| NPC/quest/enemy/faction reveal (Greyholm) | PARITY_CONFIRMED | `EntityLibraryPage.tsx:1795` — one shared `reveal-toggle` checkbox (`Видим игрокам` -> `visibleToPlayers`) used for `kind: 'npc' \| 'quests' \| 'enemies' \| 'factions'` (`EntityLibraryKind`, line 20), not a per-kind duplicate. Browser-verified live on NPC "Аверн Колд" (`npc-avern-kold`): toggled in the edit form, `Сохранить` -> `overlay.npcPatches['npc-avern-kold'].visibleToPlayers` flips `false` -> `true`, restored to `false` after. **Correction during this pass**: my first two save attempts silently wrote `false` because a raw CSS selector (`.reveal-toggle input[type=checkbox]`) matched the *wrong* element first — the unrelated "Открыть Арку 2 игрокам" toggle in the top nav bar, which shares the same class name. That stray toggle was flipped and immediately reverted once noticed (confirmed via `overlay.timelinePatches['arc-2-war'].visibleToPlayers` back to `false`); it never reached a "Сохранить" click for the real target so the false report was caught before being scored, not after. Zero console errors throughout. Player-facing surface for these entity kinds is via map hotspot click and "Показать поверх" (present card), not a standalone player-facing list route — this is a pre-existing architectural asymmetry vs. UC's list-with-badges surface, not a bug. |
+| NPC/quest/enemy/faction reveal (Caldran/UC) | PARITY_CONFIRMED | Same `toggleReveal`/`revealedToPlayers`/`isEntityPlayerVisible` mechanism already proven for locations (entity-type-agnostic by construction — `entityType` is just a parameter). Browser-verified live on a real Caldran NPC ("Вилья Кривой Пилот", `npc-seed-34-8m3b`): DM Edit -> "🚫 Открыть в списках" -> `revealedToPlayers` gains the id -> Player View list correctly shows `1 · NPC` (of 66) -> restored to `[]`. Zero console errors. |
+| Locations (both stacks) | PARITY_CONFIRMED | Already closed above (reveal/hide + present/dismiss rows). |
+| Create/edit/delete, relations, search, filters, arc scope, DM-only vs. player-safe fields | MISSING | Not independently re-verified this session for NPC/quest/enemy/faction specifically (only the reveal mechanism was). Existing per-kind forms (name/role/location/personality/knowledge/secrets/dmNotes fields visible in the Greyholm NPC editor) appear structurally present but CRUD lifecycle itself needs its own pass. |
+
+## Content — Group B (images, bestiary, players, linked cards)
+
+MISSING — not yet exercised this session. Deferred to the next Content pass; tracked in
+`CONTINUATION_STATE.json`'s `nextConcreteStep`.
+
 ## Summary
 
 - `PARITY_CONFIRMED`: capabilities (2 of ~26 keys fully route-gated, rest persist correctly),
