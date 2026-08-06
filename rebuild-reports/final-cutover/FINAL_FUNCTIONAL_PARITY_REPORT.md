@@ -100,6 +100,8 @@ repository record must tolerate forward schema evolution — noted for Block K's
 | Function | Status | Evidence |
 |---|---|---|
 | Greyholm battle-map placement create | PARITY_CONFIRMED | Re-verified this session; see note above. Original closure: `db9dfda`. |
+| Greyholm location reveal/hide (`/visibility` page) | PARITY_CONFIRMED (Greyholm only) | Code path: `PlayerVisibilityPage.tsx` -> `store.patchLocationState(id, { visibleToPlayers })`, persisted to `overlay.locationStatePatches`. Browser-verified live: toggled "Рыночная площадь" from Скрыть->Показать, confirmed `{"visibleToPlayers":false}` in `overlay.locationStatePatches`, toggled back, zero console errors. **Caldran/user-campaign equivalent NOT yet independently verified this pass** — left `MISSING` below rather than assumed parity from the shared-contract claim alone. |
+| Caldran/user-campaign location reveal/hide | MISSING | Not yet exercised live this session. |
 
 Everything else in this section is not yet independently re-verified this session. Rows
 intentionally left `MISSING` (meaning "not yet scored", not "confirmed absent") until each is
