@@ -137,6 +137,41 @@ export function NavBar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.currentTimelineId, inUserCampaign]);
 
+  // Same three behaviours for user campaigns: direct-URL `?arc=` sync,
+  // fallback off a missing/archived active arc, and reflecting the current
+  // arc back into the URL — mirrors the three Greyholm effects above exactly,
+  // just reading/writing through the UC store instead.
+  const ucData = ucCampaignId ? ucStore.getData(ucCampaignId) : null;
+  const ucRuntime = ucCampaignId ? ucStore.getRuntime(ucCampaignId) : null;
+  const ucCurrentArcId = ucCampaignId && ucData ? resolveCurrentArcId(ucData, ucRuntime) : undefined;
+  useEffect(() => {
+    if (!inUserCampaign || !ucCampaignId || !ucData) return;
+    if (arcParam && arcParam !== ucCurrentArcId) {
+      const target = resolveArcs(ucData).find((t) => t.id === arcParam && !t.archived);
+      if (target) ucStore.setCurrentArc(ucCampaignId, target.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arcParam, ucData, inUserCampaign, ucCampaignId]);
+  useEffect(() => {
+    if (!inUserCampaign || !ucCampaignId || !ucData || !ucCurrentArcId) return;
+    const arcs = resolveArcs(ucData);
+    const current = arcs.find((t) => t.id === ucCurrentArcId);
+    if (!current || current.archived) {
+      const fallback = arcs.find((t) => t.isDefault && !t.archived) ?? arcs.find((t) => !t.archived);
+      if (fallback && fallback.id !== ucCurrentArcId) ucStore.setCurrentArc(ucCampaignId, fallback.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ucData, ucCurrentArcId, inUserCampaign, ucCampaignId]);
+  useEffect(() => {
+    if (!inUserCampaign || !ucCampaignId || !ucCurrentArcId) return;
+    if (searchParams.get('arc') !== ucCurrentArcId) {
+      const next = new URLSearchParams(searchParams);
+      next.set('arc', ucCurrentArcId);
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ucCurrentArcId, inUserCampaign, ucCampaignId]);
+
   const currentLocation =
     data && store.party.currentLocationStateId ? getLocationState(data, store.party.currentLocationStateId) : undefined;
 

@@ -29,7 +29,7 @@ Statuses used: `PARITY_CONFIRMED`, `INTENTIONALLY_IMPROVED`, `MISSING`, `BROKEN`
 | Settings | PARITY_CONFIRMED | New `/settings` and `/campaigns/:id/settings` routes (Block D), browser-verified. |
 | Capabilities | PARITY_CONFIRMED (new capability, not present in original) — see note | See "Capabilities" section below. |
 | Arcs (Greyholm) | PARITY_CONFIRMED | Full lifecycle (create/rename/reorder/archive/restore/delete/direct-URL) browser-verified this session — see "Arcs" section below. |
-| Arcs (Caldran / new campaigns) | MISSING | No arc/Timeline-equivalent concept exists on `UserCampaignData` at all. Open design decision recorded in `CONTINUATION_STATE.json`. |
+| Arcs (Caldran / new campaigns) | PARITY_CONFIRMED | `UserCampaignData.arcs` (same `Timeline` type as Greyholm), full lifecycle browser-verified live on a real Caldran campaign — see "Arcs (Caldran / user campaigns)" section below. |
 | Import/export | MISSING (not yet re-verified this session) | `CampaignManagementPanel` (export/import-as-new-campaign with dry-run preview) exists from a prior stage (Stage 17) and passed its own harness then; not re-exercised as part of this session's work — tracked as Block J. |
 | Backup/restore | MISSING (not yet re-verified this session) | Backup/restore UI exists from Stage 17g; not re-exercised this session. |
 
@@ -61,28 +61,64 @@ Statuses used: `PARITY_CONFIRMED`, `INTENTIONALLY_IMPROVED`, `MISSING`, `BROKEN`
 | Reveal to players (`visibleToPlayers`) | PARITY_CONFIRMED | Pre-existing, reconfirmed via code read (unchanged this session). |
 | Content scope editor (arc-specific/shared/campaign-wide) | MISSING | No UI to change an entity's scope; only the existing per-entity `timelineId` field, no "shared between arcs" representation. |
 
+## Arcs (Caldran / user campaigns)
+
+Same domain model and same `<ArcSwitcher>` UI component as Greyholm — not a parallel
+architecture. `UserCampaignData.arcs?: Timeline[]` (the identical `Timeline` type from
+`src/types.ts`), `UserCampaignRuntime.currentArcId`, and
+`addArc`/`patchArc`/`deleteArc`/`setCurrentArc` in `userCampaignStore.tsx` mirror Greyholm's
+`addTimeline`/`patchTimeline`/`deleteTimeline`/`setTimeline` exactly. A campaign with no
+`arcs` array (every campaign that existed before this feature, including the real Caldran
+export fixture) is treated as having one implicit default arc via `resolveArcs()` — never a
+migration step.
+
+| Function | Status | Evidence |
+|---|---|---|
+| Switch | PARITY_CONFIRMED | Browser-verified on a real Caldran one-shot campaign. |
+| Create | PARITY_CONFIRMED | Browser-verified: created "Кальдран Арка 2", switched immediately. |
+| Rename | PARITY_CONFIRMED | Browser-verified via double-click prompt. |
+| Reorder | PARITY_CONFIRMED | Browser-verified via ‹/› swap-order buttons. |
+| Archive/restore | PARITY_CONFIRMED | Browser-verified: archived, hidden from switcher, restored. |
+| Safe delete | PARITY_CONFIRMED | Structurally can only remove a non-default, non-current arc; verified the happy path and that the default arc never exposes a delete/archive-while-current control. |
+| Reload persistence | PARITY_CONFIRMED | Browser-verified: title/order/archived all correct in `userCampaignData.arcs` after a real page reload. |
+| Campaign isolation | PARITY_CONFIRMED | Arc mutations on the Caldran campaign never touched Greyholm's `overlay.timelinePatches` (separate localStorage keys by construction). |
+| Direct URL (`?arc=`) | PARITY_CONFIRMED | Three UC-side effects added mirroring Greyholm's exactly (sync from URL, fallback, reflect back to URL). Browser-verified: creating a new campaign immediately produced `?arc=arc-1` in the address bar. |
+| Fallback on missing/archived active arc | PARITY_CONFIRMED (code-verified, not independently fault-injected — same standard as Greyholm's row above) | `useEffect` re-dispatches `setCurrentArc` to the default arc when `resolveCurrentArcId()`'s target is missing/archived, same pattern as Greyholm. |
+
 ## Maps, Atlas, Content, Timeline, Economy, Zones, Battles
 
-Not yet independently re-verified this session beyond what's covered above (placement
-create/move/remove was closed and browser-verified in the immediately preceding session —
-see `db9dfda` and `591166d` in git history). Rows intentionally left `MISSING` (meaning "not
-yet scored", not "confirmed absent") until each is exercised live per this report's own
-evidence rule — filling these in from memory or prior-stage reports without a fresh
-verification would violate the report's own standard.
+Placement create/move/remove (closed in a prior session, see `db9dfda`/`591166d`) was
+re-verified live this session after the arc/capabilities refactor touched `NavBar.tsx`
+(a real regression risk given the scope of that change): `decision: durable_committed`,
+`predictionComparison: equal`, zero console errors. (One false alarm on the first attempt —
+a stale, schema-incompatible `campaign:camp:greyholm:main` record left over in this browser's
+`universal:v1` localStorage namespace from exploratory testing several sessions ago failed
+validation on read; clearing that dev-only leftover and retrying produced a clean
+`durable_committed`. Not a real regression, but a legitimate reminder that a durable
+repository record must tolerate forward schema evolution — noted for Block K's real cutover.)
+
+| Function | Status | Evidence |
+|---|---|---|
+| Greyholm battle-map placement create | PARITY_CONFIRMED | Re-verified this session; see note above. Original closure: `db9dfda`. |
+
+Everything else in this section is not yet independently re-verified this session. Rows
+intentionally left `MISSING` (meaning "not yet scored", not "confirmed absent") until each is
+exercised live per this report's own evidence rule — filling these in from memory or
+prior-stage reports without a fresh verification would violate the report's own standard.
 
 ## Summary
 
 - `PARITY_CONFIRMED`: capabilities (2 of ~26 keys fully route-gated, rest persist correctly),
-  Greyholm arc lifecycle (complete), campaign switching, direct URL, reload, settings.
+  Greyholm AND Caldran/user-campaign arc lifecycle (both complete, one shared domain+UI),
+  campaign switching, direct URL, reload, settings, Greyholm battle-map placement create.
 - `INTENTIONALLY_IMPROVED`: none scored yet with full justification — capabilities and arc
   archive/restore are new relative to the original but not yet cross-checked against whether
   the original had an equivalent, so left under `PARITY_CONFIRMED` (new-feature framing) with
   a note rather than a formal `INTENTIONALLY_IMPROVED` claim that would need a direct
   production comparison this environment cannot make.
-- `MISSING`: Caldran/new-campaign arcs, most capability route-gating, content scope editor,
+- `MISSING`: most capability route-gating (~15 of 26 keys), content scope editor,
   import/export/backup/restore/campaign-delete re-verification, and the entire
-  Maps/Atlas/Content/Timeline/Economy/Zones/Battles sections beyond what a prior session
-  already closed for placements.
+  Maps/Atlas/Content/Timeline/Economy/Zones/Battles sections beyond placement create.
 - `BROKEN`: none found.
 
 **Not a complete report.** Continues to be filled in as further blocks close; see
