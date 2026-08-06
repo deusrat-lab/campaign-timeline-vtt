@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-06T12:50:00.000Z",
-  "currentHead": "140e73c",
+  "generatedAt": "2026-08-06T15:30:00.000Z",
+  "currentHead": "d08ac91",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -75,6 +75,15 @@
       ]
     },
     {
+      "block": "F (start): Caldran location reveal/hide + present/dismiss",
+      "status": "PARITY_CONFIRMED_BOTH_ROWS",
+      "evidence": "See FINAL_FUNCTIONAL_PARITY_REPORT.md 'Maps, Atlas, Content, Timeline, Economy, Zones, Battles' section, rows 'Caldran/user-campaign location reveal/hide' and 'Present/dismiss card'. Live-verified on real Caldran one-shot camp-mshatb5f-mrttl: toggleReveal via 'Открыть в списках' -> revealedToPlayers -> Player View filtered list (1/17) -> reload persisted -> restored to 0; presentCard/dismissCard via 'Показать поверх'/'Закрыть показ' -> presentedCard runtime field -> grants Player View visibility independent of revealedToPlayers -> dismissed cleanly (presentedCard:null). Cross-campaign isolation re-confirmed via localStorage read across all 3 Caldran one-shot instances (all empty) plus Greyholm main campaign map loading unaffected. Zero console errors throughout both flows.",
+      "notExercised": "Map switching (atlas maps) and party placement were spot-checked this session but party placement did not visibly persist on first attempt (click sequence on 'Поставить партию' + map click produced no mapPlacements entry) -- not scored BROKEN since the exact required interaction (drag vs click, confirm step) wasn't confirmed; flagged as the immediate next thing to investigate, not a regression.",
+      "commits": [
+        "d08ac91"
+      ]
+    },
+    {
       "block": "E: universal arcs",
       "status": "FULL_LIFECYCLE_BOTH_STACKS_COMPLETE",
       "discovery": "Greyholm arcs already existed end-to-end under the name `Timeline` (src/types.ts) BEFORE this session: switch (SET_TIMELINE), the header segmented control (already generic over data.timelines), reveal-to-players, reload persistence. Only CREATE (dead `addTimeline`/ADD_TIMELINE action, zero UI callers) and DELETE (didn't exist at all) were missing.",
@@ -92,7 +101,7 @@
   ],
   "currentBlock": null,
   "nextConcreteStep": {
-    "description": "Continue Block F: verify Caldran location reveal/hide (find its equivalent UI -- CampaignLibraryPage location cards or a similar visibility control), then proceed subsystem by subsystem through Content/Timeline/Economy/Zones/Battles for both stacks. Given the scope (dozens of subsystems x two stacks x live browser verification each), budget this as the dominant remaining work before Blocks G-N (unified workspace, tab-scoped view modes, multi-window, new campaign, import/export, source-of-truth cutover, legacy removal, final reports) can even start -- those are architecturally larger than Block F itself.",
+    "description": "Continue Block F Maps/Atlas group: (1) work out the real party-placement interaction (likely needs a drag from the 'Поставить партию' button onto the map, or a second distinct click state -- inspect IsolatedCampaignMapWorkspace.tsx / MapWorkspacePage.tsx placement handlers before retrying blindly) and prove it persists + reloads for both Greyholm and Caldran; (2) zoom/pan controls; (3) map-switching reload persistence (does the active atlas map id survive reload?); (4) hotspot create/move/remove for locations on both stacks; (5) capability off/on for maps. Then move to Content (NPC/quest/enemy/faction reveal -- same toggleReveal/isEntityPlayerVisible mechanism already proven for locations, should be fast to batch-verify), then Timeline/Economy/Zones/Battles per the original row list in FINAL_FUNCTIONAL_PARITY_REPORT.md. Keep working subsystem-by-subsystem in coherent committed blocks; do not ask permission between them.",
     "targetFiles": [
       "rebuild-reports/final-cutover/FINAL_FUNCTIONAL_PARITY_REPORT.md"
     ]
