@@ -37,6 +37,8 @@ import {
   type FieldAuthorityKind,
   commitMapPlacements,
   type MapPlacementSnapshotEntry,
+  commitRoutes,
+  type RouteSnapshotEntry,
 } from '../domain';
 
 const UC_BACKUP_NS = 'campaign-timeline-vtt:uc-backup:v1';
@@ -834,9 +836,39 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
       patchData(id, (p) => ({ ...p, mapPlacements: committed }));
     },
 
-    addRoute: (id, route) => { const rid = uid('rte'); patchData(id, (p) => ({ ...p, routes: [...p.routes, { ...route, id: rid }] })); return rid; },
-    updateRoute: (id, routeId, patch) => patchData(id, (p) => ({ ...p, routes: p.routes.map((r) => (r.id === routeId ? { ...r, ...patch } : r)) })),
-    removeRoute: (id, routeId) => patchData(id, (p) => ({ ...p, routes: p.routes.filter((r) => r.id !== routeId) })),
+    addRoute: (id, route) => {
+      const rid = uid('rte');
+      const full: CampaignRoute = { ...route, id: rid };
+      const pre = captureUc(id);
+      const candidate: RouteSnapshotEntry[] = [...(pre.data?.routes ?? []), full];
+      const outcome = commitRoutes(ucFieldStorage(), campaignIdFromLegacy('user', id), 'userCampaign.routes', candidate);
+      if (!outcome.ok || !outcome.routes) {
+        throw new Error(`addRoute: universal routes commit failed: ${outcome.error ?? 'unknown error'}`);
+      }
+      const committed = outcome.routes as CampaignRoute[];
+      patchData(id, (p) => ({ ...p, routes: committed }));
+      return rid;
+    },
+    updateRoute: (id, routeId, patch) => {
+      const pre = captureUc(id);
+      const candidate: RouteSnapshotEntry[] = (pre.data?.routes ?? []).map((r) => (r.id === routeId ? { ...r, ...patch } : r));
+      const outcome = commitRoutes(ucFieldStorage(), campaignIdFromLegacy('user', id), 'userCampaign.routes', candidate);
+      if (!outcome.ok || !outcome.routes) {
+        throw new Error(`updateRoute: universal routes commit failed: ${outcome.error ?? 'unknown error'}`);
+      }
+      const committed = outcome.routes as CampaignRoute[];
+      patchData(id, (p) => ({ ...p, routes: committed }));
+    },
+    removeRoute: (id, routeId) => {
+      const pre = captureUc(id);
+      const candidate: RouteSnapshotEntry[] = (pre.data?.routes ?? []).filter((r) => r.id !== routeId);
+      const outcome = commitRoutes(ucFieldStorage(), campaignIdFromLegacy('user', id), 'userCampaign.routes', candidate);
+      if (!outcome.ok || !outcome.routes) {
+        throw new Error(`removeRoute: universal routes commit failed: ${outcome.error ?? 'unknown error'}`);
+      }
+      const committed = outcome.routes as CampaignRoute[];
+      patchData(id, (p) => ({ ...p, routes: committed }));
+    },
 
     exportCampaign: (id, includeRuntime) => {
       const entry = registry.find((r) => r.campaignId === id);
