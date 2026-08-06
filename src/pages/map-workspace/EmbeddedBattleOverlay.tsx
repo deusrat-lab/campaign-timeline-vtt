@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BATTLE_MAP_ASSET_ORIGIN } from '../../config';
 import { useCampaignStore } from '../../state/campaignStore';
-import { useBattleAuthority } from '../../features/battle-authority/BattleAuthorityProvider';
-import { campaignIdFromLegacy } from '../../domain';
 import type { ActiveBattleCombatant, ActiveBattleState } from '../../types';
-
-const GREYHOLM_CAMPAIGN_ID = campaignIdFromLegacy('greyholm', 'main');
 import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
 import type { DmCustomEnemy, DmFaction, DmImageItem, DmLocation, DmPlayer, DmQuest } from '../../types/dmCompanion';
 
@@ -295,21 +291,7 @@ export function EmbeddedBattleOverlay({
   isPlayerView: boolean;
 }) {
   const store = useCampaignStore();
-  const battleAuth = useBattleAuthority();
 
-  // Stage 17 — reload recovery for a pending Greyholm turn-advance compatibility
-  // projection (universal committed last session, legacy update failed). Re-apply
-  // the idempotent legacy transition and clear the record; no second universal commit.
-  const greyholmBattleRecoveredRef = useRef(false);
-  useEffect(() => {
-    if (!battleAuth.active || greyholmBattleRecoveredRef.current) return;
-    const pending = battleAuth.readPending(GREYHOLM_CAMPAIGN_ID, battle.id);
-    if (!pending) return;
-    greyholmBattleRecoveredRef.current = true;
-    store.updateActiveBattle({ currentTurnCombatantId: pending.tokenId, round: pending.position.x });
-    battleAuth.clearPending(GREYHOLM_CAMPAIGN_ID, battle.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [battleAuth.active, battle.id]);
   const boardRef = useRef<HTMLDivElement | null>(null);
   // State-based callback ref (not a plain useRef + useEffect(..., [])) — the
   // board can mount with zero measured size before layout settles (e.g. the
@@ -581,22 +563,13 @@ export function EmbeddedBattleOverlay({
     const idx = Math.max(0, ordered.findIndex((c) => c.id === currentId));
     const next = ordered[(idx + 1) % ordered.length];
     const nextRound = idx === ordered.length - 1 ? battle.round + 1 : battle.round;
-    // Stage 17 — when universal battle authority is active, commit the turn
-    // advance durably (universal-first) before the legacy overlay update runs
-    // as the compatibility projection. A dev fixture can fail the compat step
-    // after the durable commit to exercise reload recovery.
-    if (battleAuth.active) {
-      const outcome = battleAuth.advanceGreyholmTurn(GREYHOLM_CAMPAIGN_ID, battle, next.id, nextRound);
-      if (outcome && outcome.ok) {
-        if (battleAuth.consumeFailCompatOnce()) {
-          battleAuth.recordPending({ campaignId: GREYHOLM_CAMPAIGN_ID as never, battleId: battle.id, tokenId: next.id, position: { x: nextRound, y: 0 }, committedRevision: outcome.newRevision ?? 0 });
-          setSelectedId(next.id);
-          setPostMovePrompt(null);
-          return; // universal committed, legacy pending (recovered on reload)
-        }
-      }
-      // outcome null/!ok → safe fallback: legacy runs unchanged below
-    }
+    // Decision 2 — store.updateActiveBattle now IS the sole-authority commit
+    // (see campaignStore.tsx's action creator: computes this exact candidate,
+    // commits it through commitGreyholmBattle, dispatches the durably-committed
+    // result). The old shadow advanceGreyholmTurn/pending-recovery path above
+    // this function used to duplicate that work behind a default-off flag;
+    // removed as dead weight now that every activeBattle write goes through
+    // universal authority unconditionally, not just this one action.
     store.updateActiveBattle({ currentTurnCombatantId: next.id, round: nextRound });
     setSelectedId(next.id);
     setPostMovePrompt(null);

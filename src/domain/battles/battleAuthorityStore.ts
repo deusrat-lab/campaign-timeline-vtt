@@ -17,8 +17,9 @@ import type { UniversalPoint } from '../maps/types';
 import { executeBattleCommand, checkInvariants } from './battleCommands';
 import type { BattleCommandFail } from './battleCommands';
 import { battleTokenId } from './battleIdentity';
-import { userBoardToUniversal, universalToUserBoard } from './battleAdapters';
+import { userBoardToUniversal, universalToUserBoard, greyholmBattleToUniversal, universalToGreyholmBattle } from './battleAdapters';
 import type { CampaignBattleBoard } from '../../types/userCampaign';
+import type { ActiveBattleState } from '../../types';
 
 export const UNIVERSAL_BATTLE_NAMESPACE = 'campaign-timeline-vtt:universal-battle:v1';
 
@@ -241,6 +242,52 @@ export function readUserBoard(
 ): CampaignBattleBoard | null {
   const stored = readStoredBattle(storage, campaignId, battleId);
   return stored ? universalToUserBoard(stored.runtime) : null;
+}
+
+// --- Decision 2 — Greyholm whole-battle sole-authority commit ---------------
+//
+// Mirrors commitUserBoard/readUserBoard exactly, for Greyholm's single
+// `ActiveBattleState` shape instead of Caldran's per-map `CampaignBattleBoard`.
+// Greyholm's 5 dispatchable actions (start/update/updateCombatant/addCombatant/
+// end) all funnel through this before the campaignStore reducer ever runs --
+// see campaignStore.tsx's startActiveBattle/updateActiveBattle/etc, which
+// compute the candidate ActiveBattleState with the reducer's own pure logic,
+// commit it here, and dispatch the durably-committed, round-tripped result
+// (never their own uncommitted candidate).
+export interface GreyholmBattleCommitOutcome {
+  ok: boolean;
+  newRevision?: number;
+  compatBattle?: ActiveBattleState;
+  error?: string;
+}
+
+export function commitGreyholmBattle(
+  storage: RepositoryStorage,
+  campaignId: CampaignId,
+  nextBattle: ActiveBattleState,
+): GreyholmBattleCommitOutcome {
+  const battleId = nextBattle.id;
+  const stored = readStoredBattle(storage, campaignId, battleId);
+  const expectedRevision = stored?.revision ?? 0;
+  const nextRuntime = greyholmBattleToUniversal(campaignId, nextBattle);
+  const invariant = checkInvariants(nextRuntime);
+  if (invariant) return { ok: false, error: invariant.message };
+
+  const commit = commitBattle(storage, campaignId, battleId, nextRuntime, expectedRevision);
+  if (!commit.ok) return { ok: false, error: commit.message };
+
+  const readBack = readStoredBattle(storage, campaignId, battleId);
+  if (!readBack) return { ok: false, error: 'commit not visible read-after-write' };
+  return { ok: true, newRevision: commit.newRevision, compatBattle: universalToGreyholmBattle(readBack.runtime) };
+}
+
+export function readGreyholmBattle(
+  storage: RepositoryStorage,
+  campaignId: CampaignId,
+  battleId: string,
+): ActiveBattleState | null {
+  const stored = readStoredBattle(storage, campaignId, battleId);
+  return stored ? universalToGreyholmBattle(stored.runtime) : null;
 }
 
 // --- pending compatibility-projection recovery ------------------------------

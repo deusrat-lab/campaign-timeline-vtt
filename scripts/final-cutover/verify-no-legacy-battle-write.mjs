@@ -42,10 +42,43 @@ function read(path) {
   }
 }
 
+// --- Greyholm: campaignStore.tsx --------------------------------------------
+{
+  const file = 'src/state/campaignStore.tsx';
+  const text = read(file);
+
+  // Every one of the 5 active-battle action creators must commit through
+  // commitGreyholmBattle before dispatching -- a direct
+  // `dispatch({ type: 'UPDATE_ACTIVE_BATTLE', ... })`/`UPDATE_ACTIVE_BATTLE_COMBATANT`/
+  // `ADD_ACTIVE_BATTLE_COMBATANT` from these action creators would be an
+  // uncommitted-candidate write bypassing universal authority (END_ACTIVE_BATTLE
+  // is exempt -- it clears the durable Greyholm battle record's local runtime
+  // presence but does not need a commit of its own since there's no candidate
+  // state to validate).
+  const forbiddenDispatches = [
+    "dispatch({ type: 'UPDATE_ACTIVE_BATTLE',",
+    "dispatch({ type: 'UPDATE_ACTIVE_BATTLE_COMBATANT',",
+    "dispatch({ type: 'ADD_ACTIVE_BATTLE_COMBATANT',",
+  ];
+  for (const snippet of forbiddenDispatches) {
+    if (text.includes(snippet)) failed.push(`${file}: found a direct uncommitted dispatch bypassing commitGreyholmBattle: ${snippet}`);
+  }
+
+  if (!/commitGreyholmBattle\(/.test(text)) {
+    failed.push(`${file}: no call to commitGreyholmBattle found -- Greyholm active-battle actions no longer route through universal authority`);
+  }
+
+  // All 4 candidate-computing action creators must commit before dispatching.
+  const commitCount = (text.match(/commitGreyholmBattle\(greyholmBattleStorage\(\)/g) ?? []).length;
+  if (commitCount !== 4) {
+    failed.push(`${file}: expected exactly 4 commitGreyholmBattle call sites (start/update/updateCombatant/addCombatant), found ${commitCount}`);
+  }
+}
+
 if (failed.length) {
   console.error('LEGACY_BATTLE_WRITE_GUARD_FAIL:');
   for (const f of failed) console.error(`  - ${f}`);
   process.exit(1);
 }
 
-console.log(JSON.stringify({ ok: true, filesChecked: 1, verdict: 'NO_LEGACY_BATTLE_WRITE_PATH_FOUND' }));
+console.log(JSON.stringify({ ok: true, filesChecked: 2, verdict: 'NO_LEGACY_BATTLE_WRITE_PATH_FOUND' }));

@@ -42,6 +42,22 @@ import { emitMainCommand } from './commandShadowSink';
 import { routeMainAuthority } from './commandAuthoritySink';
 import { routeMainDurable } from './durableAuthoritySink';
 import { routeMainComplex, type ComplexActionDescriptor } from './complexAuthoritySink';
+import { commitGreyholmBattle, createBrowserRepositoryStorage, campaignIdFromLegacy } from '../domain';
+
+// Decision 2 — the SAME universal campaign id EmbeddedBattleOverlay.tsx
+// already uses for its (now-superseded) shadow turn-advance path. Must be
+// `campaignIdFromLegacy('greyholm', 'main')`, NOT a raw `makeCampaignId` of
+// MAIN_CAMPAIGN_ID ('main-greyholm-campaign') -- that string has no colon
+// segment and fails the branded CampaignId's format assertion.
+const GREYHOLM_UNIVERSAL_CAMPAIGN_ID = campaignIdFromLegacy('greyholm', 'main');
+
+// Decision 2 — battle authority storage handle for the Greyholm active-battle
+// commit path (see startActiveBattle/updateActiveBattle/etc below). SSR-safe:
+// throws only if actually called with no window, which never happens outside
+// a browser event handler.
+function greyholmBattleStorage() {
+  return createBrowserRepositoryStorage(window.localStorage);
+}
 
 const STORAGE_KEY = 'campaign-timeline-vtt:overlay:v2';
 const OLD_STORAGE_KEY = 'campaign-timeline-vtt:state:v1';
@@ -1336,11 +1352,65 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       markBattleEntryCompleted: (entryId) => dispatch({ type: 'MARK_BATTLE_ENTRY_COMPLETED', entryId }),
       setBattleMapLink: (link) => dispatch({ type: 'SET_BATTLE_MAP_LINK', link }),
       setBattleMapVttUrl: (battleMapId, url) => dispatch({ type: 'SET_BATTLE_MAP_VTT_URL', battleMapId, url }),
-      startActiveBattle: (battle) => dispatch({ type: 'START_ACTIVE_BATTLE', battle }),
-      updateActiveBattle: (patch) => dispatch({ type: 'UPDATE_ACTIVE_BATTLE', patch }),
-      updateActiveBattleCombatant: (combatantId, patch) =>
-        dispatch({ type: 'UPDATE_ACTIVE_BATTLE_COMBATANT', combatantId, patch }),
-      addActiveBattleCombatant: (combatant) => dispatch({ type: 'ADD_ACTIVE_BATTLE_COMBATANT', combatant }),
+      // Decision 2 — universal battle authority. Every mutation below computes
+      // its candidate ActiveBattleState with the SAME merge logic the reducer
+      // itself would apply (so behavior is unchanged), commits that candidate
+      // through commitGreyholmBattle (typed conversion via greyholmBattleToUniversal
+      // -- the same adapter Stage 17 proves lossless -- invariant-checked,
+      // expected-revision-guarded, read-after-write verified), and dispatches
+      // the durably-committed, round-tripped result via the existing pure
+      // START_ACTIVE_BATTLE/END_ACTIVE_BATTLE reducer cases (both already do an
+      // unconditional full replace, exactly what a committed-result set needs --
+      // no new action type required). A rejected commit (invariant violation,
+      // revision conflict) dispatches nothing: the legacy activeBattle stays
+      // completely untouched, no silent fallback to an uncommitted candidate.
+      startActiveBattle: (battle) => {
+        const outcome = commitGreyholmBattle(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, battle);
+        if (!outcome.ok || !outcome.compatBattle) {
+          // eslint-disable-next-line no-console
+          console.error('[battle] universal commit rejected, battle not started:', outcome.error);
+          return;
+        }
+        dispatch({ type: 'START_ACTIVE_BATTLE', battle: outcome.compatBattle });
+      },
+      updateActiveBattle: (patch) => {
+        if (!state.activeBattle) return;
+        const candidate: ActiveBattleState = { ...state.activeBattle, ...patch };
+        const outcome = commitGreyholmBattle(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, candidate);
+        if (!outcome.ok || !outcome.compatBattle) {
+          // eslint-disable-next-line no-console
+          console.error('[battle] universal commit rejected, battle not updated:', outcome.error);
+          return;
+        }
+        dispatch({ type: 'START_ACTIVE_BATTLE', battle: outcome.compatBattle });
+      },
+      updateActiveBattleCombatant: (combatantId, patch) => {
+        if (!state.activeBattle) return;
+        const candidate: ActiveBattleState = {
+          ...state.activeBattle,
+          combatants: state.activeBattle.combatants.map((combatant) =>
+            combatant.id === combatantId ? { ...combatant, ...patch } : combatant,
+          ),
+        };
+        const outcome = commitGreyholmBattle(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, candidate);
+        if (!outcome.ok || !outcome.compatBattle) {
+          // eslint-disable-next-line no-console
+          console.error('[battle] universal commit rejected, combatant not updated:', outcome.error);
+          return;
+        }
+        dispatch({ type: 'START_ACTIVE_BATTLE', battle: outcome.compatBattle });
+      },
+      addActiveBattleCombatant: (combatant) => {
+        if (!state.activeBattle) return;
+        const candidate: ActiveBattleState = { ...state.activeBattle, combatants: [...state.activeBattle.combatants, combatant] };
+        const outcome = commitGreyholmBattle(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, candidate);
+        if (!outcome.ok || !outcome.compatBattle) {
+          // eslint-disable-next-line no-console
+          console.error('[battle] universal commit rejected, combatant not added:', outcome.error);
+          return;
+        }
+        dispatch({ type: 'START_ACTIVE_BATTLE', battle: outcome.compatBattle });
+      },
       endActiveBattle: () => dispatch({ type: 'END_ACTIVE_BATTLE' }),
       presentCard: (card) => {
         const action: Action = { type: 'SET_PRESENTED_CARD', card };

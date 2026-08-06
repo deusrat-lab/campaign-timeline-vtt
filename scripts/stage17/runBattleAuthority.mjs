@@ -6,6 +6,7 @@ import {
   listBattleRecords, totalPendingCount,
   userBoardToUniversal, greyholmBattleToUniversal, executeBattleCommand,
   commitUserBoard, readUserBoard,
+  commitGreyholmBattle, readGreyholmBattle,
 } from './.dist/domain/index.js';
 import { Checks } from '../stage08/lib.mjs';
 import { CALDRAN_ID, OTHER_UC_ID, GREYHOLM_ID, caldranBoards, greyholmActiveBattle } from './fixtures.mjs';
@@ -240,6 +241,71 @@ export function runBattleAuthority(c = new Checks()) {
     commitUserBoard(storage, OTHER_UC_ID, 'custom-alpha', { ...board, round: 9 });
     c.eq('board-commit: caldran round isolated', readUserBoard(storage, CALDRAN_ID, 'custom-alpha').round, 5);
     c.eq('board-commit: other-uc round isolated', readUserBoard(storage, OTHER_UC_ID, 'custom-alpha').round, 9);
+  }
+
+  // --- Decision 2: Greyholm whole-battle sole-authority commit (the real UI's
+  // startActiveBattle/updateActiveBattle/updateActiveBattleCombatant/
+  // addActiveBattleCombatant now route through this instead of dispatching
+  // straight to the reducer) ---
+  {
+    const storage = createMemoryRepositoryStorage();
+    const active = greyholmActiveBattle();
+
+    c.ok('greyholm board-commit: readGreyholmBattle null before any commit', readGreyholmBattle(storage, GREYHOLM_ID, active.id) === null);
+
+    // startActiveBattle
+    const r1 = commitGreyholmBattle(storage, GREYHOLM_ID, active);
+    c.ok('greyholm board-commit: start ok', r1.ok);
+    c.eq('greyholm board-commit: revision 1', r1.newRevision, 1);
+    c.eq('greyholm board-commit: combatant count preserved', r1.compatBattle.combatants.length, 3);
+    c.ok('greyholm board-commit: readGreyholmBattle recovers exact committed battle', readGreyholmBattle(storage, GREYHOLM_ID, active.id).combatants.length === 3);
+
+    // updateActiveBattle (round + currentTurnCombatantId together, mirrors "Следующий ход")
+    const advanced = { ...r1.compatBattle, currentTurnCombatantId: 'cmb-bandit-1', round: 3 };
+    const r2 = commitGreyholmBattle(storage, GREYHOLM_ID, advanced);
+    c.ok('greyholm board-commit: turn+round combined mutation ok', r2.ok);
+    c.eq('greyholm board-commit: revision 2', r2.newRevision, 2);
+    c.eq('greyholm board-commit: round persisted', r2.compatBattle.round, 3);
+    c.eq('greyholm board-commit: current turn persisted', r2.compatBattle.currentTurnCombatantId, 'cmb-bandit-1');
+
+    // updateActiveBattleCombatant (hp change on one combatant, others untouched)
+    const hpPatched = {
+      ...r2.compatBattle,
+      combatants: r2.compatBattle.combatants.map((cb) => (cb.id === 'cmb-bandit-1' ? { ...cb, currentHp: 2 } : cb)),
+    };
+    const r3 = commitGreyholmBattle(storage, GREYHOLM_ID, hpPatched);
+    c.ok('greyholm board-commit: combatant hp update ok', r3.ok);
+    c.eq('greyholm board-commit: hp persisted', r3.compatBattle.combatants.find((cb) => cb.id === 'cmb-bandit-1').currentHp, 2);
+    c.eq('greyholm board-commit: other combatant hp untouched', r3.compatBattle.combatants.find((cb) => cb.id === 'cmb-hero').currentHp, 22);
+
+    // addActiveBattleCombatant
+    const withNew = {
+      ...r3.compatBattle,
+      combatants: [...r3.compatBattle.combatants, { id: 'cmb-bandit-3', side: 'enemy', sourceId: 'enm-bandit', name: 'Bandit', currentHp: 11, maxHp: 11, armorClass: 12, x: 30, y: 10 }],
+    };
+    const r4 = commitGreyholmBattle(storage, GREYHOLM_ID, withNew);
+    c.ok('greyholm board-commit: add combatant ok', r4.ok);
+    c.eq('greyholm board-commit: combatant count +1', r4.compatBattle.combatants.length, 4);
+
+    c.eq('greyholm board-commit: exactly 4 revisions for 4 user gestures', battleRevision(storage, GREYHOLM_ID, active.id), 4);
+
+    // reload/bootstrap recovery
+    const reloaded = readGreyholmBattle(storage, GREYHOLM_ID, active.id);
+    c.eq('greyholm board-commit: reload recovers combatant count', reloaded.combatants.length, 4);
+    c.eq('greyholm board-commit: reload recovers round', reloaded.round, 3);
+    c.eq('greyholm board-commit: reload recovers current turn', reloaded.currentTurnCombatantId, 'cmb-bandit-1');
+
+    // invariant rejection: duplicate combatant id -> nothing persisted
+    const dup = { ...r4.compatBattle, combatants: [...r4.compatBattle.combatants, { ...r4.compatBattle.combatants[0] }] };
+    const bad = commitGreyholmBattle(storage, GREYHOLM_ID, dup);
+    c.ok('greyholm board-commit: duplicate combatant id rejected', !bad.ok);
+    c.eq('greyholm board-commit: no durable write on rejection', battleRevision(storage, GREYHOLM_ID, active.id), 4);
+
+    // campaign isolation
+    const otherActive = { ...active, id: 'battle-other', combatants: [active.combatants[0]] };
+    commitGreyholmBattle(storage, CALDRAN_ID, otherActive);
+    c.eq('greyholm board-commit: greyholm battle unaffected by caldran-scoped commit of a different battle id', battleRevision(storage, GREYHOLM_ID, active.id), 4);
+    c.ok('greyholm board-commit: distinct campaign record isolated', readGreyholmBattle(storage, CALDRAN_ID, 'battle-other') !== null);
   }
 
   return c;
