@@ -63,6 +63,12 @@ export function validateCampaignSnapshot(snapshot: CampaignSnapshot): Validation
   // A duplicate id makes every battleMapRef pointing at it ambiguous (it could
   // resolve to 2+ maps), so it must be rejected instead of first-match resolved.
   const battleMapIdCounts = new Map<string, number>();
+  // A placement's entityRef for a battle-map marker is the generic universal id
+  // (`entity:battleMap:<rawId>`, from `entityIdFromLegacy`), but `durable.battleMaps`
+  // ids are the RAW legacy id — a distinct namespace from `durable.entities`. Track
+  // the prefixed form too so such placements resolve during reference-integrity
+  // validation instead of being rejected as unresolved.
+  const battleMapEntityRefIds = new Set<string>();
   snapshot.durable.battleMaps.forEach((map, index) => {
     if (map.campaignId !== campaignId) issues.push(error(`durable.battleMaps.${index}.campaignId`, 'battle map belongs to another campaign'));
     const seen = battleMapIdCounts.get(map.id) ?? 0;
@@ -70,6 +76,7 @@ export function validateCampaignSnapshot(snapshot: CampaignSnapshot): Validation
     if (seen >= 1) {
       issues.push(error(`durable.battleMaps.${index}.id`, `duplicate battle map id ${map.id}`));
     }
+    battleMapEntityRefIds.add(`entity:battleMap:${map.id}`);
   });
 
   snapshot.durable.hotspots.forEach((hotspot, index) => {
@@ -87,7 +94,7 @@ export function validateCampaignSnapshot(snapshot: CampaignSnapshot): Validation
     validatePoint(placement.position, `durable.placements.${index}.position`, issues);
     // Loss-sensitive: a placement always carries an entityRef; if it cannot be
     // resolved the placement is meaningless, so this is a blocking error.
-    if (!entityIds.has(placement.entityRef)) {
+    if (!entityIds.has(placement.entityRef) && !battleMapEntityRefIds.has(placement.entityRef)) {
       issues.push(error(`durable.placements.${index}.entityRef`, `unresolved entity ${placement.entityRef}`));
     }
   });

@@ -35,6 +35,23 @@ export function resolveIdentity(snapshot: CampaignSnapshot, query: IdentityQuery
   }
 
   if (query.entityId !== undefined) {
+    // Battle-map placements reference `durable.battleMaps` (a `BattleMapDefinition`,
+    // Stage 17's battle domain), not `durable.entities` — a distinct universal
+    // collection with its own id space. Resolved first (and exclusively for this
+    // kind) so a placement linked to a battle map can be identity-resolved and
+    // durably committed like any other entity-linked placement.
+    if (query.entityKind === 'battleMap') {
+      // `durable.battleMaps[].id` is the RAW legacy battle-map id (Stage 17's own
+      // namespace, e.g. used directly as `sourceMapId`/`battleMapRef` elsewhere) —
+      // it is NOT re-prefixed into the generic `entity:battleMap:` universal id
+      // space the way `durable.entities` ids are. Strip the prefix the adapter's
+      // `entityIdFromLegacy('battleMap', rawId)` added before comparing.
+      const rawId = query.entityId.startsWith('entity:battleMap:') ? query.entityId.slice('entity:battleMap:'.length) : query.entityId;
+      const maps = snapshot.durable.battleMaps.filter((m) => m.id === rawId);
+      if (maps.length === 0) return { status: 'missing', universalId: query.entityId };
+      if (maps.length > 1) return { status: 'ambiguous', universalId: query.entityId };
+      return { status: 'ok', universalId: query.entityId };
+    }
     const matches = snapshot.durable.entities.filter((e) => e.id === query.entityId);
     if (matches.length === 0) return { status: 'missing', universalId: query.entityId };
     if (matches.length > 1) {
