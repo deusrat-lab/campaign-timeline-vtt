@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-06T08:45:00.000Z",
-  "currentHead": "2ae17ac",
+  "generatedAt": "2026-08-06T09:00:00.000Z",
+  "currentHead": "591166d",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -21,14 +21,23 @@
   "completedBlocks": [
     {
       "block": "Greyholm battle-map placement create fix",
-      "commits": ["739dd51", "db9dfda"],
+      "commits": [
+        "739dd51",
+        "db9dfda"
+      ],
       "status": "IMPLEMENTED_AND_BROWSER_VERIFIED"
     },
     {
       "block": "A: production reference manifest",
-      "commits": ["2bdf09f", "0c7fde3"],
+      "commits": [
+        "2bdf09f",
+        "0c7fde3"
+      ],
       "status": "PARTIAL_IMPROVED",
-      "files": ["rebuild-reports/final-cutover/PRODUCTION_REFERENCE_MANIFEST.json", "rebuild-reports/final-cutover/GREYHOLM_RUNTIME_SHAPE.json"],
+      "files": [
+        "rebuild-reports/final-cutover/PRODUCTION_REFERENCE_MANIFEST.json",
+        "rebuild-reports/final-cutover/GREYHOLM_RUNTIME_SHAPE.json"
+      ],
       "stillMissing": [
         "arcs/capabilities/settings metadata block per campaign in the manifest itself",
         "battle/battle-map runtime records (activeBattle, battleEntriesById) for Greyholm -- localStorage-only, needs a live browser read",
@@ -39,19 +48,25 @@
     {
       "block": "B: final data migration",
       "commit": "2ae17ac",
-      "status": "CORE_ENGINE_PROVEN_END_TO_END",
+      "status": "CORE_ENGINE_AND_ID_PARITY_PROVEN",
       "file": "rebuild-reports/final-cutover/FINAL_DATA_PARITY_REPORT.json",
-      "evidence": "Real adapters + real migrationEngine.ts (Stage-7-proven) + real repository (in-memory-backed) migrated real Greyholm (979 entities/139 battleMaps/22 hotspots/4 maps) and real Caldran (407 entities/17 placements/1 route/1 map). dry-run/commit/read-back/rollback all genuinely exercised, not mocked.",
+      "evidence": "Real adapters + real migrationEngine.ts (Stage-7-proven) + real repository (in-memory-backed) migrated real Greyholm (979 entities/139 battleMaps/22 hotspots/4 maps) and real Caldran (407 entities/17 placements/1 route/1 map). dry-run/commit/read-back/rollback all genuinely exercised, not mocked. Per-type id-coverage diff against PRODUCTION_REFERENCE_MANIFEST.json: 100% coverage, 0 missing ids, across npcs/quests/enemies/images/factions (+players/shops/taverns for Greyholm) in both campaigns.",
       "stillMissing": [
-        "Per-type id-level / content-hash-level comparison against PRODUCTION_REFERENCE_MANIFEST.json (currently only aggregate counts) -- needed to prove parity, not just 'a migration ran'.",
         "Migration was run against an in-memory repository, not the browser's real localStorage-backed production repository -- the actual local cutover (Block K) still needs to run this against the real browser app.",
         "'other existing campaigns' (only Greyholm + Caldran exist locally; no third campaign found in this repo to migrate).",
         "arcs/capabilities/settings are not yet part of what gets migrated (adapters already carry defaultCapabilities(true) but arc-scoping of content is not verified end to end)."
+      ],
+      "commits": [
+        "2ae17ac",
+        "591166d"
       ]
     },
     {
       "block": "C: referential integrity",
-      "commits": ["1beee17", "0c7fde3"],
+      "commits": [
+        "1beee17",
+        "0c7fde3"
+      ],
       "status": "PARTIAL_IMPROVED",
       "file": "rebuild-reports/final-cutover/REFERENTIAL_INTEGRITY_REPORT.json",
       "covers": "20 Greyholm + 9 Caldran statically-checkable relations (14+6 from the first pass, +6 from GREYHOLM_RUNTIME_SHAPE.json), 0 broken, 34 correctly-classified typed orphans",
@@ -71,11 +86,15 @@
   ],
   "currentBlock": null,
   "nextConcreteStep": {
-    "description": "Two independent, both-valuable next increments (pick either first, no dependency order between them): (1) Extend run-final-migration.ts's report with per-entity-type id-set diffing against PRODUCTION_REFERENCE_MANIFEST.json's stored id lists (missingIds/addedIds), closing Block B's 'per-type id-level parity' gap cheaply since both id lists already exist on disk. (2) Start Block D's UI: add a capabilities record to src/types/userCampaign.ts (UC) and a new command (not raw store mutation) to read/write it, then a minimal Settings panel component with checkboxes gated by capabilityEnabled(), then gate 1-2 nav links on it as proof, then a small Node harness proving toggle-off hides UI without deleting data.",
-    "recommendedOrder": "(1) first -- it is pure data-diffing on files already on disk, no UI risk, finishes Block B's remaining honest gap in under one focused session. Then (2), which is the first block requiring real React component work + a live browser check."
+    "description": "Block D UI: add a capabilities record to src/types/userCampaign.ts (UC) and a Greyholm-equivalent persisted overlay slot, a new command (not raw store mutation) to read/write it, a minimal Settings panel component with checkboxes gated by capabilityEnabled(), gate 1-2 nav links on it as proof, then a small Node harness proving toggle-off hides UI without deleting data. This is the first remaining block requiring real React component work + a live browser check, not pure data/script work like the blocks just closed.",
+    "targetFiles": [
+      "src/types/userCampaign.ts",
+      "src/state/campaignStore.tsx (Greyholm capabilities slot)",
+      "a new src/features/settings/ or src/pages/SettingsPage.tsx",
+      "src/App.tsx (route + nav gating)"
+    ]
   },
   "remainingBlocks": [
-    "B (finish): per-type id/hash parity diff against the manifest",
     "D (finish): capabilities UI + command-layer enforcement",
     "E: universal arcs (create/edit/reorder/archive/delete/direct URL/scope)",
     "F: full functional parity matrix across campaign mgmt/maps/content/timeline/economy/battles",
