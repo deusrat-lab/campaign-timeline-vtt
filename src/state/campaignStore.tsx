@@ -40,7 +40,7 @@ import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
 import { API_BASE_URL } from '../config';
 import { emitMainCommand } from './commandShadowSink';
 import { routeMainComplex, type ComplexActionDescriptor } from './complexAuthoritySink';
-import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, commitReveal, readReveal, type RevealSnapshot, createBrowserRepositoryStorage, campaignIdFromLegacy } from '../domain';
+import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, commitReveal, readReveal, type RevealSnapshot, commitPartyPosition, readPartyPosition, type PartyPositionSnapshot, createBrowserRepositoryStorage, campaignIdFromLegacy } from '../domain';
 
 // Decision 2 — the SAME universal campaign id EmbeddedBattleOverlay.tsx
 // already uses for its (now-superseded) shadow turn-advance path. Must be
@@ -1208,23 +1208,50 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       return handled;
     };
 
+    // Block I — universal party-position authority seed. Reads the durably
+    // committed whole snapshot if one exists; otherwise falls back to the
+    // current legacy overlay values (the one allowed migration boundary, for
+    // a campaign that predates this cutover / was never committed) — same
+    // pattern as `setRevealed`/`unsetRevealed`'s reveal seed above.
+    const seedPartyPosition = (): PartyPositionSnapshot =>
+      readPartyPosition(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.partyPosition') ?? {
+        currentLocationStateId: state.party.currentLocationStateId ?? null,
+        currentPartyRouteId: state.party.currentPartyRouteId ?? null,
+        currentMapPosition: state.party.currentMapPosition ?? null,
+        partyRouteProgress: (state.partyRouteProgress as unknown as Record<string, unknown> | null) ?? null,
+      };
+
     return {
       ...state,
       isDmView: state.mode !== 'player-view',
       arc2RevealedToPlayers,
       saveStatus,
       setCurrentLocation: (locationStateId, routeId) => {
+        // Block I — universal party-position authority is the SOLE active
+        // authority: the candidate WHOLE snapshot (currentLocationStateId/
+        // currentPartyRouteId/currentMapPosition/partyRouteProgress) is
+        // durably committed first (expected-revision guard, read-after-write
+        // verified), and only the committed value is projected into the
+        // existing legacy dispatch as a compatibility write. No flag, no
+        // optional fallback path — mirrors the unconditional field/battle/
+        // presentedCard/reveal cutovers above. Legacy SET_CURRENT_LOCATION
+        // always atomically clears the in-flight map position + route
+        // progress on arrival (see reducer above); the candidate expresses
+        // the SAME single transaction.
+        const seed = seedPartyPosition();
+        const candidate: PartyPositionSnapshot = {
+          ...seed,
+          currentLocationStateId: locationStateId,
+          currentPartyRouteId: routeId ?? null,
+          currentMapPosition: null,
+          partyRouteProgress: null,
+        };
+        const outcome = commitPartyPosition(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.partyPosition', candidate);
+        if (!outcome.ok || !outcome.snapshot) {
+          throw new Error(`setCurrentLocation: universal party-position commit failed for ${locationStateId}: ${outcome.error ?? 'unknown error'}`);
+        }
         const action: Action = { type: 'SET_CURRENT_LOCATION', locationStateId, routeId };
-        // Legacy SET_CURRENT_LOCATION always atomically clears the in-flight map
-        // position + route progress on arrival (see reducer above) — the
-        // universal command must express the SAME single transaction, not a
-        // bare location patch, or the prediction parity check would mismatch
-        // and this would silently stay legacy-only forever.
-        routeGreyComplex(
-          'greyholm.partyLocation',
-          { aggregate: 'partyLocation', locationStateId, clearMapPosition: true, clearRouteProgress: true },
-          action,
-        );
+        dispatch(action);
       },
       markVisited: (locationStateId) => dispatch({ type: 'MARK_VISITED', locationStateId }),
       setKnown: (locationStateId) => dispatch({ type: 'SET_KNOWN', locationStateId }),
@@ -1490,26 +1517,45 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
         dispatch(action);
       },
       setPartyMapPosition: (position) => {
+        // Block I — universal party-position authority is the SOLE active
+        // authority (see setCurrentLocation above for the full pattern
+        // explanation). Legacy SET_PARTY_MAP_POSITION always atomically
+        // clears the current location + route progress (a direct free-map
+        // move ends any tracked arrival/travel) — the candidate expresses
+        // the SAME single transaction.
+        const seed = seedPartyPosition();
+        const candidate: PartyPositionSnapshot = {
+          ...seed,
+          currentLocationStateId: null,
+          currentPartyRouteId: null,
+          currentMapPosition: position,
+          partyRouteProgress: null,
+        };
+        const outcome = commitPartyPosition(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.partyPosition', candidate);
+        if (!outcome.ok || !outcome.snapshot) {
+          throw new Error(`setPartyMapPosition: universal party-position commit failed: ${outcome.error ?? 'unknown error'}`);
+        }
         const action: Action = { type: 'SET_PARTY_MAP_POSITION', position };
-        // Legacy SET_PARTY_MAP_POSITION always atomically clears the current
-        // location + route progress (a direct free-map move ends any tracked
-        // arrival/travel) — same single-transaction requirement as arrival.
-        routeGreyComplex(
-          'greyholm.partyLocation',
-          { aggregate: 'partyLocation', mapRawId: position.mapId, x: position.x, y: position.y, clearLocation: true, clearRouteProgress: true },
-          action,
-        );
+        dispatch(action);
       },
       setPartyRouteProgress: (progress) => {
+        // Block I — universal party-position authority is the SOLE active
+        // authority. Legacy SET_PARTY_ROUTE_PROGRESS also clears
+        // currentMapPosition when advancing (see reducer above);
+        // routeProgress:null (pause/cancel) does not touch map position or
+        // location metadata — the candidate expresses the SAME transaction.
+        const seed = seedPartyPosition();
+        const candidate: PartyPositionSnapshot = {
+          ...seed,
+          currentMapPosition: progress ? null : seed.currentMapPosition,
+          partyRouteProgress: (progress as unknown as Record<string, unknown> | null) ?? null,
+        };
+        const outcome = commitPartyPosition(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.partyPosition', candidate);
+        if (!outcome.ok || !outcome.snapshot) {
+          throw new Error(`setPartyRouteProgress: universal party-position commit failed: ${outcome.error ?? 'unknown error'}`);
+        }
         const action: Action = { type: 'SET_PARTY_ROUTE_PROGRESS', progress };
-        // Legacy SET_PARTY_ROUTE_PROGRESS also clears currentMapPosition when
-        // advancing (see reducer above); routeProgress:null (pause/cancel) does
-        // not touch map position.
-        routeGreyComplex(
-          'greyholm.routeProgress',
-          { aggregate: 'routeProgress', progress: progress as unknown as Record<string, unknown> | null, clearMapPosition: !!progress },
-          action,
-        );
+        dispatch(action);
       },
       confirmBattleMapLink: (locationStateId, battleMapId) => {
         const key = `${locationStateId}__${battleMapId}`;

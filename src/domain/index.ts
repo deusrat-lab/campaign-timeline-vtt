@@ -38,4 +38,5 @@ export * from './validation/validateCampaignSnapshot';
 export * from './visibility/types';
 export * from './visibility/presentedCardAuthorityStore';
 export * from './visibility/revealAuthorityStore';
+export * from './party/partyPositionAuthorityStore';
 export * from './workspace/index';
