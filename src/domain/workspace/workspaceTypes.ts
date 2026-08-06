@@ -49,6 +49,7 @@ export type WorkspaceModuleId =
   | 'library.body'
   | 'map.workspace'
   | 'battle.board'
+  | 'economy'
   | 'settings'
   | 'importExport';
 

@@ -136,6 +136,17 @@ export const WORKSPACE_MODULE_REGISTRY: readonly WorkspaceModuleRegistryEntry[] 
     writeOwner: 'legacy: battle stores',
   },
   {
+    moduleId: 'economy',
+    label: 'Экономика (цены/услуги)',
+    classification: 'legacy-write',
+    audiences: DM_ONLY,
+    campaignKinds: ['greyholm'],
+    routes: ['economy', 'services', 'shops', 'taverns'],
+    readScope: null,
+    projection: null,
+    writeOwner: 'legacy: campaignStore (economy/services reference pages)',
+  },
+  {
     moduleId: 'settings',
     label: 'Настройки кампании',
     classification: 'legacy-write',

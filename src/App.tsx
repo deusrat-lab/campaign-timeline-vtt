@@ -168,6 +168,27 @@ function PlayerWorkspaceRoute() {
  * derived from the store's own mode (DM/player), NOT hardcoded 'dm' -- unlike
  * the DM-only content routes, /map serves both.
  */
+/**
+ * Block G — Greyholm's Economy/Services reference pages (EconomyPage.tsx,
+ * ServicesPage.tsx) are Greyholm-only (Caldran has no economy data model,
+ * confirmed NOT_APPLICABLE_BY_SOURCE_DESIGN in the F: Timeline/Economy/Zones
+ * bundle) and already DM-only-guarded (DmOnlyRoute + RequireCapability
+ * "economy" wrap every caller). Audience is hardcoded 'dm' here (unlike
+ * GreyholmMapRoute) because these routes cannot be reached by a player or
+ * observer at all — DmOnlyRoute redirects them before this component mounts.
+ */
+function GreyholmEconomyRoute({ activeRoute, page }: { activeRoute: string; page: ReactElement }) {
+  return (
+    <GreyholmWorkspace
+      activeRoute={activeRoute}
+      audience="dm"
+      bodyModuleId="economy"
+      legacyHeader={<></>}
+      legacyBody={page}
+    />
+  );
+}
+
 function GreyholmMapRoute() {
   const store = useCampaignStore();
   const audience: 'dm' | 'player' = store.mode === 'player-view' ? 'player' : 'dm';
@@ -279,10 +300,10 @@ function AppShell() {
             <Route path="/enemies" element={<DmOnlyRoute><RequireCapability capability="enemies"><EntityLibraryPage kind="enemies" /></RequireCapability></DmOnlyRoute>} />
             <Route path="/bestiary" element={<DmOnlyRoute><RequireCapability capability="enemies"><EntityLibraryPage kind="bestiary" /></RequireCapability></DmOnlyRoute>} />
             <Route path="/players" element={<DmOnlyRoute><RequireCapability capability="party"><EntityLibraryPage kind="players" /></RequireCapability></DmOnlyRoute>} />
-            <Route path="/economy" element={<DmOnlyRoute><RequireCapability capability="economy"><EconomyPage /></RequireCapability></DmOnlyRoute>} />
-            <Route path="/services" element={<DmOnlyRoute><RequireCapability capability="economy"><ServicesPage /></RequireCapability></DmOnlyRoute>} />
-            <Route path="/shops" element={<DmOnlyRoute><RequireCapability capability="economy"><ServicesPage initialKind="shop" /></RequireCapability></DmOnlyRoute>} />
-            <Route path="/taverns" element={<DmOnlyRoute><RequireCapability capability="economy"><ServicesPage initialKind="tavern" /></RequireCapability></DmOnlyRoute>} />
+            <Route path="/economy" element={<DmOnlyRoute><RequireCapability capability="economy"><GreyholmEconomyRoute activeRoute="/economy" page={<EconomyPage />} /></RequireCapability></DmOnlyRoute>} />
+            <Route path="/services" element={<DmOnlyRoute><RequireCapability capability="economy"><GreyholmEconomyRoute activeRoute="/services" page={<ServicesPage />} /></RequireCapability></DmOnlyRoute>} />
+            <Route path="/shops" element={<DmOnlyRoute><RequireCapability capability="economy"><GreyholmEconomyRoute activeRoute="/shops" page={<ServicesPage initialKind="shop" />} /></RequireCapability></DmOnlyRoute>} />
+            <Route path="/taverns" element={<DmOnlyRoute><RequireCapability capability="economy"><GreyholmEconomyRoute activeRoute="/taverns" page={<ServicesPage initialKind="tavern" />} /></RequireCapability></DmOnlyRoute>} />
             <Route path="/images" element={<DmOnlyRoute><RequireCapability capability="images"><ImagesPage /></RequireCapability></DmOnlyRoute>} />
             <Route path="/battle-maps" element={<DmOnlyRoute><RequireCapability capability="battleMaps"><EntityLibraryPage kind="battleMaps" /></RequireCapability></DmOnlyRoute>} />
             <Route path="/factions" element={<DmOnlyRoute><RequireCapability capability="factions"><EntityLibraryPage kind="factions" /></RequireCapability></DmOnlyRoute>} />
