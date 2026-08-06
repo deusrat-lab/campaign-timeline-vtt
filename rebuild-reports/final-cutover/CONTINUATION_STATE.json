@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-06T11:15:00.000Z",
-  "currentHead": "1394480",
+  "generatedAt": "2026-08-06T12:00:00.000Z",
+  "currentHead": "63a68ea",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -76,29 +76,28 @@
     },
     {
       "block": "E: universal arcs",
-      "status": "GREYHOLM_LIFECYCLE_COMPLETE_UC_DESIGN_PENDING",
+      "status": "FULL_LIFECYCLE_BOTH_STACKS_COMPLETE",
       "discovery": "Greyholm arcs already existed end-to-end under the name `Timeline` (src/types.ts) BEFORE this session: switch (SET_TIMELINE), the header segmented control (already generic over data.timelines), reveal-to-players, reload persistence. Only CREATE (dead `addTimeline`/ADD_TIMELINE action, zero UI callers) and DELETE (didn't exist at all) were missing.",
-      "evidence": "Full lifecycle browser-verified in one continuous flow: create -> rename (double-click) -> reorder (‹/›) -> archive -> reload persistence (title/order/archived all survive in overlay.timelinePatches) -> restore -> delete. Direct-URL ?arc= two-way sync. Fallback when active arc is archived/unknown. Seed arcs (arc-1/arc-2) structurally can never be deleted or archived-while-current. Zero console errors.",
+      "evidence": "Full lifecycle browser-verified in one continuous flow: create -> rename (double-click) -> reorder (‹/›) -> archive -> reload persistence (title/order/archived all survive in overlay.timelinePatches) -> restore -> delete. Direct-URL ?arc= two-way sync. Fallback when active arc is archived/unknown. Seed arcs (arc-1/arc-2) structurally can never be deleted or archived-while-current. Zero console errors. UC/Caldran side: UserCampaignData.arcs (same Timeline type), UserCampaignRuntime.currentArcId, addArc/patchArc/deleteArc/setCurrentArc in userCampaignStore.tsx mirroring Greyholm 1:1, one shared <ArcSwitcher> component (not a duplicate) used by both NavBar branches. Full lifecycle browser-verified on a real Caldran campaign: create->switch->rename->reorder->archive->RELOAD (all correct in userCampaignData.arcs)->restore->delete, zero console errors, seed arc structurally protected identically to Greyholm.",
       "stillMissing": [
-        "Arc-specific/shared/campaign-wide SCOPE has no editor UI -- an entity's own timelineId field is still the only scoping mechanism, and \"shared between selected arcs\" has no representation at all (would need a multi-arc field, not just one timelineId).",
-        "Caldran/user campaigns have NO arc/Timeline-equivalent concept whatsoever. Needs an explicit design decision before Block F can score this as PARITY_CONFIRMED vs INTENTIONALLY_IMPROVED vs MISSING for Caldran/new campaigns: either (a) port a parallel Timeline-like array + the same CRUD onto UserCampaignData, or (b) document single-arc-by-design as intentional (one-shots/mini-arcs plausibly never needed multi-arc in the original either) with reasoning in FINAL_FUNCTIONAL_PARITY_REPORT.md."
+        "Content SCOPE (campaign-wide/arc-specific/shared-between-arcs) has no editor UI on either stack -- still just each entity's own single scoping field, no cross-arc \"shared\" representation."
       ],
       "commits": [
         "7c5ee20",
-        "1394480"
+        "1394480",
+        "63a68ea"
       ]
     }
   ],
   "currentBlock": null,
   "nextConcreteStep": {
-    "description": "Decide and act on the UC arc design question (see Block E stillMissing above) OR move directly to Block F (functional parity matrix) treating Caldran single-arc as INTENTIONALLY_IMPROVED-pending-decision and documenting it explicitly rather than blocking on it. Recommended: start Block F now -- create rebuild-reports/final-cutover/FINAL_FUNCTIONAL_PARITY_REPORT.md and begin filling PARITY_CONFIRMED rows for everything already proven this session (capabilities, arcs-Greyholm, placement create/move/remove, migration, referential integrity), which gives concrete shape to what is actually still MISSING/BROKEN before spending more time on any single subsystem.",
+    "description": "Block F: continue filling FINAL_FUNCTIONAL_PARITY_REPORT.md. Arcs section can now be updated to reflect UC parity too. Next real subsystem to verify+fill: Maps/Atlas (placement create/move/remove was already closed in a prior session -- verify it still works after this session's NavBar refactor, then move through Content/Timeline/Economy/Zones/Battles per the report's own remaining sections).",
     "targetFiles": [
-      "rebuild-reports/final-cutover/FINAL_FUNCTIONAL_PARITY_REPORT.md (new)"
+      "rebuild-reports/final-cutover/FINAL_FUNCTIONAL_PARITY_REPORT.md"
     ]
   },
   "remainingBlocks": [
     "D (finish): wire remaining capability keys not yet gating any nav/route; command-layer enforcement for non-route actions",
-    "E (design decision): UC/Caldran arc story -- port Timeline-equivalent or document as intentional single-arc",
     "F: full functional parity matrix (FINAL_FUNCTIONAL_PARITY_REPORT.md) across campaign mgmt/maps/content/timeline/economy/battles",
     "G: unified workspace (shared components across Greyholm/Caldran/new campaign) -- NOTE: view mode (`mode`/`dm-view`|`dm-edit`|`player-view`) is currently a single shared overlay field, NOT tab-scoped; this is a real, load-bearing finding for Block H, discovered this session",
     "H: view modes + multi-window isolation (DM View/DM Edit/Player View/Observer, 3 real tabs) -- requires making view mode tab/session-scoped first (see G note)",
