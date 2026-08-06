@@ -177,7 +177,44 @@ not a dedicated page but an inline toolbar embedded in `MapWorkspacePage.tsx`.
 | Function | Status | Evidence |
 |---|---|---|
 | Faction zones, dynamic/terrain overlays (Greyholm) | PARTIAL | `FactionZone`/`DynamicMapOverlay`/`MovableEntity` types exist in `src/types.ts` (lines 589/666/712) and "Зоны и наложения" management UI was seen in the map toolbar, plus "Зоны (вкл)" layer toggle and "+ Зона" tool were exercised incidentally during the party-marker Maps bundle. Full CRUD/reveal-controlled/event-controlled lifecycle not independently verified this session. |
-| Zones (Caldran/UC) | PARTIAL | `CampaignMapPlacement`-adjacent "+ Зона" tool exists (seen and used incidentally in the Maps bundle for routes/zones creation buttons), но full CRUD/ownership/influence lifecycle not independently verified this session. |
+| Zones (Caldran/UC) | PARTIAL | `CampaignMapPlacement`-adjacent "+ Зона" tool exists (seen and used incidentally in the Maps bundle for routes/zones creation buttons), but full CRUD/ownership/influence lifecycle not independently verified this session. |
+
+## Battles
+
+**Active-runtime matrix (required before any lifecycle work), determined by direct type
+inspection — not assumed from a shared name:**
+
+| Aspect | Greyholm | Caldran/UC | Same runtime? |
+|---|---|---|---|
+| Battle definition | `BattleEntry` (`types.ts:760`) — `status: prepared\|available\|active\|completed\|disabled\|hidden`, linked enemies/quests/NPCs, `playerSafeDescription`/`playerSafeSummary` split | `CampaignCustomBattleMap` (`userCampaign.ts:228`) — just `title`/`dayImage`/`nightImage`/`columns`/`rows`, no status machine | **NO** |
+| Active battle state | `ActiveBattleState` (`types.ts:828`) — one global-ish struct: `round`, `currentTurnCombatantId`, `combatants: ActiveBattleCombatant[]`, `terrainCells` | `CampaignBattleBoard` (`userCampaign.ts:242`), one **per battle-map id** in `battleBoards: Record<string, CampaignBattleBoard>` — `round`, `currentTurnTokenId`, `tokens: CampaignBattleToken[]`, `terrain: Record<"row,col", TerrainType>` | **NO** — different shape, different keying (single active vs. per-map dict) |
+| Combatant/token | `ActiveBattleCombatant`: `side: enemy\|player`, `row`/`column` (grid-cell based) AND `x`/`y` | `CampaignBattleToken`: `side: enemy\|player\|ally\|neutral` (extra `ally`/`neutral`), `x`/`y` only (% of image, no row/column) | **NO** |
+| Present-to-players | `visibleInPlayerView` per `BattleEntry` | `presentedBattle: {mapId} \| null` on `UserCampaignRuntime` — explicit present/hide action, closer to the `presentedCard` pattern already proven elsewhere | **NO** (different mechanism, UC's is arguably more consistent with its own reveal/present conventions) |
+| Day/night | Not found on `BattleEntry`/`ActiveBattleState` — likely handled elsewhere or not modeled the same way | `CampaignCustomBattleMap.nightImage` + `CampaignBattleBoard.variant` (`day\|evening\|night\|default`) | **Unclear on Greyholm side — needs code reading, not assumed absent** |
+| Legacy/deprecated field | none noted | `battleBoard?` on `UserCampaignRuntime` explicitly marked `@deprecated`, superseded by `battleBoards` — confirms UC's own model evolved at least once already | N/A |
+
+**Conclusion: Greyholm and Caldran do NOT share a battle runtime or even a compatible data
+shape today.** This directly confirms the task's stated concern — "если Greyholm и Caldran
+пока используют разные battle runtimes, не считать Block F завершённым" applies literally
+here. Unifying these under one universal battle authority (the stated Block F/Block L goal)
+is a real data-model migration, not a UI wiring exercise — `row`/`column` vs. percentage-only
+positioning and the `side` enum mismatch (`enemy|player` vs `enemy|player|ally|neutral`) are
+breaking differences, not cosmetic ones. This has NOT been attempted this session; scoping it
+correctly (as a schema unification, likely UC's richer `ally`/`neutral` sides plus Greyholm's
+richer status machine) is real design work for a dedicated Battles-unification block, not
+something to rush inside a verification pass.
+
+| Function | Status | Evidence |
+|---|---|---|
+| Battle-map create/edit/delete (Caldran/UC) | PARTIAL | `CampaignCustomBattleMap` CRUD exists in `userCampaignStore.tsx` (create-from-upload flow implied by `dayImage: data URL or https URL`); not live-verified this session. |
+| Battle-map create/edit/delete (Greyholm) | MISSING | Not independently verified this session; prior-session closure (`db9dfda`) covered placement create only, not the battle-map definition CRUD itself. |
+| Battle open/token placement/initiative/turn/round (Caldran/UC) | PARITY_CONFIRMED | Browser-verified live on real battle-map `caldran-l01-a`: opening a battle-map card from `/library/battle-maps` immediately loads a live `CampaignBattleBoard` (no separate "start battle" step) -> placed a free player token (had to dispatch native `PointerEvent`s directly on `.ucw-viewport` — a raw `left_click` at the same screen coordinates silently missed, same class of automation pitfall as the earlier party-marker case, not a product bug) -> token appeared in "Инициатива"/"Игроки на поле" -> "Закончить ход" + "+ раунд" advanced round 1->2, `currentTurnTokenId` updated -> toggled Ночь (`variant: 'night'` persisted) -> **reload recovery confirmed**: round 2, current-turn token, night variant all survived `window.location.reload()` -> Player View correctly showed "▶ Мастер открыл бой" banner -> clicking it opened a read-only board (`РЕЖИМ ИГРОКА`, DM-only controls like `+раунд`/`Очистить токены`/`Закончить бой` absent) with only the placed token visible. Zero console errors throughout. |
+| Finish battle (Caldran/UC) | PARITY_CONFIRMED (code-verified after an automation false-alarm) | First attempt appeared to do nothing (`battleBoards`/`presentedBattle` unchanged) — root-caused, not left as a mystery: `CampaignBattlePage.tsx:559`, `finishBattle()` opens a `window.confirm(...)` guard before clearing state, which a scripted `.click()` cannot answer (browsers auto-dismiss/no-op programmatic confirms in this automation context), so the function returned early exactly as designed. Reading the function body confirms it correctly does `tokens: []`, `round: 1`, `currentTurnTokenId: undefined`, and clears `presentedBattle`/`presentedCard` when confirmed — i.e. the feature works, my click just never passed its confirmation gate. Test state was cleaned up manually via `localStorage` surgery to match what a confirmed finish would have produced. Flagging for the next live pass: any future browser verification of a destructive/confirm-gated action needs to either accept-dialog via the browser tool's dialog handling or read the source first (as done here) rather than conclude BROKEN from a silent no-op. |
+| Battle-map create/edit/delete, both stacks | MISSING | Not exercised this session (only pre-existing battle maps were opened, not created/edited/deleted). |
+| Grid/terrain/scale/hand-mode, both stacks | MISSING | "Сетка" (grid) was clicked but its persisted effect wasn't verified (no `showGrid` field appeared in the saved board — needs follow-up: does it default true and only serialize on explicit false, or did the toggle not register?). Terrain/scale/hand-mode not exercised. |
+| Battle lifecycle (Greyholm: BattleEntry/ActiveBattleState) | MISSING | Not exercised this session — this is the OTHER, structurally different runtime per the matrix above; nothing here should be assumed proven by the Caldran test. |
+| Observer, campaign isolation, arc scope (both stacks) | MISSING | Not exercised this session. |
+| Unification onto one universal battle authority | NOT_STARTED | Real architectural work identified in the matrix above; not begun. |
 
 ## Summary
 
