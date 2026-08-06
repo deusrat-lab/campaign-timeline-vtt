@@ -17,6 +17,7 @@
     "lint:runtime": "npm run lint:hooks && npm run typecheck && npm run build",
     "audit:data": "node scripts/audit-campaign-data.mjs",
     "build:production-reference-manifest": "node scripts/final-cutover/build-production-reference-manifest.mjs",
+    "verify:referential-integrity": "node scripts/final-cutover/verify-referential-integrity.mjs",
     "verify:domain": "node scripts/verify-universal-domain.mjs",
     "verify:stage04": "node scripts/verify-stage-04-parity.mjs",
     "verify:stage05": "node scripts/verify-stage-05-projections.mjs",
