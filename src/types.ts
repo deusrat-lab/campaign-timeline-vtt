@@ -25,6 +25,11 @@ export interface Timeline {
   visibleToPlayers?: boolean;
   /** Marks the timeline the DM currently considers "live" in the fiction. */
   isCurrent?: boolean;
+  /** Block E — soft-disable: hidden from the normal arc switcher and from
+   * "current arc" fallback resolution, but never deleted and always
+   * restorable. Distinct from hard delete (which only ever applies to an
+   * unreferenced DM-created arc). Absent/false = active. */
+  archived?: boolean;
 }
 
 /** A renderable world/region/city map (background image + hotspots). */

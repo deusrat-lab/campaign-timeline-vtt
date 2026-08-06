@@ -376,6 +376,31 @@ a:hover {
   border: 1px dashed var(--border);
 }
 
+.segmented-option-reorder {
+  background: transparent;
+  border: none;
+  color: var(--fg-dim);
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0 0.2rem;
+  cursor: pointer;
+}
+
+.segmented-option-reorder:hover {
+  color: var(--fg);
+}
+
+.segmented-archived {
+  margin-top: 0.3rem;
+  opacity: 0.8;
+}
+
+.segmented-option-archived-label {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+  color: var(--fg-dim);
+}
+
 /* ---------- generic page shell (timeline/quests/admin pages) ---------- */
 .page {
   max-width: 900px;

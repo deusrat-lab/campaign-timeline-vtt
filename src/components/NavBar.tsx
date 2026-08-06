@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useCampaignStore } from '../state/campaignStore';
 import { useCampaignData } from '../state/campaignDataContext';
 import { getLocationState } from '../data/selectors';
@@ -94,6 +94,45 @@ export function NavBar() {
   const inUserCampaign = /^\/campaigns\/(?!new(?:$|\/))[^/]+/.test(location.pathname);
   const userCampaignPlayerLocked = inUserCampaign && new URLSearchParams(location.search).get('as') === 'player';
   const observerLocked = location.pathname === '/observer' || userCampaignPlayerLocked;
+
+  // Block E — direct URL support: `?arc=<id>` switches to that arc on load
+  // (or whenever it changes), and stays in sync when the DM switches arcs via
+  // the segmented control, so a shared/bookmarked link opens the right arc.
+  // Falls back to the current selection (never a hard error) if the id is
+  // unknown or archived.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showArchivedArcs, setShowArchivedArcs] = useState(false);
+  const arcParam = searchParams.get('arc');
+  useEffect(() => {
+    if (!data || inUserCampaign) return;
+    if (arcParam && arcParam !== store.currentTimelineId) {
+      const target = data.timelines.find((t) => t.id === arcParam && !t.archived);
+      if (target) store.setTimeline(target.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arcParam, data, inUserCampaign]);
+  // Fallback: if the active arc is unknown or was just archived, switch to
+  // the default arc instead of leaving the app pointed at a hidden/missing
+  // timeline (e.g. a stale `?arc=` bookmark, or the DM archiving the arc
+  // they were just on via a second tab).
+  useEffect(() => {
+    if (!data || inUserCampaign || !store.currentTimelineId) return;
+    const current = data.timelines.find((t) => t.id === store.currentTimelineId);
+    if (!current || current.archived) {
+      const fallback = data.timelines.find((t) => t.isDefault && !t.archived) ?? data.timelines.find((t) => !t.archived);
+      if (fallback) store.setTimeline(fallback.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, store.currentTimelineId, inUserCampaign]);
+  useEffect(() => {
+    if (inUserCampaign || !store.currentTimelineId) return;
+    if (searchParams.get('arc') !== store.currentTimelineId) {
+      const next = new URLSearchParams(searchParams);
+      next.set('arc', store.currentTimelineId);
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.currentTimelineId, inUserCampaign]);
 
   const currentLocation =
     data && store.party.currentLocationStateId ? getLocationState(data, store.party.currentLocationStateId) : undefined;
@@ -191,34 +230,87 @@ export function NavBar() {
             </span>
           )}
           {!inUserCampaign && data && (
+            <>
             <div className="segmented" role="group" aria-label="Текущая арка">
-              {data.timelines.map((t) => {
-                const disabled = t.arcId === 'arc-2' && store.mode === 'player-view' && !store.arc2RevealedToPlayers;
-                const deletable = isEditMode && store.newTimelines.some((nt) => nt.id === t.id) && t.id !== store.currentTimelineId;
-                return (
-                  <span key={t.id} className="segmented-option-wrap">
-                    <button
-                      type="button"
-                      className={`segmented-option${t.id === store.currentTimelineId ? ' active' : ''}`}
-                      disabled={disabled}
-                      onClick={() => store.setTimeline(t.id)}
-                    >
-                      {t.title}
-                    </button>
-                    {deletable && (
+              {[...data.timelines]
+                .filter((t) => !t.archived)
+                .sort((a, b) => a.order - b.order)
+                .map((t, index, visible) => {
+                  const disabled = t.arcId === 'arc-2' && store.mode === 'player-view' && !store.arc2RevealedToPlayers;
+                  const deletable = isEditMode && store.newTimelines.some((nt) => nt.id === t.id) && t.id !== store.currentTimelineId;
+                  const isCurrent = t.id === store.currentTimelineId;
+                  return (
+                    <span key={t.id} className="segmented-option-wrap">
                       <button
                         type="button"
-                        className="segmented-option-delete"
-                        title={`Удалить арку «${t.title}» (безопасно, только если на ней ничего нет)`}
-                        aria-label={`Удалить арку ${t.title}`}
-                        onClick={() => store.deleteTimeline(t.id)}
+                        className={`segmented-option${isCurrent ? ' active' : ''}`}
+                        disabled={disabled}
+                        onClick={() => store.setTimeline(t.id)}
+                        onDoubleClick={() => {
+                          if (!isEditMode) return;
+                          const title = window.prompt('Новое название арки:', t.title);
+                          if (!title || !title.trim() || title.trim() === t.title) return;
+                          store.patchTimeline(t.id, { title: title.trim() });
+                        }}
+                        title={isEditMode ? 'Двойной клик — переименовать' : t.title}
                       >
-                        ×
+                        {t.title}
                       </button>
-                    )}
-                  </span>
-                );
-              })}
+                      {isEditMode && index > 0 && (
+                        <button
+                          type="button"
+                          className="segmented-option-reorder"
+                          title="Сдвинуть влево"
+                          aria-label={`Сдвинуть арку ${t.title} влево`}
+                          onClick={() => {
+                            const prev = visible[index - 1];
+                            store.patchTimeline(t.id, { order: prev.order });
+                            store.patchTimeline(prev.id, { order: t.order });
+                          }}
+                        >
+                          ‹
+                        </button>
+                      )}
+                      {isEditMode && index < visible.length - 1 && (
+                        <button
+                          type="button"
+                          className="segmented-option-reorder"
+                          title="Сдвинуть вправо"
+                          aria-label={`Сдвинуть арку ${t.title} вправо`}
+                          onClick={() => {
+                            const next = visible[index + 1];
+                            store.patchTimeline(t.id, { order: next.order });
+                            store.patchTimeline(next.id, { order: t.order });
+                          }}
+                        >
+                          ›
+                        </button>
+                      )}
+                      {isEditMode && !isCurrent && (
+                        <button
+                          type="button"
+                          className="segmented-option-delete"
+                          title={`Архивировать арку «${t.title}» (обратимо — скрывает, не удаляет)`}
+                          aria-label={`Архивировать арку ${t.title}`}
+                          onClick={() => store.patchTimeline(t.id, { archived: true })}
+                        >
+                          ⤓
+                        </button>
+                      )}
+                      {deletable && (
+                        <button
+                          type="button"
+                          className="segmented-option-delete"
+                          title={`Удалить арку «${t.title}» (безопасно, только если на ней ничего нет)`}
+                          aria-label={`Удалить арку ${t.title}`}
+                          onClick={() => store.deleteTimeline(t.id)}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </span>
+                  );
+                })}
               {isEditMode && (
                 <button
                   type="button"
@@ -236,7 +328,36 @@ export function NavBar() {
                   + Арка
                 </button>
               )}
+              {isEditMode && data.timelines.some((t) => t.archived) && (
+                <button
+                  type="button"
+                  className="segmented-option segmented-option-archived-toggle"
+                  title="Показать/скрыть архивные арки"
+                  onClick={() => setShowArchivedArcs((v) => !v)}
+                >
+                  Архив ({data.timelines.filter((t) => t.archived).length})
+                </button>
+              )}
             </div>
+            {isEditMode && showArchivedArcs && (
+              <div className="segmented segmented-archived" role="group" aria-label="Архивные арки">
+                {data.timelines.filter((t) => t.archived).map((t) => (
+                  <span key={t.id} className="segmented-option-wrap">
+                    <span className="segmented-option segmented-option-archived-label">{t.title}</span>
+                    <button
+                      type="button"
+                      className="segmented-option-reorder"
+                      title={`Восстановить арку «${t.title}»`}
+                      aria-label={`Восстановить арку ${t.title}`}
+                      onClick={() => store.patchTimeline(t.id, { archived: false })}
+                    >
+                      ↺
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            </>
           )}
           {!inUserCampaign && observerLocked ? (
             <div className="segmented" role="group" aria-label="Режим приложения">
