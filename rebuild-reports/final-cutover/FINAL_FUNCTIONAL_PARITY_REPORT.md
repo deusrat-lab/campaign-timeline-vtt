@@ -181,6 +181,20 @@ not a dedicated page but an inline toolbar embedded in `MapWorkspacePage.tsx`.
 
 ## Battles
 
+**UPDATE (Decision 2, commits f3f1c61/c0bbf96): the "NO — different runtime" rows below are
+now historical.** Both stacks' active-runtime writes route through one universal battle
+authority (`src/domain/battles/*`): Caldran's `CampaignBattlePage.tsx` via
+`commitUserBoard`, Greyholm's `campaignStore.tsx` active-battle actions via
+`commitGreyholmBattle`. Both are campaign-scoped, revision-guarded, invariant-checked,
+durably committed, and browser-verified end to end (place/move/HP/initiative/turn/round
+rollover/reload recovery/Player View safety/finish/reload cleanup) on real data for both
+campaigns — see `CONTINUATION_STATE.json`'s `decision2BattleCutover` for full evidence.
+The legacy shapes (`ActiveBattleState`/`CampaignBattleBoard`) still exist as the UI-facing
+projection each stack reads/renders (round-tripped from the universal record on every
+write), which is why the matrix below (documenting those legacy shapes) is still accurate
+as a description of what the UI sees — it is no longer accurate as a description of what
+owns the data.
+
 **Active-runtime matrix (required before any lifecycle work), determined by direct type
 inspection — not assumed from a shared name:**
 
