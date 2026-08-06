@@ -22,6 +22,7 @@
     "verify:final-migration": "npx tsx scripts/final-cutover/run-final-migration.ts",
     "verify:domain": "node scripts/verify-universal-domain.mjs",
     "verify:block-i-configuration": "npx tsx scripts/final-cutover/verify-block-i-configuration.ts",
+    "verify:no-legacy-battle-write": "node scripts/final-cutover/verify-no-legacy-battle-write.mjs",
     "verify:stage04": "node scripts/verify-stage-04-parity.mjs",
     "verify:stage05": "node scripts/verify-stage-05-projections.mjs",
     "verify:stage06": "node scripts/verify-stage-06-repository.mjs",

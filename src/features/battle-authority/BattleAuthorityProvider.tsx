@@ -15,12 +15,15 @@ import {
   remoteRevision,
   remoteAppliedCount,
   canonicalHash,
+  commitUserBoard,
+  readUserBoard,
   type RepositoryStorage,
   type BattleMoveOutcome,
   type TurnAdvanceOutcome,
   type PendingBattleProjection,
   type SyncFlushResult,
   type CampaignId,
+  type BoardCommitOutcome,
 } from '../../domain';
 import type { CampaignBattleBoard } from '../../types/userCampaign';
 import type { ActiveBattleState } from '../../types';
@@ -69,6 +72,21 @@ export interface BattleAuthorityContextValue {
   flushSync(campaignId: string, online?: boolean): SyncFlushResult;
   remoteRevisionOf(campaignId: string, battleId: string): number;
   remoteAppliedTotal(campaignId: string): number;
+  /**
+   * Decision 2 — whole-board sole-authority commit/read. UNCONDITIONALLY
+   * available (not gated by UNIVERSAL_BATTLE_AUTHORITY/UNIVERSAL_LOCAL_CUTOVER
+   * -- those flags gate the OLD shadow-then-legacy-reapply move path above,
+   * which board-owning UI no longer needs once it routes every mutation
+   * through `commitBoard`). Every Caldran board write goes through this; the
+   * legacy `runtime.battleBoards[mapId]` is only ever the read-after-write
+   * projection of what was actually committed here, never an independent
+   * write -- see CampaignBattlePage.tsx's `patchBoard`.
+   */
+  commitBoard(campaignId: string, battleId: string, nextBoard: CampaignBattleBoard): BoardCommitOutcome;
+  /** Durable board for reload/bootstrap, or null if this battle was never
+   * committed yet (caller falls back to its legacy seed once, the one
+   * allowed migration boundary for pre-cutover boards). */
+  readBoard(campaignId: string, battleId: string): CampaignBattleBoard | null;
 }
 
 const DISABLED: BattleAuthorityContextValue = {
@@ -86,6 +104,8 @@ const DISABLED: BattleAuthorityContextValue = {
   flushSync: () => ({ attempted: 0, applied: 0, duplicates: 0, conflicts: 0, remaining: 0, statuses: [] }),
   remoteRevisionOf: () => 0,
   remoteAppliedTotal: () => 0,
+  commitBoard: () => ({ ok: false, error: 'battle authority unavailable (no window)' }),
+  readBoard: () => null,
 };
 
 const BattleAuthorityContext = createContext<BattleAuthorityContextValue>(DISABLED);
@@ -98,8 +118,18 @@ export function BattleAuthorityProvider({ children }: { children: ReactNode }) {
   const syncActive = active && UNIVERSAL_SYNC_ENABLED;
 
   const value = useMemo<BattleAuthorityContextValue>(() => {
-    if (!active || typeof window === 'undefined') return DISABLED;
+    if (typeof window === 'undefined') return DISABLED;
     const storage: RepositoryStorage = createBrowserRepositoryStorage(window.localStorage);
+
+    // Decision 2 board commit/read: always wired, independent of the shadow
+    // flags below (those only gate the legacy move-shadow path this replaces
+    // for board-owning UI).
+    const commitBoard = (campaignId: string, battleId: string, nextBoard: CampaignBattleBoard): BoardCommitOutcome =>
+      commitUserBoard(storage, campaignId as never, battleId, nextBoard);
+    const readBoard = (campaignId: string, battleId: string): CampaignBattleBoard | null =>
+      readUserBoard(storage, campaignId as never, battleId);
+
+    if (!active) return { ...DISABLED, commitBoard, readBoard };
 
     // Enqueue EXACTLY ONE sync op per successful durable commit. Deterministic
     // eventId (per campaign/battle/revision) makes a re-enqueue idempotent.
@@ -143,6 +173,8 @@ export function BattleAuthorityProvider({ children }: { children: ReactNode }) {
       remoteRevisionOf: (campaignId, battleId) => remoteRevision(storage, campaignId, battleId),
       remoteAppliedTotal: (campaignId) => remoteAppliedCount(storage, campaignId),
       revisionOf: (campaignId, battleId) => battleRevision(storage, campaignId as never, battleId),
+      commitBoard,
+      readBoard,
       recordPending: (pending) => recordPendingProjection(storage, pending),
       readPending: (campaignId, battleId) => readPendingProjection(storage, campaignId as never, battleId),
       clearPending: (campaignId, battleId) => clearPendingProjection(storage, campaignId as never, battleId),

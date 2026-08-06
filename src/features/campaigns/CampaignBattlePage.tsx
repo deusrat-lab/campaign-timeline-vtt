@@ -99,13 +99,18 @@ export function CampaignBattlePage() {
     return () => { cancelAnimationFrame(raf); clearTimeout(t); window.removeEventListener('resize', measure); window.removeEventListener('orientationchange', measure); };
   }, []);
 
-  // Initialize this map's own board once (if it has no entry yet), carrying over
-  // a legacy single-board setup only when it belonged to this same map.
+  // Initialize this map's own board once (if it has no entry yet). Decision 2:
+  // the durably-committed universal board (if this battle was ever mutated
+  // through `patchBoard` below) is now authoritative on reload -- the legacy
+  // single-board carry-over only applies to a board that predates BOTH this
+  // per-map-board feature AND any universal commit (the one migration
+  // boundary this cutover still allows).
   useEffect(() => {
     if (campaignId && mapId && (map || customMap) && !runtime?.battleBoards?.[mapId]) {
+      const fromUniversal = battleAuth.readBoard(campaignId, mapId);
       store.updateRuntime(campaignId, (p) => {
         const legacy = p.battleBoard && p.battleBoard.mapId === mapId ? p.battleBoard : undefined;
-        const seed: CampaignBattleBoard = legacy ?? { tokens: [], round: 1, mapId, variant: variants[0], columns: customMap?.columns };
+        const seed: CampaignBattleBoard = fromUniversal ?? legacy ?? { tokens: [], round: 1, mapId, variant: variants[0], columns: customMap?.columns };
         return { ...p, battleBoards: { ...(p.battleBoards ?? {}), [mapId]: { ...seed, mapId } } };
       });
     }
@@ -130,61 +135,66 @@ export function CampaignBattlePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId, mapId, isPlayer]);
 
-  const patchBoard = (updater: (b: CampaignBattleBoard) => CampaignBattleBoard, syncPlayerRemote = true) => {
-    if (!campaignId || !mapId) return;
-    let nextBoard: CampaignBattleBoard | null = null;
-    store.updateRuntime(campaignId, (p) => {
-      const prev = p.battleBoards?.[mapId]
-        ?? (p.battleBoard && p.battleBoard.mapId === mapId ? p.battleBoard : { tokens: [], round: 1 });
-      nextBoard = { ...updater(prev), mapId };
-      return { ...p, battleBoards: { ...(p.battleBoards ?? {}), [mapId]: nextBoard } };
-    });
-    if (isPlayer && syncPlayerRemote && nextBoard) patchBattleBoardRemote(campaignId, mapId, nextBoard);
-  };
-
   /**
-   * Stage 17 — move a token. When universal battle authority is active (both
-   * cutover flags on), the move is committed durably to the universal battle
-   * store FIRST (typed command + expected revision + read-after-write); the
-   * legacy board update then runs as the compatibility projection. A dev-only
-   * fixture can make the compatibility projection fail after the durable commit,
-   * leaving a pending record that reload-recovery resolves. When inactive this
-   * is exactly the legacy board update.
+   * Decision 2 — sole write path for this board. Every mutation (token
+   * place/move/remove, rename, hp, initiative, turn/round, terrain, grid,
+   * variant, view) already goes through this one function, so cutting IT
+   * over to universal authority cuts over every call site at once instead of
+   * rewriting ~30 of them individually. `updater` computes the candidate
+   * board exactly as before (unchanged call sites, unchanged UX); the
+   * candidate is then committed through `battleAuth.commitBoard` -- typed
+   * conversion via the same adapter Stage 17 proves lossless, invariant-
+   * checked, expected-revision-guarded, read-after-write-verified -- and
+   * ONLY the durably-committed, read-after-write board is ever persisted
+   * into the legacy `battleBoards[mapId]` store field. That field is now
+   * purely the React-reactive projection of what universal actually holds,
+   * never an independent write: a rejected commit (invariant violation,
+   * revision conflict) leaves the board completely untouched, no fallback.
+   *
+   * `prev` is read from the universal store directly (not the React-render
+   * closure `board`) so back-to-back calls before a re-render never operate
+   * on a stale base -- the universal record is the single source of truth
+   * for what "current" means, matching Universal Repository being the sole
+   * active authority.
    */
-  const applyLegacyMove = (tokenId: string, x: number, y: number) =>
-    patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => (t.id === tokenId ? { ...t, x, y } : t)) }));
-
-  const moveTokenTo = (tokenId: string, x: number, y: number) => {
-    if (battleAuth.active && campaignId && mapId) {
-      const outcome = battleAuth.moveUserToken(campaignId, mapId, board, tokenId, { x, y });
-      if (outcome && outcome.ok) {
-        // durable universal commit succeeded — now the legacy compat projection.
-        if (battleAuth.consumeFailCompatOnce()) {
-          battleAuth.recordPending({ campaignId: campaignId as never, battleId: mapId, tokenId, position: { x, y }, committedRevision: outcome.newRevision ?? 0 });
-          return; // universal committed, legacy pending (recovered on reload)
-        }
-        applyLegacyMove(tokenId, x, y);
-        return;
-      }
-      // universal path rejected → safe legacy fallback (no durable write happened)
+  /**
+   * `extraRuntimePatch` exists ONLY to let a caller fold an additional
+   * same-tick runtime change (e.g. finishBattle's presentedBattle clear)
+   * into this SAME `store.updateRuntime` call. `userCampaignStore`'s
+   * `patchRuntime` reads its "current" from React state, not fresh
+   * localStorage -- two separate `store.updateRuntime` calls issued back-to-
+   * back in one synchronous handler both read the SAME pre-update snapshot,
+   * so the second call's write silently clobbers the first's (a real,
+   * pre-existing race in the legacy store, not introduced by this cutover --
+   * discovered here because it made the legacy board cache visibly diverge
+   * from the durable universal commit after Закончить бой). Folding both
+   * changes into one updater closure is the correct fix at every call site
+   * that needs it, not a battle-specific workaround.
+   */
+  const patchBoard = (
+    updater: (b: CampaignBattleBoard) => CampaignBattleBoard,
+    syncPlayerRemote = true,
+    extraRuntimePatch?: (p: import('../../types/userCampaign').UserCampaignRuntime) => import('../../types/userCampaign').UserCampaignRuntime,
+  ) => {
+    if (!campaignId || !mapId) return;
+    const prev = battleAuth.readBoard(campaignId, mapId) ?? board;
+    const candidate: CampaignBattleBoard = { ...updater(prev), mapId };
+    const outcome = battleAuth.commitBoard(campaignId, mapId, candidate);
+    if (!outcome.ok || !outcome.compatBoard) {
+      // eslint-disable-next-line no-console
+      console.error(`[battle] universal commit rejected for ${campaignId}/${mapId}, board not saved:`, outcome.error);
+      return;
     }
-    applyLegacyMove(tokenId, x, y);
+    const committed: CampaignBattleBoard = { ...outcome.compatBoard, mapId };
+    store.updateRuntime(campaignId, (p) => {
+      const withBoard = { ...p, battleBoards: { ...(p.battleBoards ?? {}), [mapId]: committed } };
+      return extraRuntimePatch ? extraRuntimePatch(withBoard) : withBoard;
+    });
+    if (isPlayer && syncPlayerRemote) patchBattleBoardRemote(campaignId, mapId, committed);
   };
 
-  // Stage 17 — reload recovery for a pending battle compatibility projection.
-  // If the universal commit succeeded but the legacy projection failed last
-  // session, re-apply the (idempotent) legacy transition and clear the record.
-  // Never triggers a second universal commit.
-  const battleRecoveredRef = useRef(false);
-  useEffect(() => {
-    if (!battleAuth.active || !campaignId || !mapId || battleRecoveredRef.current) return;
-    const pending = battleAuth.readPending(campaignId, mapId);
-    if (!pending) return;
-    battleRecoveredRef.current = true;
-    applyLegacyMove(pending.tokenId, pending.position.x, pending.position.y);
-    battleAuth.clearPending(campaignId, mapId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [battleAuth.active, campaignId, mapId, runtime]);
+  const moveTokenTo = (tokenId: string, x: number, y: number) =>
+    patchBoard((b) => ({ ...b, tokens: b.tokens.map((t) => (t.id === tokenId ? { ...t, x, y } : t)) }));
 
   const fit = () => {
     const vp = viewportRef.current, img = imgRef.current;
@@ -557,8 +567,11 @@ export function CampaignBattlePage() {
   };
   const finishBattle = () => {
     if (!window.confirm('Закончить бой? Токены и инициатива будут убраны, террейн и сетка останутся.')) return;
-    patchBoard((b) => ({ ...b, tokens: [], round: 1, currentTurnTokenId: undefined }));
-    store.updateRuntime(campaignId, (p) => ({ ...p, presentedBattle: p.presentedBattle?.mapId === mapId ? null : p.presentedBattle, presentedCard: null }));
+    patchBoard(
+      (b) => ({ ...b, tokens: [], round: 1, currentTurnTokenId: undefined }),
+      true,
+      (p) => ({ ...p, presentedBattle: p.presentedBattle?.mapId === mapId ? null : p.presentedBattle, presentedCard: null }),
+    );
     setSelected(null);
     setPostMovePrompt(null);
     const returnTo = searchParams.get('returnTo');

@@ -14,7 +14,7 @@ import type { CampaignId } from '../campaign/ids';
 import type { RepositoryStorage } from '../repository/shadowRepository';
 import type { BattleRuntime } from './types';
 import type { UniversalPoint } from '../maps/types';
-import { executeBattleCommand } from './battleCommands';
+import { executeBattleCommand, checkInvariants } from './battleCommands';
 import type { BattleCommandFail } from './battleCommands';
 import { battleTokenId } from './battleIdentity';
 import { userBoardToUniversal, universalToUserBoard } from './battleAdapters';
@@ -175,6 +175,72 @@ export function routeSetTurn(
 /** Current durable revision for a battle (0 when never committed). */
 export function battleRevision(storage: RepositoryStorage, campaignId: CampaignId, battleId: string): number {
   return readStoredBattle(storage, campaignId, battleId)?.revision ?? 0;
+}
+
+// --- Decision 2 — whole-board sole-authority commit --------------------------
+//
+// `routeUserTokenMove`/`routeSetTurn` above route ONE typed command each. A
+// real board UI (CampaignBattlePage.tsx) computes its next board locally
+// (token add/move/remove, rename, hp, terrain paint, grid, variant, turn/round
+// all share the same `patchBoard(updater)` call site) and needs ONE commit per
+// user gesture, not a hand-maintained diff-to-typed-command translator for
+// every field combination a `patchBoard` caller might touch together.
+//
+// `commitUserBoard` closes that gap while keeping the same durable-authority
+// discipline as the single-command routes above: the candidate board is
+// converted through the SAME `userBoardToUniversal` adapter the Stage 17
+// harness already proves is lossless, validated with the SAME
+// `checkInvariants` every typed command result is checked against (duplicate
+// token ids, non-finite positions, hp > maxHp), then committed under an
+// expected-revision guard with read-after-write verification. A board that
+// fails invariants is rejected before anything is persisted -- exactly the
+// same rejection a bad typed command would produce, just checked once against
+// the whole next board instead of once per field. This is universal-first:
+// the legacy `CampaignBattleBoard` a caller then displays/persists is always
+// the read-after-write projection of what was actually committed, never an
+// independent write.
+export interface BoardCommitOutcome {
+  ok: boolean;
+  newRevision?: number;
+  /** The durably-committed board, round-tripped back through the adapter --
+   * always what the caller should treat as current, never its own candidate. */
+  compatBoard?: CampaignBattleBoard;
+  error?: string;
+}
+
+export function commitUserBoard(
+  storage: RepositoryStorage,
+  campaignId: CampaignId,
+  battleId: string,
+  nextBoard: CampaignBattleBoard,
+): BoardCommitOutcome {
+  const stored = readStoredBattle(storage, campaignId, battleId);
+  const expectedRevision = stored?.revision ?? 0;
+  const nextRuntime = userBoardToUniversal(campaignId, battleId, nextBoard, {
+    active: true,
+    presented: stored?.runtime.presentedToPlayers ?? false,
+  });
+  const invariant = checkInvariants(nextRuntime);
+  if (invariant) return { ok: false, error: invariant.message };
+
+  const commit = commitBattle(storage, campaignId, battleId, nextRuntime, expectedRevision);
+  if (!commit.ok) return { ok: false, error: commit.message };
+
+  const readBack = readStoredBattle(storage, campaignId, battleId);
+  if (!readBack) return { ok: false, error: 'commit not visible read-after-write' };
+  return { ok: true, newRevision: commit.newRevision, compatBoard: universalToUserBoard(readBack.runtime) };
+}
+
+/** Reload/bootstrap: the durably-committed board if one exists, else null
+ * (caller falls back to its own legacy seed -- the one allowed migration
+ * boundary, for a board that predates this cutover / was never committed). */
+export function readUserBoard(
+  storage: RepositoryStorage,
+  campaignId: CampaignId,
+  battleId: string,
+): CampaignBattleBoard | null {
+  const stored = readStoredBattle(storage, campaignId, battleId);
+  return stored ? universalToUserBoard(stored.runtime) : null;
 }
 
 // --- pending compatibility-projection recovery ------------------------------

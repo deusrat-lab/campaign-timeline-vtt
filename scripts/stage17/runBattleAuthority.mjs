@@ -5,6 +5,7 @@ import {
   recordPendingProjection, readPendingProjection, clearPendingProjection, pendingProjectionCount,
   listBattleRecords, totalPendingCount,
   userBoardToUniversal, greyholmBattleToUniversal, executeBattleCommand,
+  commitUserBoard, readUserBoard,
 } from './.dist/domain/index.js';
 import { Checks } from '../stage08/lib.mjs';
 import { CALDRAN_ID, OTHER_UC_ID, GREYHOLM_ID, caldranBoards, greyholmActiveBattle } from './fixtures.mjs';
@@ -150,6 +151,95 @@ export function runBattleAuthority(c = new Checks()) {
     clearPendingProjection(storage, CALDRAN_ID, 'custom-alpha');
     c.eq('authority: pending cleared', pendingProjectionCount(storage, CALDRAN_ID), 0);
     c.eq('authority: recovery did not re-commit universal', battleRevision(storage, CALDRAN_ID, 'custom-alpha'), revBefore);
+  }
+
+  // --- Decision 2: whole-board sole-authority commit (CampaignBattlePage.tsx's
+  // real `patchBoard` write path -- one commit per user gesture, covering
+  // multi-field mutations a single typed command can't express in one call:
+  // place-a-token-and-set-current-turn, roll-all-initiative-and-select-first,
+  // finish-battle-clears-tokens-round-and-turn, etc.) ---
+  {
+    const storage = createMemoryRepositoryStorage();
+
+    // reload/bootstrap: nothing committed yet -> null (caller falls back to legacy seed)
+    c.ok('board-commit: readUserBoard null before any commit', readUserBoard(storage, CALDRAN_ID, 'custom-alpha') === null);
+
+    // token placement + auto-select-as-current-turn in ONE commit (mirrors the
+    // real onPointerUp placement call site: tokens + currentTurnTokenId together)
+    const withNewToken = {
+      ...board,
+      tokens: [...board.tokens, { id: 'tok-new-1', name: 'Новый враг', side: 'enemy', x: 40, y: 60, ac: 12, currentHp: 9, maxHp: 9 }],
+      currentTurnTokenId: board.currentTurnTokenId ?? 'tok-new-1',
+    };
+    const r1 = commitUserBoard(storage, CALDRAN_ID, 'custom-alpha', withNewToken);
+    c.ok('board-commit: place+set-turn combined mutation ok', r1.ok);
+    c.eq('board-commit: revision 1', r1.newRevision, 1);
+    c.eq('board-commit: token count +1', r1.compatBoard.tokens.length, board.tokens.length + 1);
+    c.ok('board-commit: new token present with correct fields', r1.compatBoard.tokens.some((t) => t.id === 'tok-new-1' && t.name === 'Новый враг' && t.x === 40 && t.y === 60));
+
+    // reload/bootstrap now sees the durable commit
+    const reloaded = readUserBoard(storage, CALDRAN_ID, 'custom-alpha');
+    c.ok('board-commit: readUserBoard recovers exact committed board', reloaded && reloaded.tokens.length === board.tokens.length + 1);
+
+    // roll-all-initiative + select-first in ONE commit (every token's initiative
+    // changes together with currentTurnTokenId -- exactly rollAllInitiative())
+    const rolled = {
+      ...reloaded,
+      tokens: reloaded.tokens.map((t, i) => ({ ...t, initiative: 20 - i })),
+      currentTurnTokenId: reloaded.tokens[0].id,
+    };
+    const r2 = commitUserBoard(storage, CALDRAN_ID, 'custom-alpha', rolled);
+    c.ok('board-commit: roll-all-initiative combined mutation ok', r2.ok);
+    c.eq('board-commit: revision 2', r2.newRevision, 2);
+    c.ok('board-commit: initiative values persisted', r2.compatBoard.tokens.every((t) => typeof t.initiative === 'number'));
+
+    // terrain paint + grid + variant in ONE commit (Slice A4 board-configuration fields)
+    const configured = { ...r2.compatBoard, terrain: { '3,4': 'blocked', '5,5': 'difficult' }, columns: 30, snap: false, variant: 'night' };
+    const r3 = commitUserBoard(storage, CALDRAN_ID, 'custom-alpha', configured);
+    c.ok('board-commit: terrain+grid+variant combined mutation ok', r3.ok);
+    c.eq('board-commit: terrain cell count', Object.keys(r3.compatBoard.terrain ?? {}).length, 2);
+    c.eq('board-commit: grid columns persisted', r3.compatBoard.columns, 30);
+    c.eq('board-commit: variant persisted', r3.compatBoard.variant, 'night');
+
+    // finish battle: clears tokens/round/turn in ONE commit (finishBattle())
+    const finished = { ...r3.compatBoard, tokens: [], round: 1, currentTurnTokenId: undefined };
+    const r4 = commitUserBoard(storage, CALDRAN_ID, 'custom-alpha', finished);
+    c.ok('board-commit: finish-battle combined mutation ok', r4.ok);
+    c.eq('board-commit: tokens cleared', r4.compatBoard.tokens.length, 0);
+    c.eq('board-commit: round reset', r4.compatBoard.round, 1);
+    c.ok('board-commit: current turn cleared', !r4.compatBoard.currentTurnTokenId);
+    // terrain/grid explicitly survive finish (task requirement: "террейн и сетка останутся")
+    c.eq('board-commit: terrain survives finish', Object.keys(r4.compatBoard.terrain ?? {}).length, 2);
+    c.eq('board-commit: grid survives finish', r4.compatBoard.columns, 30);
+
+    c.eq('board-commit: exactly 4 revisions for 4 user gestures (no duplicate writes)', battleRevision(storage, CALDRAN_ID, 'custom-alpha'), 4);
+  }
+
+  // --- Decision 2: invariant rejection leaves nothing persisted (no partial write) ---
+  {
+    const storage = createMemoryRepositoryStorage();
+    const dup = { ...board, tokens: [...board.tokens, { ...board.tokens[0] }] }; // duplicate id
+    const bad = commitUserBoard(storage, CALDRAN_ID, 'custom-alpha', dup);
+    c.ok('board-commit: duplicate token id rejected', !bad.ok);
+    c.eq('board-commit: no durable write on invariant rejection', battleRevision(storage, CALDRAN_ID, 'custom-alpha'), 0);
+    c.ok('board-commit: readUserBoard still null after rejection', readUserBoard(storage, CALDRAN_ID, 'custom-alpha') === null);
+
+    const nonFinite = { ...board, tokens: board.tokens.map((t, i) => (i === 0 ? { ...t, x: Number.POSITIVE_INFINITY } : t)) };
+    const bad2 = commitUserBoard(storage, CALDRAN_ID, 'custom-alpha', nonFinite);
+    c.ok('board-commit: non-finite position rejected', !bad2.ok);
+
+    const overHp = { ...board, tokens: board.tokens.map((t, i) => (i === 0 ? { ...t, currentHp: 999, maxHp: 10 } : t)) };
+    const bad3 = commitUserBoard(storage, CALDRAN_ID, 'custom-alpha', overHp);
+    c.ok('board-commit: hp > maxHp rejected', !bad3.ok);
+  }
+
+  // --- Decision 2: campaign isolation for whole-board commits ---
+  {
+    const storage = createMemoryRepositoryStorage();
+    commitUserBoard(storage, CALDRAN_ID, 'custom-alpha', { ...board, round: 5 });
+    commitUserBoard(storage, OTHER_UC_ID, 'custom-alpha', { ...board, round: 9 });
+    c.eq('board-commit: caldran round isolated', readUserBoard(storage, CALDRAN_ID, 'custom-alpha').round, 5);
+    c.eq('board-commit: other-uc round isolated', readUserBoard(storage, OTHER_UC_ID, 'custom-alpha').round, 9);
   }
 
   return c;
