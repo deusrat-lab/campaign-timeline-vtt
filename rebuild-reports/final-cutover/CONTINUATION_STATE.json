@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-06T12:00:00.000Z",
-  "currentHead": "63a68ea",
+  "generatedAt": "2026-08-06T12:30:00.000Z",
+  "currentHead": "150f61b",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -80,18 +80,19 @@
       "discovery": "Greyholm arcs already existed end-to-end under the name `Timeline` (src/types.ts) BEFORE this session: switch (SET_TIMELINE), the header segmented control (already generic over data.timelines), reveal-to-players, reload persistence. Only CREATE (dead `addTimeline`/ADD_TIMELINE action, zero UI callers) and DELETE (didn't exist at all) were missing.",
       "evidence": "Full lifecycle browser-verified in one continuous flow: create -> rename (double-click) -> reorder (‹/›) -> archive -> reload persistence (title/order/archived all survive in overlay.timelinePatches) -> restore -> delete. Direct-URL ?arc= two-way sync. Fallback when active arc is archived/unknown. Seed arcs (arc-1/arc-2) structurally can never be deleted or archived-while-current. Zero console errors. UC/Caldran side: UserCampaignData.arcs (same Timeline type), UserCampaignRuntime.currentArcId, addArc/patchArc/deleteArc/setCurrentArc in userCampaignStore.tsx mirroring Greyholm 1:1, one shared <ArcSwitcher> component (not a duplicate) used by both NavBar branches. Full lifecycle browser-verified on a real Caldran campaign: create->switch->rename->reorder->archive->RELOAD (all correct in userCampaignData.arcs)->restore->delete, zero console errors, seed arc structurally protected identically to Greyholm.",
       "stillMissing": [
-        "Content SCOPE (campaign-wide/arc-specific/shared-between-arcs) has no editor UI on either stack -- still just each entity's own single scoping field, no cross-arc \"shared\" representation."
+        "Content SCOPE (campaign-wide/arc-specific/shared-between-arcs) has no editor UI on either stack."
       ],
       "commits": [
         "7c5ee20",
         "1394480",
-        "63a68ea"
+        "63a68ea",
+        "150f61b"
       ]
     }
   ],
   "currentBlock": null,
   "nextConcreteStep": {
-    "description": "Block F: continue filling FINAL_FUNCTIONAL_PARITY_REPORT.md. Arcs section can now be updated to reflect UC parity too. Next real subsystem to verify+fill: Maps/Atlas (placement create/move/remove was already closed in a prior session -- verify it still works after this session's NavBar refactor, then move through Content/Timeline/Economy/Zones/Battles per the report's own remaining sections).",
+    "description": "Block F continues: verify+fill Maps/Atlas/Content/Timeline/Economy/Zones/Battles sections of FINAL_FUNCTIONAL_PARITY_REPORT.md one subsystem at a time (placement create already re-confirmed this session). Each subsystem needs a live browser check before its row can move from MISSING to PARITY_CONFIRMED per the report's own evidence rule.",
     "targetFiles": [
       "rebuild-reports/final-cutover/FINAL_FUNCTIONAL_PARITY_REPORT.md"
     ]
