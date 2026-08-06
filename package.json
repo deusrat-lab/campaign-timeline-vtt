@@ -23,6 +23,7 @@
     "verify:domain": "node scripts/verify-universal-domain.mjs",
     "verify:block-i-configuration": "npx tsx scripts/final-cutover/verify-block-i-configuration.ts",
     "verify:no-legacy-battle-write": "node scripts/final-cutover/verify-no-legacy-battle-write.mjs",
+    "verify:no-legacy-field-write": "node scripts/final-cutover/verify-no-legacy-field-write.mjs",
     "verify:no-workspace-split": "node scripts/final-cutover/verify-no-workspace-split.mjs",
     "verify:stage04": "node scripts/verify-stage-04-parity.mjs",
     "verify:stage05": "node scripts/verify-stage-05-projections.mjs",

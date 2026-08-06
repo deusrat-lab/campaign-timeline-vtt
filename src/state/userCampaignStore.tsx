@@ -20,15 +20,33 @@ import { getRegionPreset } from '../data/regionPresets';
 import type { UniversalCapabilityKey } from '../domain/campaign/capabilities';
 import type { Timeline } from '../types';
 import { mergeScenarioIntoData, scenarioForCampaign } from '../data/scenarioMerge';
-import { exportUserCampaignDM, exportUserCampaignPlayerSafe, reconstructUserCampaign, previewUserCampaignImport, userCampaignExportHash, mintPlacementId } from '../domain';
+import {
+  exportUserCampaignDM,
+  exportUserCampaignPlayerSafe,
+  reconstructUserCampaign,
+  previewUserCampaignImport,
+  userCampaignExportHash,
+  mintPlacementId,
+  commitField,
+  createBrowserRepositoryStorage,
+  campaignIdFromLegacy,
+  type FieldAuthorityKind,
+} from '../domain';
 
 const UC_BACKUP_NS = 'campaign-timeline-vtt:uc-backup:v1';
 const UC_ROLLBACK_NS = 'campaign-timeline-vtt:uc-rollback:v1';
 import { emitUserCommand } from './commandShadowSink';
-import { routeUserAuthority } from './commandAuthoritySink';
-import { routeUserDurable } from './durableAuthoritySink';
 import { routeUserComplex } from './complexAuthoritySink';
 import { syncEnabled, pushCampaign, deleteCampaignRemote, fetchRegistry, fetchCampaign, subscribeUc, patchPlayerRemote } from './userCampaignSync';
+
+// Block I — universal field-authority storage handle for the user-campaign
+// scalar/text field cutover (npc/quest/faction/location, see
+// `resolveUserFieldKind` below). Mirrors `greyholmBattleStorage()` /
+// Decision 2's unconditional battle authority exactly: no flag, plain
+// localStorage-backed RepositoryStorage.
+function ucFieldStorage() {
+  return createBrowserRepositoryStorage(window.localStorage);
+}
 
 /**
  * Isolated user-campaign store.
@@ -39,29 +57,29 @@ import { syncEnabled, pushCampaign, deleteCampaignRemote, fetchRegistry, fetchCa
  *   dmCompanion.userCampaignRuntime.${id}.v1
  */
 /**
- * Stage 15 — map a user-campaign entity kind + single patched field to its
- * proven-safe durable-authority scope, or null when the edit is not an
- * allowlisted single scalar/text field. Kept as a closed table so an unknown
- * field can never take durable authority.
+ * Block I — map a user-campaign entity kind + single patched field to its
+ * proven-safe field-authority kind (the same allowlist Stage 15 proved), or
+ * null when the edit is not an allowlisted single scalar/text field. Kept as
+ * a closed table so an unknown field can never take universal authority.
  */
-function resolveUserDurableScope(entityType: string, field: string | null): string | null {
+function resolveUserFieldKind(entityType: string, field: string | null): FieldAuthorityKind | null {
   if (!field) return null;
-  const table: Record<string, Record<string, string>> = {
+  const table: Record<string, Record<string, FieldAuthorityKind>> = {
     npc: {
-      role: 'userCampaign.npc.role.update',
-      name: 'userCampaign.npc.name.update',
-      description: 'userCampaign.npc.description.update',
+      role: 'userCampaign.npc.role',
+      name: 'userCampaign.npc.name',
+      description: 'userCampaign.npc.description',
     },
     quest: {
-      title: 'userCampaign.quest.title.update',
-      description: 'userCampaign.quest.description.update',
+      title: 'userCampaign.quest.title',
+      description: 'userCampaign.quest.description',
     },
     faction: {
-      name: 'userCampaign.faction.name.update',
-      description: 'userCampaign.faction.description.update',
+      name: 'userCampaign.faction.name',
+      description: 'userCampaign.faction.description',
     },
     location: {
-      description: 'userCampaign.location.description.update',
+      description: 'userCampaign.location.description',
     },
   };
   return table[entityType]?.[field] ?? null;
@@ -715,68 +733,37 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
         return { ...p, [key]: list } as UserCampaignData;
       };
 
-      // Stage 15 durable-authority scope for a proven-safe single scalar/text
-      // field edit on this entity kind (see safeFieldRegistry). Only exact
+      // Block I — universal field authority for a proven-safe single scalar/text
+      // field edit on this entity kind (the exact Stage 15 allowlist). Only exact
       // single-field patches qualify.
       const singleKey = keys.length === 1 ? keys[0] : null;
       const singleVal = singleKey ? (patch as Record<string, unknown>)[singleKey] : undefined;
-      const durableScope = resolveUserDurableScope(entityType, singleKey);
+      const fieldKind = resolveUserFieldKind(entityType, singleKey);
 
-      if (durableScope && typeof singleVal === 'string') {
-        const nextValue = singleVal;
-        // A pure single-field updater on the target list. None of npc / quest /
-        // faction / location trigger `patchPlayerRemote`, so it has no side effect
-        // beyond the single field. Used for the pure prediction (on the captured
-        // immutable pre-data) and the ONE real legacy commit.
-        const listKey = ({ npc: 'npcs', quest: 'quests', faction: 'factions', location: 'locations' } as const)[entityType as 'npc'];
-        const fieldUpdater = (p: UserCampaignData): UserCampaignData => ({
-          ...p,
-          [listKey]: ((p[listKey] as Array<{ id: string }> | undefined) ?? []).map((e) => (e.id === entityId ? { ...e, ...patch } : e)),
-        } as UserCampaignData);
-
-        // Stage 15 — universal DURABLE authority runs FIRST: the universal command
-        // is committed to the production repository, then this exact legacy
-        // `patchData` runs once as the compatibility projection (existing
-        // persistence + existing `pushBlob` sync, fired exactly once). When the
-        // Stage 15 flag is off / scope not owned, `routeUserDurable` returns false
-        // and we fall through to the Stage 14 path (role only) or a direct
-        // `patchData` — exactly the pre-Stage-15 behaviour.
-        const commitOnce = () => {
-          patchData(id, fieldUpdater);
-          return captureUc(id);
-        };
-        let handled = routeUserDurable({
-          legacyCampaignId: id,
-          durableScope,
-          entityKind: entityType,
-          legacyEntityId: entityId,
-          value: nextValue,
-          preData: pre.data,
-          preRuntime: pre.runtime,
-          predict: () => ({ data: pre.data ? fieldUpdater(pre.data) : pre.data, runtime: pre.runtime }),
-          commit: commitOnce,
-          fallback: () => patchData(id, fieldUpdater),
-        });
-        // Stage 14 — universal command authority (npc role only) if Stage 15 did
-        // not take the scope.
-        if (!handled && durableScope === 'userCampaign.npc.role.update') {
-          handled = routeUserAuthority({
-            legacyCampaignId: id,
-            scope: 'userCampaign.npc.role.update',
-            input: { scope: 'userCampaign.npc.update', legacyNpcId: entityId, field: 'role', value: nextValue },
-            preData: pre.data,
-            preRuntime: pre.runtime,
-            nextValue,
-            predict: () => ({ data: pre.data ? fieldUpdater(pre.data) : pre.data, runtime: pre.runtime }),
-            commit: commitOnce,
-            fallback: () => patchData(id, fieldUpdater),
-          });
+      if (fieldKind && typeof singleVal === 'string') {
+        // Block I — universal FIELD authority is the SOLE active authority for
+        // this field: the candidate value is durably committed first (isolated,
+        // campaign-scoped, expected-revision guard, read-after-write verified),
+        // and only the committed value is projected into the existing legacy
+        // `patchData` as a compatibility write (existing persistence + existing
+        // `pushBlob` sync, fired exactly once). No flag, no optional fallback —
+        // mirrors the unconditional Decision 2 battle cutover.
+        const outcome = commitField(ucFieldStorage(), campaignIdFromLegacy('user', id), fieldKind, entityId, singleVal);
+        if (!outcome.ok || typeof outcome.value !== 'string') {
+          throw new Error(`updateEntity: universal field commit failed for ${fieldKind} on ${entityId}: ${outcome.error ?? 'unknown error'}`);
         }
-        if (!handled) patchData(id, fieldUpdater);
-        // Stage 13 shadow diagnostics remain independent (npc role only maps to a
-        // Stage 13 command scope).
-        if (durableScope === 'userCampaign.npc.role.update') {
-          emitUcCommand(id, 'userCampaign.npc.update', { scope: 'userCampaign.npc.update', legacyNpcId: entityId, field: 'role', value: nextValue }, pre);
+        const listKey = ({ npc: 'npcs', quest: 'quests', faction: 'factions', location: 'locations' } as const)[entityType as 'npc'];
+        const committedFieldUpdater = (p: UserCampaignData): UserCampaignData => ({
+          ...p,
+          [listKey]: ((p[listKey] as Array<{ id: string }> | undefined) ?? []).map((e) =>
+            e.id === entityId ? { ...e, [singleKey as string]: outcome.value } : e,
+          ),
+        } as UserCampaignData);
+        patchData(id, committedFieldUpdater);
+        // Stage 13 shadow diagnostics remain independent, best-effort, and never
+        // gate the (now unconditional) universal commit above.
+        if (fieldKind === 'userCampaign.npc.role') {
+          emitUcCommand(id, 'userCampaign.npc.update', { scope: 'userCampaign.npc.update', legacyNpcId: entityId, field: 'role', value: outcome.value }, pre);
         }
       } else {
         patchData(id, genericUpdater);

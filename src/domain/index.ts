@@ -10,6 +10,7 @@ export * from './campaign/ids';
 export * from './campaign/snapshot';
 export * from './campaign/source';
 export * from './entities/types';
+export * from './fields';
 export * from './maps/types';
 export * from './migration/migrationEngine';
 export * from './persistence/serialization';

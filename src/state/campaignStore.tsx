@@ -39,10 +39,8 @@ import { createHttpOverlayAdapter, createLocalStorageOverlayAdapter, readLegacyO
 import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
 import { API_BASE_URL } from '../config';
 import { emitMainCommand } from './commandShadowSink';
-import { routeMainAuthority } from './commandAuthoritySink';
-import { routeMainDurable } from './durableAuthoritySink';
 import { routeMainComplex, type ComplexActionDescriptor } from './complexAuthoritySink';
-import { commitGreyholmBattle, createBrowserRepositoryStorage, campaignIdFromLegacy } from '../domain';
+import { commitGreyholmBattle, commitField, type FieldAuthorityKind, createBrowserRepositoryStorage, campaignIdFromLegacy } from '../domain';
 
 // Decision 2 — the SAME universal campaign id EmbeddedBattleOverlay.tsx
 // already uses for its (now-superseded) shadow turn-advance path. Must be
@@ -1272,54 +1270,34 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       patchNpc: (id, patch) => {
         const action: Action = { type: 'PATCH_ENTITY', kind: 'npc', id, patch: patch as Patch<unknown> };
         // Allowlisted slice only: a single-field `role` or `name` edit maps 1:1 to
-        // a universal safe-field command. Any other patch shape dispatches directly.
+        // the universal field authority. Any other patch shape dispatches directly.
         const keys = Object.keys(patch as Record<string, unknown>);
         const singleKey = keys.length === 1 ? keys[0] : null;
         const value = singleKey ? (patch as Record<string, unknown>)[singleKey] : undefined;
-        // Stage 15 durable scope for the safe Greyholm npc fields.
-        const durableScope =
-          singleKey === 'role' ? 'greyholm.npc.role.update' : singleKey === 'name' ? 'greyholm.npc.name.update' : null;
-        if (durableScope && typeof value === 'string') {
-          const nextValue = value;
-          const preOverlay = state;
-          const commitOnce = () => {
-            dispatch(action);
-            return reducer(preOverlay, action);
-          };
-          // Stage 15 — universal DURABLE authority runs FIRST: the universal
-          // command is committed to the production repository, then this exact
-          // legacy dispatch runs once as the compatibility projection. When the
-          // Stage 15 flag is off / scope not owned, `routeMainDurable` returns
-          // false and we fall through to the Stage 14 authority path (role only)
-          // or a direct dispatch — exactly the pre-Stage-15 behaviour.
-          let handled = routeMainDurable({
-            durableScope,
-            legacyEntityId: id,
-            value: nextValue,
-            preOverlay,
-            predict: () => reducer(preOverlay, action),
-            commit: commitOnce,
-            fallback: () => dispatch(action),
-          });
-          // Stage 14 — universal command authority (role only) for the reversible
-          // edit, only if Stage 15 did not take it.
-          if (!handled && durableScope === 'greyholm.npc.role.update') {
-            handled = routeMainAuthority({
-              scope: 'greyholm.npc.role.update',
-              input: { scope: 'greyholm.npc.update', legacyNpcId: id, field: 'role', value: nextValue },
-              preOverlay,
-              nextValue,
-              predict: () => reducer(preOverlay, action),
-              commit: commitOnce,
-              fallback: () => dispatch(action),
-            });
+        const fieldKind: FieldAuthorityKind | null =
+          singleKey === 'role' ? 'greyholm.npc.role' : singleKey === 'name' ? 'greyholm.npc.name' : null;
+        if (fieldKind && typeof value === 'string') {
+          // Block I — universal FIELD authority is the SOLE active authority for
+          // this field: the candidate value is durably committed first (expected-
+          // revision guard, read-after-write verified), and only the committed
+          // value is projected into the existing legacy dispatch as a
+          // compatibility write. No flag, no optional fallback path — mirrors the
+          // unconditional Decision 2 battle cutover (`commitGreyholmBattle`).
+          const outcome = commitField(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, fieldKind, id, value);
+          if (!outcome.ok || typeof outcome.value !== 'string') {
+            throw new Error(`patchNpc: universal field commit failed for ${fieldKind} on ${id}: ${outcome.error ?? 'unknown error'}`);
           }
-          if (!handled) dispatch(action);
-          // Stage 13 shadow diagnostics remain independent (one dispatch, at most
-          // two diagnostics; never a second mutation). Only the role field maps to
-          // a Stage 13 command scope.
-          if (durableScope === 'greyholm.npc.role.update') {
-            emitCommand('greyholm.npc.update', { scope: 'greyholm.npc.update', legacyNpcId: id, field: 'role', value: nextValue }, action);
+          const committedAction: Action = {
+            type: 'PATCH_ENTITY',
+            kind: 'npc',
+            id,
+            patch: { [singleKey as string]: outcome.value } as Patch<unknown>,
+          };
+          dispatch(committedAction);
+          // Stage 13 shadow diagnostics remain independent, best-effort, and never
+          // gate the (now unconditional) universal commit above.
+          if (fieldKind === 'greyholm.npc.role') {
+            emitCommand('greyholm.npc.update', { scope: 'greyholm.npc.update', legacyNpcId: id, field: 'role', value: outcome.value }, committedAction);
           }
         } else {
           dispatch(action);
