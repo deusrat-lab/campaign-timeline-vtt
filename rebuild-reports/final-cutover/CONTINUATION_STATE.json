@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-06T10:15:00.000Z",
-  "currentHead": "7c5ee20",
+  "generatedAt": "2026-08-06T10:45:00.000Z",
+  "currentHead": "31cda1e",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -21,36 +21,57 @@
   "completedBlocks": [
     {
       "block": "Greyholm battle-map placement create fix",
-      "commits": ["739dd51", "db9dfda"],
+      "commits": [
+        "739dd51",
+        "db9dfda"
+      ],
       "status": "IMPLEMENTED_AND_BROWSER_VERIFIED"
     },
     {
       "block": "A: production reference manifest",
-      "commits": ["2bdf09f", "0c7fde3"],
+      "commits": [
+        "2bdf09f",
+        "0c7fde3"
+      ],
       "status": "PARTIAL_IMPROVED",
-      "stillMissing": ["battle/presentedCard/reveal/party runtime state -- localStorage-only, needs a live browser read", "GREYHOLM_RUNTIME_SHAPE.json not yet merged into the main manifest file"]
+      "stillMissing": [
+        "battle/presentedCard/reveal/party runtime state -- localStorage-only, needs a live browser read",
+        "GREYHOLM_RUNTIME_SHAPE.json not yet merged into the main manifest file"
+      ]
     },
     {
       "block": "B: final data migration",
-      "commits": ["2ae17ac", "591166d"],
+      "commits": [
+        "2ae17ac",
+        "591166d"
+      ],
       "status": "CORE_ENGINE_AND_ID_PARITY_PROVEN",
-      "stillMissing": ["run against the real browser/localStorage repository (not just in-memory) -- that's Block K's job", "no third campaign exists locally to prove 'other campaigns' beyond Greyholm+Caldran"]
+      "stillMissing": [
+        "run against the real browser/localStorage repository (not just in-memory) -- that's Block K's job",
+        "no third campaign exists locally to prove 'other campaigns' beyond Greyholm+Caldran"
+      ]
     },
     {
       "block": "C: referential integrity",
-      "commits": ["1beee17", "0c7fde3"],
+      "commits": [
+        "1beee17",
+        "0c7fde3"
+      ],
       "status": "PARTIAL_IMPROVED",
       "stillMissing": "battle->*, zone->faction, arc->entity, presentedCard->entity, observerFocus->entity -- all runtime-only, need a live browser read"
     },
     {
       "block": "D: campaign capabilities",
-      "commit": "f385052",
       "status": "IMPLEMENTED_AND_BROWSER_VERIFIED",
       "evidence": "Persisted CapabilityToggles on both Greyholm overlay and UserCampaignData, shared CapabilitiesPanel UI at /settings and /campaigns/:id/settings, NavRail hides gated links, RequireCapability/UserCampaignRequireCapability route guards reject direct URLs to a disabled module. Browser-verified live for Greyholm economy AND a real Caldran one-shot's battleMaps: toggle off -> nav+route gone, survives reload, data untouched, toggle back on -> restored, cross-campaign isolation confirmed, no console errors.",
       "stillMissing": [
-        "Only 2 of 26 capability keys (economy, battleMaps) are actually wired to a nav item or route guard -- the rest of UNIVERSAL_CAPABILITY_KEYS exist in the toggle UI and persist correctly but don't yet gate anything (arcs, atlas, maps, locations, placements, party, routes, timeline, calendar, events, triggers, npc, quests, enemies, factions, images, zones, overlays, movableEntities, playerView, observer, importExport).",
-        "No command-layer rejection for a mutating action reachable without navigating through a gated route (e.g. a button on an already-open page).",
-        "No automated Node harness for capability toggle/enforce -- only live-browser-verified."
+        "placements/party/routes/timeline/calendar/events/triggers/economyReference/zones/overlays/movableEntities/battles/playerView/observer/importExport/arcs capabilities exist in the toggle UI and persist but gate no nav item or route yet -- no dedicated page exists for several of these (placements, routes, movableEntities) so there is nothing obvious to gate.",
+        "command-layer rejection for a mutating action reachable without navigating through a gated route.",
+        "No automated Node harness -- only live-browser-verified."
+      ],
+      "commits": [
+        "f385052",
+        "31cda1e"
       ]
     },
     {
