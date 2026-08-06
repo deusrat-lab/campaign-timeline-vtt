@@ -10,6 +10,7 @@
  */
 
 import type { CapabilityToggles } from '../domain/campaign/capabilities';
+import type { Timeline } from '../types';
 
 export type UserCampaignType = 'campaign' | 'oneShot' | 'miniArc' | 'sandbox';
 
@@ -189,6 +190,16 @@ export interface UserCampaignData {
    * own `undefined`-safe default (absent key = enabled).
    */
   capabilities?: CapabilityToggles;
+
+  /**
+   * Universal arcs — the SAME `Timeline` type Greyholm uses (src/types.ts),
+   * not a parallel UC-only shape, so both stacks share one arc domain model
+   * and one <ArcSwitcher> UI component. Optional/lazily-defaulted: an old or
+   * freshly-created campaign with no `arcs` array at all is treated as
+   * having exactly one implicit default arc (see `resolveArcs()` in
+   * userCampaignStore.tsx) rather than requiring a migration step.
+   */
+  arcs?: Timeline[];
 }
 
 export type UserCampaignMode = 'dmView' | 'dmEdit' | 'playerView';
@@ -271,6 +282,11 @@ export interface UserCampaignRuntime {
    * player library and closes only when the DM clears/closes it. */
   presentedCard?: { entityType: CampaignEntityType; entityId: string } | null;
   mapViewState: { zoom: number; panX: number; panY: number };
+  /** Universal arcs — id of the arc currently being viewed/edited. Session
+   * runtime state (like `activeMapId`), not campaign content. Absent = the
+   * default arc (see `resolveArcs()`/`resolveCurrentArcId()` in
+   * userCampaignStore.tsx). */
+  currentArcId?: string;
 }
 
 /** Lightweight registry entry (list view without loading full data). */

@@ -7,6 +7,8 @@ import { API_BASE_URL } from '../config';
 import { getStoredToken, setStoredToken } from '../state/persistence/authToken';
 import type { AppMode } from '../types';
 import { CampaignSwitcher } from './CampaignSwitcher';
+import { ArcSwitcher } from './ArcSwitcher';
+import { useUserCampaigns, resolveArcs, resolveCurrentArcId } from '../state/userCampaignStore';
 
 /** DM-facing sync-connection indicator. The critical, repeatedly-hit failure
  * mode: a DM opens the plain app URL (or a fresh browser/device) without ever
@@ -86,12 +88,14 @@ const MODE_LABELS: Record<AppMode, string> = {
 export function NavBar() {
   const { data } = useCampaignData();
   const store = useCampaignStore();
+  const ucStore = useUserCampaigns();
   const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Inside a user campaign (or its map), hide all main-campaign controls (arc
   // toggles, DM/Player mode, Observer, export/import, party) — they belong to
   // the protected main campaign and must not bleed into another context.
   const inUserCampaign = /^\/campaigns\/(?!new(?:$|\/))[^/]+/.test(location.pathname);
+  const ucCampaignId = location.pathname.match(/^\/campaigns\/(?!new(?:$|\/))([^/]+)/)?.[1];
   const userCampaignPlayerLocked = inUserCampaign && new URLSearchParams(location.search).get('as') === 'player';
   const observerLocked = location.pathname === '/observer' || userCampaignPlayerLocked;
 
@@ -101,7 +105,6 @@ export function NavBar() {
   // Falls back to the current selection (never a hard error) if the id is
   // unknown or archived.
   const [searchParams, setSearchParams] = useSearchParams();
-  const [showArchivedArcs, setShowArchivedArcs] = useState(false);
   const arcParam = searchParams.get('arc');
   useEffect(() => {
     if (!data || inUserCampaign) return;
@@ -229,135 +232,61 @@ export function NavBar() {
               Отдельная кампания — данные основной кампании скрыты
             </span>
           )}
+          {inUserCampaign && ucCampaignId && (() => {
+            const ucData = ucStore.getData(ucCampaignId);
+            const ucRuntime = ucStore.getRuntime(ucCampaignId);
+            if (!ucData) return null;
+            const ucArcs = resolveArcs(ucData);
+            const ucCurrentArcId = resolveCurrentArcId(ucData, ucRuntime);
+            const ucIsEditMode = ucRuntime.mode === 'dmEdit';
+            return (
+              <ArcSwitcher
+                arcs={ucArcs}
+                currentArcId={ucCurrentArcId}
+                isEditMode={ucIsEditMode}
+                onSwitch={(id) => ucStore.setCurrentArc(ucCampaignId, id)}
+                onCreate={(title) => ucStore.addArc(ucCampaignId, title)}
+                onRename={(id, title) => ucStore.patchArc(ucCampaignId, id, { title })}
+                onReorder={(id, neighborId) => {
+                  const a = ucArcs.find((x) => x.id === id);
+                  const b = ucArcs.find((x) => x.id === neighborId);
+                  if (!a || !b) return;
+                  ucStore.patchArc(ucCampaignId, a.id, { order: b.order });
+                  ucStore.patchArc(ucCampaignId, b.id, { order: a.order });
+                }}
+                onArchive={(id) => ucStore.patchArc(ucCampaignId, id, { archived: true })}
+                onRestore={(id) => ucStore.patchArc(ucCampaignId, id, { archived: false })}
+                canDelete={(id) => id !== 'arc-1'}
+                onDelete={(id) => ucStore.deleteArc(ucCampaignId, id)}
+              />
+            );
+          })()}
           {!inUserCampaign && data && (
-            <>
-            <div className="segmented" role="group" aria-label="Текущая арка">
-              {[...data.timelines]
-                .filter((t) => !t.archived)
-                .sort((a, b) => a.order - b.order)
-                .map((t, index, visible) => {
-                  const disabled = t.arcId === 'arc-2' && store.mode === 'player-view' && !store.arc2RevealedToPlayers;
-                  const deletable = isEditMode && store.newTimelines.some((nt) => nt.id === t.id) && t.id !== store.currentTimelineId;
-                  const isCurrent = t.id === store.currentTimelineId;
-                  return (
-                    <span key={t.id} className="segmented-option-wrap">
-                      <button
-                        type="button"
-                        className={`segmented-option${isCurrent ? ' active' : ''}`}
-                        disabled={disabled}
-                        onClick={() => store.setTimeline(t.id)}
-                        onDoubleClick={() => {
-                          if (!isEditMode) return;
-                          const title = window.prompt('Новое название арки:', t.title);
-                          if (!title || !title.trim() || title.trim() === t.title) return;
-                          store.patchTimeline(t.id, { title: title.trim() });
-                        }}
-                        title={isEditMode ? 'Двойной клик — переименовать' : t.title}
-                      >
-                        {t.title}
-                      </button>
-                      {isEditMode && index > 0 && (
-                        <button
-                          type="button"
-                          className="segmented-option-reorder"
-                          title="Сдвинуть влево"
-                          aria-label={`Сдвинуть арку ${t.title} влево`}
-                          onClick={() => {
-                            const prev = visible[index - 1];
-                            store.patchTimeline(t.id, { order: prev.order });
-                            store.patchTimeline(prev.id, { order: t.order });
-                          }}
-                        >
-                          ‹
-                        </button>
-                      )}
-                      {isEditMode && index < visible.length - 1 && (
-                        <button
-                          type="button"
-                          className="segmented-option-reorder"
-                          title="Сдвинуть вправо"
-                          aria-label={`Сдвинуть арку ${t.title} вправо`}
-                          onClick={() => {
-                            const next = visible[index + 1];
-                            store.patchTimeline(t.id, { order: next.order });
-                            store.patchTimeline(next.id, { order: t.order });
-                          }}
-                        >
-                          ›
-                        </button>
-                      )}
-                      {isEditMode && !isCurrent && (
-                        <button
-                          type="button"
-                          className="segmented-option-delete"
-                          title={`Архивировать арку «${t.title}» (обратимо — скрывает, не удаляет)`}
-                          aria-label={`Архивировать арку ${t.title}`}
-                          onClick={() => store.patchTimeline(t.id, { archived: true })}
-                        >
-                          ⤓
-                        </button>
-                      )}
-                      {deletable && (
-                        <button
-                          type="button"
-                          className="segmented-option-delete"
-                          title={`Удалить арку «${t.title}» (безопасно, только если на ней ничего нет)`}
-                          aria-label={`Удалить арку ${t.title}`}
-                          onClick={() => store.deleteTimeline(t.id)}
-                        >
-                          ×
-                        </button>
-                      )}
-                    </span>
-                  );
-                })}
-              {isEditMode && (
-                <button
-                  type="button"
-                  className="segmented-option segmented-option-add"
-                  title="Создать новую арку"
-                  onClick={() => {
-                    const title = window.prompt('Название новой арки:');
-                    if (!title || !title.trim()) return;
-                    const id = `arc-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-                    const order = Math.max(0, ...data.timelines.map((t) => t.order)) + 1;
-                    store.addTimeline({ id, arcId: id, title: title.trim(), order });
-                    store.setTimeline(id);
-                  }}
-                >
-                  + Арка
-                </button>
-              )}
-              {isEditMode && data.timelines.some((t) => t.archived) && (
-                <button
-                  type="button"
-                  className="segmented-option segmented-option-archived-toggle"
-                  title="Показать/скрыть архивные арки"
-                  onClick={() => setShowArchivedArcs((v) => !v)}
-                >
-                  Архив ({data.timelines.filter((t) => t.archived).length})
-                </button>
-              )}
-            </div>
-            {isEditMode && showArchivedArcs && (
-              <div className="segmented segmented-archived" role="group" aria-label="Архивные арки">
-                {data.timelines.filter((t) => t.archived).map((t) => (
-                  <span key={t.id} className="segmented-option-wrap">
-                    <span className="segmented-option segmented-option-archived-label">{t.title}</span>
-                    <button
-                      type="button"
-                      className="segmented-option-reorder"
-                      title={`Восстановить арку «${t.title}»`}
-                      aria-label={`Восстановить арку ${t.title}`}
-                      onClick={() => store.patchTimeline(t.id, { archived: false })}
-                    >
-                      ↺
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            </>
+            <ArcSwitcher
+              arcs={data.timelines}
+              currentArcId={store.currentTimelineId}
+              isEditMode={isEditMode}
+              lockedArcId={store.mode === 'player-view' && !store.arc2RevealedToPlayers ? data.timelines.find((t) => t.arcId === 'arc-2')?.id : undefined}
+              onSwitch={(id) => store.setTimeline(id)}
+              onCreate={(title) => {
+                const id = `arc-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+                const order = Math.max(0, ...data.timelines.map((t) => t.order)) + 1;
+                store.addTimeline({ id, arcId: id, title, order });
+                store.setTimeline(id);
+              }}
+              onRename={(id, title) => store.patchTimeline(id, { title })}
+              onReorder={(id, neighborId) => {
+                const a = data.timelines.find((t) => t.id === id);
+                const b = data.timelines.find((t) => t.id === neighborId);
+                if (!a || !b) return;
+                store.patchTimeline(a.id, { order: b.order });
+                store.patchTimeline(b.id, { order: a.order });
+              }}
+              onArchive={(id) => store.patchTimeline(id, { archived: true })}
+              onRestore={(id) => store.patchTimeline(id, { archived: false })}
+              canDelete={(id) => store.newTimelines.some((nt) => nt.id === id)}
+              onDelete={(id) => store.deleteTimeline(id)}
+            />
           )}
           {!inUserCampaign && observerLocked ? (
             <div className="segmented" role="group" aria-label="Режим приложения">

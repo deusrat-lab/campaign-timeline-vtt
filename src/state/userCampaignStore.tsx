@@ -18,6 +18,7 @@ import type {
 } from '../types/userCampaign';
 import { getRegionPreset } from '../data/regionPresets';
 import type { UniversalCapabilityKey } from '../domain/campaign/capabilities';
+import type { Timeline } from '../types';
 import { mergeScenarioIntoData, scenarioForCampaign } from '../data/scenarioMerge';
 import { exportUserCampaignDM, exportUserCampaignPlayerSafe, reconstructUserCampaign, previewUserCampaignImport, userCampaignExportHash, mintPlacementId } from '../domain';
 
@@ -104,6 +105,29 @@ export interface CampaignSeed {
   images?: Array<{ title: string; src: string; playerSafe?: boolean }>;
 }
 
+const DEFAULT_ARC_ID = 'arc-1';
+
+function defaultArc(): Timeline {
+  return { id: DEFAULT_ARC_ID, arcId: DEFAULT_ARC_ID, title: 'Арка 1', order: 1, isDefault: true, isCurrent: true, visibleToPlayers: true };
+}
+
+/** Universal arcs, shared type/domain with Greyholm (Timeline, src/types.ts).
+ * A campaign with no `arcs` array at all (every campaign created before this
+ * feature existed, and any fixture/import that predates it) is treated as
+ * having exactly one implicit default arc — never a migration step, same
+ * "always defaulted" pattern the Greyholm overlay uses throughout. */
+export function resolveArcs(data: UserCampaignData | null | undefined): Timeline[] {
+  if (!data?.arcs || data.arcs.length === 0) return [defaultArc()];
+  return data.arcs;
+}
+
+export function resolveCurrentArcId(data: UserCampaignData | null | undefined, runtime: UserCampaignRuntime | null | undefined): string {
+  const arcs = resolveArcs(data);
+  const wanted = runtime?.currentArcId;
+  if (wanted && arcs.some((a) => a.id === wanted && !a.archived)) return wanted;
+  return (arcs.find((a) => a.isDefault && !a.archived) ?? arcs.find((a) => !a.archived) ?? arcs[0]).id;
+}
+
 function emptyData(campaignId: string, title: string, type: UserCampaignType, baseMapId: string, regionIds: string[], seed?: CampaignSeed): UserCampaignData {
   // Seed the new campaign's library with COPIES (fresh ids → isolated data).
   // A scenario seed wins; otherwise fall back to the region's canon presets.
@@ -145,12 +169,13 @@ function emptyData(campaignId: string, title: string, type: UserCampaignType, ba
     campaignId, title, type, baseMapId,
     mapIds: [baseMapId], regionIds,
     locations, npcs, quests, enemies, factions, images, routes: [], zones: [], notes: [], party, mapPlacements: [],
+    arcs: [defaultArc()],
   };
 }
 
 function emptyRuntime(campaignId: string, baseMapId: string): UserCampaignRuntime {
   return {
-    campaignId, activeMapId: baseMapId, mode: 'dmView',
+    campaignId, activeMapId: baseMapId, mode: 'dmView', currentArcId: DEFAULT_ARC_ID,
     notes: [], revealedToPlayers: [], questStatuses: {}, battleTracker: null,
     mapViewState: { zoom: 1, panX: 0, panY: 0 },
   };
@@ -170,6 +195,10 @@ interface UserCampaignValue {
   createCampaign: (input: { title: string; type: UserCampaignType; baseMapId: string; regionIds: string[]; seed?: CampaignSeed }) => string;
   renameCampaign: (id: string, title: string) => void;
   setCapability: (id: string, key: UniversalCapabilityKey, enabled: boolean) => void;
+  addArc: (id: string, title: string) => void;
+  patchArc: (id: string, arcId: string, patch: Partial<Timeline>) => void;
+  deleteArc: (id: string, arcId: string) => void;
+  setCurrentArc: (id: string, arcId: string) => void;
   deleteCampaign: (id: string) => void;
 
   getData: (id: string) => UserCampaignData | null;
@@ -454,6 +483,43 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
 
     setCapability: (id, key, enabled) => {
       patchData(id, (p) => ({ ...p, capabilities: { ...p.capabilities, [key]: enabled } }));
+    },
+
+    // Universal arcs — same Timeline type + same CRUD shape as Greyholm's
+    // addTimeline/patchTimeline/deleteTimeline (campaignStore.tsx), just
+    // persisted through this store's patchData/patchRuntime instead of a
+    // reducer action. One shared <ArcSwitcher> component drives both.
+    addArc: (id, title) => {
+      patchData(id, (p) => {
+        const arcs = resolveArcs(p);
+        const arcIdNew = `arc-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+        const order = Math.max(0, ...arcs.map((a) => a.order)) + 1;
+        return { ...p, arcs: [...arcs, { id: arcIdNew, arcId: arcIdNew, title, order }] };
+      });
+      // patchData above already committed synchronously; read the just-written
+      // arc id back from storage rather than recomputing it (avoids a second
+      // random-id generation that could drift from what was actually saved).
+      const fresh = readJson<UserCampaignData>(dataKey(id));
+      const last = fresh?.arcs?.[fresh.arcs.length - 1];
+      if (last) patchRuntime(id, (r) => ({ ...r, currentArcId: last.id }));
+    },
+    patchArc: (id, arcId, patch) => {
+      patchData(id, (p) => ({ ...p, arcs: resolveArcs(p).map((a) => (a.id === arcId ? { ...a, ...patch } : a)) }));
+    },
+    deleteArc: (id, arcId) => {
+      patchData(id, (p) => {
+        const arcs = resolveArcs(p);
+        // Safe delete: never the seed default arc, never the currently active
+        // arc, never the last remaining arc -- structurally impossible to
+        // leave a campaign with zero arcs or pointed at a just-deleted one.
+        const runtime = runtimeCache[id] ?? readJson<UserCampaignRuntime>(runtimeKey(id));
+        const currentId = resolveCurrentArcId(p, runtime);
+        if (arcId === DEFAULT_ARC_ID || arcId === currentId || arcs.length <= 1) return p;
+        return { ...p, arcs: arcs.filter((a) => a.id !== arcId) };
+      });
+    },
+    setCurrentArc: (id, arcId) => {
+      patchRuntime(id, (r) => ({ ...r, currentArcId: arcId }));
     },
 
     deleteCampaign: (id) => {
