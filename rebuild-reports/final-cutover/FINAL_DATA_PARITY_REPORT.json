@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-06T08:26:19.898Z",
+  "generatedAt": "2026-08-06T08:29:09.510Z",
   "engine": "src/domain/migration/migrationEngine.ts (runUniversalMigration / rollbackUniversalMigration) — real production code, not reimplemented.",
   "repository": "createProductionCampaignRepository + createMemoryRepositoryStorage (in-memory Map, same repository implementation the browser app uses over localStorage).",
   "results": [
@@ -32,7 +32,49 @@
         "entities": 979,
         "battleMaps": 139
       },
-      "lostEntities": 0
+      "lostEntities": 0,
+      "idCoverage": {
+        "npcs": {
+          "manifestCount": 210,
+          "coveredCount": 210,
+          "missingIds": []
+        },
+        "quests": {
+          "manifestCount": 51,
+          "coveredCount": 51,
+          "missingIds": []
+        },
+        "enemies": {
+          "manifestCount": 127,
+          "coveredCount": 127,
+          "missingIds": []
+        },
+        "images": {
+          "manifestCount": 420,
+          "coveredCount": 420,
+          "missingIds": []
+        },
+        "factions": {
+          "manifestCount": 22,
+          "coveredCount": 22,
+          "missingIds": []
+        },
+        "players": {
+          "manifestCount": 4,
+          "coveredCount": 4,
+          "missingIds": []
+        },
+        "shops": {
+          "manifestCount": 6,
+          "coveredCount": 6,
+          "missingIds": []
+        },
+        "taverns": {
+          "manifestCount": 3,
+          "coveredCount": 3,
+          "missingIds": []
+        }
+      }
     },
     {
       "campaignId": "user:caldran-captivity",
@@ -63,7 +105,34 @@
         "entities": 407,
         "battleMaps": 0
       },
-      "lostEntities": 0
+      "lostEntities": 0,
+      "idCoverage": {
+        "npcs": {
+          "manifestCount": 66,
+          "coveredCount": 66,
+          "missingIds": []
+        },
+        "quests": {
+          "manifestCount": 26,
+          "coveredCount": 26,
+          "missingIds": []
+        },
+        "enemies": {
+          "manifestCount": 78,
+          "coveredCount": 78,
+          "missingIds": []
+        },
+        "images": {
+          "manifestCount": 205,
+          "coveredCount": 205,
+          "missingIds": []
+        },
+        "factions": {
+          "manifestCount": 12,
+          "coveredCount": 12,
+          "missingIds": []
+        }
+      }
     }
   ]
 }

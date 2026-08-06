@@ -98,6 +98,44 @@ function buildCaldranAdapterInput(): { data: UserCampaignData; runtime: UserCamp
   return raw;
 }
 
+interface ManifestEntityType {
+  count: number;
+  ids: string[];
+  contentHash: string;
+}
+interface ManifestCampaign {
+  campaignId: string;
+  entities: Record<string, ManifestEntityType>;
+}
+
+function loadManifest(): ManifestCampaign[] {
+  const raw = readJson<{ campaigns: ManifestCampaign[] }>(resolve(root, 'rebuild-reports/final-cutover/PRODUCTION_REFERENCE_MANIFEST.json'));
+  return raw.campaigns;
+}
+
+/** For each `manifestKind -> universalKind` pair, verify every manifest id
+ * appears in the union of `sourceIds` across matching-kind universal
+ * entities. Extra universal-side entries (e.g. the two synthesized
+ * Kingdom/Region location-hierarchy nodes) are expected and not flagged --
+ * only a manifest id with NO matching universal sourceIds counts as missing. */
+function idCoverageDiff(
+  manifest: ManifestCampaign,
+  entities: { kind: string; sourceIds?: string[] }[],
+  kindMap: Record<string, string>,
+): Record<string, { manifestCount: number; coveredCount: number; missingIds: string[] }> {
+  const out: Record<string, { manifestCount: number; coveredCount: number; missingIds: string[] }> = {};
+  for (const [manifestKind, universalKind] of Object.entries(kindMap)) {
+    const manifestType = manifest.entities[manifestKind];
+    if (!manifestType) continue;
+    const sourceIdUnion = new Set(
+      entities.filter((e) => e.kind === universalKind).flatMap((e) => e.sourceIds ?? []),
+    );
+    const missingIds = manifestType.ids.filter((id) => !sourceIdUnion.has(id));
+    out[manifestKind] = { manifestCount: manifestType.count, coveredCount: manifestType.count - missingIds.length, missingIds: missingIds.slice(0, 20) };
+  }
+  return out;
+}
+
 interface ReconciliationRow {
   campaignId: string;
   dryRun: { ok: boolean; alreadyMigrated: boolean; committed: boolean };
@@ -106,9 +144,16 @@ interface ReconciliationRow {
   rollback: { ok: boolean; revisionAfterRollback: number | null; matchesPreCommit: boolean };
   entityCounts: Record<string, number>;
   lostEntities: number;
+  idCoverage: Record<string, { manifestCount: number; coveredCount: number; missingIds: string[] }>;
 }
 
-async function migrateOne(name: string, source: LegacyMigrationSource, targetCampaignId: CampaignId): Promise<ReconciliationRow> {
+async function migrateOne(
+  name: string,
+  source: LegacyMigrationSource,
+  targetCampaignId: CampaignId,
+  manifest: ManifestCampaign | undefined,
+  kindMap: Record<string, string>,
+): Promise<ReconciliationRow> {
   const storage = createMemoryRepositoryStorage();
   const repository = createProductionCampaignRepository(storage);
 
@@ -156,6 +201,8 @@ async function migrateOne(name: string, source: LegacyMigrationSource, targetCam
       }
     : {};
 
+  const idCoverage = manifest && finalSnap ? idCoverageDiff(manifest, finalSnap.durable.entities, kindMap) : {};
+
   return {
     campaignId: name,
     dryRun: { ok: dry.ok, alreadyMigrated: dry.alreadyMigrated, committed: dry.committed },
@@ -164,6 +211,7 @@ async function migrateOne(name: string, source: LegacyMigrationSource, targetCam
     rollback: { ok: rollbackOk, revisionAfterRollback, matchesPreCommit },
     entityCounts,
     lostEntities: preCommitRead ? 1 : 0, // preCommitRead must be null after a dry-run; non-null = a lost-invariant bug
+    idCoverage,
   };
 }
 
@@ -183,8 +231,15 @@ async function main() {
     adapt: () => adaptUserCampaignToUniversal({ data: caldran.data, runtime: caldran.runtime }),
   };
 
-  const greyholm = await migrateOne('greyholm:main', greySource, greyId);
-  const caldranResult = await migrateOne('user:caldran-captivity', caldranSource, caldranId);
+  const manifestCampaigns = loadManifest();
+  const greyManifest = manifestCampaigns.find((c) => c.campaignId === 'greyholm:main');
+  const caldranManifest = manifestCampaigns.find((c) => c.campaignId === 'user:caldran-captivity');
+
+  const greyKindMap: Record<string, string> = { npcs: 'npc', quests: 'quest', enemies: 'enemy', images: 'image', factions: 'faction', players: 'player', shops: 'shop', taverns: 'tavern' };
+  const caldranKindMap: Record<string, string> = { npcs: 'npc', quests: 'quest', enemies: 'enemy', images: 'image', factions: 'faction' };
+
+  const greyholm = await migrateOne('greyholm:main', greySource, greyId, greyManifest, greyKindMap);
+  const caldranResult = await migrateOne('user:caldran-captivity', caldranSource, caldranId, caldranManifest, caldranKindMap);
 
   const report = {
     generatedAt: new Date().toISOString(),
@@ -206,11 +261,16 @@ async function main() {
     rollbackRestoresTitle: r.rollback.matchesPreCommit,
     lostEntities: r.lostEntities,
     entityCounts: r.entityCounts,
+    idCoverage: Object.fromEntries(Object.entries(r.idCoverage).map(([k, v]) => [k, `${v.coveredCount}/${v.manifestCount}`])),
   })), null, 2));
 
+  const totalMissingIds = report.results.reduce(
+    (sum, r) => sum + Object.values(r.idCoverage).reduce((s, v) => s + v.missingIds.length, 0),
+    0,
+  );
   const anyFail = report.results.some((r) =>
     !r.dryRun.ok || !r.commit.committed || !r.readBack.matchesCommitted || !r.rollback.ok || !r.rollback.matchesPreCommit || r.lostEntities > 0,
-  );
+  ) || totalMissingIds > 0;
   if (anyFail) {
     console.error('FINAL_MIGRATION_FAIL');
     process.exit(1);
