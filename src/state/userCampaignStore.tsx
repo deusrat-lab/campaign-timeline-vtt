@@ -173,6 +173,39 @@ function emptyData(campaignId: string, title: string, type: UserCampaignType, ba
   };
 }
 
+// Block H (Caldran side) — `runtime.mode` (dmView/dmEdit/playerView, the
+// in-page DM Edit / Player View toggle used by CampaignLibraryPage and
+// IsolatedCampaignMapWorkspace) must be tab-scoped, exactly like Greyholm's
+// `mode` in campaignStore.tsx. Historically it lived inside `UserCampaignRuntime`,
+// which is written to localStorage under `runtimeKey(id)` AND pushed to the
+// server / broadcast to every other subscribed tab/client via `pushBlob` +
+// `subscribeUc` — so toggling "Player View" in one DM tab would silently
+// flip every other open tab (including real players' browsers) into that
+// mode too. sessionStorage is scoped to a single tab (new tab/window = fresh,
+// independent sessionStorage; reload keeps it), so it's used here the same
+// way as the Greyholm fix: `mode` is read from/written to sessionStorage only,
+// stripped out of every runtime write to localStorage/server, and ignored on
+// every incoming sync payload.
+export const ucModeSessionKey = (id: string) => `campaign-timeline-vtt:uc-mode:tab:${id}`;
+
+export function loadUcTabMode(id: string): UserCampaignMode {
+  try {
+    const raw = window.sessionStorage.getItem(ucModeSessionKey(id));
+    if (raw === 'dmView' || raw === 'dmEdit' || raw === 'playerView') return raw;
+  } catch {
+    // sessionStorage unavailable (SSR, privacy mode) — fall through to default.
+  }
+  return 'dmView';
+}
+
+export function saveUcTabMode(id: string, mode: UserCampaignMode): void {
+  try {
+    window.sessionStorage.setItem(ucModeSessionKey(id), mode);
+  } catch {
+    // Best-effort only; an in-memory mode still works for this page's lifetime.
+  }
+}
+
 function emptyRuntime(campaignId: string, baseMapId: string): UserCampaignRuntime {
   return {
     campaignId, activeMapId: baseMapId, mode: 'dmView', currentArcId: DEFAULT_ARC_ID,
@@ -382,7 +415,10 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
   const readRuntime = useCallback((id: string): UserCampaignRuntime => {
     const entry = registry.find((r) => r.campaignId === id);
     const fallbackMap = entry?.baseMapId ?? '';
-    return runtimeCache[id] ?? readJson<UserCampaignRuntime>(runtimeKey(id)) ?? emptyRuntime(id, fallbackMap);
+    const base = runtimeCache[id] ?? readJson<UserCampaignRuntime>(runtimeKey(id)) ?? emptyRuntime(id, fallbackMap);
+    // Block H — always override with THIS tab's own sessionStorage-backed
+    // mode, never the shared/synced value (see loadUcTabMode above).
+    return { ...base, mode: loadUcTabMode(id) };
   }, [runtimeCache, registry]);
 
   const touchRegistry = useCallback((id: string) => {
@@ -407,7 +443,12 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     const entry = registry.find((r) => r.campaignId === id);
     const current = runtimeCache[id] ?? readJson<UserCampaignRuntime>(runtimeKey(id)) ?? emptyRuntime(id, entry?.baseMapId ?? '');
     const next = updater(current);
-    writeJson(runtimeKey(id), next);
+    // Block H — `mode` never joins the persisted/synced runtime blob (see
+    // ucModeSessionKey helpers above). Persist a neutral placeholder so any
+    // code reading the raw localStorage/server blob directly never sees a
+    // real tab's mode; readRuntime always re-attaches the caller's own tab
+    // mode on top regardless of what's stored here.
+    writeJson(runtimeKey(id), { ...next, mode: 'dmView' as UserCampaignMode });
     setRuntimeCache((prev) => ({ ...prev, [id]: next }));
     pushBlob(id);
   }, [registry, runtimeCache, pushBlob]);
@@ -535,7 +576,17 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     updateData: patchData,
     updateRuntime: patchRuntime,
 
-    setMode: (id, mode) => patchRuntime(id, (prev) => ({ ...prev, mode })),
+    // Block H — tab-scoped only: sessionStorage write + in-memory cache
+    // update, deliberately bypassing patchRuntime (which would persist to
+    // localStorage and push/broadcast to every other tab/client).
+    setMode: (id, mode) => {
+      saveUcTabMode(id, mode);
+      setRuntimeCache((prev) => {
+        const entry = registry.find((r) => r.campaignId === id);
+        const current = prev[id] ?? readJson<UserCampaignRuntime>(runtimeKey(id)) ?? emptyRuntime(id, entry?.baseMapId ?? '');
+        return { ...prev, [id]: { ...current, mode } };
+      });
+    },
     setSelected: (id, entityId, entityType) => patchRuntime(id, (prev) => ({ ...prev, selectedEntityId: entityId, selectedEntityType: entityType })),
     toggleReveal: (id, entityId) => {
     const __pre = captureUc(id);

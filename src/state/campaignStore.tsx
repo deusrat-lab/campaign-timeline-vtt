@@ -252,7 +252,39 @@ function loadProjectSnapshot(): CampaignOverlay {
   return normalizeOverlay(projectOverlaySnapshot as Partial<CampaignOverlay>);
 }
 
-function loadPersisted(): CampaignOverlay {
+// Block H — view mode (`mode`: 'dm-view'|'dm-edit'|'player-view') is
+// intentionally NEVER part of the shared campaign overlay: it is excluded
+// from every localStorage write (see the `{ mode: _mode, ...persistedState }`
+// destructure in the save effect below) and from every cross-tab
+// IMPORT_OVERLAY (the reducer's IMPORT_OVERLAY case explicitly keeps
+// `state.mode` instead of the incoming value). That already makes it
+// per-tab in memory. What was missing is reload persistence: it used to
+// hard-reset to 'dm-view' on every load. sessionStorage is scoped to a
+// single tab (a new tab/window gets a fresh, independent sessionStorage;
+// a tab reload keeps it) — exactly the "tab/session-scoped" mechanism
+// Block H calls for, and it can never leak into the shared campaign
+// document, the universal export, or any cross-tab sync path.
+export const MODE_SESSION_KEY = 'campaign-timeline-vtt:mode:tab';
+
+export function loadPersistedMode(): AppMode {
+  try {
+    const raw = window.sessionStorage.getItem(MODE_SESSION_KEY);
+    if (raw === 'dm-view' || raw === 'dm-edit' || raw === 'player-view') return raw;
+  } catch {
+    // sessionStorage unavailable (SSR, privacy mode) — fall through to default.
+  }
+  return 'dm-view';
+}
+
+export function savePersistedMode(mode: AppMode): void {
+  try {
+    window.sessionStorage.setItem(MODE_SESSION_KEY, mode);
+  } catch {
+    // Best-effort only; an in-memory mode still works for this page's lifetime.
+  }
+}
+
+function loadPersistedOverlayData(): CampaignOverlay {
   try {
     const raw = overlayStorage.load();
     if (raw) {
@@ -278,6 +310,13 @@ function loadPersisted(): CampaignOverlay {
   } catch {
     return loadProjectSnapshot();
   }
+}
+
+/** Loads the shared campaign overlay, then overrides `mode` with THIS tab's
+ * own sessionStorage-backed value — never the shared/imported one. */
+function loadPersisted(): CampaignOverlay {
+  const overlay = loadPersistedOverlayData();
+  return { ...overlay, mode: loadPersistedMode() };
 }
 
 type EntityKind =
@@ -1094,6 +1133,16 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       setSaveStatus('error');
     }
   }, [state]);
+
+  // Block H — persist THIS tab's own view mode to sessionStorage, entirely
+  // separate from the shared-overlay save effect above (mode is deliberately
+  // excluded from that JSON). Runs on every mode change, including the very
+  // first render, so a mode restored from a prior reload of this same tab is
+  // written straight back (harmless no-op) and a mode changed via SET_MODE
+  // is captured immediately.
+  useEffect(() => {
+    savePersistedMode(state.mode);
+  }, [state.mode]);
 
   useEffect(() => {
     return overlayStorage.subscribe((newJson) => {
