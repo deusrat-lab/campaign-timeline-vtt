@@ -121,6 +121,16 @@ export function normalizeTechnical(snapshot: CampaignSnapshot): CampaignSnapshot
       // overlay (which leaves the base-data echo untouched) would spuriously
       // differ from a universal command that also rewrites the echo.
       entities: snapshot.durable.entities.map((entity) => stripEntityOriginal(entity)),
+      // Same rationale for placements: `adaptMainCampaignToUniversal` stamps every
+      // placement with `extensions: { original: <legacy placement> }`, but the
+      // pure `placement.place`/`move`/`remove` command executors never populate
+      // `extensions` on the placement they produce (see
+      // `src/domain/complex-authority/complexCommands.ts`). Left unstripped, that
+      // asymmetry alone made every Greyholm placement-create durable commit
+      // report a spurious `semantic_mismatch` and fall back to legacy — this was
+      // the residual layer of FINAL_REMAINING_WORK_AUDIT.md §4b.3, exposed once
+      // the underlying data-staleness bug was fixed.
+      placements: snapshot.durable.placements.map((placement) => stripEntityOriginal(placement)),
     },
     runtime: { ...snapshot.runtime, extensions: {} },
     migrationMetadata: snapshot.migrationMetadata.map((meta) => ({ ...meta, migratedAt: '' })),
@@ -131,7 +141,15 @@ function stripEntityOriginal<T extends { extensions?: Record<string, unknown> }>
   if (!entity.extensions || !('original' in entity.extensions)) return entity;
   const extensions = { ...entity.extensions };
   delete (extensions as Record<string, unknown>).original;
-  return { ...entity, extensions };
+  // A pure domain command (e.g. `placement.place`) never sets `extensions` at
+  // all on the record it produces — the key is absent, not `{}`. If stripping
+  // `original` here left `extensions: {}` behind, that would itself be a
+  // structural mismatch against the command's key-absent record (`{}` !==
+  // `undefined` under the structural diff below). Drop the key entirely once
+  // it is empty so both sides normalize to the same "no extensions" shape.
+  const result: T = { ...entity, extensions };
+  if (Object.keys(extensions).length === 0) delete (result as { extensions?: unknown }).extensions;
+  return result;
 }
 
 function sortIdentifiable(snapshot: CampaignSnapshot): CampaignSnapshot {

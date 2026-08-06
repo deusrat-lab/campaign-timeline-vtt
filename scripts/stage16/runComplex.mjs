@@ -235,15 +235,14 @@ function groupDurableHappy() {
     durableCommit(router, greyholmComplex(), GREY.placeRemove, 'GREY placement.remove');
   }
   {
-    // Greyholm placement CREATE needs the raw-legacy echo the adapter synthesises
-    // (extensions.original), which the universal create command does not carry —
-    // so it safely FALLS BACK (documented capability difference; create authority
-    // for Greyholm is deferred). Caldran create (no echo) is durable below.
-    const { router, repoStore } = makeRouter();
-    const r = route(router, greyholmComplex(), GREY.placeNew, { noFallbackApply: true });
-    checks.eq('GREY placement.place -> safe fallback (echo deferred)', r.outcome.decision, 'fallback');
-    checks.eq('GREY placement.place fallback prediction_mismatch', r.outcome.fallbackReason, 'prediction_mismatch');
-    checks.eq('GREY placement.place no repo write', repoStore.writeCount(), 0);
+    // Greyholm placement CREATE: `commandComparison.ts`'s `normalizeTechnical`
+    // now strips the adapter-only raw-legacy echo (`extensions.original`) from
+    // placements the same way it already did for entities, so the universal
+    // create command (which never carries that echo) durably commits instead of
+    // safely falling back on a spurious echo-shape mismatch (see
+    // docs/universal-rebuild/FINAL_REMAINING_WORK_AUDIT.md §4b.3, closed).
+    const { router } = makeRouter();
+    durableCommit(router, greyholmComplex(), GREY.placeNew, 'GREY placement.place', ['durable.placements:plc-new-1']);
   }
   // Caldran
   {
