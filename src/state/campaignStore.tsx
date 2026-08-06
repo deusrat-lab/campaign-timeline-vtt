@@ -40,7 +40,7 @@ import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
 import { API_BASE_URL } from '../config';
 import { emitMainCommand } from './commandShadowSink';
 import { routeMainComplex, type ComplexActionDescriptor } from './complexAuthoritySink';
-import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, createBrowserRepositoryStorage, campaignIdFromLegacy } from '../domain';
+import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, commitReveal, readReveal, type RevealSnapshot, createBrowserRepositoryStorage, campaignIdFromLegacy } from '../domain';
 
 // Decision 2 — the SAME universal campaign id EmbeddedBattleOverlay.tsx
 // already uses for its (now-superseded) shadow turn-advance path. Must be
@@ -1229,13 +1229,36 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       markVisited: (locationStateId) => dispatch({ type: 'MARK_VISITED', locationStateId }),
       setKnown: (locationStateId) => dispatch({ type: 'SET_KNOWN', locationStateId }),
       setRevealed: (locationStateId) => {
+        // Block I — universal reveal authority is the SOLE active authority:
+        // the candidate WHOLE snapshot (Greyholm only carries the
+        // `revealedIds` half — no map-placement/image cascade exists here) is
+        // durably committed first (expected-revision guard, read-after-write
+        // verified), and only the committed value is projected into the
+        // existing legacy dispatch as a compatibility write. No flag, no
+        // optional fallback path — mirrors the unconditional field/battle/
+        // presented-card cutovers above.
+        const seed: RevealSnapshot = readReveal(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.reveal')
+          ?? { revealedIds: state.party.revealedLocationStateIds, placementVisibility: {}, imagePlayerSafe: {} };
+        const nextIds = seed.revealedIds.includes(locationStateId) ? seed.revealedIds : [...seed.revealedIds, locationStateId];
+        const candidate: RevealSnapshot = { ...seed, revealedIds: nextIds };
+        const outcome = commitReveal(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.reveal', candidate);
+        if (!outcome.ok || !outcome.snapshot) {
+          throw new Error(`setRevealed: universal reveal commit failed for ${locationStateId}: ${outcome.error ?? 'unknown error'}`);
+        }
         const action: Action = { type: 'SET_REVEALED', locationStateId };
-        routeGreyComplex('greyholm.reveal', { aggregate: 'reveal', reveal: true, entityKind: 'locationState', legacyEntityId: locationStateId }, action);
+        dispatch(action);
         emitCommand('greyholm.reveal.update', { scope: 'greyholm.reveal.update', kind: 'locationState', legacyId: locationStateId }, action);
       },
       unsetRevealed: (locationStateId) => {
+        const seed: RevealSnapshot = readReveal(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.reveal')
+          ?? { revealedIds: state.party.revealedLocationStateIds, placementVisibility: {}, imagePlayerSafe: {} };
+        const candidate: RevealSnapshot = { ...seed, revealedIds: seed.revealedIds.filter((id) => id !== locationStateId) };
+        const outcome = commitReveal(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.reveal', candidate);
+        if (!outcome.ok || !outcome.snapshot) {
+          throw new Error(`unsetRevealed: universal reveal commit failed for ${locationStateId}: ${outcome.error ?? 'unknown error'}`);
+        }
         const action: Action = { type: 'UNSET_REVEALED', locationStateId };
-        routeGreyComplex('greyholm.reveal', { aggregate: 'reveal', reveal: false, entityKind: 'locationState', legacyEntityId: locationStateId }, action);
+        dispatch(action);
       },
       setLocationStatus: (locationStateId, status) =>
         dispatch({ type: 'SET_LOCATION_STATUS', locationStateId, status }),

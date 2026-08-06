@@ -37,4 +37,5 @@ export * from './store/universalStore';
 export * from './validation/validateCampaignSnapshot';
 export * from './visibility/types';
 export * from './visibility/presentedCardAuthorityStore';
+export * from './visibility/revealAuthorityStore';
 export * from './workspace/index';

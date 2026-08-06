@@ -29,6 +29,9 @@ import {
   mintPlacementId,
   commitField,
   commitPresentedCard,
+  commitReveal,
+  readReveal,
+  type RevealSnapshot,
   createBrowserRepositoryStorage,
   campaignIdFromLegacy,
   type FieldAuthorityKind,
@@ -611,56 +614,63 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     const __pre = captureUc(id);
     const __wasRevealed = (__pre.runtime?.revealedToPlayers ?? []).includes(entityId);
     const reveal = !__wasRevealed;
-    // Pure computation of the FULL coupled transition (runtime.revealedToPlayers
-    // + data.mapPlacements[].visibleToPlayers + — reveal direction only, matching
-    // the legacy asymmetry exactly — the entity's single linked image's
-    // playerSafe flag). Building this as one pure function lets the universal
-    // `reveal` command's cascade (placements + image) be compared for real
-    // parity instead of taking a direct legacy-only write for a coupled action.
-    const computeNext = (): { runtime: UserCampaignRuntime | null; data: UserCampaignData | null } => {
-      const set = new Set(__pre.runtime?.revealedToPlayers ?? []);
-      if (reveal) set.add(entityId); else set.delete(entityId);
-      const nextRuntime = __pre.runtime ? { ...__pre.runtime, revealedToPlayers: [...set] } : __pre.runtime;
-      let nextData = __pre.data;
-      if (__pre.data) {
-        const imageId =
-          __pre.data.locations.find((e) => e.id === entityId)?.imageId ??
-          __pre.data.npcs.find((e) => e.id === entityId)?.imageId ??
-          __pre.data.quests.find((e) => e.id === entityId)?.imageId ??
-          __pre.data.enemies.find((e) => e.id === entityId)?.imageId ??
-          __pre.data.factions?.find((e) => e.id === entityId)?.imageId ??
-          __pre.data.party?.find((e) => e.id === entityId)?.imageId;
-        nextData = {
-          ...__pre.data,
-          mapPlacements: __pre.data.mapPlacements.map((mp) => (mp.entityId === entityId ? { ...mp, visibleToPlayers: reveal } : mp)),
-          images: reveal && imageId
-            ? __pre.data.images.map((im) => (im.id === imageId ? { ...im, playerSafe: true } : im))
-            : __pre.data.images,
-        };
-      }
-      return { runtime: nextRuntime, data: nextData };
+    // Block I — universal reveal authority is the SOLE active authority for
+    // this coupled multi-field aggregate: runtime.revealedToPlayers +
+    // data.mapPlacements[].visibleToPlayers + — reveal direction only,
+    // matching the exact legacy asymmetry — the entity's single linked
+    // image's playerSafe flag must all move together atomically, exactly
+    // like `commitUserBoard`'s whole-board battle commit. The candidate is
+    // the FULL next snapshot (every placement's visibility, every image's
+    // playerSafe flag, not just the touched entity's), durably committed
+    // first (expected-revision guard, read-after-write verified), and only
+    // the committed snapshot is projected into the legacy data/runtime patch
+    // as a compatibility write. No flag, no optional fallback path.
+    const universalCampaignId = campaignIdFromLegacy('user', id);
+    const seed: RevealSnapshot = readReveal(ucFieldStorage(), universalCampaignId, 'userCampaign.reveal') ?? {
+      revealedIds: __pre.runtime?.revealedToPlayers ?? [],
+      placementVisibility: Object.fromEntries((__pre.data?.mapPlacements ?? []).map((mp) => [mp.id, mp.visibleToPlayers])),
+      imagePlayerSafe: Object.fromEntries((__pre.data?.images ?? []).map((im) => [im.id, !!im.playerSafe])),
     };
-    const applyReal = (): void => {
-      const next = computeNext();
-      if (next.data) { writeJson(dataKey(id), next.data); setDataCache((prevData) => ({ ...prevData, [id]: next.data as UserCampaignData })); }
-      patchRuntime(id, (prev) => ({ ...prev, revealedToPlayers: next.runtime?.revealedToPlayers ?? prev.revealedToPlayers }));
+    const set = new Set(seed.revealedIds);
+    if (reveal) set.add(entityId); else set.delete(entityId);
+    const imageId =
+      __pre.data?.locations.find((e) => e.id === entityId)?.imageId ??
+      __pre.data?.npcs.find((e) => e.id === entityId)?.imageId ??
+      __pre.data?.quests.find((e) => e.id === entityId)?.imageId ??
+      __pre.data?.enemies.find((e) => e.id === entityId)?.imageId ??
+      __pre.data?.factions?.find((e) => e.id === entityId)?.imageId ??
+      __pre.data?.party?.find((e) => e.id === entityId)?.imageId;
+    const nextPlacementVisibility: Record<string, boolean> = { ...seed.placementVisibility };
+    for (const mp of __pre.data?.mapPlacements ?? []) {
+      nextPlacementVisibility[mp.id] = mp.entityId === entityId ? reveal : (mp.id in nextPlacementVisibility ? nextPlacementVisibility[mp.id] : mp.visibleToPlayers);
+    }
+    const nextImagePlayerSafe: Record<string, boolean> = { ...seed.imagePlayerSafe };
+    if (reveal && imageId) nextImagePlayerSafe[imageId] = true;
+    const candidate: RevealSnapshot = {
+      revealedIds: [...set],
+      placementVisibility: nextPlacementVisibility,
+      imagePlayerSafe: nextImagePlayerSafe,
     };
-    // Only route through the universal reveal command when the target resolves
-    // unambiguously to a single kind (never first-match / guessed identity).
+    const outcome = commitReveal(ucFieldStorage(), universalCampaignId, 'userCampaign.reveal', candidate);
+    if (!outcome.ok || !outcome.snapshot) {
+      throw new Error(`toggleReveal: universal reveal commit failed for campaign ${id}, entity ${entityId}: ${outcome.error ?? 'unknown error'}`);
+    }
+    const committed = outcome.snapshot;
+    if (__pre.data) {
+      const nextData: UserCampaignData = {
+        ...__pre.data,
+        mapPlacements: __pre.data.mapPlacements.map((mp) =>
+          mp.id in committed.placementVisibility ? { ...mp, visibleToPlayers: committed.placementVisibility[mp.id] } : mp,
+        ),
+        images: __pre.data.images.map((im) =>
+          im.id in committed.imagePlayerSafe ? { ...im, playerSafe: committed.imagePlayerSafe[im.id] } : im,
+        ),
+      };
+      writeJson(dataKey(id), nextData);
+      setDataCache((prevData) => ({ ...prevData, [id]: nextData }));
+    }
+    patchRuntime(id, (prev) => ({ ...prev, revealedToPlayers: committed.revealedIds }));
     const kind = resolveUcKind(__pre.data, entityId);
-    const handled = kind
-      ? routeUserComplex({
-          legacyCampaignId: id,
-          complexScope: 'userCampaign.reveal',
-          descriptor: { aggregate: 'reveal', reveal, entityKind: kind, legacyEntityId: entityId },
-          preData: __pre.data,
-          preRuntime: __pre.runtime,
-          predict: computeNext,
-          commit: () => { applyReal(); return captureUc(id); },
-          fallback: applyReal,
-        })
-      : false;
-    if (!handled) applyReal();
     if (!__wasRevealed && kind) {
       emitUcCommand(id, 'userCampaign.reveal.update', { scope: 'userCampaign.reveal.update', kind, legacyId: entityId }, __pre);
     }
