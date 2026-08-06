@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-06T19:15:00.000Z",
-  "currentHead": "4f9f194",
+  "generatedAt": "2026-08-06T21:00:00.000Z",
+  "currentHead": "b83f979",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -149,11 +149,22 @@
       "commits": [
         "4f9f194"
       ]
+    },
+    {
+      "block": "Decision 1: universal Content delete (npc/quest/enemy)",
+      "status": "IMPLEMENTED_AND_BROWSER_VERIFIED_BOTH_STACKS",
+      "evidence": "src/shared/entity/contentDeletePolicy.ts (one shared BLOCK_DELETE/confirm policy) wired into Greyholm EntityLibraryPage.tsx via the pre-existing patchXxx(id, DELETED) generic mechanism (discovered already read-side-filtered by applyOverlayToList, so zero reducer changes needed) and into Caldran CampaignEntityCard.tsx + CampaignLibraryPage.tsx. Live-verified full lifecycle both stacks: create test entity -> relation -> blocked delete -> remove relation -> confirmed delete -> reload -> zero dangling refs -> zero console errors.",
+      "bugFoundAndFixed": "CampaignLibraryPage.tsx (full /library/npc list page) had its own independent onDelete wiring separate from CampaignEntityCard.tsx (map popup) -- fixing only the popup left the list page deleting with no relation check. Caught by the live test itself (a dangling quest.npcIds entry survived a \"delete\"), fixed by exporting/reusing one relation-scan function instead of a third duplicate.",
+      "scopeExclusions": "Faction delete (read-only derived roster, no create/edit exists for it either) and Location delete (Greyholm location concept splits across a static DmLocation roster + a separate LocationState map-instance editor, not touched this pass) are explicitly out of scope, not silently dropped.",
+      "commits": [
+        "09b1cb0",
+        "b83f979"
+      ]
     }
   ],
   "currentBlock": null,
   "nextConcreteStep": {
-    "description": "Block F is now substantially covered by evidence (real or NOT_APPLICABLE determinations for every subsystem asked for) but NOT fully closed -- remaining MISSING rows are listed per-section in FINAL_FUNCTIONAL_PARITY_REPORT.md and should be picked up opportunistically, not re-audited from scratch. The dominant remaining work is no longer 'is there evidence' but real engineering: (1) decide + implement Greyholm Group A delete actions (or explicitly declare permanent-by-design), (2) design the battle-runtime unification (BattleEntry+ActiveBattleState vs CampaignCustomBattleMap+CampaignBattleBoard -- recommend absorbing UC's richer side enum and Greyholm's richer status machine into one shape, this needs a dedicated design pass, not an in-session guess), (3) decide whether Timeline/Economy become universal capabilities available to any campaign (architecturally required for a real Block G) or stay Greyholm-only forever (then Block G's 'unified workspace' claim must be scoped down honestly). Once those three decisions are made, begin Block G (Unified Campaign Workspace) for real -- it cannot be done honestly before deciding what 'universal' means for Timeline/Economy/Battles. Block H (tab-scoped view mode) has a firm starting point: Greyholm's mode isn't just shared, it isn't persisted at all (pure React state, confirmed by grep) -- UC's mode IS persisted per-campaign in userCampaignRuntime but still globally, not per-tab. Do not start Blocks G-M with unverified assumptions about what 'unified' should mean for the Timeline/Economy/Battle asymmetries just found.",
+    "description": "Decision 1 (Content delete) is real, implemented, and verified -- the other two architectural decisions from this session (Decision 2: universal battle model; Decision 3: Timeline/Economy as universal capabilities) and ALL of Blocks G-N (unified workspace, tab-scoped view mode, universal battle implementation, repository authority cutover, new-campaign proof, import/export round trips, legacy removal) are NOT started. These are not verification passes -- they are multi-file architectural implementations (a new normalized battle schema with adapters for two incompatible existing schemas; a policy/capability contract read generically by UI instead of any hardcoded campaign-id branch; a real workspace-shell merge of two independently-evolved React component trees; a tab-scoped session-state mechanism; an audit-then-delete of legacy write paths) that each deserve their own careful, tested implementation pass -- attempting all of them in one session would produce exactly the unverified, rushed architecture this whole project has been trying to avoid. Recommended next concrete step, in order: (1) Block I first (module/policy contracts) since Decision 1 already proved the pattern -- add a small campaignCapabilities/campaignPolicies read model that both stacks consult (start read-only, migration defaults = current behavior, i.e. Caldran timeline/economy=false, Greyholm timeline/economy=true) before touching any UI; (2) Decision 2 (universal battle model) as its own dedicated session -- start with the BattleDefinition/BattleRuntime/BattleCombatant/BattleToken/BattleTurnState/BattlePresentation contracts from this task plus one adapter per existing stack, prove it with a Node harness BEFORE wiring any UI, exactly like Stage 5b/5c/5d did for the original universal repository work (see completedBlocks history) -- do not skip the harness step for battles given how different the two existing schemas are; (3) Block G (unified workspace) only after Decision 2 and the policy contract exist, since a real unified workspace needs both to avoid becoming a third hardcoded branch. Block H (tab-scoped view mode) can be done independently and earlier if a quick win is wanted -- it does not depend on Decisions 2/3.",
     "targetFiles": [
       "rebuild-reports/final-cutover/FINAL_FUNCTIONAL_PARITY_REPORT.md"
     ]
@@ -174,7 +185,8 @@
   "knownFailures": [
     "Greyholm has zero delete actions for any Group A content entity (locations/npc/quests/enemies/factions) -- confirmed by exhaustive grep, not a per-kind gap.",
     "Greyholm and Caldran run structurally incompatible battle-runtime data shapes (see Battles matrix in FINAL_FUNCTIONAL_PARITY_REPORT.md) -- not unified, unification not yet designed.",
-    "Grid-toggle persistence in Caldran battle board was not confirmed (toggled but no showGrid field appeared in the saved board) -- needs follow-up."
+    "Grid-toggle persistence in Caldran battle board was not confirmed (toggled but no showGrid field appeared in the saved board) -- needs follow-up.",
+    "Decision 2 (universal battle model) and Decision 3 (Timeline/Economy as universal capabilities) are architectural decisions accepted by the user this session but NOT yet implemented in any code -- do not report them as done in any future summary."
   ],
   "externalBlockers": [],
   "honestVerdict": "UNIVERSAL_LOCAL_REBUILD_INCOMPLETE",
