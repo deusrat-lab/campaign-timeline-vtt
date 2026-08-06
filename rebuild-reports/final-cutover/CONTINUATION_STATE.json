@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-06T12:30:00.000Z",
-  "currentHead": "150f61b",
+  "generatedAt": "2026-08-06T12:50:00.000Z",
+  "currentHead": "140e73c",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -92,7 +92,7 @@
   ],
   "currentBlock": null,
   "nextConcreteStep": {
-    "description": "Block F continues: verify+fill Maps/Atlas/Content/Timeline/Economy/Zones/Battles sections of FINAL_FUNCTIONAL_PARITY_REPORT.md one subsystem at a time (placement create already re-confirmed this session). Each subsystem needs a live browser check before its row can move from MISSING to PARITY_CONFIRMED per the report's own evidence rule.",
+    "description": "Continue Block F: verify Caldran location reveal/hide (find its equivalent UI -- CampaignLibraryPage location cards or a similar visibility control), then proceed subsystem by subsystem through Content/Timeline/Economy/Zones/Battles for both stacks. Given the scope (dozens of subsystems x two stacks x live browser verification each), budget this as the dominant remaining work before Blocks G-N (unified workspace, tab-scoped view modes, multi-window, new campaign, import/export, source-of-truth cutover, legacy removal, final reports) can even start -- those are architecturally larger than Block F itself.",
     "targetFiles": [
       "rebuild-reports/final-cutover/FINAL_FUNCTIONAL_PARITY_REPORT.md"
     ]
