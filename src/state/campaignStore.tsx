@@ -299,6 +299,7 @@ type Action =
   | { type: 'PATCH_ENTITY'; kind: EntityKind; id: string; patch: Patch<unknown> }
   | { type: 'RESET_PATCH'; kind: EntityKind; id: string }
   | { type: 'ADD_TIMELINE'; timeline: Timeline }
+  | { type: 'DELETE_TIMELINE'; timelineId: string }
   | { type: 'ADD_WORLD_MAP'; map: WorldMap }
   | { type: 'ADD_WORLD_MAP_STATE'; state: WorldMapState }
   | { type: 'ADD_LOCATION_STATE'; state: LocationState }
@@ -553,6 +554,24 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
     }
     case 'ADD_TIMELINE':
       return { ...state, newTimelines: [...state.newTimelines, action.timeline] };
+    case 'DELETE_TIMELINE': {
+      // Block E "safe delete": only a DM-created arc (one that exists in
+      // newTimelines, never one of the two canonical seed arcs arc-1/arc-2)
+      // may ever be deleted, and only while nothing on it references the
+      // timeline (no locationState/hotspot/worldMapState was ever placed on
+      // it) -- deleting a seed arc or a referenced arc would silently orphan
+      // real content, so both are rejected as no-ops rather than partially
+      // deleting.
+      const isUserCreated = state.newTimelines.some((t) => t.id === action.timelineId);
+      if (!isUserCreated) return state;
+      const referenced =
+        state.newLocationStates.some((ls) => ls.timelineId === action.timelineId) ||
+        Object.values(state.locationStatePatches).some((p) => p !== DELETED && p.timelineId === action.timelineId) ||
+        state.newHotspots.some((h) => h.timelineId === action.timelineId) ||
+        state.newWorldMapStates.some((s) => s.timelineId === action.timelineId);
+      if (referenced) return state;
+      return { ...state, newTimelines: state.newTimelines.filter((t) => t.id !== action.timelineId) };
+    }
     case 'ADD_WORLD_MAP':
       return { ...state, newWorldMaps: [...state.newWorldMaps, action.map] };
     case 'ADD_WORLD_MAP_STATE':
@@ -948,6 +967,7 @@ interface CampaignStoreValue extends CampaignOverlay {
   deleteRoute: (id: string) => void;
   deletePlacement: (id: string) => void;
   addTimeline: (timeline: Timeline) => void;
+  deleteTimeline: (timelineId: string) => void;
   addWorldMap: (map: WorldMap) => void;
   addWorldMapState: (state: WorldMapState) => void;
   addLocationState: (state: LocationState) => void;
@@ -1258,6 +1278,7 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
         routeGreyComplex('greyholm.placement', { aggregate: 'placement', op: 'remove', placementId: id }, action);
       },
       addTimeline: (timeline) => dispatch({ type: 'ADD_TIMELINE', timeline }),
+      deleteTimeline: (timelineId) => dispatch({ type: 'DELETE_TIMELINE', timelineId }),
       addWorldMap: (map) => dispatch({ type: 'ADD_WORLD_MAP', map }),
       addWorldMapState: (mapState) => dispatch({ type: 'ADD_WORLD_MAP_STATE', state: mapState }),
       addLocationState: (locState) => dispatch({ type: 'ADD_LOCATION_STATE', state: locState }),

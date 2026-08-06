@@ -352,6 +352,30 @@ a:hover {
   cursor: not-allowed;
 }
 
+.segmented-option-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.segmented-option-delete {
+  background: transparent;
+  border: none;
+  color: var(--fg-dim);
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0 0.3rem;
+  cursor: pointer;
+}
+
+.segmented-option-delete:hover {
+  color: #d64545;
+}
+
+.segmented-option-add {
+  color: var(--gold-dim);
+  border: 1px dashed var(--border);
+}
+
 /* ---------- generic page shell (timeline/quests/admin pages) ---------- */
 .page {
   max-width: 900px;

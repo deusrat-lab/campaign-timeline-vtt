@@ -194,18 +194,48 @@ export function NavBar() {
             <div className="segmented" role="group" aria-label="Текущая арка">
               {data.timelines.map((t) => {
                 const disabled = t.arcId === 'arc-2' && store.mode === 'player-view' && !store.arc2RevealedToPlayers;
+                const deletable = isEditMode && store.newTimelines.some((nt) => nt.id === t.id) && t.id !== store.currentTimelineId;
                 return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className={`segmented-option${t.id === store.currentTimelineId ? ' active' : ''}`}
-                    disabled={disabled}
-                    onClick={() => store.setTimeline(t.id)}
-                  >
-                    {t.title}
-                  </button>
+                  <span key={t.id} className="segmented-option-wrap">
+                    <button
+                      type="button"
+                      className={`segmented-option${t.id === store.currentTimelineId ? ' active' : ''}`}
+                      disabled={disabled}
+                      onClick={() => store.setTimeline(t.id)}
+                    >
+                      {t.title}
+                    </button>
+                    {deletable && (
+                      <button
+                        type="button"
+                        className="segmented-option-delete"
+                        title={`Удалить арку «${t.title}» (безопасно, только если на ней ничего нет)`}
+                        aria-label={`Удалить арку ${t.title}`}
+                        onClick={() => store.deleteTimeline(t.id)}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </span>
                 );
               })}
+              {isEditMode && (
+                <button
+                  type="button"
+                  className="segmented-option segmented-option-add"
+                  title="Создать новую арку"
+                  onClick={() => {
+                    const title = window.prompt('Название новой арки:');
+                    if (!title || !title.trim()) return;
+                    const id = `arc-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+                    const order = Math.max(0, ...data.timelines.map((t) => t.order)) + 1;
+                    store.addTimeline({ id, arcId: id, title: title.trim(), order });
+                    store.setTimeline(id);
+                  }}
+                >
+                  + Арка
+                </button>
+              )}
             </div>
           )}
           {!inUserCampaign && observerLocked ? (
