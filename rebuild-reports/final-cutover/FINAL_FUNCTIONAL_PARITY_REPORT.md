@@ -144,6 +144,41 @@ covers the mechanism for all of them; per-kind UI presence was still spot-checke
 | Linked cards / relations rendering | MISSING | Not independently re-verified this session — deferred. |
 | Create/edit/delete for images/bestiary/players themselves (not the entities they illustrate) | MISSING | Not exercised this session (e.g., uploading a new image, editing a player character sheet) — deferred. |
 
+## Timeline / Events
+
+**Applicability determined explicitly, not assumed.** `UserCampaignData`/`UserCampaignRuntime`
+(`src/types/userCampaign.ts`) has no calendar, session, event, or delayed-trigger fields at
+all, and no UI route references them. This is **NOT_APPLICABLE_BY_SOURCE_DESIGN** for
+Caldran/UC, not a missing migration or missing UI over existing data — the feature was never
+built for user campaigns, full stop. Scoring it `MISSING` would wrongly imply a gap to close;
+it is an intentional scope boundary of the UC stack as it exists today. Also notable: even on
+Greyholm, the main `NavRail` has a literal disabled "Таймлайн — скоро" ("Timeline — coming
+soon") placeholder link (`NavRail.tsx:126`) — the *actual* calendar/session/event system is
+not a dedicated page but an inline toolbar embedded in `MapWorkspacePage.tsx`.
+
+| Function | Status | Evidence |
+|---|---|---|
+| Campaign calendar (Greyholm) | PARITY_CONFIRMED | Inline toolbar on `/map`: `+фаза`/`+день`/`Долгий отдых`/`+час`/`Свой сдвиг…`/`Отменить`, backed by `overlay.calendarsByTimelineId[timelineId]`. Browser-verified live: `+фаза` advanced "День 1 · Незериум · 1492 · Утро" -> "...День", survived `window.location.reload()`, restored to empty (default) afterward. `Отменить` (undo) is a single in-memory snapshot per the code's own comment and correctly does NOT survive reload (disabled after reload) — this is by design, not a bug. |
+| Sessions / timeline entries / events / delayed triggers (Greyholm) | MISSING | "Текущая сессия" and "Ожидающие триггеры" buttons exist and were seen in the toolbar but their own create/edit/complete lifecycle was not exercised this pass. |
+| Route/travel effects, arc filtering, Player View filtering (Greyholm) | MISSING | Not exercised this session. |
+| Calendar / sessions / events / delayed triggers (Caldran/UC) | NOT_APPLICABLE_BY_SOURCE_DESIGN | See applicability note above — no data model, no UI, not a gap to close. |
+
+## Economy
+
+| Function | Status | Evidence |
+|---|---|---|
+| Price reference browsing (Greyholm) | PARITY_CONFIRMED | `/economy` loads the full DM Companion price catalog with category filters, zero console errors. Read-only reference, not a manageable entity list. |
+| Shops/taverns browsing (Greyholm) | PARITY_CONFIRMED | `/services` loads 9 shop/tavern objects with location links (Кузница, two Магазин lavka, Оружейная мастерская, two Taверна, etc.), category/location filters, zero console errors. |
+| Shops/taverns CRUD, prices, currencies, availability, DM-only vs player-visible fields, capability off/on | MISSING | Loading and browsing confirmed; create/edit/delete lifecycle and field-level DM/player split not exercised this session. |
+| Economy (Caldran/UC) | NOT_APPLICABLE_BY_SOURCE_DESIGN | Grepped `userCampaign.ts` for shop/tavern/economy fields and `src/features/campaigns/*.tsx` for any economy UI — none exist. Same determination method and same conclusion as Timeline/Events above: this is an intentional scope boundary of the UC stack, not a missing migration. |
+
+## Zones / Overlays / Movable Entities
+
+| Function | Status | Evidence |
+|---|---|---|
+| Faction zones, dynamic/terrain overlays (Greyholm) | PARTIAL | `FactionZone`/`DynamicMapOverlay`/`MovableEntity` types exist in `src/types.ts` (lines 589/666/712) and "Зоны и наложения" management UI was seen in the map toolbar, plus "Зоны (вкл)" layer toggle and "+ Зона" tool were exercised incidentally during the party-marker Maps bundle. Full CRUD/reveal-controlled/event-controlled lifecycle not independently verified this session. |
+| Zones (Caldran/UC) | PARTIAL | `CampaignMapPlacement`-adjacent "+ Зона" tool exists (seen and used incidentally in the Maps bundle for routes/zones creation buttons), но full CRUD/ownership/influence lifecycle not independently verified this session. |
+
 ## Summary
 
 - `PARITY_CONFIRMED`: capabilities (2 of ~26 keys fully route-gated, rest persist correctly),
