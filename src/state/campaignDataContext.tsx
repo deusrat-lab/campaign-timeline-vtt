@@ -111,7 +111,13 @@ export function CampaignDataProvider({ children }: { children: ReactNode }) {
   return <BaseCampaignDataContext.Provider value={state}>{children}</BaseCampaignDataContext.Provider>;
 }
 
-function useBaseCampaignData(): CampaignDataState {
+/** Exposes the read-only base/seed layer BEFORE the localStorage overlay is
+ * merged in. Used by `ComplexAuthorityProvider` to re-derive overlay-merged
+ * array fields (e.g. placements) freshly from a just-predicted/committed
+ * overlay instead of trusting `useCampaignData()`'s merged snapshot, which
+ * lags one render behind a synchronous same-tick mutation (see
+ * `docs/universal-rebuild/FINAL_REMAINING_WORK_AUDIT.md` §4b.3). */
+export function useBaseCampaignData(): CampaignDataState {
   return useContext(BaseCampaignDataContext);
 }
 

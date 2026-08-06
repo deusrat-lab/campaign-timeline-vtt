@@ -12,7 +12,7 @@ import {
   type MainCampaignDataInput,
   type MainCampaignOverlayInput,
 } from '../../domain';
-import { useCampaignData } from '../../state/campaignDataContext';
+import { useCampaignData, useBaseCampaignData } from '../../state/campaignDataContext';
 import { setComplexAuthoritySink } from '../../state/complexAuthoritySink';
 import { routeMainComplexThrough, routeUserComplexThrough } from './complexRouteBridge';
 import { UNIVERSAL_COMPLEX_AUTHORITY_ENABLED, UNIVERSAL_COMPLEX_AUTHORITY_SCOPES } from '../../config';
@@ -87,6 +87,9 @@ function EnabledComplexAuthorityProvider({ children }: { children: ReactNode }) 
   const { data } = useCampaignData();
   const dataRef = useRef(data);
   dataRef.current = data;
+  const { data: baseData } = useBaseCampaignData();
+  const basePlacementsRef = useRef(baseData?.placements);
+  basePlacementsRef.current = baseData?.placements;
   const recoveredRef = useRef(false);
 
   useEffect(() => {
@@ -101,7 +104,13 @@ function EnabledComplexAuthorityProvider({ children }: { children: ReactNode }) 
 
     setComplexAuthoritySink({
       routeMain: (req) =>
-        routeMainComplexThrough(instance, () => dataRef.current, req.complexScope as ComplexAuthorityScope, withFailFixture(req)),
+        routeMainComplexThrough(
+          instance,
+          () => dataRef.current,
+          req.complexScope as ComplexAuthorityScope,
+          withFailFixture(req),
+          () => basePlacementsRef.current ?? [],
+        ),
       routeUser: (req) => routeUserComplexThrough(instance, req.complexScope as ComplexAuthorityScope, withFailFixture(req)),
     });
 

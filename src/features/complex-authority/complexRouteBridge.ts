@@ -11,6 +11,8 @@ import {
 import type { MainCampaignDataInput, MainCampaignOverlayInput } from '../../domain';
 import type { UserCampaignData, UserCampaignRuntime } from '../../types/userCampaign';
 import type { ComplexActionDescriptor, MainComplexRequest, UserComplexRequest } from '../../state/complexAuthoritySink';
+import { applyOverlayToList, type Patch } from '../../state/overlay';
+import type { MapObjectPlacement } from '../../types';
 
 /**
  * Stage 16.1 — the PURE translation + routing bridge shared by the React
@@ -81,18 +83,40 @@ export function descriptorToCommand(descriptor: ComplexActionDescriptor): Comple
 }
 
 /** Route one Greyholm (main) complex request. `getMergedData` returns the merged
- * Greyholm base data (npcs/placements/…); only the overlay changes per action. */
+ * Greyholm base data (npcs/placements/…); only the overlay changes per action.
+ *
+ * `getBasePlacements`, when provided, supplies the PRE-overlay placements list
+ * (the read-only seed layer, not merged with any overlay). When present, each
+ * adapted snapshot (pre/predicted/committed) re-derives `data.placements`
+ * fresh from that base list plus the OVERLAY BEING ADAPTED (`placementPatches`
+ * / `newPlacements`) instead of trusting `getMergedData()`'s placements array,
+ * which reflects only the PREVIOUS render's overlay and is one tick stale for
+ * a same-handler predict()/commit() that just added or moved a placement (see
+ * `docs/universal-rebuild/FINAL_REMAINING_WORK_AUDIT.md` §4b.3). Omitting it
+ * preserves the exact prior behaviour (used by the Node integration harness,
+ * which never mutates placements through this path). */
 export function routeMainComplexThrough(
   router: ComplexAuthorityRouter,
   getMergedData: () => unknown,
   scope: ComplexAuthorityScope,
   request: MainComplexRequest,
+  getBasePlacements?: () => unknown,
 ): boolean {
   if (!router.isAllowlisted(scope)) return false;
   const command = descriptorToCommand(request.descriptor);
   if (!command) return false;
-  const adapt = (overlay: unknown) =>
-    adaptMainCampaignToUniversal({ data: getMergedData() as MainCampaignDataInput, overlay: overlay as MainCampaignOverlayInput });
+  const adapt = (overlay: unknown) => {
+    const data = getMergedData() as MainCampaignDataInput;
+    const ov = (overlay ?? {}) as MainCampaignOverlayInput;
+    if (!getBasePlacements) return adaptMainCampaignToUniversal({ data, overlay: ov });
+    const basePlacements = getBasePlacements() as MapObjectPlacement[];
+    const placements = applyOverlayToList(
+      basePlacements,
+      (ov.placementPatches ?? {}) as Record<string, Patch<MapObjectPlacement>>,
+      (ov.newPlacements ?? []) as MapObjectPlacement[],
+    );
+    return adaptMainCampaignToUniversal({ data: { ...data, placements }, overlay: ov });
+  };
   const outcome = router.route({
     campaignId: campaignIdFromLegacy('greyholm', 'main'),
     campaignKind: 'greyholm',
