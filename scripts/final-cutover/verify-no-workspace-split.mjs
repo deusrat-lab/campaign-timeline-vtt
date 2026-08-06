@@ -29,21 +29,27 @@ function read(path) {
     { name: 'MapWorkspacePage', regex: /element=\{<MapWorkspacePage/ },
     { name: 'IsolatedCampaignMapWorkspace', regex: /element=\{[^}]*<IsolatedCampaignMapWorkspace/ },
     { name: 'CampaignBattlePage', regex: /element=\{[^}]*<CampaignBattlePage/ },
+    { name: 'EconomyPage', regex: /element=\{[^}]*<EconomyPage(?!\s*\/>\s*\}\s*page=)/ },
+    { name: 'ServicesPage', regex: /element=\{[^}]*<ServicesPage(?![^}]*page=)/ },
   ];
   for (const line of routeElementLines) {
     for (const { name, regex } of bypassPatterns) {
-      if (regex.test(line)) {
+      // EconomyPage/ServicesPage are allowed when passed as the `page` prop of
+      // GreyholmEconomyRoute (i.e. the line also contains GreyholmEconomyRoute) --
+      // only a bare direct mount is a bypass.
+      if (regex.test(line) && !/GreyholmEconomyRoute/.test(line)) {
         failed.push(`${file}: a <Route element={...}> mounts ${name} directly, bypassing the shared workspace: ${line.trim()}`);
       }
     }
   }
 
-  // The three Block G wrapper components must exist and must mount the shared
+  // The Block G wrapper components must exist and must mount the shared
   // workspace, not just re-export the legacy component under a new name.
   const wrappers = [
     { fn: 'GreyholmMapRoute', workspace: 'GreyholmWorkspace' },
     { fn: 'CaldranMapRoute', workspace: 'UserCampaignWorkspace' },
     { fn: 'CaldranBattleRoute', workspace: 'UserCampaignWorkspace' },
+    { fn: 'GreyholmEconomyRoute', workspace: 'GreyholmWorkspace' },
   ];
   for (const { fn, workspace } of wrappers) {
     const fnMatch = text.match(new RegExp(`function ${fn}\\([^)]*\\)\\s*\\{([\\s\\S]*?)\\n\\}`));
