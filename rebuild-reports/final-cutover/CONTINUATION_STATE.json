@@ -1,11 +1,29 @@
 {
-  "generatedAt": "2026-08-06T23:45:00.000Z",
-  "currentHead": "c0bbf96",
+  "generatedAt": "2026-08-07T01:00:00.000Z",
+  "currentHead": "ae5af74",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
   "deploy": 0,
   "productionWrites": 0,
+  "blockGUnifiedWorkspace": {
+    "verdict": "BLOCK_G_UNIFIED_CAMPAIGN_WORKSPACE_INCOMPLETE",
+    "commit": "ae5af74",
+    "whatShipped": "Activated Stage 12's already-built (previously flag-gated, default-off) CampaignWorkspaceShell/GreyholmWorkspace/UserCampaignWorkspace as the UNCONDITIONAL active entry point for Content (both stacks, was already wired, just flag-gated) and newly extended it to Maps and Battles (both stacks, net-new wiring): GreyholmMapRoute/CaldranMapRoute/CaldranBattleRoute in App.tsx now mount legacy page trees (MapWorkspacePage, IsolatedCampaignMapWorkspace, CampaignBattlePage) as a workspace body slot instead of a bare <Route element>. Strangler pattern, not a rewrite -- legacy internals (CRUD, reveal/present, party marker, universal battle authority) are completely untouched.",
+    "moduleStatus": {
+      "content": "CONVERGED -- both stacks, unconditional (isSharedWorkspaceEnabledForKind branch removed)",
+      "maps": "CONVERGED -- both stacks, net-new this pass",
+      "battles": "CONVERGED -- both stacks, net-new this pass; universal battle authority (Decision 2) unaffected, browser-reverified live",
+      "visibilityPresentation": "FOLDED IN, not independently wrapped -- reveal/hide and present/dismiss live inside the Content/Maps legacy bodies already wrapped above, so they render through the shared shell as a side effect, but there is no dedicated 'visibility' module slot and it was not independently browser-re-verified beyond incidental coverage during Content/Maps checks",
+      "timelineEconomy": "NOT STARTED -- EconomyPage.tsx/ServicesPage.tsx (Greyholm-only, Caldran has no Timeline/Economy data model at all per earlier findings) still mount as bare <Route element>, no workspace wrapping attempted",
+      "zones": "NOT STARTED -- no dedicated zones route/page identified yet, folded into Maps' own zone tooling, not separately wrapped",
+      "partyRoutesArcsCapabilities": "NOT STARTED as distinct modules -- party marker/routes already work through the wrapped Maps body; arc switching and capability toggles are unchanged top-level app chrome (NavBar/arc selector), not yet part of the workspace descriptor's own state"
+    },
+    "realBugFoundAndFixed": "GreyholmWorkspace hardcoded audience:'dm' (safe for its original DM-only Content callers) would have leaked DM-only nav items into Player View once reused for the player-visible /map and /observer routes (buildCampaignWorkspaceDescriptor's isNavVisible treats 'dm' as 'sees everything'). Caught by reading the descriptor builder's own privacy logic before shipping, fixed by making audience a real prop derived from store.mode, confirmed live: Player View on /map shows only 'Карта' in nav.",
+    "browserVerified": "Both campaigns, zero console errors throughout: Greyholm /map (shared nav+status above untouched map, location click works, Player View nav correctly filtered), Greyholm /npc (Content through the shell), Caldran /campaigns/:id/map (shared nav above untouched Caldran map), Caldran battle route (placed a token through the wrapped page -- universal commit succeeded, revision bumped, confirming Decision 2 unaffected -- then cleaned up), campaign switch Greyholm->Caldran->Greyholm clean, no cross-campaign contamination.",
+    "notVerifiedThisPass": "Direct-URL cold-boot reload of a nested route (e.g. reloading straight into /campaigns/:id/library/npc) could not be cleanly re-tested -- a pre-existing (not Block-G-introduced) dev-tool/cold-boot interaction already observed in the Decision 2 session resets to /home on a forced full reload regardless of the target hash. In-app navigation (the real path for a bookmark clicked from within an already-loaded session, or browser back/forward) was thoroughly verified instead and is unaffected.",
+    "antiSplitGuard": "scripts/final-cutover/verify-no-workspace-split.mjs -- fails if any <Route element> mounts MapWorkspacePage/IsolatedCampaignMapWorkspace/CampaignBattlePage directly, if the three wrapper functions stop mounting their workspace, or if either Content page regresses to the old flag branch. PASSING."
+  },
   "decision2BattleCutover": {
     "verdict": "DECISION_2_UNIVERSAL_BATTLE_ACTIVE_CUTOVER_COMPLETE",
     "domainStatus": "COMPLETE_AND_SUFFICIENT",
@@ -38,7 +56,10 @@
     "verify:stage16-1": "149/149",
     "verify:stage17": "384/384",
     "verify:universal-regression": "15/15",
+    "verify:stage11": "72/72 (updated this pass: safe-54/55 assert the new GreyholmWorkspace/UserCampaignWorkspace composition point)",
+    "verify:stage12": "97/97",
     "verify:no-legacy-battle-write": "PASS (both CampaignBattlePage.tsx and campaignStore.tsx guarded)",
+    "verify:no-workspace-split": "PASS (new this pass)",
     "verify:referential-integrity": "PASS (0 broken)",
     "build:greyholm-runtime-shape": "PASS (0 broken, 34 typed orphans)",
     "verify:final-migration": "PASS (dry-run/commit/read-back/rollback all OK, 0 lost entities, 100% id coverage, both campaigns)"
@@ -187,21 +208,22 @@
       ]
     }
   ],
-  "currentBlock": null,
+  "currentBlock": "G",
   "nextConcreteStep": {
-    "description": "Decision 2 (universal battle active runtime cutover) is DONE this pass, both campaigns, browser-verified end to end (see decision2BattleCutover above) -- commits f3f1c61 (Caldran) and c0bbf96 (Greyholm). Two real pre-existing bugs were found and fixed along the way (a userCampaignStore.patchRuntime stale-read race, and a campaign-id format mismatch) -- neither was introduced by this cutover, both were exposed by it. The next block per the task's own stated order is Block G -- Unified Campaign Workspace. Before starting it: (1) find both active route entry points (Greyholm's MapWorkspacePage.tsx vs Caldran's CampaignBattlePage.tsx/CampaignEntityCard.tsx tree) and build a SHORT dependency matrix (route / workspace component / store reads / store writes / shared children / campaign-specific branches) -- reuse the pattern from this pass's Decision 2 matrix, don't write a new long audit; (2) create/extend a shared CampaignWorkspace shell using the strangler pattern (legacy route -> unified shell -> shared module -> universal selector/command), starting with the Content module since Decision 1's delete policy already proved that pattern works across both stacks; (3) do NOT attempt the full UI rewrite in one pass -- after each module (Content, then Maps, then Visibility/Presentation, then Timeline/Economy where capability-gated, then Zones, then Battles now that Decision 2 gives it a real universal authority to route through) do a real browser smoke test before moving to the next, same discipline as this pass. Block H (tab-scoped view modes) can be done independently/earlier if a quick win is wanted -- the current single shared `mode` field (not tab-scoped) was already identified as a real finding in an earlier session; it does not depend on Block G.",
+    "description": "Block G (Unified Campaign Workspace) is PARTIALLY done this pass -- Content, Maps, and Battles converge onto the shared CampaignWorkspace shell for BOTH campaigns, browser-verified, guard passing (commit ae5af74). NOT done: Timeline/Economy/Zones modules are not wrapped at all (still bare <Route element> for EconomyPage.tsx/ServicesPage.tsx), and Visibility/Presentation has no dedicated module slot of its own (it rides along inside Content/Maps but wasn't independently verified). Exact next code-level step: (1) EconomyPage.tsx and ServicesPage.tsx (src/pages/) are Greyholm-only (Caldran has no economy data model, capability-gated off already) -- add a 'runtime.presentation'-style module id or a new 'economy' WorkspaceModuleId to src/domain/workspace/workspaceTypes.ts + moduleRegistry.ts (campaignKinds: ['greyholm'] only, audiences: DM_ONLY since these are DM-reference pages today), wrap both routes in App.tsx the same way GreyholmMapRoute does (GreyholmWorkspace with bodyModuleId='economy', audience='dm' since these routes are already DmOnlyRoute-guarded); (2) find the Zones entry point (likely inside MapWorkspacePage's own '+ Зона' tool per earlier session notes, not a separate route) and decide whether it needs its OWN module slot or whether 'map.workspace' already covers it structurally (probably the latter -- verify by checking if zone tooling is a route or just in-page UI); (3) after each module, browser-smoke both campaigns exactly as this pass did before moving to the next; (4) once Timeline/Economy/Zones are wrapped (or explicitly ruled out-of-scope for Caldran with a documented capability reason), re-run scripts/final-cutover/verify-no-workspace-split.mjs and extend it to cover the new routes; (5) only then is BLOCK_G_UNIFIED_CAMPAIGN_WORKSPACE_COMPLETE honestly claimable. Block H (tab-scoped view modes) can start independently/earlier if wanted -- the current single shared `mode` field is a real, already-identified finding; it does not block on Block G finishing.",
     "targetFiles": [
-      "src/pages/MapWorkspacePage.tsx",
-      "src/features/campaigns/CampaignEntityCard.tsx",
-      "src/features/campaigns/CampaignLibraryPage.tsx",
-      "src/state/campaignStore.tsx",
-      "src/state/userCampaignStore.tsx"
+      "src/domain/workspace/workspaceTypes.ts",
+      "src/domain/workspace/moduleRegistry.ts",
+      "src/pages/EconomyPage.tsx",
+      "src/pages/ServicesPage.tsx",
+      "src/App.tsx",
+      "scripts/final-cutover/verify-no-workspace-split.mjs"
     ]
   },
   "remainingBlocks": [
     "D (finish): wire remaining capability keys not yet gating any nav/route; command-layer enforcement for non-route actions",
     "F: full functional parity matrix (FINAL_FUNCTIONAL_PARITY_REPORT.md) across campaign mgmt/maps/content/timeline/economy/battles",
-    "G: unified workspace (shared components across Greyholm/Caldran/new campaign) -- NOTE: view mode (`mode`/`dm-view`|`dm-edit`|`player-view`) is currently a single shared overlay field, NOT tab-scoped; this is a real, load-bearing finding for Block H",
+    "G (finish): Timeline/Economy/Zones modules not yet wrapped through CampaignWorkspace (Content/Maps/Battles ARE, see blockGUnifiedWorkspace above) -- NOTE: view mode (`mode`/`dm-view`|`dm-edit`|`player-view`) is currently a single shared overlay field, NOT tab-scoped; this is a real, load-bearing finding for Block H",
     "H: view modes + multi-window isolation (DM View/DM Edit/Player View/Observer, 3 real tabs) -- requires making view mode tab/session-scoped first (see G note); also the moment to give Observer a projection distinct from Player View (currently identical, see decision2BattleCutover.projections.observer)",
     "I: new empty campaign proof via UI, then cleanup or fixture-mark",
     "J: import/export round-trip parity (Greyholm, Caldran, new campaign)",
@@ -213,13 +235,16 @@
   ],
   "knownFailures": [
     "Greyholm has zero delete actions for any Group A content entity (locations/npc/quests/enemies/factions) -- confirmed by exhaustive grep, not a per-kind gap.",
-    "Grid-toggle persistence in Caldran battle board was not confirmed in an earlier session (toggled but no showGrid field appeared in the saved board) -- NOW CLOSED: set-grid is a real typed command (this pass), and commitUserBoard's whole-board commit persists board.showGrid/board.grid unconditionally as part of every commit; if this is re-checked and still broken it is a genuinely new regression, not the old known gap.",
+    "Grid-toggle persistence in Caldran battle board was not confirmed in an earlier session (toggled but no showGrid field appeared in the saved board) -- NOW CLOSED: set-grid is a real typed command, and commitUserBoard's whole-board commit persists board.showGrid/board.grid unconditionally as part of every commit; if this is re-checked and still broken it is a genuinely new regression, not the old known gap.",
     "Observer is not a distinct projection from Player View in either stack -- both use the same isPlayer/asPlayer boolean. Safe (no DM-only leak), just not richer. Deferred to Block H by design, not a Decision 2 gap.",
     "Decision 3 (Timeline/Economy as universal capabilities): src/domain/campaign/configuration.ts (Block I) expresses this as data (capabilities.timeline/economy default per stack) but nothing reads this contract at runtime yet -- still not implemented in active code.",
-    "userCampaignStore.tsx's patchRuntime reads its 'current' snapshot from React state, not fresh localStorage -- ANY two consecutive same-tick store.updateRuntime calls elsewhere in the codebase (not just battles) can race the same way finishBattle did. Only the battle call site was fixed (scoped fix via patchBoard's extraRuntimePatch); a broader audit of other multi-call-site patterns is worth doing during Block G's dependency-matrix pass, not urgent enough to justify its own session."
+    "userCampaignStore.tsx's patchRuntime reads its 'current' snapshot from React state, not fresh localStorage -- ANY two consecutive same-tick store.updateRuntime calls elsewhere in the codebase (not just battles) can race the same way finishBattle did. Only the battle call site was fixed (scoped fix via patchBoard's extraRuntimePatch); a broader audit of other multi-call-site patterns is worth doing during Block G's remaining module-wiring pass, not urgent enough to justify its own session.",
+    "Timeline/Economy/Zones are not yet routed through CampaignWorkspace (Block G partial, see blockGUnifiedWorkspace.moduleStatus) -- they are still fully legacy, unwrapped routes, functionally unaffected but architecturally not yet converged.",
+    "Direct-URL cold-boot reload of a nested route was not re-verified this pass due to a pre-existing dev-tool/cold-boot interaction (not a Block-G regression, already observed in the Decision 2 session) -- worth a dedicated look with a real browser (not this session's automation tooling) if it matters for the final acceptance pass."
   ],
   "externalBlockers": [],
   "honestVerdict": "UNIVERSAL_LOCAL_REBUILD_INCOMPLETE",
   "decision2Verdict": "DECISION_2_UNIVERSAL_BATTLE_ACTIVE_CUTOVER_COMPLETE",
-  "note": "This pass finished Decision 2 for both campaigns, browser-verified, not just Node-harness-verified. Corrected an earlier session's premature 'domain-prep only, cutover deliberately deferred' plan by actually executing the cutover: closed the last command gaps found genuinely necessary (whole-board/whole-battle commit primitives, mirroring the existing per-command routes), wired both stacks' real write choke points (Caldran's patchBoard, Greyholm's 5 action creators) through universal authority as SOLE persistence (not shadow), removed the now-dead shadow/pending-recovery machinery from both files, and ran full real-browser lifecycles for both campaigns including reload recovery and Player View safety -- catching and fixing two genuine pre-existing bugs along the way that only a live browser pass could surface. Overall project verdict remains UNIVERSAL_LOCAL_REBUILD_INCOMPLETE: Block G (Unified Campaign Workspace) and everything after it in the task's own block order is still unstarted."
+  "blockGVerdict": "BLOCK_G_UNIFIED_CAMPAIGN_WORKSPACE_INCOMPLETE",
+  "note": "This pass activated Stage 12's dormant shared-workspace shell as the real, unconditional active entry point for Content (both stacks) and extended it net-new to Maps and Battles (both stacks) -- a genuine architectural convergence, browser-verified, not a cosmetic wrapper: MapWorkspacePage/IsolatedCampaignMapWorkspace/CampaignBattlePage now always mount through GreyholmWorkspace/UserCampaignWorkspace, never as a bare route element. Found and fixed one real bug before shipping (GreyholmWorkspace's hardcoded 'dm' audience, which would have leaked DM-only nav to Player View on /map). Deliberately stopped short of claiming BLOCK_G_UNIFIED_CAMPAIGN_WORKSPACE_COMPLETE: Timeline/Economy/Zones remain fully legacy/unwrapped, and Visibility/Presentation has no dedicated module slot of its own even though it works today (rides inside Content/Maps). This is the 'закончи текущий crupный block, сделай commit, оставь exact next step' case, not a stall -- the next pass's work is spelled out precisely (add an 'economy' module id, wrap 2 more routes, browser-verify) rather than left as a vague TODO. Overall project verdict unchanged: UNIVERSAL_LOCAL_REBUILD_INCOMPLETE."
 }

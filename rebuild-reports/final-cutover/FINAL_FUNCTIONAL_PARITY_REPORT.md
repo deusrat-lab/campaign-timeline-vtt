@@ -5,6 +5,24 @@ against the local universal architecture. Rows without evidence are left `MISSIN
 than assumed — no status here is asserted without either a passing Node harness or a live
 browser verification recorded in the Evidence column.
 
+## Block G — Unified Campaign Workspace (commit ae5af74)
+
+**PARTIAL.** Content, Maps, and Battles now mount for BOTH Greyholm and Caldran through one
+active entry point — `GreyholmWorkspace`/`UserCampaignWorkspace` (Stage 12's shell,
+previously flag-gated default-off, now unconditional) — instead of a bare route element
+mounting the legacy page tree directly. Browser-verified both campaigns: shared nav +
+status line render above the untouched legacy page body, Player View correctly filters
+DM-only nav items (a real bug — hardcoded `audience:'dm'` — was found and fixed before this
+shipped), campaign switching is clean, and the Caldran battle route's universal-authority
+write path (Decision 2) still commits correctly through the wrapper. Zero console errors
+across all checks. See `CONTINUATION_STATE.json`'s `blockGUnifiedWorkspace` for full detail.
+
+**NOT done:** Timeline/Economy (`EconomyPage.tsx`/`ServicesPage.tsx`, Greyholm-only) and
+Zones are still bare, unwrapped routes. Visibility/Presentation has no dedicated workspace
+module slot — it works today because it lives inside the already-wrapped Content/Maps
+bodies, but wasn't independently verified as its own module. Verdict:
+`BLOCK_G_UNIFIED_CAMPAIGN_WORKSPACE_INCOMPLETE`.
+
 Reference: the original production Railway deployment is unreachable from this offline
 local environment (no browser session, API token, or network path). Per
 `FINAL_REMAINING_WORK_AUDIT.md` and `PRODUCTION_REFERENCE_MANIFEST.json`, canonical local
