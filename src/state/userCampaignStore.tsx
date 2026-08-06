@@ -44,6 +44,8 @@ import {
   type ZoneSnapshotEntry,
   commitArcs,
   type ArcSnapshotEntry,
+  commitCapabilities,
+  type CapabilityTogglesSnapshot,
 } from '../domain';
 
 const UC_BACKUP_NS = 'campaign-timeline-vtt:uc-backup:v1';
@@ -557,7 +559,22 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     },
 
     setCapability: (id, key, enabled) => {
-      patchData(id, (p) => ({ ...p, capabilities: { ...p.capabilities, [key]: enabled } }));
+      // Block I — universal CAPABILITIES authority is the SOLE active
+      // authority for this concern (shared module with Greyholm's
+      // `campaignStore.tsx` setCapability): the candidate whole toggles map
+      // (current map with this one key flipped, matching exactly what the
+      // legacy call used to compute inline) is durably committed first
+      // (expected-revision guard, read-after-write verified), and only the
+      // committed map is projected into `patchData` as a compatibility
+      // write. No flag, no optional fallback path.
+      patchData(id, (p) => {
+        const candidate: CapabilityTogglesSnapshot = { ...p.capabilities, [key]: enabled };
+        const outcome = commitCapabilities(ucFieldStorage(), campaignIdFromLegacy('user', id), 'userCampaign.capabilities', candidate);
+        if (!outcome.ok || !outcome.toggles) {
+          throw new Error(`setCapability: universal capabilities commit failed for ${key}: ${outcome.error ?? 'unknown error'}`);
+        }
+        return { ...p, capabilities: outcome.toggles };
+      });
     },
 
     // Universal arcs — same Timeline type + same CRUD shape as Greyholm's
