@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-08-07T00:00:00.000Z",
-  "currentHead": "f388368",
+  "currentHead": "8e9e1d3",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -206,18 +206,28 @@
         "09b1cb0",
         "b83f979"
       ]
+    },
+    {
+      "block": "I: universal field authority (NPC/quest/faction/location safe scalar fields)",
+      "status": "SUBSYSTEM_CONVERGED_BOTH_STACKS",
+      "commit": "8e9e1d3",
+      "evidence": "New src/domain/fields/fieldAuthorityStore.ts (plain, always-on module, no feature flag, mirrors battleAuthorityStore.ts exactly): isolated namespace campaign-timeline-vtt:universal-field:v1, per-(campaignId, fieldKind, entityId) expected-revision-guarded commit + read-after-write verify. Wired unconditionally into campaignStore.tsx's patchNpc (Greyholm npc.role/npc.name) and userCampaignStore.tsx's updateEntity (userCampaign npc.role/npc.name/npc.description, quest.title/description, faction.name/description, location.description) -- the exact Stage 15 safe-field allowlist, now sole authority instead of optional/flag-gated. The old routeMainDurable/routeMainAuthority (campaignStore.tsx) and routeUserDurable/routeUserAuthority (userCampaignStore.tsx) calls were removed for this scope (dead for these fields now; Stage 14/15 infra itself untouched/still present for other future scopes).",
+      "guard": "scripts/final-cutover/verify-no-legacy-field-write.mjs (new, mirrors verify-no-legacy-battle-write.mjs) -- fails if routeMainDurable/routeMainAuthority/routeUserDurable/routeUserAuthority calls reappear in either file, or if the commitField sole-authority call sites are removed. PASSING.",
+      "gates": "tsc -b clean, vite build clean, verify:no-legacy-field-write PASS, verify:no-legacy-battle-write PASS (untouched/unregressed), verify:domain PASS, verify:universal-regression 15/15, verify:referential-integrity PASS (0 broken).",
+      "browserVerified": "Real dev server, both campaigns. Greyholm (main campaign, NPC 'Префект Иларис Дорн', role field): edit -> localStorage universal-field record created (revision 1) -> legacy overlay.npcPatches projected with the exact committed value -> full reload -> value persists in both the universal record and the legacy overlay -> zero console errors. Caldran (camp-mshatb5f-mrttl, NPC 'Вилья Кривой Пилот', role field): same edit -> universal-field record created (revision 1) -> legacy dmCompanion.userCampaignData npc.role projected correctly -> edited again -> revision incremented to 2 confirming the expected-revision guard works across sequential commits -> zero console errors, no cross-campaign contamination (Greyholm record untouched by the Caldran edit and vice versa). Test edits reverted after verification (Greyholm reverted via direct universal-field + overlay write since a UI rendering glitch unrelated to this change blocked a second in-browser edit pass; Caldran reverted via the normal edit form, proving revert-through-authority too).",
+      "notExercised": "The other 8 of 10 allowlisted fields (userCampaign npc.name/description, quest.title/description, faction.name/description, location.description) were exercised only through the Node regression harness (verify:stage15, 268/268), not individually browser-verified this pass -- they share the exact same code path as the two browser-verified fields (resolveUserFieldKind -> commitField -> committedFieldUpdater), so risk is low but not zero.",
+      "realGotcha": "Browser automation coordinate space in this session's tooling was inconsistent between raw pixel `coordinate` clicks and `ref`-based clicks after a DM Edit mode banner shifted the layout -- several early clicks silently landed on the wrong element (a Товар/Правило popup instead of the intended NPC card). Always prefer `ref`-based clicks after a layout-affecting state change (mode switch, modal open) rather than reusing previously-observed pixel coordinates."
     }
   ],
   "currentBlock": "I",
   "nextConcreteStep": {
-    "description": "Block H is COMPLETE (see blockHTabScopedViewModes above). Block I is large and was NOT started this pass -- ran out of session budget after Block H's verification. Block I's goal: make the Universal Repository the sole active authority for all subsystems (registry, configuration, capabilities, arcs, maps, content, relations, visibility, presented cards, party, routes, timeline, economy, zones, movable entities, battles) -- i.e. remove direct legacy store reads/writes, dual writes, and legacy fallback mutations from ACTIVE runtime code paths; legacy adapters should remain only for migration/import/export/reference, not live read/write. Battles are already there (Decision 2 cutover, both stacks) -- that is the template to replicate. Suggested first concrete step: grep src/state/campaignStore.tsx and src/state/userCampaignStore.tsx for every direct localStorage read/write that is NOT already routed through a durable-authority/complex-authority sink (grep for writeJson/readJson call sites not wrapped by routeUserDurable/routeUserAuthority/routeUserComplex or their Greyholm equivalents in commandAuthoritySink.ts/durableAuthoritySink.ts/complexAuthoritySink.ts), then work outward one subsystem at a time the same way battles were cut over, adding an architecture guard script (mirroring scripts/final-cutover/verify-no-legacy-battle-write.mjs) for each subsystem as it converges. This is a multi-session block; stop at a clean, committed sub-slice rather than leaving it half-wired.",
+    "description": "Block I is a multi-session block; this pass converged ONE subsystem (universal field authority for the Stage 15 safe-scalar allowlist, commit 8e9e1d3) and stopped there deliberately rather than leaving a second subsystem half-wired. Do NOT claim BLOCK_I_UNIVERSAL_REPOSITORY_SOLE_AUTHORITY_COMPLETE until every subsystem listed below is converged: registry, configuration, capabilities, arcs, maps, content (beyond the safe scalar fields already done), relations, visibility, presented cards, party, routes, timeline, economy, zones, movable entities. Battles (Decision 2) and the safe-scalar NPC/quest/faction/location fields (this pass) are DONE. Suggested next subsystem: presentedCard/visibility (already has Stage 16 complex-authority scaffolding in src/domain/complex-authority/ + routeMainComplex/routeUserComplex call sites in campaignStore.tsx's routeGreyComplex helper and userCampaignStore.tsx's togglePresentedCard/setRevealed -- same pattern as this pass: promote from optional/flag-gated (UNIVERSAL_COMPLEX_AUTHORITY_ENABLED, default off) to an unconditional plain module mirroring battleAuthorityStore.ts, add scripts/final-cutover/verify-no-legacy-presentation-write.mjs, browser-verify reveal/present/dismiss on both stacks, commit as its own commit). After that: party/routes (already partially structured via routeGreyComplex 'greyholm.partyLocation' and 'greyholm.placement').",
     "targetFiles": [
-      "src/state/campaignStore.tsx",
-      "src/state/userCampaignStore.tsx",
-      "src/state/commandAuthoritySink.ts",
-      "src/state/durableAuthoritySink.ts",
-      "src/state/complexAuthoritySink.ts",
-      "scripts/final-cutover/verify-no-legacy-battle-write.mjs (template for new per-subsystem guards)"
+      "src/domain/complex-authority/complexAuthorityRouter.ts (reference for the aggregate-commit pattern to mirror into a new plain always-on module)",
+      "src/state/campaignStore.tsx (routeGreyComplex helper, setRevealed/unsetRevealed/setCurrentLocation/patchPlacement call sites)",
+      "src/state/userCampaignStore.tsx (togglePresentedCard, setRevealed-equivalent reveal logic)",
+      "src/state/complexAuthoritySink.ts (current optional sink to be superseded for this scope, same as durableAuthoritySink.ts was this pass)",
+      "scripts/final-cutover/verify-no-legacy-field-write.mjs (template for the new verify-no-legacy-presentation-write.mjs guard)"
     ]
   },
   "remainingBlocks": [
