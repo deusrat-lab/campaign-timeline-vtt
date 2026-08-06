@@ -135,8 +135,14 @@ covers the mechanism for all of them; per-kind UI presence was still spot-checke
 
 ## Content — Group B (images, bestiary, players, linked cards)
 
-MISSING — not yet exercised this session. Deferred to the next Content pass; tracked in
-`CONTINUATION_STATE.json`'s `nextConcreteStep`.
+| Function | Status | Evidence |
+|---|---|---|
+| Image asset integrity (Greyholm) | **FIXED_REAL_GAP -> PARITY_CONFIRMED** | Data-level audit (not just visual spot-check): decoded and resolved all 420 `images.json` `src` paths against the filesystem. Found 56 genuinely missing files, all under `/images/бой/` (battle-map reference images) — they existed in the sibling `dm-companion` source project but were never copied into this repo's `public/`. Copied all 56 from `../dm-companion/public/images/бой/` (local file copy, no network, no server). Re-ran the audit: 420/420 resolve. Commit `3ae3f56`. This is the single most concrete "1:1 data parity" finding of the whole rebuild so far — a real, fixed gap, not a false negative. |
+| Image asset integrity (Caldran) | PARITY_CONFIRMED | Audited all `${ART}...` template refs in `src/data/campaignScenarios.ts` (207 refs) against `public/scenarios/caldran-captivity/` (205 files) — 0 missing. Browser-confirmed: `/campaigns/.../library/images` shows the full 205-image set with `playerSafe` (👁/🚫) toggles per image, zero console errors. |
+| Bestiary (both stacks) | PARITY_CONFIRMED | Single shared catalog (`bestiary.local.json`, 414 entries) used by both `/bestiary` (Greyholm) and `/campaigns/:id/library/bestiary` (Caldran) — browser-confirmed `414/414` on the Caldran route, "Добавить в мои враги"/`+ В кампанию` add-to-campaign-enemies flow present on both. All 414 `imageUrl` references resolve (0 missing) per the same audit method as the general image check. |
+| Players (both stacks) | PARITY_CONFIRMED | Greyholm: 4 players, `image: ""` for all four in source data -> UI correctly renders "Нет изображения" (this is a `0->0` correct-absence case, not a bug: source data never had player images). Caldran: 3 players (`PC01`/`PC02`/`PC03`), matching `PRODUCTION_REFERENCE_MANIFEST.json`'s "3 ИГРОКОВ". Both routes load with zero console errors. |
+| Linked cards / relations rendering | MISSING | Not independently re-verified this session — deferred. |
+| Create/edit/delete for images/bestiary/players themselves (not the entities they illustrate) | MISSING | Not exercised this session (e.g., uploading a new image, editing a player character sheet) — deferred. |
 
 ## Summary
 
