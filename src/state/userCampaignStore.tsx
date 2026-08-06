@@ -42,6 +42,8 @@ import {
   type RouteSnapshotEntry,
   commitZones,
   type ZoneSnapshotEntry,
+  commitArcs,
+  type ArcSnapshotEntry,
 } from '../domain';
 
 const UC_BACKUP_NS = 'campaign-timeline-vtt:uc-backup:v1';
@@ -559,37 +561,56 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     },
 
     // Universal arcs — same Timeline type + same CRUD shape as Greyholm's
-    // addTimeline/patchTimeline/deleteTimeline (campaignStore.tsx), just
-    // persisted through this store's patchData/patchRuntime instead of a
-    // reducer action. One shared <ArcSwitcher> component drives both.
+    // addTimeline/patchTimeline/deleteTimeline (campaignStore.tsx). Block I:
+    // every mutation now commits the WHOLE `arcs` collection through
+    // `commitArcs` (universal, campaign-scoped, expected-revision-guarded)
+    // first, then projects the durably-committed collection into the legacy
+    // `patchData` compatibility write -- mirrors addRoute/addZone exactly.
+    // `currentArcId` stays a runtime pointer, untouched by this cutover (see
+    // `arcAuthorityStore.ts` scope note -- same precedent as activeMapId).
     addArc: (id, title) => {
-      patchData(id, (p) => {
-        const arcs = resolveArcs(p);
-        const arcIdNew = `arc-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-        const order = Math.max(0, ...arcs.map((a) => a.order)) + 1;
-        return { ...p, arcs: [...arcs, { id: arcIdNew, arcId: arcIdNew, title, order }] };
-      });
-      // patchData above already committed synchronously; read the just-written
-      // arc id back from storage rather than recomputing it (avoids a second
-      // random-id generation that could drift from what was actually saved).
-      const fresh = readJson<UserCampaignData>(dataKey(id));
-      const last = fresh?.arcs?.[fresh.arcs.length - 1];
+      const arcIdNew = `arc-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+      const pre = captureUc(id);
+      const arcs = resolveArcs(pre.data);
+      const order = Math.max(0, ...arcs.map((a) => a.order)) + 1;
+      const candidate: ArcSnapshotEntry[] = [...arcs, { id: arcIdNew, arcId: arcIdNew, title, order }];
+      const outcome = commitArcs(ucFieldStorage(), campaignIdFromLegacy('user', id), 'userCampaign.arcs', candidate);
+      if (!outcome.ok || !outcome.arcs) {
+        throw new Error(`addArc: universal arcs commit failed: ${outcome.error ?? 'unknown error'}`);
+      }
+      const committed = outcome.arcs as Timeline[];
+      patchData(id, (p) => ({ ...p, arcs: committed }));
+      const last = committed[committed.length - 1];
       if (last) patchRuntime(id, (r) => ({ ...r, currentArcId: last.id }));
     },
     patchArc: (id, arcId, patch) => {
-      patchData(id, (p) => ({ ...p, arcs: resolveArcs(p).map((a) => (a.id === arcId ? { ...a, ...patch } : a)) }));
+      const pre = captureUc(id);
+      const candidate: ArcSnapshotEntry[] = resolveArcs(pre.data).map((a) => (a.id === arcId ? { ...a, ...patch } : a));
+      const outcome = commitArcs(ucFieldStorage(), campaignIdFromLegacy('user', id), 'userCampaign.arcs', candidate);
+      if (!outcome.ok || !outcome.arcs) {
+        throw new Error(`patchArc: universal arcs commit failed: ${outcome.error ?? 'unknown error'}`);
+      }
+      const committed = outcome.arcs as Timeline[];
+      patchData(id, (p) => ({ ...p, arcs: committed }));
     },
     deleteArc: (id, arcId) => {
-      patchData(id, (p) => {
-        const arcs = resolveArcs(p);
-        // Safe delete: never the seed default arc, never the currently active
-        // arc, never the last remaining arc -- structurally impossible to
-        // leave a campaign with zero arcs or pointed at a just-deleted one.
-        const runtime = runtimeCache[id] ?? readJson<UserCampaignRuntime>(runtimeKey(id));
-        const currentId = resolveCurrentArcId(p, runtime);
-        if (arcId === DEFAULT_ARC_ID || arcId === currentId || arcs.length <= 1) return p;
-        return { ...p, arcs: arcs.filter((a) => a.id !== arcId) };
-      });
+      const pre = captureUc(id);
+      const arcs = resolveArcs(pre.data);
+      // Safe delete: never the seed default arc, never the currently active
+      // arc, never the last remaining arc -- structurally impossible to
+      // leave a campaign with zero arcs or pointed at a just-deleted one.
+      // (Also structurally enforced by `checkArcsInvariant`'s "never empty"
+      // rule for the last-remaining-arc case.)
+      const runtime = runtimeCache[id] ?? pre.runtime;
+      const currentId = resolveCurrentArcId(pre.data, runtime);
+      if (arcId === DEFAULT_ARC_ID || arcId === currentId || arcs.length <= 1) return;
+      const candidate: ArcSnapshotEntry[] = arcs.filter((a) => a.id !== arcId);
+      const outcome = commitArcs(ucFieldStorage(), campaignIdFromLegacy('user', id), 'userCampaign.arcs', candidate);
+      if (!outcome.ok || !outcome.arcs) {
+        throw new Error(`deleteArc: universal arcs commit failed: ${outcome.error ?? 'unknown error'}`);
+      }
+      const committed = outcome.arcs as Timeline[];
+      patchData(id, (p) => ({ ...p, arcs: committed }));
     },
     setCurrentArc: (id, arcId) => {
       patchRuntime(id, (r) => ({ ...r, currentArcId: arcId }));
