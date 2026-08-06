@@ -1,0 +1,100 @@
+{
+  "generatedAt": "2026-08-06T08:15:00.000Z",
+  "currentHead": "PENDING_NEXT_COMMIT",
+  "branch": "master",
+  "workingTree": "clean",
+  "push": 0,
+  "deploy": 0,
+  "productionWrites": 0,
+  "lastGreenGates": {
+    "typecheck": "PASS",
+    "build": "PASS",
+    "verify:domain": "PASS",
+    "verify:stage16": "405/405",
+    "verify:stage16-1": "149/149",
+    "verify:stage17": "326/326",
+    "verify:universal-regression": "15/15",
+    "verify:referential-integrity": "PASS (0 broken of 23 statically-checkable relations)"
+  },
+  "completedBlocks": [
+    {
+      "block": "Greyholm battle-map placement create fix",
+      "commits": [
+        "739dd51",
+        "db9dfda"
+      ],
+      "status": "IMPLEMENTED_AND_BROWSER_VERIFIED",
+      "evidence": "decision=durable_committed, predictionComparison=equal, legacyVerificationComparison=equal, deterministic mintPlacementId, survives reload, no console errors, no duplicate."
+    },
+    {
+      "block": "A: production reference manifest",
+      "commit": "2bdf09f",
+      "status": "PARTIAL_IMPROVED",
+      "file": "rebuild-reports/final-cutover/PRODUCTION_REFERENCE_MANIFEST.json",
+      "covers": [
+        "Greyholm and Caldran: locations, npcs, quests, enemies, images, factions, players, shops, taverns, battleMaps, economy, economyReference (Greyholm); locations, npcs, quests, enemies, images, factions, mapPlacements, routes, zones, notes, customBattleMaps (Caldran)"
+      ],
+      "missingFromManifest": [
+        "placements/hotspots/routes/worldMaps/worldMapStates for Greyholm (timeline-scoped MC collections, only exist at app runtime + localStorage overlay -- honestly reported empty, not fabricated)",
+        "arcs, capabilities, settings metadata block per campaign",
+        "battle/battle-map runtime records (activeBattle, battleEntriesById) for Greyholm",
+        "presentedCard/reveal runtime state for either campaign",
+        "party state for Greyholm"
+      ],
+      "howToFinish": "Requires a live browser session against localhost dev server (DM Edit mode, VITE_UNIVERSAL_DIAGNOSTICS=1) to read the merged CampaignData + overlay via useCampaignData()/localStorage, OR a small Node-side loader that replicates loadCampaignData.ts's baked-TS assembly (src/data/loadCampaignData.ts) outside the browser. The baked-TS assembly path (src/data/*.ts: hotspots.json, routes.json, battleMapLocationLinks.ts, arc2Hotspots.ts, etc.) is importable from plain Node/ESM without a browser -- this is the fastest path, not yet attempted.",
+      "additionalEvidence": [
+        "GREYHOLM_RUNTIME_SHAPE.json: worldMapStates(5)/locationStates(136)/hotspots(22)/routes(0)/travelEvents(1)/battleMapLocationLinks(551) derived by directly invoking loadCampaignData.ts's own exported pure builder functions via `npx tsx` (not a reimplementation) -- 0 broken references, 34 correctly classified as pre-existing typed 'manual_required' orphans, not silently dropped."
+      ]
+    },
+    {
+      "block": "C: referential integrity",
+      "commit": "1beee17",
+      "status": "PARTIAL_IMPROVED",
+      "file": "rebuild-reports/final-cutover/REFERENTIAL_INTEGRITY_REPORT.json",
+      "covers": "14 Greyholm + 9 Caldran statically-checkable relations, 0 broken",
+      "missingFromCheck": "10 Greyholm + 6 Caldran relation types marked NOT_STATICALLY_CHECKABLE (placement->entity, route->location, battle->*, zone->faction, arc->entity, presentedCard->entity, observerFocus->entity) -- same root cause as the manifest gap above (runtime/localStorage-only data). Closing this requires the same baked-TS Node loader or a live browser read.",
+      "additionalEvidence": [
+        "hotspot->worldMap, hotspot->locationState, worldMapState->worldMap, worldMapState->hotspot, battleMapLocationLink->locationState, battleMapLocationLink->battleMap all now statically checked via GREYHOLM_RUNTIME_SHAPE.json -- 0 broken."
+      ]
+    },
+    {
+      "block": "D: campaign capabilities",
+      "commit": "1beee17",
+      "status": "PARTIAL",
+      "done": "src/domain/campaign/capabilities.ts: UNIVERSAL_CAPABILITY_KEYS extended to cover the full task-named minimum set (additive, typecheck/build/regression all green).",
+      "notDone": [
+        "No UI surface anywhere (DM Edit / Settings) to view or toggle capabilities -- verified via grep: only 4 consumers, all inside src/domain/adapters/* and snapshot.ts, none in src/pages or src/features.",
+        "No persisted per-campaign capabilities record distinct from the adapter-computed default (defaultCapabilities(true) is hardcoded true for every campaign right now).",
+        "No command-layer enforcement that blocks a command when its capability is disabled."
+      ],
+      "howToFinish": "1) Add a capabilities field to the UC campaign record (src/types/userCampaign.ts) and Greyholm-equivalent persisted overlay slot. 2) Add a Settings panel component reading/writing it through a new command (not raw store mutation). 3) Gate the relevant nav links / action buttons on capabilityEnabled(). 4) Add a Stage-style harness proving toggle-off hides UI without deleting data."
+    }
+  ],
+  "currentBlock": null,
+  "nextConcreteStep": {
+    "description": "Attempt the baked-TS Node loader for Greyholm runtime data (placements/hotspots/routes/worldMapStates) by importing src/data/loadCampaignData.ts's constituent modules directly in a Node ESM script under scripts/final-cutover/, sidestepping the React/browser dependency. If loadCampaignData.ts itself has React/DOM imports that block Node execution, the concrete fallback is a real Playwright/browser script (per the task's own 'Browser verification strategy' section) that opens the dev server with VITE_UNIVERSAL_DIAGNOSTICS=1, reads useCampaignData()'s merged snapshot via a diagnostics page or window global, and writes the result back into PRODUCTION_REFERENCE_MANIFEST.json and REFERENTIAL_INTEGRITY_REPORT.json.",
+    "targetFiles": [
+      "src/data/loadCampaignData.ts (read first to check for browser-only imports)",
+      "scripts/final-cutover/build-production-reference-manifest.mjs (extend once a Node-safe or browser-sourced loader exists)",
+      "scripts/final-cutover/verify-referential-integrity.mjs (extend the same way)"
+    ]
+  },
+  "remainingBlocks": [
+    "B: final data migration (Greyholm/Caldran -> universal, idempotent/dry-run/backup/rollback/reconciliation)",
+    "D (finish): capabilities UI + command-layer enforcement",
+    "E: universal arcs (create/edit/reorder/archive/delete/direct URL/scope)",
+    "F: full functional parity matrix across campaign mgmt/maps/content/timeline/economy/battles",
+    "G: unified workspace (shared components across Greyholm/Caldran/new campaign)",
+    "H: view modes + multi-window isolation (DM View/DM Edit/Player View/Observer, 3 real tabs)",
+    "I: new empty campaign proof via UI, then cleanup or fixture-mark",
+    "J: import/export round-trip parity (Greyholm, Caldran, new campaign)",
+    "K: universal source-of-truth cutover (eliminate active legacy write paths)",
+    "L: legacy runtime removal + LEGACY_RUNTIME_REMOVAL_REPORT.md",
+    "M: FINAL_DATA_PARITY_REPORT.json, FINAL_FUNCTIONAL_PARITY_REPORT.md, FINAL_BROWSER_EVIDENCE.md",
+    "N: verify:final-cutover aggregate gate + full final gate run",
+    "Documentation: ARCHITECTURE.md, DATA_MODEL.md, DEVELOPMENT.md, MIGRATION.md, RECOVERY.md, CUTOVER.md, FINAL_REMAINING_WORK_AUDIT.md updates"
+  ],
+  "knownFailures": [],
+  "honestVerdict": "UNIVERSAL_LOCAL_REBUILD_INCOMPLETE",
+  "note": "This checkpoint exists per the task's own 'Допустимое управление объёмом' protocol -- not a request for permission to continue. Work resumes at nextConcreteStep without re-running the full Stage 4-18 audit."
+}

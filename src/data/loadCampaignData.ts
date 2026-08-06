@@ -96,7 +96,7 @@ export const TIMELINES: Timeline[] = [
  * the new canon art; if the real exported file differs, update these three
  * fields before trusting any coordinate placed against it.
  */
-const WORLD_MAPS: WorldMap[] = [
+export const WORLD_MAPS: WorldMap[] = [
   {
     id: 'map-kingdom',
     title: 'Королевство Аурелон',
@@ -229,7 +229,7 @@ function mergeUnique<T>(...groups: T[][]): T[] {
  * still come from dm-companion as authored; only map placement is left to
  * the DM unless a real Arc 1 region hotspot can be safely mirrored.
  */
-function buildLocationStates(
+export function buildLocationStates(
   locations: DmLocation[],
   npcs: DmNpc[],
   quests: DmQuest[],
@@ -426,7 +426,7 @@ function mirrorArc1RegionHotspotsForArc2(hotspots: MapHotspot[]): MapHotspot[] {
  * hotspots.json — every Arc-1 map silently fell back to the "PLACEHOLDER —
  * нужна карта" UI even though real canon art was registered. Fixed here.
  */
-function buildWorldMapStatesAndHotspots(
+export function buildWorldMapStatesAndHotspots(
   timelines: Timeline[],
 ): { worldMapStates: WorldMapState[]; hotspots: MapHotspot[] } {
   const baseHotspots = hotspotsSeed as MapHotspot[];
@@ -455,11 +455,11 @@ function buildWorldMapStatesAndHotspots(
   return { worldMapStates, hotspots };
 }
 
-function buildRoutes(): MapRoute[] {
+export function buildRoutes(): MapRoute[] {
   return routesSeed as MapRoute[];
 }
 
-function buildTravelEvents(): TravelEvent[] {
+export function buildTravelEvents(): TravelEvent[] {
   return travelEventsSeed as TravelEvent[];
 }
 

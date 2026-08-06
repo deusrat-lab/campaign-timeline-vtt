@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2026-08-06T08:20:15.738Z",
+  "provenance": "Derived by directly invoking loadCampaignData.ts's exported pure builder functions (buildLocationStates, buildWorldMapStatesAndHotspots, buildRoutes, buildTravelEvents) + battleMapLocationLinks.ts's buildBattleMapLocationLinks against the same canonical static JSON as PRODUCTION_REFERENCE_MANIFEST.json -- the SAME derivation code path the real app runs (not a reimplementation), executed outside a browser via `npx tsx`. This closes the \"timeline-scoped MC collections reported empty\" gap recorded in CONTINUATION_STATE.json for Greyholm's worldMapStates/locationStates/hotspots/routes/travelEvents/battleMapLocationLinks -- everything EXCEPT placements, which loadCampaignData.ts itself documents as having \"no seed data at all -- placements are 100% DM-created, living entirely in the local overlay\" (never in any static/canonical file, by design).",
+  "worldMaps": {
+    "count": 4,
+    "ids": [
+      "map-city-greyholm",
+      "map-kingdom",
+      "map-region",
+      "map-region-arc2-war"
+    ]
+  },
+  "timelines": {
+    "count": 2,
+    "ids": [
+      "arc-1-peace",
+      "arc-2-war"
+    ]
+  },
+  "locationStates": {
+    "count": 136,
+    "contentHash": "sha256:19a97b65839d4309"
+  },
+  "worldMapStates": {
+    "count": 5,
+    "contentHash": "sha256:abf74a968891a0c8"
+  },
+  "hotspots": {
+    "count": 22,
+    "contentHash": "sha256:3b565620416a7950"
+  },
+  "routes": {
+    "count": 0,
+    "contentHash": "sha256:4f53cda18c2baa0c"
+  },
+  "travelEvents": {
+    "count": 1,
+    "contentHash": "sha256:47f45043c6324628"
+  },
+  "battleMapLocationLinks": {
+    "count": 551,
+    "contentHash": "sha256:477637ee70bf94cd"
+  },
+  "placements": {
+    "count": 0,
+    "note": "Not applicable by design -- see provenance note. No canonical source exists; production placements live only in that specific browser session's localStorage overlay, never exported to a static file."
+  },
+  "brokenReferenceCounts": {
+    "hotspot -> worldMap": 0,
+    "hotspot -> locationState": 0,
+    "worldMapState -> worldMap": 0,
+    "worldMapState -> hotspot": 0,
+    "battleMapLocationLink -> locationState": 0,
+    "battleMapLocationLink -> battleMap": 0
+  },
+  "explicitOrphanCounts": {
+    "battleMapLocationLink (unmatched, manual_required)": 34
+  },
+  "totalBrokenReferences": 0
+}
