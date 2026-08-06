@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-06T16:45:00.000Z",
-  "currentHead": "168338b",
+  "generatedAt": "2026-08-06T19:15:00.000Z",
+  "currentHead": "4f9f194",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -103,7 +103,9 @@
       "status": "CORE_MECHANISMS_PROVEN_BOTH_STACKS",
       "evidence": "Party marker create/move/reload/Player-View for Greyholm (overlay.party.currentMapPosition) AND Caldran/UC (mapPlacements, singleton-per-map replace-on-move), map switching + zoom/pan persistence (Caldran survived a full dev-server restart, not just in-page reload), hotspot/placement create-move-remove proven at the mechanism level (same addPlacement/removePlacement store calls). See FINAL_FUNCTIONAL_PARITY_REPORT.md Maps section for full evidence. Real finding: Greyholm's view mode (DM View/DM Edit/Player View) is NOT persisted anywhere in overlay localStorage at all (confirmed by grep -- no mode/viewMode key exists) -- it is pure in-memory React state, reset to DM View on every full page load/navigate. This is a stronger version of the Block G/H note below: it's not just 'shared, not tab-scoped', it doesn't survive reload either. Relevant for Block H's design.",
       "notExercised": "Layers, routes/route-progress, visited-locations, overlays, filters, search, linked-entity-card rendering, capability off/on specifically for map nav -- not yet independently verified this session.",
-      "commits": ["ed486c3"]
+      "commits": [
+        "ed486c3"
+      ]
     },
     {
       "block": "F: Content Group A (reveal mechanism only)",
@@ -111,12 +113,47 @@
       "evidence": "EntityLibraryPage.tsx is one shared editor for npc/quests/enemies/factions on Greyholm (visibleToPlayers checkbox, same pattern as locations); UC uses the same generic toggleReveal/revealedToPlayers proven for locations, entityType is just a parameter. Live-verified: Greyholm NPC 'Аверн Колд' toggle+save -> overlay.npcPatches[...].visibleToPlayers true->false; Caldran NPC 'Вилья Кривой Пилот' toggle -> revealedToPlayers -> Player View '1 · NPC' (of 66) -> restored.",
       "selfCorrection": "First two Greyholm save attempts silently failed because a raw CSS selector `.reveal-toggle input[type=checkbox]` matched the WRONG element first (an unrelated 'Открыть Арку 2 игрокам' top-nav toggle that happens to share the same class name) instead of the NPC's own checkbox further down the form. The stray Arc-2 toggle was caught and reverted (confirmed overlay.timelinePatches['arc-2-war'].visibleToPlayers back to false) before it was ever scored as evidence. Lesson for future passes in this codebase: `.reveal-toggle` is not a unique class, always disambiguate by index/position or a more specific selector.",
       "notExercised": "Create/edit/delete lifecycle, relations, search/filters, arc scope, DM-only vs player-safe field separation -- only the reveal toggle itself was verified, not full CRUD, for npc/quests/enemies/factions.",
-      "commits": ["168338b"]
+      "commits": [
+        "168338b"
+      ]
+    },
+    {
+      "block": "F: Content Group A CRUD + Group B assets",
+      "status": "CRUD_PROVEN_BOTH_STACKS_PLUS_ONE_REAL_DATA_FIX",
+      "evidence": "Create/edit browser-verified on Greyholm (map-scoped 'Создать NPC здесь' -> overlay.newNpcs -> EntityLibraryPage editor -> overlay.npcPatches). Create/edit/delete full lifecycle browser-verified on Caldran ('+ NPC' -> data.npcs -> popup card with Редактировать/Разместить на карте/Показать поверх/Открыть в списках/Удалить -> Удалить -> back to original count). Data-level asset audit (not visual spot-check): decoded+resolved all 420 Greyholm images.json src paths and all 207 Caldran scenario template refs against the filesystem.",
+      "realGapFound": "Greyholm has NO delete action for ANY Group A entity kind (locations/npc/quests/enemies/factions) -- confirmed by exhaustive grep of campaignStore.tsx, not just NPC. A created custom NPC can only be removed by direct localStorage array surgery. This is a genuine, consistently-applied architectural gap, not a per-entity oversight -- needs a real product decision (add delete, or confirm it's intentionally permanent-once-created) before Block L legacy removal can consider Greyholm's entity lifecycle 'complete'.",
+      "realGapFixed": "56 of 420 Greyholm images.json references pointed to files that were never copied from the sibling dm-companion source project into this repo's public/ -- all under /images/бой/ (battle-map reference images). Copied all 56 locally (no network, no server). Re-audit: 420/420 resolve. This is the most concrete 1:1-parity fix of the whole rebuild so far.",
+      "notExercised": "Relations, search/filters, arc scope, DM-only vs player-safe field separation for Group A; create/edit/delete of images/bestiary/players themselves (not the entities they illustrate).",
+      "commits": [
+        "3ae3f56",
+        "aa51599",
+        "84307fb"
+      ]
+    },
+    {
+      "block": "F: Timeline/Economy/Zones bundle",
+      "status": "APPLICABILITY_DETERMINED_PLUS_PARTIAL_VERIFICATION",
+      "evidence": "Greyholm campaign calendar (+фаза/+день/Долгий отдых/+час/Свой сдвиг/Отменить, backed by overlay.calendarsByTimelineId) browser-verified: advance survives reload, single-slot undo correctly does NOT survive reload (by design). Greyholm /economy (price reference) and /services (9 shops/taverns) browse-verified, zero console errors.",
+      "majorFinding": "Caldran/UC has NO Timeline/calendar/session/event/delayed-trigger data model AND NO Economy/shop/tavern data model AT ALL -- confirmed by grepping src/types/userCampaign.ts and src/features/campaigns/*.tsx, not assumed. Scored NOT_APPLICABLE_BY_SOURCE_DESIGN rather than MISSING, per the report's own classification rule. This is architecturally significant for Block G (Unified Campaign Workspace): a truly universal engine needs Timeline+Economy to be part of the shared capability set available to ANY campaign, not permanently Greyholm-exclusive features -- otherwise 'unified workspace' just means Greyholm keeps a bigger feature set forever, which contradicts the stated goal.",
+      "notExercised": "Sessions/events/delayed-triggers CRUD (Greyholm), shops/taverns CRUD (Greyholm), Zones/Overlays/MovableEntities full lifecycle (both stacks, only incidentally touched via the '+ Зона' tool during the Maps bundle).",
+      "commits": [
+        "eb4c7ac"
+      ]
+    },
+    {
+      "block": "F: Battles bundle (start)",
+      "status": "RUNTIME_MATRIX_DONE_PLUS_ONE_FULL_CALDRAN_LIFECYCLE_PASS",
+      "evidence": "Required active-runtime matrix built from direct type inspection (BattleEntry/ActiveBattleState/ActiveBattleCombatant for Greyholm vs CampaignCustomBattleMap/CampaignBattleBoard/CampaignBattleToken for UC) -- CONFIRMED NOT the same runtime or even a compatible shape (row/column+x/y vs x/y-only positioning; side enum enemy|player vs enemy|player|ally|neutral; single ActiveBattleState vs per-battle-map battleBoards dict). Full Caldran lifecycle browser-verified live on a real battle map (caldran-l01-a): open (no separate start step) -> place player token (required raw PointerEvent dispatch, a left_click at the same coords silently missed -- same automation pitfall class as the earlier party-marker case) -> initiative/round/turn advance -> day/night toggle -> RELOAD RECOVERY confirmed (round, current turn, night variant all survived) -> Player View banner + read-only board confirmed (DM controls correctly absent) -> finish-battle button appeared to no-op on first click; root-caused (not left a mystery) to a window.confirm() guard in CampaignBattlePage.tsx:559 that a scripted click can't answer -- read the function body, confirmed it correctly clears tokens/round/presentedBattle when actually confirmed. Test state cleaned up manually.",
+      "notExercised": "Greyholm's OWN battle lifecycle (BattleEntry/ActiveBattleState) -- nothing about it should be assumed proven by the Caldran test above, they are different runtimes. Battle-map create/edit/delete on both stacks. Grid/terrain/scale/hand-mode persistence (grid toggle was clicked but no showGrid field appeared in the saved board -- needs follow-up). Observer view, campaign isolation, arc scope for battles.",
+      "architecturalConclusion": "Unifying Greyholm and Caldran onto one universal battle authority (the stated Block F/L goal) is a real schema-migration project, not a UI-wiring task. Not started this session -- correctly left as NOT_STARTED rather than claimed done.",
+      "commits": [
+        "4f9f194"
+      ]
     }
   ],
   "currentBlock": null,
   "nextConcreteStep": {
-    "description": "Continue Block F Content bundle: (1) Group A remaining -- CRUD (create/edit/delete) for npc/quests/enemies/factions/locations on both stacks, relations, search/filters, arc scope, DM-only vs player-safe field split; (2) Group B -- images (asset integrity, playerSafe flag), bestiary, players, linked cards, export compatibility. Then move to Timeline/Events, Economy, Zones/Overlays/Movable-Entities as one or two coherent passes each (both stacks), then the full Battles lifecycle (this is the subsystem most likely to reveal Greyholm/Caldran running genuinely different runtimes -- budget real time here, do not rubber-stamp it). Only after Block F's remaining rows are closed should Blocks G-M (unified workspace, tab-scoped view mode -- note the Greyholm reload-loses-mode finding above, new-campaign proof, import/export, universal-repository cutover, legacy removal) begin. Keep committing after each coherent bundle; update this file and the parity report each time, don't wait until everything is done.",
+    "description": "Block F is now substantially covered by evidence (real or NOT_APPLICABLE determinations for every subsystem asked for) but NOT fully closed -- remaining MISSING rows are listed per-section in FINAL_FUNCTIONAL_PARITY_REPORT.md and should be picked up opportunistically, not re-audited from scratch. The dominant remaining work is no longer 'is there evidence' but real engineering: (1) decide + implement Greyholm Group A delete actions (or explicitly declare permanent-by-design), (2) design the battle-runtime unification (BattleEntry+ActiveBattleState vs CampaignCustomBattleMap+CampaignBattleBoard -- recommend absorbing UC's richer side enum and Greyholm's richer status machine into one shape, this needs a dedicated design pass, not an in-session guess), (3) decide whether Timeline/Economy become universal capabilities available to any campaign (architecturally required for a real Block G) or stay Greyholm-only forever (then Block G's 'unified workspace' claim must be scoped down honestly). Once those three decisions are made, begin Block G (Unified Campaign Workspace) for real -- it cannot be done honestly before deciding what 'universal' means for Timeline/Economy/Battles. Block H (tab-scoped view mode) has a firm starting point: Greyholm's mode isn't just shared, it isn't persisted at all (pure React state, confirmed by grep) -- UC's mode IS persisted per-campaign in userCampaignRuntime but still globally, not per-tab. Do not start Blocks G-M with unverified assumptions about what 'unified' should mean for the Timeline/Economy/Battle asymmetries just found.",
     "targetFiles": [
       "rebuild-reports/final-cutover/FINAL_FUNCTIONAL_PARITY_REPORT.md"
     ]
@@ -134,8 +171,12 @@
     "N: verify:final-cutover aggregate gate + full final gate run",
     "Documentation: ARCHITECTURE.md, DATA_MODEL.md, DEVELOPMENT.md, MIGRATION.md, RECOVERY.md, CUTOVER.md, FINAL_REMAINING_WORK_AUDIT.md updates"
   ],
-  "knownFailures": [],
+  "knownFailures": [
+    "Greyholm has zero delete actions for any Group A content entity (locations/npc/quests/enemies/factions) -- confirmed by exhaustive grep, not a per-kind gap.",
+    "Greyholm and Caldran run structurally incompatible battle-runtime data shapes (see Battles matrix in FINAL_FUNCTIONAL_PARITY_REPORT.md) -- not unified, unification not yet designed.",
+    "Grid-toggle persistence in Caldran battle board was not confirmed (toggled but no showGrid field appeared in the saved board) -- needs follow-up."
+  ],
   "externalBlockers": [],
   "honestVerdict": "UNIVERSAL_LOCAL_REBUILD_INCOMPLETE",
-  "note": "Checkpoint per the task's own 'Допустимое управление объёмом' protocol -- not a request for permission to continue. No external blocker exists. A real architectural finding this session: view mode is currently GLOBAL/shared overlay state, not tab-scoped, which Block H will need to fix before multi-tab isolation can be proven; flagged here so the next pass doesn't have to rediscover it."
+  "note": "Checkpoint per the task's own volume-management protocol -- not a request for permission to continue. No external blocker exists. This session closed Block F Content (Groups A+B) and Timeline/Economy/Zones bundles with real evidence, found and FIXED a genuine 56-file image-asset gap (commit 3ae3f56), found a genuine Greyholm delete-action gap (not fixed -- needs a product decision first), determined Caldran/UC has NO Timeline or Economy data model at all (NOT_APPLICABLE_BY_SOURCE_DESIGN, not a migration gap), and built the required Battles active-runtime matrix proving Greyholm and Caldran do NOT share a battle runtime today. Blocks G-M were correctly NOT started this session: starting them before deciding what universal means for the Timeline/Economy/Battle asymmetries just discovered would produce unverifiable, premature architecture. The next pass's real job is engineering decisions (see nextConcreteStep), not more verification passes."
 }
