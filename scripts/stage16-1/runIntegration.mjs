@@ -94,6 +94,27 @@ function greyholmHarness() {
       n.party.currentLocationStateId = descriptor.locationStateId;
       n.party.currentMapPosition = undefined;
       n.partyRouteProgress = null;
+    } else if (descriptor.aggregate === 'placement') {
+      // Mirror the real campaignStore overlay shape (placementPatches / newPlacements)
+      // exactly like ADD_PLACEMENT/PATCH_PLACEMENT/DELETE_PLACEMENT so a placement
+      // move/place/remove is actually observable in the adapted snapshot.
+      n.placementPatches = { ...(n.placementPatches ?? {}) };
+      n.newPlacements = [...(n.newPlacements ?? [])];
+      if (descriptor.op === 'move') {
+        n.placementPatches[descriptor.placementId] = { ...(n.placementPatches[descriptor.placementId] ?? {}), position: { x: descriptor.x, y: descriptor.y } };
+      } else if (descriptor.op === 'remove') {
+        n.placementPatches[descriptor.placementId] = { ...(n.placementPatches[descriptor.placementId] ?? {}), _deleted: true };
+      } else if (descriptor.op === 'place') {
+        n.newPlacements.push({
+          id: descriptor.placementId,
+          mapId: descriptor.mapRawId,
+          entityKind: descriptor.entityKind,
+          entityId: descriptor.entityId,
+          position: { x: descriptor.x, y: descriptor.y },
+          title: descriptor.title,
+          visibleToPlayers: descriptor.visibleToPlayers ?? false,
+        });
+      }
     }
     return n;
   }
@@ -411,32 +432,43 @@ function groupPrivacy() {
 // I — Completion gate: truthful UI ownership + excluded scopes
 // ===========================================================================
 function groupOwnershipTruthfulness() {
-  // Universal-rebuild completion pass: all 8 registry scopes are now genuinely
-  // wired to real UI actions (Greyholm placement create/move/remove,
-  // partyLocation.move (arrival + direct-move + atomic route-progress clear),
-  // routeProgress.advance/clear, and user-campaign reveal + presentedCard were
-  // the remaining gaps — see docs/universal-rebuild/FINAL_REMAINING_WORK_AUDIT.md
-  // and aggregateOwnership.ts for the file:line evidence per scope).
+  // Block L re-audit (post Stage-16.1 completion): of the 8 registry scopes,
+  // fresh grepping of the real app store code found only ONE (greyholm.placement,
+  // 3 call sites in campaignStore.tsx via routeGreyComplex) still actually wired
+  // to a live UI action. The other 7 were wired at Stage-16.1 completion time but
+  // have since been superseded by dedicated Block I durable authority stores
+  // (revealAuthorityStore, presentedCardAuthorityStore, mapPlacementAuthorityStore,
+  // and equivalent Greyholm partyLocation/routeProgress authority) — no live call
+  // site passes those scopes to routeGreyComplex/routeUserComplex any more. This
+  // is reflected honestly in aggregateOwnership.ts as uiStatus
+  // 'superseded-by-authority-store' rather than 'wired'. They remain
+  // engine-capable (proven durable in this harness, exercised below via
+  // routeMainComplexThrough directly — bypassing the app's UI-ownership
+  // narrowing, exactly like the Node integration harness always has).
   const uiOwned = new Set(UI_OWNED_COMPLEX_SCOPES);
-  checks.eq('UI-owned set size 8 (all scopes wired)', uiOwned.size, 8);
+  checks.eq('UI-owned set size 1 (only greyholm.placement still wired)', uiOwned.size, 1);
+  checks.ok('greyholm.placement UI-owned', uiOwned.has('greyholm.placement'));
   for (const scope of ALL_COMPLEX_AUTHORITY_SCOPES) {
-    checks.ok(`${scope} UI-owned`, uiOwned.has(scope));
+    if (scope === 'greyholm.placement') continue;
+    checks.ok(`${scope} NOT UI-owned (superseded)`, !uiOwned.has(scope));
   }
 
   // narrowToUiOwned only ever narrows, and never invents membership for a
   // scope outside its input.
-  checks.eq('narrow(all) == UI-owned size', narrowToUiOwned(ALL_COMPLEX_AUTHORITY_SCOPES).size, 8);
-  checks.eq('narrow(reveal only) size 1', narrowToUiOwned(['greyholm.reveal']).size, 1);
+  checks.eq('narrow(all) == UI-owned size', narrowToUiOwned(ALL_COMPLEX_AUTHORITY_SCOPES).size, 1);
+  checks.eq('narrow(reveal only) size 0 (superseded, not UI-owned)', narrowToUiOwned(['greyholm.reveal']).size, 0);
+  checks.eq('narrow(placement only) size 1', narrowToUiOwned(['greyholm.placement']).size, 1);
   checks.eq('narrow(unknown scope) empty', narrowToUiOwned(['not.a.real.scope']).size, 0);
 
-  // uiStatus is honest for every descriptor — all wired now.
+  // uiStatus is honest for every descriptor.
   const byScope = Object.fromEntries(allAggregateDescriptors().map((d) => [d.scope, d.uiStatus]));
+  checks.eq('greyholm.placement uiStatus wired', byScope['greyholm.placement'], 'wired');
   for (const scope of ALL_COMPLEX_AUTHORITY_SCOPES) {
-    checks.eq(`${scope} uiStatus wired`, byScope[scope], 'wired');
+    if (scope === 'greyholm.placement') continue;
+    checks.eq(`${scope} uiStatus superseded-by-authority-store`, byScope[scope], 'superseded-by-authority-store');
   }
 
-  // A router narrowed to UI-owned scopes DOES own every real scope, including
-  // the ones that were excluded before this completion pass.
+  // A router narrowed to UI-owned scopes DOES own the one real remaining scope.
   const repo = instrumentedStorage();
   const diag = instrumentedStorage();
   const router = new ComplexAuthorityRouter({
@@ -448,12 +480,20 @@ function groupOwnershipTruthfulness() {
   });
   const grey = greyholmHarness();
   const calls = { commit: 0, fallback: 0 };
-  const handled = routeMainComplexThrough(router, grey.mergedData, 'greyholm.partyLocation', grey.request('greyholm.partyLocation', { aggregate: 'partyLocation', locationStateId: 'loc-mine__arc-1-peace', clearMapPosition: true, clearRouteProgress: true }, calls));
-  checks.eq('greyholm.partyLocation now wired: handled by the UI router', handled, true);
-  checks.ok('greyholm.partyLocation durable commit wrote the repo', repo.writeCount() > 0);
-  checks.ok('greyholm.partyLocation durable commit wrote diagnostics', diag.writeCount() > 0);
-  checks.eq('greyholm.partyLocation: legacy committed exactly once', calls.commit, 1);
-  checks.eq('greyholm.partyLocation: no pre-commit fallback', calls.fallback, 0);
+  const handled = routeMainComplexThrough(router, grey.mergedData, 'greyholm.placement', grey.request('greyholm.placement', { aggregate: 'placement', op: 'move', placementId: 'plc-mayor', x: 0.5, y: 0.5 }, calls), () => grey.mergedData().placements);
+  checks.eq('greyholm.placement wired: handled by the UI router', handled, true);
+  checks.ok('greyholm.placement durable commit wrote the repo', repo.writeCount() > 0);
+  checks.ok('greyholm.placement durable commit wrote diagnostics', diag.writeCount() > 0);
+  checks.eq('greyholm.placement: legacy committed exactly once', calls.commit, 1);
+  checks.eq('greyholm.placement: no pre-commit fallback', calls.fallback, 0);
+
+  // A UI-narrowed router does NOT own a superseded scope any more (it falls
+  // through to the caller's unchanged legacy path, exactly as if the scope had
+  // never existed in the registry).
+  const g2 = greyholmHarness();
+  const c2 = { commit: 0, fallback: 0 };
+  const h2 = routeMainComplexThrough(router, g2.mergedData, 'greyholm.reveal', g2.request('greyholm.reveal', { aggregate: 'reveal', reveal: true, entityKind: 'locationState', legacyEntityId: 'loc-mine__arc-1-peace' }, c2));
+  checks.eq('superseded scope NOT handled by the UI-narrowed router', h2, false);
 
   // A genuinely unknown scope (not in the registry at all) is still never
   // routed — the narrowing/allowlist mechanism itself remains sound.
@@ -467,12 +507,17 @@ function groupOwnershipTruthfulness() {
   });
   checks.eq('unknown scope not allowlisted', router2.isAllowlisted('not.a.real.scope'), false);
 
-  // The same router DOES own a wired scope (greyholm.reveal) durably.
-  const g2 = greyholmHarness();
-  const c2 = { commit: 0, fallback: 0 };
-  const h2 = routeMainComplexThrough(router, g2.mergedData, 'greyholm.reveal', g2.request('greyholm.reveal', { aggregate: 'reveal', reveal: true, entityKind: 'locationState', legacyEntityId: 'loc-mine__arc-1-peace' }, c2));
-  checks.eq('wired scope handled by UI router', h2, true);
-  checks.eq('wired scope durable committed', router.getStatus(g2.campaignId).lastDecision, 'durable_committed');
+  // The engine remains capable for superseded scopes when a router is
+  // allowlisted with ALL scopes directly (not narrowed to UI-ownership) — this
+  // is exactly the pattern the Node harness (and formerly the app) used to
+  // prove durability; it is a deliberate, isolated engine-capability check, not
+  // app wiring.
+  const { router: fullRouter } = makeRouter();
+  const g3 = greyholmHarness();
+  const c3 = { commit: 0, fallback: 0 };
+  const h3 = routeMainComplexThrough(fullRouter, g3.mergedData, 'greyholm.reveal', g3.request('greyholm.reveal', { aggregate: 'reveal', reveal: true, entityKind: 'locationState', legacyEntityId: 'loc-mine__arc-1-peace' }, c3));
+  checks.eq('superseded scope still engine-capable via a fully-allowlisted router', h3, true);
+  checks.eq('engine-capable durable commit', fullRouter.getStatus(g3.campaignId).lastDecision, 'durable_committed');
 }
 
 // ===========================================================================

@@ -27,7 +27,14 @@ export type AggregateUiStatus =
   | 'excluded-coupled' // real UI action bundles multiple slots -> legacy-owned in the UI
   | 'excluded-id-coordination' // real UI action generates its own id -> legacy-owned in the UI
   | 'no-ui-action' // no normal UI control exists for this scope
-  | 'patch-merge-deferred'; // real UI action uses the overlay patch-merge -> not wired
+  | 'patch-merge-deferred' // real UI action uses the overlay patch-merge -> not wired
+  | 'superseded-by-authority-store'; // was wired in Stage 16.1; the real UI action has since been
+  // re-routed to a dedicated Block I authority store (durableAuthoritySink /
+  // commandAuthoritySink) instead. No live call site passes this scope to
+  // routeGreyComplex/routeUserComplex any more (verified by grep, Block L
+  // cleanup). Kept as an engine-capable, proven-in-harness row — NOT wired
+  // in the real app, so it is excluded from UI_OWNED_COMPLEX_SCOPES and the
+  // store never routes it.
 
 export interface AggregateOwnershipDescriptor {
   scope: ComplexAuthorityScope;
@@ -51,8 +58,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['reveal.entity', 'reveal.hide'],
     destructiveCommandKinds: ['reveal.hide'],
-    uiStatus: 'wired',
-    uiNote: 'MapWorkspace "Отметить открытым/Сбросить открытие" -> setRevealed/unsetRevealed; single-slot, durable.',
+    uiStatus: 'superseded-by-authority-store',
+    uiNote: 'Was wired (MapWorkspace "Отметить открытым/Сбросить открытие" -> setRevealed/unsetRevealed) in Stage 16.1; the real UI action has since been re-routed to the Block I durable reveal authority store — no live call site passes this scope to routeGreyComplex any more (verified Block L).',
   },
   {
     scope: 'greyholm.presentedCard',
@@ -61,8 +68,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['presentedCard.present', 'presentedCard.dismiss'],
     destructiveCommandKinds: ['presentedCard.dismiss'],
-    uiStatus: 'wired',
-    uiNote: 'MapWorkspace "Показать карточку игрокам" -> presentCard; single-slot, durable when card id resolves.',
+    uiStatus: 'superseded-by-authority-store',
+    uiNote: 'Was wired (MapWorkspace "Показать карточку игрокам" -> presentCard) in Stage 16.1; re-routed to a Block I durable authority store since — no live call site passes this scope to routeGreyComplex any more (verified Block L).',
   },
   {
     scope: 'greyholm.placement',
@@ -81,8 +88,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['partyLocation.move'],
     destructiveCommandKinds: [],
-    uiStatus: 'wired',
-    uiNote: 'setCurrentLocation/setPartyMapPosition -> partyLocation.move with clearMapPosition/clearLocation/clearRouteProgress flags, so the arrival/direct-move + route-progress clear commit as ONE atomic candidate matching SET_CURRENT_LOCATION/SET_PARTY_MAP_POSITION exactly (owned region extended to include durable.travel.partyRouteProgress).',
+    uiStatus: 'superseded-by-authority-store',
+    uiNote: 'Was wired (setCurrentLocation/setPartyMapPosition -> partyLocation.move) in Stage 16.1; re-routed to a Block I durable authority store since — no live call site passes this scope to routeGreyComplex any more (verified Block L).',
   },
   {
     scope: 'greyholm.routeProgress',
@@ -91,8 +98,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['routeProgress.advance', 'routeProgress.clear'],
     destructiveCommandKinds: ['routeProgress.clear'],
-    uiStatus: 'wired',
-    uiNote: 'setPartyRouteProgress -> routeProgress.advance/clear; advance sets clearMapPosition:true (matching SET_PARTY_ROUTE_PROGRESS exactly), owned region extended to include runtime.party.currentMapPosition.',
+    uiStatus: 'superseded-by-authority-store',
+    uiNote: 'Was wired (setPartyRouteProgress -> routeProgress.advance/clear) in Stage 16.1; re-routed to a Block I durable authority store since — no live call site passes this scope to routeGreyComplex any more (verified Block L).',
   },
   {
     scope: 'userCampaign.reveal',
@@ -101,8 +108,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['reveal.entity', 'reveal.hide'],
     destructiveCommandKinds: ['reveal.hide'],
-    uiStatus: 'wired',
-    uiNote: 'toggleReveal -> reveal.entity/hide; the executor cascades to linked placements (both directions) and the linked image (reveal direction only, matching the legacy asymmetry) as ONE atomic candidate (owned region extended to durable.placements + durable.entities).',
+    uiStatus: 'superseded-by-authority-store',
+    uiNote: 'Was wired (toggleReveal -> reveal.entity/hide) in Stage 16.1; re-routed to the Block I `revealAuthorityStore` durable store since — `routeUserComplex` is never called by any live app code path any more (verified Block L; the only real caller is the Stage 16.1 Node integration harness via routeUserComplexThrough directly, proving engine capability, not app wiring).',
   },
   {
     scope: 'userCampaign.presentedCard',
@@ -111,8 +118,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['presentedCard.present', 'presentedCard.dismiss'],
     destructiveCommandKinds: ['presentedCard.dismiss'],
-    uiStatus: 'wired',
-    uiNote: 'Centralized togglePresentedCard store action (replacing 3 scattered raw updateRuntime call sites) -> presentedCard.present/dismiss via routeUserComplex. The legacy commit also clears the separate `presentedBattle` field in the SAME one legacy write — presentedBattle is Stage 17 battle-authority scope (its own subsystem), not modeled in the universal presentation aggregate, analogous to Greyholm’s currentPartyRouteId legacy-only echo.',
+    uiStatus: 'superseded-by-authority-store',
+    uiNote: 'Was wired (togglePresentedCard -> presentedCard.present/dismiss via routeUserComplex) in Stage 16.1; re-routed to the Block I `presentedCardAuthorityStore` durable store since — `routeUserComplex` is never called by any live app code path any more (verified Block L).',
   },
   {
     scope: 'userCampaign.placement',
@@ -121,8 +128,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['placement.place', 'placement.move', 'placement.remove'],
     destructiveCommandKinds: ['placement.remove'],
-    uiStatus: 'wired',
-    uiNote: 'addPlacement -> place (id minted once via the shared mintPlacementId() authority, before either the universal command or the legacy write), updatePlacement(pure x/y) -> move, removePlacement -> remove; all durable.',
+    uiStatus: 'superseded-by-authority-store',
+    uiNote: 'Was wired (addPlacement/updatePlacement/removePlacement -> place/move/remove via routeUserComplex) in Stage 16.1; re-routed to the Block I `mapPlacementAuthorityStore` durable store since — `routeUserComplex` is never called by any live app code path any more (verified Block L).',
   },
 ];
 
