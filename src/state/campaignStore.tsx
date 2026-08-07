@@ -40,7 +40,7 @@ import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
 import { API_BASE_URL } from '../config';
 import { emitMainCommand } from './commandShadowSink';
 import { routeMainComplex, type ComplexActionDescriptor } from './complexAuthoritySink';
-import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, commitReveal, readReveal, type RevealSnapshot, commitPartyPosition, readPartyPosition, type PartyPositionSnapshot, createBrowserRepositoryStorage, campaignIdFromLegacy, commitCapabilities, type CapabilityTogglesSnapshot, commitArcs, type ArcSnapshotEntry } from '../domain';
+import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, commitReveal, readReveal, type RevealSnapshot, commitPartyPosition, readPartyPosition, type PartyPositionSnapshot, createBrowserRepositoryStorage, campaignIdFromLegacy, commitCapabilities, type CapabilityTogglesSnapshot, commitArcs, type ArcSnapshotEntry, commitCalendar, readCalendar, type CalendarSnapshot } from '../domain';
 
 // Decision 2 — the SAME universal campaign id EmbeddedBattleOverlay.tsx
 // already uses for its (now-superseded) shadow turn-advance path. Must be
@@ -1512,9 +1512,47 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       addEnemy: (enemy) => dispatch({ type: 'ADD_ENEMY', enemy }),
       setPlacementLayerVisible: (visible) => dispatch({ type: 'SET_PLACEMENT_LAYER_VISIBLE', visible }),
       getCalendar: (timelineId) => state.calendarsByTimelineId[timelineId] ?? DEFAULT_CALENDAR,
-      setCalendar: (timelineId, calendar) => dispatch({ type: 'SET_CALENDAR', timelineId, calendar }),
-      advanceTimePhase: (timelineId) => dispatch({ type: 'ADVANCE_TIME_PHASE', timelineId }),
-      advanceDay: (timelineId) => dispatch({ type: 'ADVANCE_DAY', timelineId }),
+      // Block I — universal calendar authority is the SOLE active authority:
+      // the candidate WHOLE calendar snapshot for this timelineId is durably
+      // committed first (expected-revision guard, read-after-write
+      // verified), and only the committed value is projected into the
+      // existing legacy dispatch (always as SET_CALENDAR, the one legacy
+      // case that replaces the timeline's calendar whole) as a compatibility
+      // write. No flag, no optional fallback path — mirrors the
+      // unconditional field/battle/presentedCard/reveal/party-position/arcs
+      // cutovers above.
+      setCalendar: (timelineId, calendar) => {
+        const candidate: CalendarSnapshot = { ...calendar };
+        const outcome = commitCalendar(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.calendar', timelineId, candidate);
+        if (!outcome.ok || !outcome.calendar) {
+          throw new Error(`setCalendar: universal calendar commit failed for ${timelineId}: ${outcome.error ?? 'unknown error'}`);
+        }
+        dispatch({ type: 'SET_CALENDAR', timelineId, calendar: outcome.calendar });
+      },
+      advanceTimePhase: (timelineId) => {
+        const seed: CalendarSnapshot = readCalendar(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.calendar', timelineId)
+          ?? state.calendarsByTimelineId[timelineId] ?? DEFAULT_CALENDAR;
+        const idx = TIME_OF_DAY_ORDER.indexOf(seed.currentTimeOfDay);
+        const isNewDay = idx === TIME_OF_DAY_ORDER.length - 1;
+        const candidate: CalendarSnapshot = isNewDay
+          ? { ...seed, currentDay: seed.currentDay + 1, currentTimeOfDay: TIME_OF_DAY_ORDER[0] }
+          : { ...seed, currentTimeOfDay: TIME_OF_DAY_ORDER[idx + 1] };
+        const outcome = commitCalendar(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.calendar', timelineId, candidate);
+        if (!outcome.ok || !outcome.calendar) {
+          throw new Error(`advanceTimePhase: universal calendar commit failed for ${timelineId}: ${outcome.error ?? 'unknown error'}`);
+        }
+        dispatch({ type: 'SET_CALENDAR', timelineId, calendar: outcome.calendar });
+      },
+      advanceDay: (timelineId) => {
+        const seed: CalendarSnapshot = readCalendar(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.calendar', timelineId)
+          ?? state.calendarsByTimelineId[timelineId] ?? DEFAULT_CALENDAR;
+        const candidate: CalendarSnapshot = { ...seed, currentDay: seed.currentDay + 1 };
+        const outcome = commitCalendar(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.calendar', timelineId, candidate);
+        if (!outcome.ok || !outcome.calendar) {
+          throw new Error(`advanceDay: universal calendar commit failed for ${timelineId}: ${outcome.error ?? 'unknown error'}`);
+        }
+        dispatch({ type: 'SET_CALENDAR', timelineId, calendar: outcome.calendar });
+      },
       addCampaignEvent: (event) => dispatch({ type: 'ADD_CAMPAIGN_EVENT', event }),
       updateCampaignEvent: (eventId, patch) => dispatch({ type: 'UPDATE_CAMPAIGN_EVENT', eventId, patch }),
       archiveCampaignEvent: (eventId) => dispatch({ type: 'ARCHIVE_CAMPAIGN_EVENT', eventId }),
