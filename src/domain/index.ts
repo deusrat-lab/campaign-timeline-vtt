@@ -46,4 +46,5 @@ export * from './routes/routeAuthorityStore';
 export * from './zones/zoneAuthorityStore';
 export * from './arcs/arcAuthorityStore';
 export * from './capabilities/capabilityAuthorityStore';
+export * from './registry/registryAuthorityStore';
 export * from './workspace/index';

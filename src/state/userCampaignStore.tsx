@@ -46,6 +46,8 @@ import {
   type ArcSnapshotEntry,
   commitCapabilities,
   type CapabilityTogglesSnapshot,
+  commitRegistry,
+  type RegistryEntry,
 } from '../domain';
 
 const UC_BACKUP_NS = 'campaign-timeline-vtt:uc-backup:v1';
@@ -100,6 +102,50 @@ function resolveUserFieldKind(entityType: string, field: string | null): FieldAu
 }
 
 const REGISTRY_KEY = 'dmCompanion.userCampaigns.registry.v1';
+
+// Registry authority storage handle -- see src/domain/registry/registryAuthorityStore.ts.
+// SSR-safe: throws only if actually called with no window, which never
+// happens outside a browser event handler (mirrors greyholmBattleStorage()
+// in campaignStore.tsx).
+function registryAuthorityStorage() {
+  return createBrowserRepositoryStorage(window.localStorage);
+}
+
+/**
+ * SOLE write authority for the User-Campaign registry array. Every mutation
+ * site below (create/delete/rename/touchRegistry/server-sync upsert) MUST
+ * compute its "next array" as before, then call this instead of
+ * `writeJson(REGISTRY_KEY, next)` directly. Commits the candidate through
+ * `commitRegistry` (candidate -> invariant check -> expected-revision-guarded
+ * commit -> read-after-write), then projects the durably-committed array
+ * back as the legacy compatibility write -- exactly the discipline every
+ * other Block I authority store follows. Falls back to writing the raw
+ * candidate directly only if the universal commit itself fails validation
+ * (defensive; should not happen for well-formed candidates produced by this
+ * file's own code).
+ */
+function commitRegistryAndPersist(next: UserCampaignRegistryEntry[]): UserCampaignRegistryEntry[] {
+  const candidate: RegistryEntry[] = next.map((e) => ({
+    campaignId: e.campaignId, title: e.title, type: e.type, baseMapId: e.baseMapId,
+    regionIds: e.regionIds, createdAt: e.createdAt, updatedAt: e.updatedAt, kind: 'userCampaign',
+  }));
+  const outcome = commitRegistry(registryAuthorityStorage(), candidate);
+  if (!outcome.ok || !outcome.entries) {
+    // Should not happen for candidates this file produces; fail safe by
+    // still writing the legacy key so the app never loses data, but surface
+    // the failure loudly for diagnosis.
+    // eslint-disable-next-line no-console
+    console.error('registry authority commit failed:', outcome.error);
+    writeJson(REGISTRY_KEY, next);
+    return next;
+  }
+  const projected: UserCampaignRegistryEntry[] = outcome.entries.map((e) => ({
+    campaignId: e.campaignId, title: e.title, type: e.type as UserCampaignRegistryEntry['type'],
+    baseMapId: e.baseMapId, regionIds: e.regionIds, createdAt: e.createdAt, updatedAt: e.updatedAt,
+  }));
+  writeJson(REGISTRY_KEY, projected);
+  return projected;
+}
 const dataKey = (id: string) => `dmCompanion.userCampaignData.${id}.v1`;
 const runtimeKey = (id: string) => `dmCompanion.userCampaignRuntime.${id}.v1`;
 
@@ -346,8 +392,7 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
   const fetchedRef = useRef<Set<string>>(new Set());
 
   const persistRegistry = useCallback((next: UserCampaignRegistryEntry[]) => {
-    setRegistry(next);
-    writeJson(REGISTRY_KEY, next);
+    setRegistry(commitRegistryAndPersist(next));
   }, []);
 
   /** Push the latest `{ data, runtime }` for a campaign to the server (DM only;
@@ -379,8 +424,7 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
         });
       }
       const next = [...map.values()];
-      writeJson(REGISTRY_KEY, next);
-      return next;
+      return commitRegistryAndPersist(next);
     });
   }, []);
 
@@ -393,7 +437,7 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     });
     const unsub = subscribeUc((m) => {
       if (m.deleted) {
-        setRegistry((prev) => { const n = prev.filter((r) => r.campaignId !== m.campaignId); writeJson(REGISTRY_KEY, n); return n; });
+        setRegistry((prev) => { const n = prev.filter((r) => r.campaignId !== m.campaignId); return commitRegistryAndPersist(n); });
         setDataCache((p) => { const n = { ...p }; delete n[m.campaignId]; return n; });
         setRuntimeCache((p) => { const n = { ...p }; delete n[m.campaignId]; return n; });
         try { localStorage.removeItem(dataKey(m.campaignId)); localStorage.removeItem(runtimeKey(m.campaignId)); } catch { /* noop */ }
@@ -440,8 +484,7 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
           if (prev.some((r) => r.campaignId === id)) return prev;
           const now = new Date().toISOString();
           const next = [...prev, { campaignId: id, title: upgradedData.title, type: upgradedData.type, baseMapId: upgradedData.baseMapId, regionIds: upgradedData.regionIds, createdAt: now, updatedAt: now }];
-          writeJson(REGISTRY_KEY, next);
-          return next;
+          return commitRegistryAndPersist(next);
         });
       });
     }
@@ -460,8 +503,7 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
   const touchRegistry = useCallback((id: string) => {
     setRegistry((prev) => {
       const next = prev.map((r) => (r.campaignId === id ? { ...r, updatedAt: new Date().toISOString() } : r));
-      writeJson(REGISTRY_KEY, next);
-      return next;
+      return commitRegistryAndPersist(next);
     });
   }, []);
 
@@ -552,8 +594,7 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
     renameCampaign: (id, title) => {
       setRegistry((prev) => {
         const next = prev.map((r) => (r.campaignId === id ? { ...r, title, updatedAt: new Date().toISOString() } : r));
-        writeJson(REGISTRY_KEY, next);
-        return next;
+        return commitRegistryAndPersist(next);
       });
       patchData(id, (p) => ({ ...p, title }));
     },
