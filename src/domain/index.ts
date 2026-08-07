@@ -48,4 +48,5 @@ export * from './arcs/arcAuthorityStore';
 export * from './capabilities/capabilityAuthorityStore';
 export * from './registry/registryAuthorityStore';
 export * from './registry/routeExistence';
+export * from './relations/relationAuthorityStore';
 export * from './workspace/index';

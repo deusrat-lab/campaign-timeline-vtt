@@ -49,6 +49,12 @@ import {
   commitRegistry,
   type RegistryEntry,
   lookupCampaign as lookupCampaignAuthority,
+  commitRelations,
+  readRelations,
+  scalarToIds,
+  idsToScalar,
+  type RelationFieldKind,
+  type RelationEntry,
 } from '../domain';
 
 const UC_BACKUP_NS = 'campaign-timeline-vtt:uc-backup:v1';
@@ -98,6 +104,31 @@ function resolveUserFieldKind(entityType: string, field: string | null): FieldAu
     location: {
       description: 'userCampaign.location.description',
     },
+  };
+  return table[entityType]?.[field] ?? null;
+}
+
+/**
+ * Block I — general relations authority (see
+ * `src/domain/relations/relationAuthorityStore.ts` for the full scope
+ * rationale). Maps a user-campaign entity kind + single patched field to its
+ * relation-authority kind and cardinality, for exactly the bounded field set
+ * `findUcBlockingRelations` (`CampaignEntityCard.tsx`) already checks for
+ * BLOCK_DELETE. Kept as a closed table so an unlisted field can never take
+ * universal relation authority.
+ */
+function resolveUserRelationKind(
+  entityType: string,
+  field: string | null,
+): { kind: RelationFieldKind; cardinality: 'single' | 'array' } | null {
+  if (!field) return null;
+  const table: Record<string, Record<string, { kind: RelationFieldKind; cardinality: 'single' | 'array' }>> = {
+    npc: { locationId: { kind: 'userCampaign.npc.locationId', cardinality: 'single' } },
+    quest: {
+      npcIds: { kind: 'userCampaign.quest.npcIds', cardinality: 'array' },
+      locationId: { kind: 'userCampaign.quest.locationId', cardinality: 'single' },
+    },
+    enemy: { locationIds: { kind: 'userCampaign.enemy.locationIds', cardinality: 'array' } },
   };
   return table[entityType]?.[field] ?? null;
 }
@@ -874,8 +905,44 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
       const singleKey = keys.length === 1 ? keys[0] : null;
       const singleVal = singleKey ? (patch as Record<string, unknown>)[singleKey] : undefined;
       const fieldKind = resolveUserFieldKind(entityType, singleKey);
+      const relationKind = resolveUserRelationKind(entityType, singleKey);
 
-      if (fieldKind && typeof singleVal === 'string') {
+      if (
+        relationKind &&
+        (relationKind.cardinality === 'single'
+          ? singleVal === undefined || typeof singleVal === 'string'
+          : Array.isArray(singleVal) && singleVal.every((v) => typeof v === 'string'))
+      ) {
+        // Block I — universal RELATION authority is the SOLE active
+        // authority for this bounded field set: the whole `{fromId, toIds}`
+        // collection for this relation field is durably committed first
+        // (isolated, campaign-scoped, expected-revision guard,
+        // read-after-write verified), and only the committed collection is
+        // projected into the existing legacy `patchData` as a
+        // compatibility write. No flag, no optional fallback — mirrors
+        // every other Block I authority cutover in this file.
+        const toIds = relationKind.cardinality === 'single' ? scalarToIds(singleVal as string | undefined) : (singleVal as string[]);
+        const campaignId = campaignIdFromLegacy('user', id);
+        const existing = readRelations(ucFieldStorage(), campaignId, relationKind.kind);
+        const nextEntries: RelationEntry[] = toIds.length > 0
+          ? [...existing.filter((e) => e.fromId !== entityId), { fromId: entityId, toIds }]
+          : existing.filter((e) => e.fromId !== entityId);
+        const outcome = commitRelations(ucFieldStorage(), campaignId, relationKind.kind, nextEntries);
+        if (!outcome.ok || !outcome.entries) {
+          throw new Error(`updateEntity: universal relation commit failed for ${relationKind.kind} on ${entityId}: ${outcome.error ?? 'unknown error'}`);
+        }
+        const committedEntry = outcome.entries.find((e) => e.fromId === entityId);
+        const committedValue: string | string[] | undefined = relationKind.cardinality === 'single'
+          ? idsToScalar(committedEntry?.toIds ?? [])
+          : (committedEntry?.toIds ?? []);
+        const listKey = ({ npc: 'npcs', quest: 'quests', enemy: 'enemies' } as const)[entityType as 'npc'];
+        patchData(id, (p) => ({
+          ...p,
+          [listKey]: ((p[listKey] as Array<{ id: string }> | undefined) ?? []).map((e) =>
+            e.id === entityId ? { ...e, [singleKey as string]: committedValue } : e,
+          ),
+        } as UserCampaignData));
+      } else if (fieldKind && typeof singleVal === 'string') {
         // Block I — universal FIELD authority is the SOLE active authority for
         // this field: the candidate value is durably committed first (isolated,
         // campaign-scoped, expected-revision guard, read-after-write verified),

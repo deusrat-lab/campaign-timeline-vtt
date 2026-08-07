@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-07T11:39:51.724Z",
+  "generatedAt": "2026-08-07T12:14:19.103Z",
   "scope": "Static, hash-pinned canonical sources only (same as PRODUCTION_REFERENCE_MANIFEST.json). Runtime/localStorage-only relations are marked NOT_STATICALLY_CHECKABLE, never silently assumed clean.",
   "campaigns": [
     {

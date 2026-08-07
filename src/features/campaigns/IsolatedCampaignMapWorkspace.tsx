@@ -8,10 +8,11 @@ import { useUserCampaigns } from '../../state/userCampaignStore';
 import { resolveCampaignRouteExistence } from '../../domain';
 import { USER_CAMPAIGN_TYPE_LABELS, type CampaignEntityType, type UserCampaignMode } from '../../types/userCampaign';
 import type { WorldRegion } from '../../types/worldAtlas';
-import { CampaignEntityCard } from './CampaignEntityCard';
+import { CampaignEntityCard, findUcBlockingRelations } from './CampaignEntityCard';
 import '../../shared/entity/sharedEntity.css';
 import { RichEntityDetail } from '../../shared/entity/RichEntityDetail';
 import { buildDetail, type LibraryKind } from '../../shared/entity/userCampaignEntityVM';
+import { runContentDeletePolicy } from '../../shared/entity/contentDeletePolicy';
 import { isEntityPlayerVisible, isPlacementPlayerVisible, playerSafeImageSrc } from './playerSafe';
 
 /** CampaignEntityType → shared library kind (for the neutral VM mapper). */
@@ -413,6 +414,25 @@ export function IsolatedCampaignMapWorkspace() {
     return 'Объект';
   };
 
+  // Block I — the shared BLOCK_DELETE / referential-integrity policy
+  // (src/shared/entity/contentDeletePolicy.ts, backed by the SAME
+  // findUcBlockingRelations() CampaignEntityCard.tsx and CampaignLibraryPage.tsx
+  // already use) was missing from this map workspace's own inline entity
+  // sidebar delete action, which called store.deleteEntity directly with no
+  // relation check at all -- a real referential-integrity gap found while
+  // wiring the general relations authority. Fixed by routing through the
+  // same policy every other UC delete entry point uses.
+  const entityKindLabel: Record<CampaignEntityType, string> = {
+    location: 'Локация', npc: 'NPC', quest: 'Квест', enemy: 'Враг', image: 'Картинка', party: 'Игрок', faction: 'Фракция', custom: 'Объект',
+  };
+  const deleteSelectedWithPolicy = (type: CampaignEntityType, id: string) => {
+    const relations = findUcBlockingRelations(data, type, id);
+    if (!runContentDeletePolicy(entityKindLabel[type] ?? type, entityLabel(type, id), relations)) return;
+    store.deleteEntity(campaignId, type, id);
+    setSelected(null);
+    setSelectedStack([]);
+  };
+
   const exitPlayerPreview = () => {
     const next = new URLSearchParams(searchParams);
     next.delete('as');
@@ -750,7 +770,7 @@ export function IsolatedCampaignMapWorkspace() {
                       presenting: isPresenting(selected.type, selected.id),
                       onToggleReveal: !isPlayer ? () => store.toggleReveal(campaignId, selected.id) : undefined,
                       revealed: revealed.has(selected.id),
-                      onDelete: !isPlayer ? () => { store.deleteEntity(campaignId, selected.type, selected.id); setSelected(null); setSelectedStack([]); } : undefined,
+                      onDelete: !isPlayer ? () => deleteSelectedWithPolicy(selected.type, selected.id) : undefined,
                     }}
                   />
                 ) : <p className="atlas-empty">Карточка не найдена.</p>}
