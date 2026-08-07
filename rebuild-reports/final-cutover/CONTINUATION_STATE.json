@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-07T22:10:00.000Z",
-  "currentHead": "c82e735",
+  "generatedAt": "2026-08-07T23:40:00.000Z",
+  "currentHead": "bcda90f",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -29,7 +29,7 @@
       "consoleErrors": "0 throughout every step (export click, preview, apply, delete)."
     },
     "gates": "npx tsc -b clean, npm run build (tsc -b + vite build) clean, all 42 verify:* scripts pass (39 pre-existing + verify:greyholm-universal-export new this session; verify:stage06/verify:stage07 briefly regressed mid-session from the transitive-JSON-import issue described above, fixed before the final gate run, confirmed clean in the final full run), zero regressions on any previously converged subsystem.",
-    "commit": "PENDING -- see git log after this session's commit lands.",
+    "commit": "bcda90f",
     "blockKVerdict": "BLOCK_K_IMPORT_EXPORT_ROUND_TRIPS_COMPLETE for the scope actually covered: Caldran (prior session, commit 9834ae3) + new-campaign (prior session) + Greyholm (this session, scope = metadata/locations/npcs/quests/enemies/images/factions/mapPlacements as described in scopeCovered above) all have genuine, live-UI-proven, same-serializer export/import round trips with 0 dangling references and 0 cross-campaign contamination. This is NOT full-schema-parity for Greyholm (see scopeDeferred) -- claiming BLOCK_K complete here means 'every campaign type now has a working, non-hidden-fallback universal export/import path proven end-to-end', not 'Greyholm's entire data model round-trips'. If a future session wants full parity, scopeDeferred above is the precise starting point."
   },
   "blockIUniversalRepositorySoleAuthorityVerdict": {
