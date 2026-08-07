@@ -401,7 +401,7 @@ so the prior passes' thorough browser evidence (cited throughout this file) stan
 | Import/export — Caldran | COMPLETE | full schema, same serializer, proven round trip |
 | Import/export — Greyholm | PARTIAL | scoped subset only (metadata/locations/npcs/quests/enemies/images/factions/mapPlacements) — battles/calendar/economy/routes/zones/arcs deferred |
 | Import/export — new campaign | COMPLETE | proven round trip |
-| Legacy write removal | PARTIAL | `greyholm.placement` (3 call sites) still on legacy path, no authority store yet; `commandShadowSink` diagnostic-only shadow replay still fires (by design, non-authoritative) |
+| Legacy write removal | COMPLETE | `greyholm.placement` (last remaining active legacy scope) converted to `greyholmPlacementAuthorityStore.ts` this pass — `verify:complex-authority-and-shadow-isolation` reports `wiredComplexScopes: []`, ACTIVE legacy authority = 0, machine-verified. `commandShadowSink` remains DIAGNOSTIC_ONLY, lazy-loaded, not statically reachable (unchanged). Live-browser click-through of the new placement authority was attempted but not completed this pass (map-canvas click target did not register in this session's tooling) — mechanism proven instead by static guard + Stage 16.1 Node harness engine-capability proof + structural identity with Caldran's already browser-proven `mapPlacementAuthorityStore`. |
 | Multi-tab | COMPLETE | re-confirmed prior pass, unchanged this pass |
 | Campaign identity preservation (Caldran) | PARTIAL/BLOCKED | 2 of 3 real campaigns are content-preserving recreations under NEW ids; original root ids (`camp-mshatb5f-mrttl` + 1 other) are genuinely, permanently lost per the incident investigation |
 
@@ -517,3 +517,49 @@ are the three concrete, named blockers standing between this state and a strict
 `UNIVERSAL_LOCAL_REBUILD_1_TO_1_COMPLETE` verdict. None of these are newly
 discovered — all were already flagged as open by the prior session; this pass closed
 Block I and Phase C (Caldran baseline + identity contract) but did not reach Block K.
+
+---
+
+## FINAL LOCAL COMPLETION — Part B: Block L closed
+
+**Block L is now COMPLETE.** `greyholm.placement` — the last scope in the whole
+project with a live call site into the Stage 16.1 default-off shadow sink
+(`routeGreyComplex`) — was converted to a dedicated, unconditional, always-on
+authority store (`greyholmPlacementAuthorityStore.ts`), mirroring Caldran's
+already-proven `mapPlacementAuthorityStore.ts`. `addPlacement`/`patchPlacement`
+(now covering ALL field patches, not just pure moves)/`deletePlacement` all commit
+through it first, unconditionally. The now-fully-dead `routeGreyComplex` function
+and `ADD_PLACEMENT` action were removed rather than left as dead code.
+
+**Machine-verified: ACTIVE legacy authority = 0.**
+`verify:complex-authority-and-shadow-isolation` now reports
+`wiredComplexScopes: []` and `realGreyComplexCallSiteScopes: []` — every one of the
+8 registry scopes across both stacks is `superseded-by-authority-store`, none
+`wired`. `commandShadowSink` remains `DIAGNOSTIC_ONLY`, lazy-loaded, not statically
+reachable from `src/main.tsx` (re-confirmed, unchanged).
+
+**Gates:** `npx tsc -b` clean, `npm run build` clean, all 44 `npm run verify:*`
+scripts PASS (42 prior + 1 new — `verify:no-legacy-greyholm-placement-write`; the
+Stage 16.1 Node integration harness and the complex-authority guard were updated
+in place to reflect the new all-superseded reality, not counted as new scripts).
+
+**Not completed this pass:** a live-browser click-through of the new placement
+authority. The `Разместить на карте` → click-on-map-canvas flow was attempted
+repeatedly; the map-canvas click target did not register the placement in this
+session's Browser-pane tooling (confirmed via `getBoundingClientRect()` that click
+coordinates were within the correct element's bounds; a direct synthetic
+`MouseEvent` dispatch on the SVG also did not trigger the handler). Zero console
+errors were observed at any point. The mechanism is proven instead by the static
+guard, the Stage 16.1 Node harness's engine-capability proof (exercising the exact
+commit path through the real `ComplexAuthorityRouter`), and structural identity
+with Caldran's `mapPlacementAuthorityStore` (which WAS live-browser-proven in a
+prior session for the mechanically identical commit-then-project discipline). See
+`CONTINUATION_STATE.json`'s `blockLPlacementCompletionSession.notBrowserVerified`
+for full detail.
+
+**Verdict: `UNIVERSAL_LOCAL_REBUILD_INCOMPLETE`.** Block I and Block L are now both
+genuinely complete. Remaining concrete blockers: Block K's full Greyholm export
+schema (arcs/routes/calendar/economy/zones/battles still not in
+`materializeGreyholmAsUserCampaign`), and Block M/N's re-run against this session's
+updated state (relations 9/9, canonical Caldran baseline, root-identity contract,
+zero active legacy authority) — not yet re-executed.

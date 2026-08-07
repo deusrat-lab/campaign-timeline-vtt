@@ -39,8 +39,7 @@ import { createHttpOverlayAdapter, createLocalStorageOverlayAdapter, readLegacyO
 import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
 import { API_BASE_URL } from '../config';
 import { emitMainCommand } from './commandShadowSink';
-import { routeMainComplex, type ComplexActionDescriptor } from './complexAuthoritySink';
-import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, commitReveal, readReveal, type RevealSnapshot, commitPartyPosition, readPartyPosition, type PartyPositionSnapshot, createBrowserRepositoryStorage, campaignIdFromLegacy, commitCapabilities, type CapabilityTogglesSnapshot, commitArcs, type ArcSnapshotEntry, commitCalendar, readCalendar, type CalendarSnapshot, commitServicePatch, type ServiceAuthorityKind, commitRelations, readRelations, scalarToIds, idsToScalar, type RelationFieldKind, type RelationEntry } from '../domain';
+import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, commitReveal, readReveal, type RevealSnapshot, commitPartyPosition, readPartyPosition, type PartyPositionSnapshot, createBrowserRepositoryStorage, campaignIdFromLegacy, commitCapabilities, type CapabilityTogglesSnapshot, commitArcs, type ArcSnapshotEntry, commitCalendar, readCalendar, type CalendarSnapshot, commitServicePatch, type ServiceAuthorityKind, commitRelations, readRelations, scalarToIds, idsToScalar, type RelationFieldKind, type RelationEntry, commitGreyholmPlacements, type GreyholmPlacementSnapshotEntry } from '../domain';
 
 // Decision 2 — the SAME universal campaign id EmbeddedBattleOverlay.tsx
 // already uses for its (now-superseded) shadow turn-advance path. Must be
@@ -409,13 +408,13 @@ type Action =
   | { type: 'PATCH_ENTITY'; kind: EntityKind; id: string; patch: Patch<unknown> }
   | { type: 'RESET_PATCH'; kind: EntityKind; id: string }
   | { type: 'COMMIT_TIMELINES'; newTimelines: Timeline[]; timelinePatches: Record<string, Patch<Timeline>> }
+  | { type: 'COMMIT_PLACEMENTS'; placements: MapObjectPlacement[] }
   | { type: 'ADD_WORLD_MAP'; map: WorldMap }
   | { type: 'ADD_WORLD_MAP_STATE'; state: WorldMapState }
   | { type: 'ADD_LOCATION_STATE'; state: LocationState }
   | { type: 'ADD_HOTSPOT'; hotspot: MapHotspot }
   | { type: 'ADD_ROUTE'; route: MapRoute }
   | { type: 'ADD_TRAVEL_EVENT'; event: TravelEvent }
-  | { type: 'ADD_PLACEMENT'; placement: MapObjectPlacement }
   | { type: 'ADD_NPC'; npc: Npc }
   | { type: 'ADD_IMAGE'; image: DmImageItem }
   | { type: 'ADD_ENEMY'; enemy: DmCustomEnemy }
@@ -462,6 +461,15 @@ const TIME_OF_DAY_ORDER: TimeOfDay[] = ['morning', 'noon', 'evening', 'night'];
  * already flattens for `userCampaignStore.tsx`. */
 function materializeTimelines(state: CampaignOverlay): Timeline[] {
   return applyOverlayToList(TIMELINES, state.timelinePatches, state.newTimelines);
+}
+
+/** Block L — materializes Greyholm's full map-object placement collection.
+ * Base is always `[]` (placements are 100% DM-created, no seed data --
+ * see loadCampaignData.ts's `placements: []`), so this reduces to
+ * `applyOverlayToList([], state.placementPatches, state.newPlacements)`,
+ * exactly the shape `commitGreyholmPlacements` expects. */
+function materializePlacements(state: CampaignOverlay): MapObjectPlacement[] {
+  return applyOverlayToList([], state.placementPatches, state.newPlacements);
 }
 
 /** Block I — inverse of `materializeTimelines`: splits a durably-committed
@@ -704,6 +712,18 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
       // deterministic compatibility write. There is no independent legacy
       // direct-mutation reducer case anymore.
       return { ...state, newTimelines: action.newTimelines, timelinePatches: action.timelinePatches };
+    case 'COMMIT_PLACEMENTS':
+      // Block L — universal PLACEMENT authority (greyholmPlacementAuthorityStore.ts)
+      // is the SOLE active authority for Greyholm's map-object placement
+      // collection: addPlacement/patchPlacement(move)/deletePlacement always
+      // commit the whole materialized collection first, then this case
+      // projects the durably-committed result back as `newPlacements`, with
+      // `placementPatches` reset to empty -- valid because the base seed
+      // placements array is always `[]` (placements are 100% DM-created), so
+      // `applyOverlayToList([], {}, action.placements)` reconstructs exactly
+      // the committed collection. There is no independent legacy
+      // direct-mutation reducer case anymore.
+      return { ...state, newPlacements: action.placements, placementPatches: {} };
     case 'ADD_WORLD_MAP':
       return { ...state, newWorldMaps: [...state.newWorldMaps, action.map] };
     case 'ADD_WORLD_MAP_STATE':
@@ -716,8 +736,6 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
       return { ...state, newRoutes: [...state.newRoutes, action.route] };
     case 'ADD_TRAVEL_EVENT':
       return { ...state, newTravelEvents: [...state.newTravelEvents, action.event] };
-    case 'ADD_PLACEMENT':
-      return { ...state, newPlacements: [...state.newPlacements, action.placement] };
     case 'ADD_NPC':
       return { ...state, newNpcs: [...state.newNpcs, action.npc] };
     case 'ADD_IMAGE':
@@ -1217,29 +1235,18 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Stage 16.1 — route an allowlisted aggregate transition through the (default
-    // off) universal complex-authority sink FIRST. When Stage 16 owns the scope
-    // it durably commits the universal aggregate command and runs this exact
-    // legacy dispatch once as the compatibility projection; otherwise (flag off,
-    // scope not owned, or the legacy effect does not match the single aggregate
-    // command) `routeMainComplex` returns false and we dispatch normally — exactly
-    // the pre-Stage-16 behaviour. Only used for single-slot clean actions.
-    const routeGreyComplex = (scope: string, descriptor: ComplexActionDescriptor, action: Action): boolean => {
-      const preOverlay = state;
-      const handled = routeMainComplex({
-        complexScope: scope,
-        descriptor,
-        preOverlay,
-        predict: () => reducer(preOverlay, action),
-        commit: () => {
-          dispatch(action);
-          return reducer(preOverlay, action);
-        },
-        fallback: () => dispatch(action),
-      });
-      if (!handled) dispatch(action);
-      return handled;
-    };
+    // Block L — the last active-runtime caller of the OPTIONAL, default-off
+    // Stage 16.1 `routeGreyComplex`/`routeMainComplex` shadow sink was
+    // `greyholm.placement` (addPlacement/patchPlacement/deletePlacement) —
+    // converted above to the unconditional `greyholmPlacementAuthorityStore.ts`
+    // authority, the same discipline every other Block I/Decision-2 cutover
+    // in this file uses. No scope in this file routes through
+    // `routeMainComplex`/`ComplexActionDescriptor` anymore, so the helper and
+    // its import were removed rather than left as dead code (the
+    // `complexAuthoritySink.ts`/`ComplexAuthorityProvider.tsx` module itself
+    // is untouched — it still exists as a default-off, never-imported-by-
+    // active-runtime mechanism per Block L's `commandShadowSink`
+    // classification, see verify:complex-authority-and-shadow-isolation).
 
     // Block I — universal party-position authority seed. Reads the durably
     // committed whole snapshot if one exists; otherwise falls back to the
@@ -1397,15 +1404,29 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       patchRoute: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'route', id, patch: patch as Patch<unknown> }),
       patchTravelEvent: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'travelEvent', id, patch: patch as Patch<unknown> }),
       patchPlacement: (id, patch) => {
-        const action: Action = { type: 'PATCH_ENTITY', kind: 'placement', id, patch: patch as Patch<unknown> };
-        const keys = patch && patch !== DELETED ? Object.keys(patch as Record<string, unknown>) : [];
-        const isPureMove = keys.length === 1 && keys[0] === 'position';
-        if (isPureMove) {
-          const position = (patch as { position: { x: number; y: number } }).position;
-          routeGreyComplex('greyholm.placement', { aggregate: 'placement', op: 'move', placementId: id, x: position.x, y: position.y }, action);
-        } else {
-          dispatch(action);
+        // Block L — universal PLACEMENT authority is the SOLE active
+        // authority for every placement patch (move AND any other field
+        // edit), not just the pure-move case the old flag-gated
+        // routeGreyComplex shadow covered: the candidate whole materialized
+        // collection (with this one entry patched) is durably committed
+        // first, then the committed collection is projected back via
+        // COMMIT_PLACEMENTS. No flag, no optional fallback — mirrors every
+        // other Block I/Decision-2 cutover in this file. DELETED is handled
+        // by `deletePlacement` below, never reaches here from the UI, but is
+        // passed through unconditionally as a defensive no-op-safe fallback
+        // rather than forced through the placement-patch shape.
+        if (patch === DELETED) { dispatch({ type: 'PATCH_ENTITY', kind: 'placement', id, patch: DELETED }); return; }
+        const candidate = materializePlacements(state).map((p) => (p.id === id ? { ...p, ...(patch as object) } : p));
+        const outcome = commitGreyholmPlacements(
+          greyholmBattleStorage(),
+          GREYHOLM_UNIVERSAL_CAMPAIGN_ID,
+          'greyholm.placements',
+          candidate as unknown as GreyholmPlacementSnapshotEntry[],
+        );
+        if (!outcome.ok || !outcome.placements) {
+          throw new Error(`patchPlacement: universal placement commit failed for ${id}: ${outcome.error ?? 'unknown error'}`);
         }
+        dispatch({ type: 'COMMIT_PLACEMENTS', placements: outcome.placements as unknown as MapObjectPlacement[] });
       },
       patchNpc: (id, patch) => {
         const action: Action = { type: 'PATCH_ENTITY', kind: 'npc', id, patch: patch as Patch<unknown> };
@@ -1528,8 +1549,20 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       deleteHotspot: (id) => dispatch({ type: 'PATCH_ENTITY', kind: 'hotspot', id, patch: DELETED }),
       deleteRoute: (id) => dispatch({ type: 'PATCH_ENTITY', kind: 'route', id, patch: DELETED }),
       deletePlacement: (id) => {
-        const action: Action = { type: 'PATCH_ENTITY', kind: 'placement', id, patch: DELETED };
-        routeGreyComplex('greyholm.placement', { aggregate: 'placement', op: 'remove', placementId: id }, action);
+        // Block L — universal PLACEMENT authority (same discipline as
+        // patchPlacement above): candidate is the materialized collection
+        // with this entry removed, committed first, then projected back.
+        const candidate = materializePlacements(state).filter((p) => p.id !== id);
+        const outcome = commitGreyholmPlacements(
+          greyholmBattleStorage(),
+          GREYHOLM_UNIVERSAL_CAMPAIGN_ID,
+          'greyholm.placements',
+          candidate as unknown as GreyholmPlacementSnapshotEntry[],
+        );
+        if (!outcome.ok || !outcome.placements) {
+          throw new Error(`deletePlacement: universal placement commit failed for ${id}: ${outcome.error ?? 'unknown error'}`);
+        }
+        dispatch({ type: 'COMMIT_PLACEMENTS', placements: outcome.placements as unknown as MapObjectPlacement[] });
       },
       addTimeline: (timeline) => {
         // Block I — universal ARCS authority is the SOLE active authority
@@ -1579,23 +1612,21 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       addRoute: (route) => dispatch({ type: 'ADD_ROUTE', route }),
       addTravelEvent: (event) => dispatch({ type: 'ADD_TRAVEL_EVENT', event }),
       addPlacement: (placement) => {
-        const action: Action = { type: 'ADD_PLACEMENT', placement };
-        routeGreyComplex(
-          'greyholm.placement',
-          {
-            aggregate: 'placement',
-            op: 'place',
-            placementId: placement.id,
-            mapRawId: placement.mapId,
-            entityKind: placement.entityKind,
-            entityId: placement.entityId,
-            x: placement.position.x,
-            y: placement.position.y,
-            title: placement.title,
-            visibleToPlayers: placement.visibleInPlayerView,
-          },
-          action,
+        // Block L — universal PLACEMENT authority (same discipline as
+        // patchPlacement/deletePlacement above): candidate is the
+        // materialized collection with this new entry appended, committed
+        // first, then projected back.
+        const candidate = [...materializePlacements(state), placement];
+        const outcome = commitGreyholmPlacements(
+          greyholmBattleStorage(),
+          GREYHOLM_UNIVERSAL_CAMPAIGN_ID,
+          'greyholm.placements',
+          candidate as unknown as GreyholmPlacementSnapshotEntry[],
         );
+        if (!outcome.ok || !outcome.placements) {
+          throw new Error(`addPlacement: universal placement commit failed for ${placement.id}: ${outcome.error ?? 'unknown error'}`);
+        }
+        dispatch({ type: 'COMMIT_PLACEMENTS', placements: outcome.placements as unknown as MapObjectPlacement[] });
       },
       addNpc: (npc) => dispatch({ type: 'ADD_NPC', npc }),
       addEnemy: (enemy) => dispatch({ type: 'ADD_ENEMY', enemy }),

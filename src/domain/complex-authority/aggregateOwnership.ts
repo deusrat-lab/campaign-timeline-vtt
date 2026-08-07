@@ -78,8 +78,8 @@ const DESCRIPTORS: readonly AggregateOwnershipDescriptor[] = [
     ownership: 'universal-owned',
     commandKinds: ['placement.place', 'placement.move', 'placement.remove'],
     destructiveCommandKinds: ['placement.remove'],
-    uiStatus: 'wired',
-    uiNote: 'addPlacement/patchPlacement(pure position)/deletePlacement -> place/move/remove via routeGreyComplex, using the shared mintPlacementId() authority; single-slot, durable.',
+    uiStatus: 'superseded-by-authority-store',
+    uiNote: 'Was wired (addPlacement/patchPlacement(pure position)/deletePlacement -> place/move/remove via routeGreyComplex) through Stage 16.1/Block L; re-routed to the Block L `greyholmPlacementAuthorityStore` durable, always-on, unconditional whole-collection authority since — this was the LAST scope with a live routeGreyComplex call site (all others were already superseded); no live call site passes any scope to routeGreyComplex any more (verified Block L — the function itself was removed from campaignStore.tsx).',
   },
   {
     scope: 'greyholm.partyLocation',

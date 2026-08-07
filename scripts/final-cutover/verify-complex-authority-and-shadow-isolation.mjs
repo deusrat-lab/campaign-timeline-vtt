@@ -34,7 +34,13 @@ for (const block of descriptorBlocks) {
   if (statusMatch[1] === 'wired') wiredScopes.push(scopeMatch[1]);
 }
 
-const EXPECTED_WIRED = ['greyholm.placement'];
+// Block L (final completion pass): greyholm.placement -- the LAST scope with
+// a live routeGreyComplex call site -- was converted to the unconditional
+// greyholmPlacementAuthorityStore.ts authority. routeGreyComplex itself was
+// removed from campaignStore.tsx (it had zero remaining callers). So the set
+// of scopes a real UI action routes through the Stage 16.1 shadow sink is now
+// EMPTY -- this guard's Part B below (real call-site grep) enforces that.
+const EXPECTED_WIRED = [];
 if (JSON.stringify(wiredScopes.sort()) !== JSON.stringify([...EXPECTED_WIRED].sort())) {
   failed.push(
     `aggregateOwnership.ts uiStatus:'wired' scopes changed unexpectedly. Expected exactly ${JSON.stringify(EXPECTED_WIRED)}, found ${JSON.stringify(wiredScopes)}. ` +
@@ -67,6 +73,7 @@ for (const f of srcFiles) {
 // files themselves (they document the mechanism, not a real call site).
 const DOC_ONLY_FILES = new Set([
   'src/domain/placements/mapPlacementAuthorityStore.ts',
+  'src/domain/placements/greyholmPlacementAuthorityStore.ts',
   'src/domain/visibility/revealAuthorityStore.ts',
   'src/domain/visibility/presentedCardAuthorityStore.ts',
   'src/domain/party/partyPositionAuthorityStore.ts',

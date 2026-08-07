@@ -42,6 +42,7 @@ export * from './party/partyPositionAuthorityStore';
 export * from './calendar/calendarAuthorityStore';
 export * from './services/serviceAuthorityStore';
 export * from './placements/mapPlacementAuthorityStore';
+export * from './placements/greyholmPlacementAuthorityStore';
 export * from './routes/routeAuthorityStore';
 export * from './zones/zoneAuthorityStore';
 export * from './arcs/arcAuthorityStore';
