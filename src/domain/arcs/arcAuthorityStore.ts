@@ -32,11 +32,17 @@
  * cutover. Only the `arcs` array itself (the actual timeline/arc records)
  * is converted here.
  *
- * Caldran-only (`userCampaignStore.tsx` / `ArcSwitcher`-driven UI): Greyholm
- * has a fixed, hardcoded `TIMELINES` constant with a single boolean toggle
- * (`SET_ARC2_REVEALED` in `campaignStore.tsx`) — not a CRUD collection at
- * all — so there is no equivalent Greyholm authority to convert, the same
+ * Originally scoped Caldran-only: an earlier pass believed Greyholm's
+ * `TIMELINES` was a fixed, hardcoded constant with only a single boolean
+ * toggle (`SET_ARC2_REVEALED`) and no CRUD collection at all, the same
  * asymmetry precedent as `routeAuthorityStore.ts` / `zoneAuthorityStore.ts`.
+ * That was wrong: Greyholm's `campaignStore.tsx` has always had a real
+ * `addTimeline`/`patchTimeline`/`deleteTimeline` CRUD collection (seed
+ * `TIMELINES` + `newTimelines`/`timelinePatches` overlay, NavBar-driven
+ * create/rename/reorder/archive/restore/delete), so it is now converted
+ * too, under the distinct `'greyholm.arcs'` kind (namespaced apart from
+ * `'userCampaign.arcs'` — same storage, same invariant, different campaign
+ * scope, same as every other Decision-2-style shared-module cutover).
  *
  * Plain, always-on module — no feature flag, no diagnostics namespace, no
  * recovery queue, no React provider — imported and called directly and
@@ -51,7 +57,7 @@ import type { RepositoryStorage } from '../repository/shadowRepository';
 
 export const UNIVERSAL_ARCS_NAMESPACE = 'campaign-timeline-vtt:universal-arcs:v1';
 
-export type ArcAuthorityKind = 'userCampaign.arcs';
+export type ArcAuthorityKind = 'userCampaign.arcs' | 'greyholm.arcs';
 
 /** Plain mirror of `Timeline` (this module must not depend on app-level
  * types). */

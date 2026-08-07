@@ -32,7 +32,7 @@ import { TIMELINES } from '../data/loadCampaignData';
 import { ARC2_FACTION_ZONES_BY_ID, LEGACY_ARC2_SEEDED_FACTION_ZONE_IDS } from '../data/arc2FactionZones';
 import projectOverlaySnapshot from '../data/campaignOverlaySnapshot.json';
 import type { DmTavern, DmShop, DmImageItem, DmLocation, DmQuest, DmCustomEnemy, DmPlayer, DmEconomyReferenceItem } from '../types/dmCompanion';
-import { DELETED, EMPTY_OVERLAY, DEFAULT_CALENDAR } from './overlay';
+import { DELETED, EMPTY_OVERLAY, DEFAULT_CALENDAR, applyOverlayToList } from './overlay';
 import type { CampaignOverlay, Patch, PresentedCard } from './overlay';
 import type { UniversalCapabilityKey } from '../domain/campaign/capabilities';
 import { createHttpOverlayAdapter, createLocalStorageOverlayAdapter, readLegacyOverlayRaw } from './persistence/overlayStorage';
@@ -40,7 +40,7 @@ import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
 import { API_BASE_URL } from '../config';
 import { emitMainCommand } from './commandShadowSink';
 import { routeMainComplex, type ComplexActionDescriptor } from './complexAuthoritySink';
-import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, commitReveal, readReveal, type RevealSnapshot, commitPartyPosition, readPartyPosition, type PartyPositionSnapshot, createBrowserRepositoryStorage, campaignIdFromLegacy, commitCapabilities, type CapabilityTogglesSnapshot } from '../domain';
+import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, commitReveal, readReveal, type RevealSnapshot, commitPartyPosition, readPartyPosition, type PartyPositionSnapshot, createBrowserRepositoryStorage, campaignIdFromLegacy, commitCapabilities, type CapabilityTogglesSnapshot, commitArcs, type ArcSnapshotEntry } from '../domain';
 
 // Decision 2 — the SAME universal campaign id EmbeddedBattleOverlay.tsx
 // already uses for its (now-superseded) shadow turn-advance path. Must be
@@ -351,8 +351,7 @@ type Action =
   | { type: 'SET_ARC2_REVEALED'; revealed: boolean }
   | { type: 'PATCH_ENTITY'; kind: EntityKind; id: string; patch: Patch<unknown> }
   | { type: 'RESET_PATCH'; kind: EntityKind; id: string }
-  | { type: 'ADD_TIMELINE'; timeline: Timeline }
-  | { type: 'DELETE_TIMELINE'; timelineId: string }
+  | { type: 'COMMIT_TIMELINES'; newTimelines: Timeline[]; timelinePatches: Record<string, Patch<Timeline>> }
   | { type: 'ADD_WORLD_MAP'; map: WorldMap }
   | { type: 'ADD_WORLD_MAP_STATE'; state: WorldMapState }
   | { type: 'ADD_LOCATION_STATE'; state: LocationState }
@@ -407,6 +406,45 @@ const TIME_OF_DAY_ORDER: TimeOfDay[] = ['morning', 'noon', 'evening', 'night'];
 
 function getCalendarOrDefault(state: CampaignOverlay, timelineId: string): CampaignCalendar {
   return state.calendarsByTimelineId[timelineId] ?? DEFAULT_CALENDAR;
+}
+
+/** Block I — materializes Greyholm's full timeline/arc collection (seed
+ * `TIMELINES` + overlay `newTimelines`/`timelinePatches`) into the flat
+ * array `commitArcs` expects, exactly the shape Caldran's `resolveArcs`
+ * already flattens for `userCampaignStore.tsx`. */
+function materializeTimelines(state: CampaignOverlay): Timeline[] {
+  return applyOverlayToList(TIMELINES, state.timelinePatches, state.newTimelines);
+}
+
+/** Block I — inverse of `materializeTimelines`: splits a durably-committed
+ * whole arcs collection back into this store's `newTimelines`/
+ * `timelinePatches` overlay shape for the `COMMIT_TIMELINES` compatibility
+ * write. Any id not present in the seed `TIMELINES` constant is a
+ * DM-created arc (goes to `newTimelines` verbatim); any seed id present in
+ * the committed collection gets a diff patch against its seed shape (only
+ * the fields that actually changed, so unrelated legacy patch shapes never
+ * regress); a seed id absent from the committed collection (should never
+ * happen -- `checkArcsInvariant` and the safe-delete guard below both
+ * forbid removing a seed arc) is marked DELETED defensively rather than
+ * silently dropped. */
+function splitTimelinesForOverlay(committed: Timeline[]): { newTimelines: Timeline[]; timelinePatches: Record<string, Patch<Timeline>> } {
+  const seedIds = new Set(TIMELINES.map((t) => t.id));
+  const committedById = new Map(committed.map((t) => [t.id, t]));
+  const newTimelines = committed.filter((t) => !seedIds.has(t.id));
+  const timelinePatches: Record<string, Patch<Timeline>> = {};
+  for (const seed of TIMELINES) {
+    const current = committedById.get(seed.id);
+    if (!current) {
+      timelinePatches[seed.id] = DELETED;
+      continue;
+    }
+    const diff: Partial<Timeline> = {};
+    (Object.keys(current) as Array<keyof Timeline>).forEach((k) => {
+      if (current[k] !== seed[k]) (diff as Record<string, unknown>)[k] = current[k];
+    });
+    if (Object.keys(diff).length > 0) timelinePatches[seed.id] = diff;
+  }
+  return { newTimelines, timelinePatches };
 }
 
 function patchesKey(kind: EntityKind): keyof CampaignOverlay {
@@ -608,26 +646,16 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
       delete next[action.id];
       return { ...state, [key]: next };
     }
-    case 'ADD_TIMELINE':
-      return { ...state, newTimelines: [...state.newTimelines, action.timeline] };
-    case 'DELETE_TIMELINE': {
-      // Block E "safe delete": only a DM-created arc (one that exists in
-      // newTimelines, never one of the two canonical seed arcs arc-1/arc-2)
-      // may ever be deleted, and only while nothing on it references the
-      // timeline (no locationState/hotspot/worldMapState was ever placed on
-      // it) -- deleting a seed arc or a referenced arc would silently orphan
-      // real content, so both are rejected as no-ops rather than partially
-      // deleting.
-      const isUserCreated = state.newTimelines.some((t) => t.id === action.timelineId);
-      if (!isUserCreated) return state;
-      const referenced =
-        state.newLocationStates.some((ls) => ls.timelineId === action.timelineId) ||
-        Object.values(state.locationStatePatches).some((p) => p !== DELETED && p.timelineId === action.timelineId) ||
-        state.newHotspots.some((h) => h.timelineId === action.timelineId) ||
-        state.newWorldMapStates.some((s) => s.timelineId === action.timelineId);
-      if (referenced) return state;
-      return { ...state, newTimelines: state.newTimelines.filter((t) => t.id !== action.timelineId) };
-    }
+    case 'COMMIT_TIMELINES':
+      // Block I — universal ARCS authority is the SOLE active authority for
+      // Greyholm's timeline/arc collection (mirrors Caldran's addArc/
+      // patchArc/deleteArc cutover, arcAuthorityStore.ts): the action creators
+      // below always commit the whole materialized collection through
+      // `commitArcs` first, then split the durably-committed result back into
+      // this state's `newTimelines`/`timelinePatches` overlay shape as a
+      // deterministic compatibility write. There is no independent legacy
+      // direct-mutation reducer case anymore.
+      return { ...state, newTimelines: action.newTimelines, timelinePatches: action.timelinePatches };
     case 'ADD_WORLD_MAP':
       return { ...state, newWorldMaps: [...state.newWorldMaps, action.map] };
     case 'ADD_WORLD_MAP_STATE':
@@ -1316,7 +1344,32 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_CAPABILITIES_MAP', capabilities: outcome.toggles });
       },
       setArc2Revealed: (revealed) => dispatch({ type: 'SET_ARC2_REVEALED', revealed }),
-      patchTimeline: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'timeline', id, patch: patch as Patch<unknown> }),
+      patchTimeline: (id, patch) => {
+        // Block I — same universal ARCS authority as addTimeline/
+        // deleteTimeline above (rename/reorder/archive/restore/reveal all
+        // flow through this one generic entry point in the legacy UI, so
+        // all of them are routed through commitArcs for consistency, the
+        // same "wrap every CRUD op" scope Caldran's addArc/patchArc/
+        // deleteArc cutover used).
+        if (patch === DELETED) {
+          // Never expected from the UI (deleteTimeline is the dedicated
+          // path) but kept safe: treat as a delete through the same
+          // universal commit rather than silently no-op-ing.
+          const candidate: ArcSnapshotEntry[] = materializeTimelines(state).filter((t) => t.id !== id);
+          const outcome = commitArcs(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.arcs', candidate);
+          if (!outcome.ok || !outcome.arcs) {
+            throw new Error(`patchTimeline: universal arcs commit failed for ${id}: ${outcome.error ?? 'unknown error'}`);
+          }
+          dispatch({ type: 'COMMIT_TIMELINES', ...splitTimelinesForOverlay(outcome.arcs as Timeline[]) });
+          return;
+        }
+        const candidate: ArcSnapshotEntry[] = materializeTimelines(state).map((t) => (t.id === id ? { ...t, ...patch } : t));
+        const outcome = commitArcs(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.arcs', candidate);
+        if (!outcome.ok || !outcome.arcs) {
+          throw new Error(`patchTimeline: universal arcs commit failed for ${id}: ${outcome.error ?? 'unknown error'}`);
+        }
+        dispatch({ type: 'COMMIT_TIMELINES', ...splitTimelinesForOverlay(outcome.arcs as Timeline[]) });
+      },
       patchWorldMap: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'worldMap', id, patch: patch as Patch<unknown> }),
       patchWorldMapState: (id, patch) =>
         dispatch({ type: 'PATCH_ENTITY', kind: 'worldMapState', id, patch: patch as Patch<unknown> }),
@@ -1389,8 +1442,47 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
         const action: Action = { type: 'PATCH_ENTITY', kind: 'placement', id, patch: DELETED };
         routeGreyComplex('greyholm.placement', { aggregate: 'placement', op: 'remove', placementId: id }, action);
       },
-      addTimeline: (timeline) => dispatch({ type: 'ADD_TIMELINE', timeline }),
-      deleteTimeline: (timelineId) => dispatch({ type: 'DELETE_TIMELINE', timelineId }),
+      addTimeline: (timeline) => {
+        // Block I — universal ARCS authority is the SOLE active authority
+        // for Greyholm's timeline/arc collection (mirrors Caldran's
+        // addArc/patchArc/deleteArc cutover in userCampaignStore.tsx): the
+        // candidate whole collection is durably committed first (expected-
+        // revision guard, read-after-write verified), and only the
+        // committed collection is split back and dispatched as a
+        // COMMIT_TIMELINES compatibility write. No independent legacy
+        // direct-mutation path anymore.
+        const candidate: ArcSnapshotEntry[] = [...materializeTimelines(state), timeline];
+        const outcome = commitArcs(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.arcs', candidate);
+        if (!outcome.ok || !outcome.arcs) {
+          throw new Error(`addTimeline: universal arcs commit failed: ${outcome.error ?? 'unknown error'}`);
+        }
+        const committed = outcome.arcs as Timeline[];
+        dispatch({ type: 'COMMIT_TIMELINES', ...splitTimelinesForOverlay(committed) });
+      },
+      deleteTimeline: (timelineId) => {
+        // Block E "safe delete" (unchanged invariant, now evaluated before
+        // the universal commit instead of inside the reducer): only a
+        // DM-created arc (one that exists in newTimelines, never one of the
+        // two canonical seed arcs) may ever be deleted, and only while
+        // nothing on it references the timeline. Deleting a seed arc or a
+        // referenced arc is rejected as a no-op rather than partially
+        // deleting.
+        const isUserCreated = state.newTimelines.some((t) => t.id === timelineId);
+        if (!isUserCreated) return;
+        const referenced =
+          state.newLocationStates.some((ls) => ls.timelineId === timelineId) ||
+          Object.values(state.locationStatePatches).some((p) => p !== DELETED && p.timelineId === timelineId) ||
+          state.newHotspots.some((h) => h.timelineId === timelineId) ||
+          state.newWorldMapStates.some((s) => s.timelineId === timelineId);
+        if (referenced) return;
+        const candidate: ArcSnapshotEntry[] = materializeTimelines(state).filter((t) => t.id !== timelineId);
+        const outcome = commitArcs(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, 'greyholm.arcs', candidate);
+        if (!outcome.ok || !outcome.arcs) {
+          throw new Error(`deleteTimeline: universal arcs commit failed: ${outcome.error ?? 'unknown error'}`);
+        }
+        const committed = outcome.arcs as Timeline[];
+        dispatch({ type: 'COMMIT_TIMELINES', ...splitTimelinesForOverlay(committed) });
+      },
       addWorldMap: (map) => dispatch({ type: 'ADD_WORLD_MAP', map }),
       addWorldMapState: (mapState) => dispatch({ type: 'ADD_WORLD_MAP_STATE', state: mapState }),
       addLocationState: (locState) => dispatch({ type: 'ADD_LOCATION_STATE', state: locState }),
