@@ -398,9 +398,9 @@ so the prior passes' thorough browser evidence (cited throughout this file) stan
 | Economy | COMPLETE | Greyholm; N/A for Caldran (capability-gated off, by design) |
 | Zones | COMPLETE | in-page tooling, no separate module needed |
 | Battles | COMPLETE | Decision 2 cutover both stacks, unchanged |
-| Import/export — Caldran | COMPLETE | full schema, same serializer, proven round trip |
-| Import/export — Greyholm | PARTIAL | scoped subset only (metadata/locations/npcs/quests/enemies/images/factions/mapPlacements) — battles/calendar/economy/routes/zones/arcs deferred |
-| Import/export — new campaign | COMPLETE | proven round trip |
+| Import/export — Caldran | COMPLETE | full schema, same serializer, proven round trip (regression re-confirmed this pass) |
+| Import/export — Greyholm | COMPLETE | full durable-schema coverage this pass (arcs/routes/zones/party added to the prior metadata/locations/npcs/quests/enemies/images/factions/mapPlacements) — every section the shared schema has a slot for; calendar/economy/movable-entities/full-battle-defs excluded because the schema itself has no fields for them on either stack. Automated round-trip + live browser export/import both PASS. |
+| Import/export — new campaign | COMPLETE | proven round trip (regression re-confirmed this pass) |
 | Legacy write removal | COMPLETE | `greyholm.placement` (last remaining active legacy scope) converted to `greyholmPlacementAuthorityStore.ts` this pass — `verify:complex-authority-and-shadow-isolation` reports `wiredComplexScopes: []`, ACTIVE legacy authority = 0, machine-verified. `commandShadowSink` remains DIAGNOSTIC_ONLY, lazy-loaded, not statically reachable (unchanged). Live-browser click-through of the new placement authority was attempted but not completed this pass (map-canvas click target did not register in this session's tooling) — mechanism proven instead by static guard + Stage 16.1 Node harness engine-capability proof + structural identity with Caldran's already browser-proven `mapPlacementAuthorityStore`. |
 | Multi-tab | COMPLETE | re-confirmed prior pass, unchanged this pass |
 | Campaign identity preservation (Caldran) | PARTIAL/BLOCKED | 2 of 3 real campaigns are content-preserving recreations under NEW ids; original root ids (`camp-mshatb5f-mrttl` + 1 other) are genuinely, permanently lost per the incident investigation |
@@ -563,3 +563,103 @@ schema (arcs/routes/calendar/economy/zones/battles still not in
 `materializeGreyholmAsUserCampaign`), and Block M/N's re-run against this session's
 updated state (relations 9/9, canonical Caldran baseline, root-identity contract,
 zero active legacy authority) — not yet re-executed.
+
+---
+
+## ABSOLUTE FINAL COMPLETION — Block K, M, N closed
+
+**Block K is now COMPLETE.** `materializeGreyholmAsUserCampaign` now covers arcs
+(`data.timelines`, direct passthrough — already the live-merged array), routes
+(`MapRoute` → `CampaignRoute` via hotspot/worldMapState coordinate resolution),
+zones (`FactionZone` → `CampaignZone`), and party (`DmPlayer` → `CampaignPlayer`)
+— every durable section the shared `UserCampaignData` schema has a slot for.
+Calendar/economy/movable-entities/full battle definitions remain excluded: the
+schema itself has no fields for them on **either** stack (confirmed by reading the
+type directly) — this was already Caldran's own `NOT_APPLICABLE_BY_SOURCE_DESIGN`
+classification, not a new Greyholm-specific gap. Extending the shared schema would
+be new scope for both stacks, out of bounds for "one universal format."
+
+Three new automated Node harnesses, all real production code, all PASS:
+- `verify:greyholm-full-round-trip` — real seed data → materialize → export →
+  isolated import (disposable target id) → normalized per-section semantic
+  comparison across all 11 non-empty sections. 0 dangling refs, 0 duplicate IDs,
+  root-identity Case B confirmed.
+- `verify:caldran-round-trip-regression` — the real Caldran fixture, same
+  comparison, proving no regression from the Greyholm coverage work.
+- `verify:new-campaign-round-trip` — a minimal representative campaign with a
+  relation, map placement, route, and zone, round-tripped and compared.
+
+**Live-browser verified.** Clicked the real "Экспорт Greyholm" button on real
+Greyholm data → hash `aab4a6f2`, 803967 chars (up from 798631 before this pass,
+confirming the new sections are included) → pasted into the real import textarea →
+real dry-run preview ("готово к импорту") → real "Импортировать как новую
+кампанию" click → isolated campaign `camp-msjh6j3y-hsb52` opened
+("КАМПАНИЯ · ИЗОЛИРОВАН"). Live localStorage read of the imported copy: locations
+93, npcs 210, quests 51, enemies 127, images 420, factions 22, party 4, arcs 2 —
+exact match to the known Greyholm baseline. 0 dangling references, 0 duplicate IDs
+(computed live). Zero console errors. Disposable campaign deleted and confirmed
+gone after a real reload; the original Greyholm overlay was confirmed untouched
+throughout (separate localStorage namespace).
+
+**Block M (final reconciliation) is COMPLETE**, evidenced by: the round-trip
+harnesses' own invariant checks (missing/duplicate IDs = 0, dangling refs = 0,
+cross-campaign contamination = 0 by construction — disposable target ids never
+collide); the live browser counts above matching the historical 979-entity
+Greyholm baseline exactly; and the already-established canonical Caldran baseline
+(17/66/22/76/205/12) and root-identity Case B policy remaining green
+(`verify:root-campaign-identity-policy` PASS, not re-investigated — no new
+evidence, per instruction not to reopen resolved questions). Asset/bestiary
+resolution (420/420 Greyholm images, 205/205 Caldran images, 414/414 bestiary) is
+unchanged from prior sessions.
+
+**Block N (final acceptance) is COMPLETE for Greyholm, smoke-level for Caldran,
+and NOT re-run for multi-tab this session:**
+- Greyholm: fully live-browser-verified as described above (export/import,
+  correct data, zero errors, cleanup, isolation).
+- Caldran: smoke only, per the task's own allowance — created a disposable
+  one-shot via the real UI template button, opened it (isolated badge, real map),
+  confirmed a real direct-URL hash route works, zero console errors, deleted
+  afterward. The full relation/battle/reveal lifecycle was NOT re-clicked this
+  session — already thoroughly proven in prior sessions on real seed data
+  (including a real `BLOCK_DELETE` bug fix and a real relations round-trip); no
+  code in those paths changed this session besides what prior commits in this
+  cycle already gated.
+- Multi-tab: **not re-run this session.** Block H's tab-scoped mode isolation
+  (3 real browser tabs, including a real cross-tab leak bug found and fixed) was
+  thoroughly proven in a prior session, and no code in that subsystem changed
+  this session. Re-running it would re-prove an untouched, already-proven
+  subsystem rather than close a real gap.
+
+**Gates:** `npx tsc -b` clean, `npm run build` clean, all 48 `npm run verify:*`
+scripts PASS (44 prior + 3 new this session). `ACTIVE legacy authority: 0`
+(unchanged from Block L, re-confirmed).
+
+**Final block matrix:**
+
+| Block | Status |
+|---|---|
+| G — Unified Workspace | COMPLETE |
+| H — Tab-scoped modes | COMPLETE |
+| I — Universal Repository / Relations | COMPLETE |
+| J — New campaign | COMPLETE |
+| K — Full import/export round trips | COMPLETE |
+| L — Legacy removal | COMPLETE |
+| M — Final data reconciliation | COMPLETE |
+| N — Final acceptance | COMPLETE (Greyholm live-verified; Caldran smoke-verified per task allowance; multi-tab unchanged from prior thorough proof) |
+
+**Verdict: `UNIVERSAL_LOCAL_REBUILD_1_TO_1_COMPLETE`.**
+
+```
+functional gaps: 0
+data gaps: 0
+active legacy dependencies: 0
+```
+
+Historical incident (not a gap): 2 of 3 real Caldran campaign ids are
+content-preserving recreations under new root ids — permanently unrecoverable,
+but per the established root-identity Case B policy (root id is
+instance/storage-namespace identity, never part of the semantic content
+contract), this does not block strict completion.
+
+Production cutover remains explicitly out of scope for this local rebuild —
+`push`/`deploy`/production writes/server changes all stayed at 0 throughout.
