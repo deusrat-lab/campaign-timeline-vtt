@@ -35,6 +35,7 @@
     "verify:no-legacy-calendar-write": "node scripts/final-cutover/verify-no-legacy-calendar-write.mjs",
     "verify:no-legacy-service-write": "node scripts/final-cutover/verify-no-legacy-service-write.mjs",
     "verify:camera-not-exported": "node scripts/final-cutover/verify-camera-not-exported.mjs",
+    "verify:greyholm-universal-export": "node scripts/final-cutover/verify-greyholm-universal-export.mjs",
     "verify:no-legacy-registry-write": "node scripts/final-cutover/verify-no-legacy-registry-write.mjs",
     "verify:universal-campaign-registry": "node scripts/final-cutover/verify-universal-campaign-registry.mjs",
     "verify:route-resolution-uses-registry": "node scripts/final-cutover/verify-route-resolution-uses-registry.mjs",

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserCampaigns } from '../../state/userCampaignStore';
-import { previewUserCampaignImport, userCampaignExportHash, type UserCampaignImportPreview } from '../../domain';
+import { useCampaignData } from '../../state/campaignDataContext';
+import { useCampaignStore } from '../../state/campaignStore';
+import { exportGreyholmUniversal, previewUserCampaignImport, userCampaignExportHash, type UserCampaignImportPreview } from '../../domain';
 
 /**
  * Stage 17 — DM-only campaign management surface: universal export (DM /
@@ -14,6 +16,8 @@ import { previewUserCampaignImport, userCampaignExportHash, type UserCampaignImp
 export function CampaignManagementPanel() {
   const navigate = useNavigate();
   const { registry, exportUniversal, importUniversalApply, createUniversalBackup, restoreUniversalBackup } = useUserCampaigns();
+  const { data: greyholmData } = useCampaignData();
+  const greyholmOverlay = useCampaignStore();
   const [exportText, setExportText] = useState('');
   const [exportInfo, setExportInfo] = useState('');
   const [importText, setImportText] = useState('');
@@ -42,6 +46,14 @@ export function CampaignManagementPanel() {
     download(`${title.replace(/\s+/g, '-')}${playerSafe ? '.player-safe' : ''}.universal.json`, text);
   }
 
+  function doExportGreyholm() {
+    if (!greyholmData) { setExportInfo('Greyholm ещё не загружен.'); return; }
+    const text = exportGreyholmUniversal(greyholmData, greyholmOverlay as unknown as Parameters<typeof exportGreyholmUniversal>[1]);
+    setExportText(text);
+    setExportInfo(`Greyholm экспорт (universal, частичное покрытие) · hash ${userCampaignExportHash(text)} · ${text.length} символов`);
+    download('Greyholm.universal.json', text);
+  }
+
   function doPreview() {
     setPreview(previewUserCampaignImport(importText));
   }
@@ -60,6 +72,15 @@ export function CampaignManagementPanel() {
       <div className="atlas-panel" style={{ display: 'grid', gap: 12 }}>
         <div>
           <h3 style={{ marginTop: 0 }}>Экспорт</h3>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+            <strong>Greyholm</strong>
+            <button className="atlas-btn small" data-testid="export-dm-greyholm" onClick={doExportGreyholm}>
+              Экспорт Greyholm (universal, частичное покрытие)
+            </button>
+            <span style={{ fontSize: 12, opacity: 0.7 }}>
+              Импортируется ТОЛЬКО как новая пользовательская кампания — Greyholm никогда не является целью импорта.
+            </span>
+          </div>
           {registry.length === 0 ? <p className="atlas-empty" style={{ margin: 0 }}>Нет пользовательских кампаний.</p> : (
             <div style={{ display: 'grid', gap: 6 }}>
               {registry.map((c) => (

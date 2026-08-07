@@ -13,7 +13,9 @@
  * carries the DM snapshot or the legacy blob.
  */
 import type { UserCampaignData, UserCampaignRuntime } from '../../types/userCampaign';
+import type { MainCampaignDataInput, MainCampaignOverlayInput } from '../adapters/mainCampaignAdapter';
 import { adaptUserCampaignToUniversal } from '../adapters/userCampaignAdapter';
+import { materializeGreyholmAsUserCampaign } from '../adapters/greyholmToUserCampaignAdapter';
 import { stableStringify } from '../persistence/serialization';
 import { validateCampaignSnapshot } from '../validation/validateCampaignSnapshot';
 import { projectPlayerSafe } from '../projection/projectCampaign';
@@ -103,6 +105,20 @@ export function exportUserCampaignDM(data: UserCampaignData, runtime?: UserCampa
     extensions: { [LEGACY_EXT]: { kind: LEGACY_KIND, data, runtime: stripCameraViewState(runtime) } },
   };
   return stableStringify(envelope);
+}
+
+/**
+ * Greyholm universal export — Block K. Materializes Greyholm's live overlay +
+ * seed data into `UserCampaignData` (see greyholmToUserCampaignAdapter.ts for
+ * exactly what's covered), then reuses `exportUserCampaignDM` UNCHANGED —
+ * the literal same serializer/envelope/hash Caldran's export uses, not a
+ * parallel format. Greyholm has no DM-companion `UserCampaignRuntime`
+ * (battle boards etc. live in a different shape not covered by this pass),
+ * so `runtime` is always omitted here.
+ */
+export function exportGreyholmUniversal(data: MainCampaignDataInput, overlay: MainCampaignOverlayInput): string {
+  const materialized = materializeGreyholmAsUserCampaign(data, overlay);
+  return exportUserCampaignDM(materialized, undefined);
 }
 
 /** Player-Safe export — projection only, no DM snapshot, no legacy blob. */

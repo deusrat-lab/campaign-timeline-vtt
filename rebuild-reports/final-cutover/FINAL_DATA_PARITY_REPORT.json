@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-07T12:14:15.173Z",
+  "generatedAt": "2026-08-07T12:46:21.290Z",
   "engine": "src/domain/migration/migrationEngine.ts (runUniversalMigration / rollbackUniversalMigration) — real production code, not reimplemented.",
   "repository": "createProductionCampaignRepository + createMemoryRepositoryStorage (in-memory Map, same repository implementation the browser app uses over localStorage).",
   "results": [
