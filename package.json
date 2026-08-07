@@ -33,6 +33,7 @@
     "verify:no-legacy-arcs-write": "node scripts/final-cutover/verify-no-legacy-arcs-write.mjs",
     "verify:no-legacy-capabilities-write": "node scripts/final-cutover/verify-no-legacy-capabilities-write.mjs",
     "verify:no-legacy-calendar-write": "node scripts/final-cutover/verify-no-legacy-calendar-write.mjs",
+    "verify:no-legacy-service-write": "node scripts/final-cutover/verify-no-legacy-service-write.mjs",
     "verify:no-workspace-split": "node scripts/final-cutover/verify-no-workspace-split.mjs",
     "verify:stage04": "node scripts/verify-stage-04-parity.mjs",
     "verify:stage05": "node scripts/verify-stage-05-projections.mjs",

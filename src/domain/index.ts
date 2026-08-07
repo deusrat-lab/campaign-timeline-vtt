@@ -40,6 +40,7 @@ export * from './visibility/presentedCardAuthorityStore';
 export * from './visibility/revealAuthorityStore';
 export * from './party/partyPositionAuthorityStore';
 export * from './calendar/calendarAuthorityStore';
+export * from './services/serviceAuthorityStore';
 export * from './placements/mapPlacementAuthorityStore';
 export * from './routes/routeAuthorityStore';
 export * from './zones/zoneAuthorityStore';

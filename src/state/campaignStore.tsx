@@ -40,7 +40,7 @@ import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
 import { API_BASE_URL } from '../config';
 import { emitMainCommand } from './commandShadowSink';
 import { routeMainComplex, type ComplexActionDescriptor } from './complexAuthoritySink';
-import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, commitReveal, readReveal, type RevealSnapshot, commitPartyPosition, readPartyPosition, type PartyPositionSnapshot, createBrowserRepositoryStorage, campaignIdFromLegacy, commitCapabilities, type CapabilityTogglesSnapshot, commitArcs, type ArcSnapshotEntry, commitCalendar, readCalendar, type CalendarSnapshot } from '../domain';
+import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, commitReveal, readReveal, type RevealSnapshot, commitPartyPosition, readPartyPosition, type PartyPositionSnapshot, createBrowserRepositoryStorage, campaignIdFromLegacy, commitCapabilities, type CapabilityTogglesSnapshot, commitArcs, type ArcSnapshotEntry, commitCalendar, readCalendar, type CalendarSnapshot, commitServicePatch, type ServiceAuthorityKind } from '../domain';
 
 // Decision 2 — the SAME universal campaign id EmbeddedBattleOverlay.tsx
 // already uses for its (now-superseded) shadow turn-advance path. Must be
@@ -1425,8 +1425,47 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
           dispatch(action);
         }
       },
-      patchTavern: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'tavern', id, patch: patch as Patch<unknown> }),
-      patchShop: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'shop', id, patch: patch as Patch<unknown> }),
+      patchTavern: (id, patch) => {
+        // Block I — universal SERVICE authority (serviceAuthorityStore.ts)
+        // is the SOLE active authority for this entity: the DM Companion
+        // "Услуги" tavern editor always submits a multi-field patch, so the
+        // candidate is the WHOLE accumulated overlay patch (existing
+        // tavernPatches[id] shallow-merged with this call's patch — exactly
+        // what the PATCH_ENTITY reducer case would compute anyway), durably
+        // committed first (expected-revision guard, read-after-write
+        // verified), and only the committed patch is dispatched as the
+        // legacy compatibility write. DELETED is never expected from this
+        // editor (no tavern-delete UI) but is passed through unconditionally
+        // rather than forced through the object-patch authority.
+        if (patch === DELETED) {
+          dispatch({ type: 'PATCH_ENTITY', kind: 'tavern', id, patch: DELETED });
+          return;
+        }
+        const existing = state.tavernPatches[id];
+        const mergedPatch = { ...(existing && existing !== DELETED ? existing : {}), ...(patch as object) };
+        const kind: ServiceAuthorityKind = 'greyholm.tavern';
+        const outcome = commitServicePatch(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, kind, id, mergedPatch);
+        if (!outcome.ok || !outcome.patch) {
+          throw new Error(`patchTavern: universal service commit failed for ${id}: ${outcome.error ?? 'unknown error'}`);
+        }
+        dispatch({ type: 'PATCH_ENTITY', kind: 'tavern', id, patch: outcome.patch as Patch<unknown> });
+      },
+      patchShop: (id, patch) => {
+        // Block I — same universal SERVICE authority discipline as
+        // patchTavern above.
+        if (patch === DELETED) {
+          dispatch({ type: 'PATCH_ENTITY', kind: 'shop', id, patch: DELETED });
+          return;
+        }
+        const existing = state.shopPatches[id];
+        const mergedPatch = { ...(existing && existing !== DELETED ? existing : {}), ...(patch as object) };
+        const kind: ServiceAuthorityKind = 'greyholm.shop';
+        const outcome = commitServicePatch(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, kind, id, mergedPatch);
+        if (!outcome.ok || !outcome.patch) {
+          throw new Error(`patchShop: universal service commit failed for ${id}: ${outcome.error ?? 'unknown error'}`);
+        }
+        dispatch({ type: 'PATCH_ENTITY', kind: 'shop', id, patch: outcome.patch as Patch<unknown> });
+      },
       patchImage: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'image', id, patch: patch as Patch<unknown> }),
       patchQuest: (id, patch) => {
         const action: Action = { type: 'PATCH_ENTITY', kind: 'quest', id, patch: patch as Patch<unknown> };
