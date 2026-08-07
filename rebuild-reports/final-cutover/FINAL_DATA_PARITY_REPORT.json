@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-07T13:05:50.586Z",
+  "generatedAt": "2026-08-07T13:09:24.683Z",
   "engine": "src/domain/migration/migrationEngine.ts (runUniversalMigration / rollbackUniversalMigration) — real production code, not reimplemented.",
   "repository": "createProductionCampaignRepository + createMemoryRepositoryStorage (in-memory Map, same repository implementation the browser app uses over localStorage).",
   "results": [
@@ -132,7 +132,24 @@
           "coveredCount": 12,
           "missingIds": []
         }
-      }
+      },
+      "fixtureCaveat": "This 'user:caldran-captivity' entry is produced by verify:final-migration against a FROZEN static fixture (scripts/stage08/fixtures/caldran-real-export.json), NOT a live read of any of the 3 real present Caldran localStorage campaigns. The 407/26-quests/78-enemies numbers describe that fixture only."
     }
-  ]
+  ],
+  "liveCaldranReconciliation": {
+    "generatedAt": "2026-08-07T00:00:00.000Z",
+    "method": "Live localStorage read via browser devtools JS against a fresh npm run dev server (port 5175), reading campaign-timeline-vtt:universal-registry:v1 and each dmCompanion.userCampaignData.<id>.v1 key directly -- not cached, not estimated.",
+    "registryEntryCount": 3,
+    "campaigns": [
+      { "campaignId": "camp-mshgi2vf-xdn6x", "title": "Кальдран: Цена имени (плен)", "npcs": 66, "locations": 17, "quests": 22, "enemies": 76, "images": 205, "factions": 12 },
+      { "campaignId": "camp-msin4ti8-cdlvz", "title": "Кальдран: Цена имени (плен)", "npcs": 66, "locations": 17, "quests": 22, "enemies": 76, "images": 205, "factions": 12 },
+      { "campaignId": "camp-msinbo7r-b29td", "title": "Кальдран: Цена имени (плен)", "npcs": 66, "locations": 17, "quests": 22, "enemies": 76, "images": 205, "factions": 12 }
+    ],
+    "note": "The 3 real present Caldran campaigns are internally consistent with each other (identical counts across all 3) but do NOT numerically match the static 407-fixture's quests(26)/enemies(78) fields -- quests=22 and enemies=76 live vs quests=26/enemies=78 in the frozen fixture. npcs(66)/images(205)/factions(12) DO match. This delta was not investigated further this session (out of scope: the fixture is a frozen historical snapshot used only to prove the migration engine's mechanics, not a live-data assertion). Per the campaign-identity incident report, 2 of these 3 campaign ids are RECREATIONS with preserved content but NOT the original root campaign ids (camp-mshatb5f-mrttl and one other original id are gone). Content parity across the 3 present campaigns is real and verified; root-identity parity for 2 of them is not.",
+    "greyholmLiveSpotCheck": {
+      "method": "Live fetch() of public/data/dm-companion/*.json from the running dev server.",
+      "counts": { "locations": 93, "npcs": 210, "quests": 51, "enemies": 127, "images": 420, "factions": 22 },
+      "matchesBaseline": "npcs/quests/enemies/images/factions all match the 979-entity-count baseline's idCoverage manifestCounts exactly (210/51/127/420/22)."
+    }
+  }
 }

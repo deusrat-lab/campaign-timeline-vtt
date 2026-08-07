@@ -352,3 +352,65 @@ clean-looking log tail; fixed by writing the script and its input list into the
 session-persistent scratchpad directory instead. Recorded here because it is exactly the
 kind of "don't rubber-stamp — verify the real exit status" case this block exists to guard
 against.
+
+---
+
+## FINAL CLOSURE PASS (this session, HEAD d28ee07)
+
+Re-ran literally all 43 `npm run verify:*` scripts individually with real exit-code
+checks (up from 35/39 in earlier passes as more guards accumulated) — **43/43 PASS**.
+`npx tsc -b` clean. `npm run build` clean (vite build succeeds, 269 modules, no errors).
+
+Fresh live-data reconciliation (see `FINAL_DATA_PARITY_REPORT.json`'s
+`liveCaldranReconciliation` block): 3 real Caldran campaigns present in the registry,
+content-identical to each other (66 npcs/17 locations/22 quests/76 enemies/205
+images/12 factions each) — but this live count does NOT numerically match the static
+407-entity fixture (`scripts/stage08/fixtures/caldran-real-export.json`) used by
+`verify:final-migration` (quests 22 vs 26, enemies 76 vs 78 — npcs/images/factions do
+match). This delta was not previously called out explicitly; recorded here as a genuine,
+disclosed data-provenance caveat, not re-investigated further this pass (the fixture
+proves migration-engine mechanics, not live-data identity). Greyholm live spot-check via
+direct fetch of `public/data/dm-companion/*.json` matches the 979-entity baseline's
+idCoverage exactly (npcs 210, quests 51, enemies 127, images 420, factions 22).
+
+Fresh browser spot-check this pass: Greyholm `/map` and real Caldran
+`/campaigns/camp-mshgi2vf-xdn6x/map` (direct URL) both load cleanly, zero console
+errors. Full exhaustive scenario re-walk was not repeated (per task's own "light
+re-confirmation is sufficient where no code changed since last thorough pass"
+guidance) — no code changed in this repo between the prior closure pass and this one,
+so the prior passes' thorough browser evidence (cited throughout this file) stands.
+
+**Per-area final status:**
+
+| Area | Status | Reason |
+|---|---|---|
+| Workspace shell (Block G) | COMPLETE | unchanged, re-confirmed via gates + spot-check |
+| View modes (DM/Player/Observer, tab-scoped) | COMPLETE | unchanged, Block H |
+| Repository authority (14 subsystems + registry) | COMPLETE | unchanged, Block I core |
+| Content (both stacks) | COMPLETE | unchanged |
+| Relations (BLOCK_DELETE + general relation authority) | PARTIAL | Caldran 1/4 bounded fields wired to live mutation site (rest import-only, nothing to wire yet); Greyholm 0/5 bounded fields started (campaignStore.tsx choke point never located) |
+| Maps | COMPLETE | unchanged |
+| Party | COMPLETE | unchanged |
+| Routes | COMPLETE | unchanged |
+| Visibility/reveal | COMPLETE | unchanged |
+| Presentation (present/dismiss) | COMPLETE | unchanged |
+| Timeline | COMPLETE | structurally shared (ArcSwitcher), no separate module needed |
+| Economy | COMPLETE | Greyholm; N/A for Caldran (capability-gated off, by design) |
+| Zones | COMPLETE | in-page tooling, no separate module needed |
+| Battles | COMPLETE | Decision 2 cutover both stacks, unchanged |
+| Import/export — Caldran | COMPLETE | full schema, same serializer, proven round trip |
+| Import/export — Greyholm | PARTIAL | scoped subset only (metadata/locations/npcs/quests/enemies/images/factions/mapPlacements) — battles/calendar/economy/routes/zones/arcs deferred |
+| Import/export — new campaign | COMPLETE | proven round trip |
+| Legacy write removal | PARTIAL | `greyholm.placement` (3 call sites) still on legacy path, no authority store yet; `commandShadowSink` diagnostic-only shadow replay still fires (by design, non-authoritative) |
+| Multi-tab | COMPLETE | re-confirmed prior pass, unchanged this pass |
+| Campaign identity preservation (Caldran) | PARTIAL/BLOCKED | 2 of 3 real campaigns are content-preserving recreations under NEW ids; original root ids (`camp-mshatb5f-mrttl` + 1 other) are genuinely, permanently lost per the incident investigation |
+
+**Final verdict for this closure pass: `UNIVERSAL_LOCAL_REBUILD_INCOMPLETE`.**
+Reasons (all disclosed, none newly discovered this pass): (a) relations conversion is
+not 100% across both stacks (Greyholm 0/5, Caldran 1/4 bounded fields); (b) Greyholm
+import/export is schema-subset, not full-schema; (c) 2 of 3 real Caldran campaigns lack
+their original root campaign identity (content-preserved, identity-lost, permanently
+unrecoverable per prior incident investigation); (d) `greyholm.placement` remains on an
+unconverted legacy write path. All four gaps are long-standing, previously documented,
+and unchanged by this pass — this pass's job was honest re-verification, not
+new remediation, and no regression was found.

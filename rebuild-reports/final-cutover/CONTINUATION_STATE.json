@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-07T23:40:00.000Z",
-  "currentHead": "bcda90f",
+  "generatedAt": "2026-08-07T00:00:00.000Z",
+  "currentHead": "d28ee07",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -651,5 +651,65 @@
     "architectureGuardAdded": "scripts/final-cutover/verify-complex-authority-and-shadow-isolation.mjs (wired as `npm run verify:complex-authority-and-shadow-isolation`). Statically parses aggregateOwnership.ts to assert uiStatus:'wired' scopes are exactly ['greyholm.placement']; cross-checks that against real routeGreyComplex(...) call sites found by grep across src/ (excluding documented DOC_ONLY_FILES); and walks the real static import graph from src/main.tsx to assert CommandShadowProviderEnabled.tsx is never statically reachable (only reachable via the shell's dynamic import()). Fails loudly with actionable messages if either invariant regresses.",
     "verificationRun": "npx tsc -b (clean) + npm run build (clean, confirms chunk split) + all 43 npm run verify:* scripts (42 pre-existing + the 1 new guard) all PASS, zero regressions. Browser-verified locally: Greyholm /map loads with zero console errors (DM Edit mode, placement/object tooling visible and functional); a Caldran one-shot campaign (/campaigns/camp-mshgi2vf-xdn6x/map) loads read-only with zero console errors (no destructive actions taken, per the standing caution about the prior campaign-loss incident); /diagnostics/universal redirects safely (DM-only guard) with zero console errors/crash.",
     "openItems": "None outstanding for this task's two named items. The broader 'run a proper AST-based unused-export scan (ts-prune) across all of src/' next-step noted by the prior Block L session remains genuinely open (out of scope for this session, which was explicitly about the two named decisions) -- a future session should pick that up if further Block L cleanup is desired."
+  },
+  "finalClosurePassVerdict": {
+    "verdict": "UNIVERSAL_LOCAL_REBUILD_INCOMPLETE",
+    "headAtVerdict": "d28ee07",
+    "gates": {
+      "verifyScriptsTotal": 43,
+      "verifyScriptsPass": 43,
+      "tscB": "PASS",
+      "npmRunBuild": "PASS"
+    },
+    "dataParity": {
+      "greyholm": "979 entities baseline re-confirmed live (npcs 210/210, quests 51/51, enemies 127/127, images 420/420, factions 22/22)",
+      "caldran": "3 real campaigns present in registry, content-identical to each other (66 npcs/17 locations/22 quests/76 enemies/205 images/12 factions each); does NOT numerically match the static 407-fixture used by verify:final-migration (quests 22 vs 26, enemies 76 vs 78 in the fixture) -- fixture is a frozen historical snapshot, not a live-data source; see FINAL_DATA_PARITY_REPORT.json liveCaldranReconciliation",
+      "referentialIntegrity": "0 broken, re-confirmed fresh this pass",
+      "duplicateOrLeakedIds": "0, re-confirmed via fresh registry + per-campaign localStorage read this pass"
+    },
+    "checklist": {
+      "blockG": true,
+      "blockH": true,
+      "blockI_registrySoleAuthorityAndRouteResolution": true,
+      "blockI_relationsFullyConvertedBothStacks": false,
+      "blockI_overallComplete": false,
+      "blockJ": true,
+      "blockK_caldranRoundTrip": true,
+      "blockK_newCampaignRoundTrip": true,
+      "blockK_greyholmRoundTrip_fullSchema": false,
+      "blockK_greyholmRoundTrip_scopedSubset": true,
+      "blockK_overallComplete": false,
+      "blockL_activeLegacyRuntimeRemoved_reconfirmed": "PARTIAL -- greyholm.placement (3 call sites) still unconverted; commandShadowSink remains diagnostic-only by design",
+      "blockM_dataParityReRun": true,
+      "blockN_browserAcceptance": true,
+      "universalRepositorySoleActiveAuthority": false,
+      "activeLegacyAuthorityCount": "1 known scope (greyholm.placement) + commandShadowSink diagnostic shadow (non-authoritative, by design)",
+      "greyholmFullyPreserved": true,
+      "caldranFullyPreserved_contentParity": true,
+      "caldranFullyPreserved_rootIdentityParity": false,
+      "campaignIdentitiesPreservedPerParityContract": "FALSE for 2 of 3 Caldran campaigns (root id lost); the project parity contract treats CONTENT parity as authoritative per the incident-resolution session, and content parity holds for all 3 -- root-identity parity is a separate, explicitly disclosed deviation",
+      "newCampaignProofGreen": true,
+      "greyholmImportExportRoundTrip": "PARTIAL (schema subset)",
+      "caldranImportExportRoundTrip": true,
+      "newCampaignRoundTrip": true,
+      "multiTabGreen": true,
+      "fullBuildTestsGreen": true,
+      "browserAcceptanceGreen": true,
+      "workingTreeClean": true,
+      "noPushDeployProdServerChanges": true
+    },
+    "remainingActiveLegacyDependencies": [
+      "greyholm.placement (campaignStore.tsx, 3 call sites) -- map-object placement move/remove still on legacy dispatch path, no dedicated Block I authority store",
+      "commandShadowSink diagnostic-only shadow replay of every legacy mutation -- non-authoritative by design, an open product decision from Block L, not a bug"
+    ],
+    "knownDataGaps": [
+      "2 of 3 real Caldran campaigns (recreations replacing camp-mshatb5f-mrttl and one other original id) do not have their original root campaign identity -- content-preserved, identity genuinely and permanently unrecoverable per the incident investigation",
+      "verify:final-migration's Caldran fixture (407 entities, 26 quests, 78 enemies) is a frozen static snapshot that no longer numerically matches any of the 3 live present Caldran campaigns (22 quests, 76 enemies each) -- npcs/images/factions still match"
+    ],
+    "knownFunctionalGaps": [
+      "Greyholm: all 5 bounded relation fields (quest.giver, locationState.npcIds/questIds/enemyIds, quest.enemies) unconverted -- campaignStore.tsx choke point never located",
+      "Caldran: 3 of 4 bounded relation fields (quest.npcIds, quest.locationId, enemy.locationIds) have no live edit UI yet, so nothing to wire to the relation authority module",
+      "Greyholm export/import covers a scoped subset of the schema only (metadata/locations/npcs/quests/enemies/images/factions/mapPlacements) -- battles/calendar/economy/routes/zones/arcs are deferred"
+    ]
   }
 }
