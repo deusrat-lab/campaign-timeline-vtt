@@ -450,5 +450,12 @@
     "gatesRun": "npx tsc -b clean (after the stage17 re-export fix). npm run build clean. ALL 34 npm run verify:* scripts individually re-run with exit-code checks, all exit 0, including verify:universal-regression (15/15, was 14/15 mid-pass before the stage17 fix) and verify:stage17 (384/384, was hard-failing mid-pass with a Node ESM error before the fix).",
     "browserVerified": "Local dev server (npm run dev via .claude/launch.json 'stage17-dev', port 5175), Browser pane, real UI clicks (not programmatic state mutation). Greyholm (/map, main campaign): opened the location library card for a revealed location, clicked 'Скрыть от игроков' (hide from players) then 'Показать игрокам' (show to players) to round-trip the reveal toggle back to its original state -- exercises revealAuthorityStore.ts's commitReveal live. Caldran (camp-mshgi2vf-xdn6x, one of the 3 real recovered campaigns, /library/locations route): clicked '📺 Показать поверх' (present card) on L01 twice (present then dismiss) -- exercises presentedCardAuthorityStore.ts's commitPresentedCard live. Zero console errors on both campaigns throughout (confirmed via read_console_messages with onlyErrors and again with the full unfiltered log -- only routine Vite HMR/React-DevTools noise present, no app errors or warnings). No campaign data was structurally changed (both toggles were reverted to their original state before moving on).",
     "workingTreeAfterCommit": "Clean (rebuild-reports/*.json timestamp-only diffs produced by running the verify:* gates were reverted with `git checkout --` before committing, so the commit contains only the real src/ deletions)."
+  },
+  "blockMFullReconciliation": {
+    "status": "COMPLETE",
+    "headAtRun": "ebe72410b64e5a84154cc07e836d6dbb1df48ee6",
+    "summary": "Re-ran all prior baseline checks live (not cited from cache): Greyholm 979 entities, Caldran 407 entities, Greyholm images 420/420, shared bestiary 414/414 (independently re-derived with an ad-hoc filesystem check), 0 broken references (verify:referential-integrity), 0 duplicate/missing IDs across 843 checked, no cross-campaign authority leakage (durableAuthorityRouter rejects wrong_campaign), no residual Block K test-campaign data in canonical source files, 15/15 verify:universal-regression gates pass, all no-legacy-*-write guards pass, Block L dead-module guard passes.",
+    "verdict": "CLEAN_1_TO_1_RECONCILIATION, no regression found",
+    "reportUpdated": "rebuild-reports/final-cutover/FINAL_DATA_PARITY_REPORT.json (blockMReconciliation key added)"
   }
 }
