@@ -114,7 +114,7 @@ function buildResults(data: CampaignData, timelineId: string, progress: Campaign
       body: isPlayerView
         ? compact([state.playerSafeDescription, location?.playerView, state.publicDescription])
         : compact([state.publicDescription, state.playerSafeDescription, state.dmNotes, location?.description, location?.dmSecrets]),
-      tags: [...(state.tags ?? []), ...(location?.tags ?? [])],
+      tags: Array.from(new Set([...(state.tags ?? []), ...(location?.tags ?? [])])),
       to: `/map?selected=${encodeURIComponent(state.id)}`,
       imageUrl: imageById(data, state.imageIds[0] ?? location?.images?.[0]),
       dmOnly,
