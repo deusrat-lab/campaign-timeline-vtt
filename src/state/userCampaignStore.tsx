@@ -635,7 +635,26 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
 
     deleteCampaign: (id) => {
       persistRegistry(registry.filter((r) => r.campaignId !== id));
-      try { localStorage.removeItem(dataKey(id)); localStorage.removeItem(runtimeKey(id)); } catch { /* noop */ }
+      try {
+        localStorage.removeItem(dataKey(id));
+        localStorage.removeItem(runtimeKey(id));
+        // Block I authority stores (capabilities/zones/routes/arcs/fields/
+        // party-position) each write their own campaign-scoped
+        // `campaign-timeline-vtt:...:v1:<campaignId>:<kind>` localStorage
+        // key outside dataKey/runtimeKey. Sweep any leftover key that
+        // embeds this campaign's universal id so a deleted campaign never
+        // leaves an orphaned authority-store entry behind. `id` here is the
+        // legacy id (e.g. `camp-xxxx`); the universal CampaignId embeds it
+        // verbatim (`camp:user:camp-xxxx`), so a substring match is safe and
+        // cannot collide with a different campaign's id.
+        const orphanPrefix = 'campaign-timeline-vtt:';
+        for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(orphanPrefix) && key.includes(id)) {
+            localStorage.removeItem(key);
+          }
+        }
+      } catch { /* noop */ }
       setDataCache((prev) => { const n = { ...prev }; delete n[id]; return n; });
       setRuntimeCache((prev) => { const n = { ...prev }; delete n[id]; return n; });
       deleteCampaignRemote(id);
