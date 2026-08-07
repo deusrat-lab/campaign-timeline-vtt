@@ -47,7 +47,7 @@
 import type { CampaignId } from '../campaign/ids';
 import type { RepositoryStorage } from '../repository/shadowRepository';
 
-export const UNIVERSAL_SERVICE_NAMESPACE = 'campaign-timeline-vtt:universal-service:v1';
+const UNIVERSAL_SERVICE_NAMESPACE = 'campaign-timeline-vtt:universal-service:v1';
 
 /** Closed allowlist — the two DM Companion economy-services entity kinds
  * that have a real write path (`patchShop`/`patchTavern` in
@@ -61,9 +61,9 @@ export type ServiceAuthorityKind = 'greyholm.shop' | 'greyholm.tavern';
 /** A patch object is any plain JSON-serializable record — this store must
  * not depend on `DmShop`/`DmTavern` app-level types (mirrors
  * `CalendarSnapshot`'s app-independence). */
-export type ServicePatch = Record<string, unknown>;
+type ServicePatch = Record<string, unknown>;
 
-export interface StoredServicePatch {
+interface StoredServicePatch {
   patch: ServicePatch;
   revision: number;
 }
@@ -89,7 +89,7 @@ function checkServiceInvariant(patch: ServicePatch): string | null {
   return null;
 }
 
-export function readStoredServicePatch(
+function readStoredServicePatch(
   storage: RepositoryStorage,
   campaignId: CampaignId,
   kind: ServiceAuthorityKind,
@@ -107,7 +107,7 @@ export function readStoredServicePatch(
   }
 }
 
-export interface ServiceCommitOutcome {
+interface ServiceCommitOutcome {
   ok: boolean;
   newRevision?: number;
   /** The durably-committed patch, read back — always what the caller should
@@ -145,26 +145,3 @@ export function commitServicePatch(
   return { ok: true, newRevision, patch: readBack.patch };
 }
 
-/** Current durable revision for a shop/tavern's accumulated patch (0 when
- * never committed). */
-export function serviceRevision(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: ServiceAuthorityKind,
-  entityId: string,
-): number {
-  return readStoredServicePatch(storage, campaignId, kind, entityId)?.revision ?? 0;
-}
-
-/** Reload/bootstrap: the durably-committed accumulated patch if one exists,
- * else null (caller falls back to its own legacy seed — the one allowed
- * migration boundary, for a shop/tavern that predates this cutover / was
- * never committed). */
-export function readServicePatch(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: ServiceAuthorityKind,
-  entityId: string,
-): ServicePatch | null {
-  return readStoredServicePatch(storage, campaignId, kind, entityId)?.patch ?? null;
-}

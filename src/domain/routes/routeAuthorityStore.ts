@@ -38,9 +38,9 @@
 import type { CampaignId } from '../campaign/ids';
 import type { RepositoryStorage } from '../repository/shadowRepository';
 
-export const UNIVERSAL_ROUTES_NAMESPACE = 'campaign-timeline-vtt:universal-routes:v1';
+const UNIVERSAL_ROUTES_NAMESPACE = 'campaign-timeline-vtt:universal-routes:v1';
 
-export type RouteAuthorityKind = 'userCampaign.routes';
+type RouteAuthorityKind = 'userCampaign.routes';
 
 /** Plain mirror of `CampaignRoute` (this module must not depend on app-level
  * types). */
@@ -54,7 +54,7 @@ export interface RouteSnapshotEntry {
   notes?: string;
 }
 
-export interface StoredRoutes {
+interface StoredRoutes {
   routes: RouteSnapshotEntry[];
   revision: number;
 }
@@ -100,7 +100,7 @@ function checkRoutesInvariant(routes: RouteSnapshotEntry[]): string | null {
   return null;
 }
 
-export function readStoredRoutes(
+function readStoredRoutes(
   storage: RepositoryStorage,
   campaignId: CampaignId,
   kind: RouteAuthorityKind,
@@ -118,7 +118,7 @@ export function readStoredRoutes(
   }
 }
 
-export interface RoutesCommitOutcome {
+interface RoutesCommitOutcome {
   ok: boolean;
   newRevision?: number;
   /** The durably-committed collection, read back — always what the caller
@@ -156,24 +156,3 @@ export function commitRoutes(
   return { ok: true, newRevision, routes: readBack.routes };
 }
 
-/** Current durable revision for a campaign's routes collection (0 when never
- * committed). */
-export function routesRevision(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: RouteAuthorityKind,
-): number {
-  return readStoredRoutes(storage, campaignId, kind)?.revision ?? 0;
-}
-
-/** Reload/bootstrap: the durably-committed collection if one exists, else
- * null (caller falls back to its own legacy seed -- the one allowed
- * migration boundary, for a campaign that predates this cutover / was never
- * committed). */
-export function readRoutes(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: RouteAuthorityKind,
-): RouteSnapshotEntry[] | null {
-  return readStoredRoutes(storage, campaignId, kind)?.routes ?? null;
-}

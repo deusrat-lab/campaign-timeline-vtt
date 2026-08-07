@@ -34,9 +34,9 @@
 import type { CampaignId } from '../campaign/ids';
 import type { RepositoryStorage } from '../repository/shadowRepository';
 
-export const UNIVERSAL_REVEAL_NAMESPACE = 'campaign-timeline-vtt:universal-reveal:v1';
+const UNIVERSAL_REVEAL_NAMESPACE = 'campaign-timeline-vtt:universal-reveal:v1';
 
-export type RevealAuthorityKind = 'greyholm.reveal' | 'userCampaign.reveal';
+type RevealAuthorityKind = 'greyholm.reveal' | 'userCampaign.reveal';
 
 /**
  * Whole coupled reveal snapshot. `placementVisibility` and `imagePlayerSafe`
@@ -51,7 +51,7 @@ export interface RevealSnapshot {
   imagePlayerSafe: Record<string, boolean>;
 }
 
-export interface StoredReveal {
+interface StoredReveal {
   snapshot: RevealSnapshot;
   revision: number;
 }
@@ -65,7 +65,7 @@ function isBooleanMap(value: unknown): value is Record<string, boolean> {
   return Object.values(value as Record<string, unknown>).every((v) => typeof v === 'boolean');
 }
 
-export function readStoredReveal(
+function readStoredReveal(
   storage: RepositoryStorage,
   campaignId: CampaignId,
   kind: RevealAuthorityKind,
@@ -99,7 +99,7 @@ function checkRevealInvariant(snapshot: RevealSnapshot): string | null {
   return null;
 }
 
-export interface RevealCommitOutcome {
+interface RevealCommitOutcome {
   ok: boolean;
   newRevision?: number;
   /** The durably-committed snapshot, read back — always what the caller
@@ -135,16 +135,6 @@ export function commitReveal(
     return { ok: false, error: 'commit not visible read-after-write' };
   }
   return { ok: true, newRevision, snapshot: readBack.snapshot };
-}
-
-/** Current durable revision for a campaign's reveal snapshot (0 when never
- * committed). */
-export function revealRevision(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: RevealAuthorityKind,
-): number {
-  return readStoredReveal(storage, campaignId, kind)?.revision ?? 0;
 }
 
 /** Reload/bootstrap: the durably-committed snapshot if one exists, else null

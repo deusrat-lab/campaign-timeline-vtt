@@ -10,8 +10,6 @@ import { makeRuntimeId, sourceScopedId } from '../campaign/ids';
 import type { CampaignId, UniversalRuntimeId } from '../campaign/ids';
 import type { BattleRuntime, BattleToken } from './types';
 
-export type BattleSourceKind = 'greyholm-active' | 'user-board';
-
 /** Deterministic universal runtime id for a battle, scoped to its campaign. */
 export function battleRuntimeId(campaignId: CampaignId, battleId: string): UniversalRuntimeId {
   return makeRuntimeId(sourceScopedId(`runtime:battle:${scopeKey(campaignId)}`, battleId));

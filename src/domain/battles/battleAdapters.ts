@@ -272,5 +272,4 @@ function legacyTokenIdOf(runtime: BattleRuntime, universalTokenId: string | unde
   return (meta?.legacyId as string) ?? undefined;
 }
 
-export const BATTLE_EXTENSION_KEYS = { greyholm: GREYHOLM_EXT, user: USER_EXT } as const;
 export { DM_ONLY_VISIBILITY };

@@ -40,9 +40,9 @@
 import type { CampaignId } from '../campaign/ids';
 import type { RepositoryStorage } from '../repository/shadowRepository';
 
-export const UNIVERSAL_ZONES_NAMESPACE = 'campaign-timeline-vtt:universal-zones:v1';
+const UNIVERSAL_ZONES_NAMESPACE = 'campaign-timeline-vtt:universal-zones:v1';
 
-export type ZoneAuthorityKind = 'userCampaign.zones';
+type ZoneAuthorityKind = 'userCampaign.zones';
 
 /** Plain mirror of `CampaignZone` (this module must not depend on app-level
  * types). */
@@ -56,7 +56,7 @@ export interface ZoneSnapshotEntry {
   notes?: string;
 }
 
-export interface StoredZones {
+interface StoredZones {
   zones: ZoneSnapshotEntry[];
   revision: number;
 }
@@ -102,7 +102,7 @@ function checkZonesInvariant(zones: ZoneSnapshotEntry[]): string | null {
   return null;
 }
 
-export function readStoredZones(
+function readStoredZones(
   storage: RepositoryStorage,
   campaignId: CampaignId,
   kind: ZoneAuthorityKind,
@@ -120,7 +120,7 @@ export function readStoredZones(
   }
 }
 
-export interface ZonesCommitOutcome {
+interface ZonesCommitOutcome {
   ok: boolean;
   newRevision?: number;
   /** The durably-committed collection, read back -- always what the caller
@@ -158,24 +158,3 @@ export function commitZones(
   return { ok: true, newRevision, zones: readBack.zones };
 }
 
-/** Current durable revision for a campaign's zones collection (0 when never
- * committed). */
-export function zonesRevision(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: ZoneAuthorityKind,
-): number {
-  return readStoredZones(storage, campaignId, kind)?.revision ?? 0;
-}
-
-/** Reload/bootstrap: the durably-committed collection if one exists, else
- * null (caller falls back to its own legacy seed -- the one allowed
- * migration boundary, for a campaign that predates this cutover / was never
- * committed). */
-export function readZones(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: ZoneAuthorityKind,
-): ZoneSnapshotEntry[] | null {
-  return readStoredZones(storage, campaignId, kind)?.zones ?? null;
-}

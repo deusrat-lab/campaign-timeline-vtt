@@ -44,15 +44,15 @@ import { UNIVERSAL_CAPABILITY_KEYS, type UniversalCapabilityKey } from '../campa
 import type { CampaignId } from '../campaign/ids';
 import type { RepositoryStorage } from '../repository/shadowRepository';
 
-export const UNIVERSAL_CAPABILITIES_NAMESPACE = 'campaign-timeline-vtt:universal-capabilities:v1';
+const UNIVERSAL_CAPABILITIES_NAMESPACE = 'campaign-timeline-vtt:universal-capabilities:v1';
 
-export type CapabilityAuthorityKind = 'greyholm.capabilities' | 'userCampaign.capabilities';
+type CapabilityAuthorityKind = 'greyholm.capabilities' | 'userCampaign.capabilities';
 
 /** Plain mirror of `CapabilityToggles` (this module must not depend on
  * app-level types beyond the shared `UniversalCapabilityKey` allowlist). */
 export type CapabilityTogglesSnapshot = Partial<Record<UniversalCapabilityKey, boolean>>;
 
-export interface StoredCapabilities {
+interface StoredCapabilities {
   toggles: CapabilityTogglesSnapshot;
   revision: number;
 }
@@ -77,7 +77,7 @@ function checkCapabilitiesInvariant(toggles: CapabilityTogglesSnapshot): string 
   return null;
 }
 
-export function readStoredCapabilities(
+function readStoredCapabilities(
   storage: RepositoryStorage,
   campaignId: CampaignId,
   kind: CapabilityAuthorityKind,
@@ -94,7 +94,7 @@ export function readStoredCapabilities(
   }
 }
 
-export interface CapabilitiesCommitOutcome {
+interface CapabilitiesCommitOutcome {
   ok: boolean;
   newRevision?: number;
   /** The durably-committed toggles map, read back — always what the caller
@@ -132,24 +132,3 @@ export function commitCapabilities(
   return { ok: true, newRevision, toggles: readBack.toggles };
 }
 
-/** Current durable revision for a campaign's capability-toggles map (0 when
- * never committed). */
-export function capabilitiesRevision(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: CapabilityAuthorityKind,
-): number {
-  return readStoredCapabilities(storage, campaignId, kind)?.revision ?? 0;
-}
-
-/** Reload/bootstrap: the durably-committed toggles map if one exists, else
- * null (caller falls back to its own legacy seed — the one allowed
- * migration boundary, for a campaign that predates this cutover / was never
- * committed). */
-export function readCapabilities(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: CapabilityAuthorityKind,
-): CapabilityTogglesSnapshot | null {
-  return readStoredCapabilities(storage, campaignId, kind)?.toggles ?? null;
-}

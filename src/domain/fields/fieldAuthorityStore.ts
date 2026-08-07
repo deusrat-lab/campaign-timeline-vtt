@@ -23,7 +23,7 @@
 import type { CampaignId } from '../campaign/ids';
 import type { RepositoryStorage } from '../repository/shadowRepository';
 
-export const UNIVERSAL_FIELD_NAMESPACE = 'campaign-timeline-vtt:universal-field:v1';
+const UNIVERSAL_FIELD_NAMESPACE = 'campaign-timeline-vtt:universal-field:v1';
 
 /** Closed allowlist — mirrors the Stage 15 `DurableAuthorityScope` set exactly
  * (see `src/domain/durable-authority/durableAuthorityTypes.ts`), minus the
@@ -42,7 +42,7 @@ export type FieldAuthorityKind =
   | 'userCampaign.faction.description'
   | 'userCampaign.location.description';
 
-export interface StoredField {
+interface StoredField {
   value: string;
   revision: number;
 }
@@ -51,7 +51,7 @@ function fieldKey(campaignId: CampaignId, kind: FieldAuthorityKind, entityId: st
   return `${UNIVERSAL_FIELD_NAMESPACE}:${campaignId}:${kind}:${entityId}`;
 }
 
-export function readStoredField(
+function readStoredField(
   storage: RepositoryStorage,
   campaignId: CampaignId,
   kind: FieldAuthorityKind,
@@ -68,7 +68,7 @@ export function readStoredField(
   }
 }
 
-export interface FieldCommitOutcome {
+interface FieldCommitOutcome {
   ok: boolean;
   newRevision?: number;
   /** The durably-committed value, read back — always what the caller should
@@ -115,12 +115,3 @@ export function commitField(
   return { ok: true, newRevision, value: readBack.value };
 }
 
-/** Current durable revision for a field (0 when never committed). */
-export function fieldRevision(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: FieldAuthorityKind,
-  entityId: string,
-): number {
-  return readStoredField(storage, campaignId, kind, entityId)?.revision ?? 0;
-}

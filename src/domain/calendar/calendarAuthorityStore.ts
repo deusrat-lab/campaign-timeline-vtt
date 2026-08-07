@@ -40,12 +40,12 @@
 import type { CampaignId } from '../campaign/ids';
 import type { RepositoryStorage } from '../repository/shadowRepository';
 
-export const UNIVERSAL_CALENDAR_NAMESPACE = 'campaign-timeline-vtt:universal-calendar:v1';
+const UNIVERSAL_CALENDAR_NAMESPACE = 'campaign-timeline-vtt:universal-calendar:v1';
 
-export type CalendarAuthorityKind = 'greyholm.calendar';
+type CalendarAuthorityKind = 'greyholm.calendar';
 
 const TIME_OF_DAY_VALUES = ['morning', 'noon', 'evening', 'night'] as const;
-export type CalendarTimeOfDay = (typeof TIME_OF_DAY_VALUES)[number];
+type CalendarTimeOfDay = (typeof TIME_OF_DAY_VALUES)[number];
 
 /** Plain mirror of `CampaignCalendar` (this module must not depend on
  * app-level types). */
@@ -56,7 +56,7 @@ export interface CalendarSnapshot {
   currentTimeOfDay: CalendarTimeOfDay;
 }
 
-export interface StoredCalendar {
+interface StoredCalendar {
   calendar: CalendarSnapshot;
   revision: number;
 }
@@ -86,7 +86,7 @@ function checkCalendarInvariant(calendar: CalendarSnapshot): string | null {
   return null;
 }
 
-export function readStoredCalendar(
+function readStoredCalendar(
   storage: RepositoryStorage,
   campaignId: CampaignId,
   kind: CalendarAuthorityKind,
@@ -104,7 +104,7 @@ export function readStoredCalendar(
   }
 }
 
-export interface CalendarCommitOutcome {
+interface CalendarCommitOutcome {
   ok: boolean;
   newRevision?: number;
   /** The durably-committed calendar, read back — always what the caller
@@ -141,17 +141,6 @@ export function commitCalendar(
     return { ok: false, error: 'commit not visible read-after-write' };
   }
   return { ok: true, newRevision, calendar: readBack.calendar };
-}
-
-/** Current durable revision for a timeline's calendar (0 when never
- * committed). */
-export function calendarRevision(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: CalendarAuthorityKind,
-  timelineId: string,
-): number {
-  return readStoredCalendar(storage, campaignId, kind, timelineId)?.revision ?? 0;
 }
 
 /** Reload/bootstrap: the durably-committed calendar if one exists, else null

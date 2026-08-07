@@ -1,4 +1,4 @@
-export type VisibilityLevel =
+type VisibilityLevel =
   | 'dmOnly'
   | 'hidden'
   | 'revealed'
@@ -7,7 +7,7 @@ export type VisibilityLevel =
   | 'public'
   | 'presented';
 
-export interface FieldVisibility {
+interface FieldVisibility {
   field: string;
   level: VisibilityLevel;
 }

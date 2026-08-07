@@ -43,11 +43,11 @@
 import type { CampaignId } from '../campaign/ids';
 import type { RepositoryStorage } from '../repository/shadowRepository';
 
-export const UNIVERSAL_PARTY_POSITION_NAMESPACE = 'campaign-timeline-vtt:universal-party-position:v1';
+const UNIVERSAL_PARTY_POSITION_NAMESPACE = 'campaign-timeline-vtt:universal-party-position:v1';
 
-export type PartyPositionAuthorityKind = 'greyholm.partyPosition';
+type PartyPositionAuthorityKind = 'greyholm.partyPosition';
 
-export interface PartyMapPosition {
+interface PartyMapPosition {
   timelineId: string;
   mapId: string;
   mapLevel: string;
@@ -68,7 +68,7 @@ export interface PartyPositionSnapshot {
   partyRouteProgress: Record<string, unknown> | null;
 }
 
-export interface StoredPartyPosition {
+interface StoredPartyPosition {
   snapshot: PartyPositionSnapshot;
   revision: number;
 }
@@ -97,7 +97,7 @@ function isPlainObjectOrNull(value: unknown): value is Record<string, unknown> |
   return value === null || (typeof value === 'object' && !Array.isArray(value));
 }
 
-export function readStoredPartyPosition(
+function readStoredPartyPosition(
   storage: RepositoryStorage,
   campaignId: CampaignId,
   kind: PartyPositionAuthorityKind,
@@ -137,7 +137,7 @@ function checkPartyPositionInvariant(snapshot: PartyPositionSnapshot): string | 
   return null;
 }
 
-export interface PartyPositionCommitOutcome {
+interface PartyPositionCommitOutcome {
   ok: boolean;
   newRevision?: number;
   /** The durably-committed snapshot, read back — always what the caller
@@ -173,16 +173,6 @@ export function commitPartyPosition(
     return { ok: false, error: 'commit not visible read-after-write' };
   }
   return { ok: true, newRevision, snapshot: readBack.snapshot };
-}
-
-/** Current durable revision for a campaign's party-position snapshot (0
- * when never committed). */
-export function partyPositionRevision(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: PartyPositionAuthorityKind,
-): number {
-  return readStoredPartyPosition(storage, campaignId, kind)?.revision ?? 0;
 }
 
 /** Reload/bootstrap: the durably-committed snapshot if one exists, else null

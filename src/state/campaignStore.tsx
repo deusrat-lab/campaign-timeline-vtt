@@ -365,15 +365,10 @@ type Action =
   | { type: 'SET_BATTLE_MAP_LINK'; link: BattleMapLocationLink }
   | { type: 'SET_BATTLE_MAP_VTT_URL'; battleMapId: string; url: string }
   | { type: 'START_ACTIVE_BATTLE'; battle: ActiveBattleState }
-  | { type: 'UPDATE_ACTIVE_BATTLE'; patch: Partial<ActiveBattleState> }
-  | { type: 'UPDATE_ACTIVE_BATTLE_COMBATANT'; combatantId: string; patch: Partial<ActiveBattleCombatant> }
-  | { type: 'ADD_ACTIVE_BATTLE_COMBATANT'; combatant: ActiveBattleCombatant }
   | { type: 'END_ACTIVE_BATTLE' }
   | { type: 'SET_PRESENTED_CARD'; card: PresentedCard | null }
   | { type: 'SET_PLACEMENT_LAYER_VISIBLE'; visible: boolean }
   | { type: 'SET_CALENDAR'; timelineId: string; calendar: CampaignCalendar }
-  | { type: 'ADVANCE_TIME_PHASE'; timelineId: string }
-  | { type: 'ADVANCE_DAY'; timelineId: string }
   | { type: 'ADD_CAMPAIGN_EVENT'; event: CampaignEvent }
   | { type: 'UPDATE_CAMPAIGN_EVENT'; eventId: string; patch: Partial<CampaignEvent> }
   | { type: 'ARCHIVE_CAMPAIGN_EVENT'; eventId: string }
@@ -403,10 +398,6 @@ type Action =
   | { type: 'RESET' };
 
 const TIME_OF_DAY_ORDER: TimeOfDay[] = ['morning', 'noon', 'evening', 'night'];
-
-function getCalendarOrDefault(state: CampaignOverlay, timelineId: string): CampaignCalendar {
-  return state.calendarsByTimelineId[timelineId] ?? DEFAULT_CALENDAR;
-}
 
 /** Block I — materializes Greyholm's full timeline/arc collection (seed
  * `TIMELINES` + overlay `newTimelines`/`timelinePatches`) into the flat
@@ -683,26 +674,6 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
         ...state,
         calendarsByTimelineId: { ...state.calendarsByTimelineId, [action.timelineId]: action.calendar },
       };
-    case 'ADVANCE_TIME_PHASE': {
-      const current = getCalendarOrDefault(state, action.timelineId);
-      const idx = TIME_OF_DAY_ORDER.indexOf(current.currentTimeOfDay);
-      const isNewDay = idx === TIME_OF_DAY_ORDER.length - 1;
-      const next: CampaignCalendar = isNewDay
-        ? { ...current, currentDay: current.currentDay + 1, currentTimeOfDay: TIME_OF_DAY_ORDER[0] }
-        : { ...current, currentTimeOfDay: TIME_OF_DAY_ORDER[idx + 1] };
-      return {
-        ...state,
-        calendarsByTimelineId: { ...state.calendarsByTimelineId, [action.timelineId]: next },
-      };
-    }
-    case 'ADVANCE_DAY': {
-      const current = getCalendarOrDefault(state, action.timelineId);
-      const next: CampaignCalendar = { ...current, currentDay: current.currentDay + 1 };
-      return {
-        ...state,
-        calendarsByTimelineId: { ...state.calendarsByTimelineId, [action.timelineId]: next },
-      };
-    }
     case 'ADD_CAMPAIGN_EVENT':
       return { ...state, eventsById: { ...state.eventsById, [action.event.id]: action.event } };
     case 'UPDATE_CAMPAIGN_EVENT': {
@@ -938,32 +909,6 @@ function reducer(state: CampaignOverlay, action: Action): CampaignOverlay {
       };
     case 'START_ACTIVE_BATTLE':
       return { ...state, activeBattle: action.battle };
-    case 'UPDATE_ACTIVE_BATTLE':
-      return state.activeBattle
-        ? { ...state, activeBattle: { ...state.activeBattle, ...action.patch } }
-        : state;
-    case 'UPDATE_ACTIVE_BATTLE_COMBATANT':
-      return state.activeBattle
-        ? {
-            ...state,
-            activeBattle: {
-              ...state.activeBattle,
-              combatants: state.activeBattle.combatants.map((combatant) =>
-                combatant.id === action.combatantId ? { ...combatant, ...action.patch } : combatant,
-              ),
-            },
-          }
-        : state;
-    case 'ADD_ACTIVE_BATTLE_COMBATANT':
-      return state.activeBattle
-        ? {
-            ...state,
-            activeBattle: {
-              ...state.activeBattle,
-              combatants: [...state.activeBattle.combatants, action.combatant],
-            },
-          }
-        : state;
     case 'END_ACTIVE_BATTLE':
       return { ...state, activeBattle: null };
     case 'SET_PRESENTED_CARD':

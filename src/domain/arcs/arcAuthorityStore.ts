@@ -55,9 +55,9 @@
 import type { CampaignId } from '../campaign/ids';
 import type { RepositoryStorage } from '../repository/shadowRepository';
 
-export const UNIVERSAL_ARCS_NAMESPACE = 'campaign-timeline-vtt:universal-arcs:v1';
+const UNIVERSAL_ARCS_NAMESPACE = 'campaign-timeline-vtt:universal-arcs:v1';
 
-export type ArcAuthorityKind = 'userCampaign.arcs' | 'greyholm.arcs';
+type ArcAuthorityKind = 'userCampaign.arcs' | 'greyholm.arcs';
 
 /** Plain mirror of `Timeline` (this module must not depend on app-level
  * types). */
@@ -73,7 +73,7 @@ export interface ArcSnapshotEntry {
   archived?: boolean;
 }
 
-export interface StoredArcs {
+interface StoredArcs {
   arcs: ArcSnapshotEntry[];
   revision: number;
 }
@@ -117,7 +117,7 @@ function checkArcsInvariant(arcs: ArcSnapshotEntry[]): string | null {
   return null;
 }
 
-export function readStoredArcs(
+function readStoredArcs(
   storage: RepositoryStorage,
   campaignId: CampaignId,
   kind: ArcAuthorityKind,
@@ -135,7 +135,7 @@ export function readStoredArcs(
   }
 }
 
-export interface ArcsCommitOutcome {
+interface ArcsCommitOutcome {
   ok: boolean;
   newRevision?: number;
   /** The durably-committed collection, read back -- always what the caller
@@ -173,24 +173,3 @@ export function commitArcs(
   return { ok: true, newRevision, arcs: readBack.arcs };
 }
 
-/** Current durable revision for a campaign's arcs collection (0 when never
- * committed). */
-export function arcsRevision(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: ArcAuthorityKind,
-): number {
-  return readStoredArcs(storage, campaignId, kind)?.revision ?? 0;
-}
-
-/** Reload/bootstrap: the durably-committed collection if one exists, else
- * null (caller falls back to its own legacy seed -- the one allowed
- * migration boundary, for a campaign that predates this cutover / was never
- * committed). */
-export function readArcs(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: ArcAuthorityKind,
-): ArcSnapshotEntry[] | null {
-  return readStoredArcs(storage, campaignId, kind)?.arcs ?? null;
-}

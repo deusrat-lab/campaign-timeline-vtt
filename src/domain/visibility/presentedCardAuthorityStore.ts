@@ -29,16 +29,16 @@
 import type { CampaignId } from '../campaign/ids';
 import type { RepositoryStorage } from '../repository/shadowRepository';
 
-export const UNIVERSAL_PRESENTED_CARD_NAMESPACE = 'campaign-timeline-vtt:universal-presented-card:v1';
+const UNIVERSAL_PRESENTED_CARD_NAMESPACE = 'campaign-timeline-vtt:universal-presented-card:v1';
 
-export type PresentedCardAuthorityKind = 'greyholm.presentedCard' | 'userCampaign.presentedCard';
+type PresentedCardAuthorityKind = 'greyholm.presentedCard' | 'userCampaign.presentedCard';
 
-export interface PresentedCardValue {
+interface PresentedCardValue {
   type: string;
   id: string;
 }
 
-export interface StoredPresentedCard {
+interface StoredPresentedCard {
   card: PresentedCardValue | null;
   revision: number;
 }
@@ -47,7 +47,7 @@ function presentedCardKey(campaignId: CampaignId, kind: PresentedCardAuthorityKi
   return `${UNIVERSAL_PRESENTED_CARD_NAMESPACE}:${campaignId}:${kind}`;
 }
 
-export function readStoredPresentedCard(
+function readStoredPresentedCard(
   storage: RepositoryStorage,
   campaignId: CampaignId,
   kind: PresentedCardAuthorityKind,
@@ -64,7 +64,7 @@ export function readStoredPresentedCard(
   }
 }
 
-export interface PresentedCardCommitOutcome {
+interface PresentedCardCommitOutcome {
   ok: boolean;
   newRevision?: number;
   /** The durably-committed value, read back — always what the caller should
@@ -110,12 +110,3 @@ export function commitPresentedCard(
   return { ok: true, newRevision, card: readBack.card };
 }
 
-/** Current durable revision for a campaign's presented card (0 when never
- * committed). */
-export function presentedCardRevision(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: PresentedCardAuthorityKind,
-): number {
-  return readStoredPresentedCard(storage, campaignId, kind)?.revision ?? 0;
-}

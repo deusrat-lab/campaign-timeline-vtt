@@ -38,9 +38,9 @@
 import type { CampaignId } from '../campaign/ids';
 import type { RepositoryStorage } from '../repository/shadowRepository';
 
-export const UNIVERSAL_MAP_PLACEMENTS_NAMESPACE = 'campaign-timeline-vtt:universal-map-placements:v1';
+const UNIVERSAL_MAP_PLACEMENTS_NAMESPACE = 'campaign-timeline-vtt:universal-map-placements:v1';
 
-export type MapPlacementAuthorityKind = 'userCampaign.placements';
+type MapPlacementAuthorityKind = 'userCampaign.placements';
 
 /** Plain mirror of `CampaignMapPlacement` (this module must not depend on
  * app-level types). */
@@ -54,7 +54,7 @@ export interface MapPlacementSnapshotEntry {
   visibleToPlayers: boolean;
 }
 
-export interface StoredMapPlacements {
+interface StoredMapPlacements {
   placements: MapPlacementSnapshotEntry[];
   revision: number;
 }
@@ -91,7 +91,7 @@ function checkPlacementsInvariant(placements: MapPlacementSnapshotEntry[]): stri
   return null;
 }
 
-export function readStoredMapPlacements(
+function readStoredMapPlacements(
   storage: RepositoryStorage,
   campaignId: CampaignId,
   kind: MapPlacementAuthorityKind,
@@ -109,7 +109,7 @@ export function readStoredMapPlacements(
   }
 }
 
-export interface MapPlacementsCommitOutcome {
+interface MapPlacementsCommitOutcome {
   ok: boolean;
   newRevision?: number;
   /** The durably-committed collection, read back — always what the caller
@@ -147,24 +147,3 @@ export function commitMapPlacements(
   return { ok: true, newRevision, placements: readBack.placements };
 }
 
-/** Current durable revision for a campaign's placements collection (0 when
- * never committed). */
-export function mapPlacementsRevision(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: MapPlacementAuthorityKind,
-): number {
-  return readStoredMapPlacements(storage, campaignId, kind)?.revision ?? 0;
-}
-
-/** Reload/bootstrap: the durably-committed collection if one exists, else
- * null (caller falls back to its own legacy seed -- the one allowed
- * migration boundary, for a campaign that predates this cutover / was never
- * committed). */
-export function readMapPlacements(
-  storage: RepositoryStorage,
-  campaignId: CampaignId,
-  kind: MapPlacementAuthorityKind,
-): MapPlacementSnapshotEntry[] | null {
-  return readStoredMapPlacements(storage, campaignId, kind)?.placements ?? null;
-}

@@ -5,7 +5,7 @@ import type { VisibilityState } from '../visibility/types';
 export type BattleSide = 'enemy' | 'player' | 'ally' | 'neutral';
 export type TerrainType = 'blocked' | 'difficult' | 'custom';
 
-export interface BattleVariant {
+interface BattleVariant {
   id: string;
   kind: 'day' | 'evening' | 'night' | 'rain' | 'destroyed' | 'default' | 'custom';
   assetRef: string;
@@ -21,7 +21,7 @@ export interface GridDefinition {
   unit?: string;
 }
 
-export interface TerrainDefinition {
+interface TerrainDefinition {
   cellKey: string;
   type: TerrainType;
   blocksMovement?: boolean;
@@ -66,12 +66,12 @@ export interface BattleToken {
   extensions?: Record<string, unknown>;
 }
 
-export interface InitiativeState {
+interface InitiativeState {
   round: number;
   currentTurnTokenId?: string;
 }
 
-export interface BattleBoard {
+interface BattleBoard {
   battleMapRef: string;
   variant?: string;
   tokens: BattleToken[];

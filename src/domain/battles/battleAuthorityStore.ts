@@ -21,9 +21,9 @@ import { userBoardToUniversal, universalToUserBoard, greyholmBattleToUniversal, 
 import type { CampaignBattleBoard } from '../../types/userCampaign';
 import type { ActiveBattleState } from '../../types';
 
-export const UNIVERSAL_BATTLE_NAMESPACE = 'campaign-timeline-vtt:universal-battle:v1';
+const UNIVERSAL_BATTLE_NAMESPACE = 'campaign-timeline-vtt:universal-battle:v1';
 
-export interface StoredBattle {
+interface StoredBattle {
   runtime: BattleRuntime;
   revision: number;
 }
@@ -49,7 +49,7 @@ export function readStoredBattle(
   }
 }
 
-export interface BattleCommitResult {
+interface BattleCommitResult {
   ok: boolean;
   newRevision?: number;
   currentRevision?: number;
@@ -254,7 +254,7 @@ export function readUserBoard(
 // compute the candidate ActiveBattleState with the reducer's own pure logic,
 // commit it here, and dispatch the durably-committed, round-tripped result
 // (never their own uncommitted candidate).
-export interface GreyholmBattleCommitOutcome {
+interface GreyholmBattleCommitOutcome {
   ok: boolean;
   newRevision?: number;
   compatBattle?: ActiveBattleState;
@@ -297,7 +297,7 @@ export function readGreyholmBattle(
 // written. On reload, recovery re-applies the (idempotent) compatibility
 // transition and clears the record — WITHOUT a second universal commit.
 
-export const UNIVERSAL_BATTLE_PENDING_NAMESPACE = 'campaign-timeline-vtt:universal-battle-pending:v1';
+const UNIVERSAL_BATTLE_PENDING_NAMESPACE = 'campaign-timeline-vtt:universal-battle-pending:v1';
 
 export interface PendingBattleProjection {
   campaignId: CampaignId;
@@ -341,7 +341,7 @@ export function pendingProjectionCount(storage: RepositoryStorage, campaignId: C
   return storage.keys().filter((key) => key.startsWith(prefix)).length;
 }
 
-export interface BattleRecordSummary {
+interface BattleRecordSummary {
   campaignId: string;
   battleId: string;
   revision: number;

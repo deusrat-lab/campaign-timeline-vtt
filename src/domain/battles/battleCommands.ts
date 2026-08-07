@@ -12,7 +12,7 @@ import type { BattleRuntime, BattleToken, TerrainType } from './types';
 import { assertBattleCampaign, resolveToken, findDuplicateTokenIds } from './battleIdentity';
 import type { BattleIdentityError } from './battleIdentity';
 
-export type BattleCommand =
+type BattleCommand =
   | { kind: 'start-battle'; campaignId: CampaignId; battleId: string; expectedRevision: number }
   | { kind: 'end-battle'; campaignId: CampaignId; battleId: string; expectedRevision: number }
   | { kind: 'place-token'; campaignId: CampaignId; battleId: string; token: BattleToken; expectedRevision: number }
@@ -29,9 +29,7 @@ export type BattleCommand =
   | { kind: 'paint-terrain'; campaignId: CampaignId; battleId: string; cellKey: string; type: TerrainType | null; expectedRevision: number }
   | { kind: 'clear-terrain'; campaignId: CampaignId; battleId: string; expectedRevision: number };
 
-export type BattleCommandKind = BattleCommand['kind'];
-
-export interface TokenRuntimePatch {
+interface TokenRuntimePatch {
   name?: string;
   currentHp?: number;
   maxHp?: number;
@@ -41,20 +39,20 @@ export interface TokenRuntimePatch {
 }
 
 /** Partial `GridDefinition` -- undefined fields leave the current grid value untouched. */
-export interface GridPatch {
+interface GridPatch {
   columns?: number;
   rows?: number;
   snap?: boolean;
   unit?: string;
 }
 
-export type BattleCommandError =
+type BattleCommandError =
   | BattleIdentityError
   | { code: 'revision-conflict'; message: string }
   | { code: 'invariant'; message: string }
   | { code: 'not-active'; message: string };
 
-export interface BattleCommandOk {
+interface BattleCommandOk {
   ok: true;
   next: BattleRuntime;
   newRevision: number;
@@ -63,7 +61,9 @@ export interface BattleCommandFail {
   ok: false;
   error: BattleCommandError;
 }
-export type BattleCommandResult = BattleCommandOk | BattleCommandFail;
+type BattleCommandResult = BattleCommandOk | BattleCommandFail;
+
+type BattleCommandKind = BattleCommand['kind'];
 
 const ALL_KINDS: readonly BattleCommandKind[] = [
   'start-battle', 'end-battle', 'place-token', 'move-token', 'remove-token',
