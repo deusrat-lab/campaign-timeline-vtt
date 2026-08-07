@@ -1,10 +1,11 @@
 // Block I anti-legacy guard for the field-authority cutover (Greyholm npc
-// name/role, user-campaign npc name/role/description, quest title/
-// description, faction name/description, location description): fails if
-// campaignStore.tsx / userCampaignStore.tsx re-introduce the optional,
-// flag-gated Stage 14/15 routers (routeMainDurable/routeMainAuthority/
-// routeUserDurable/routeUserAuthority) for these fields, or if the
-// unconditional `commitField` sole-authority choke point is removed.
+// name/role, Greyholm quest title/description, user-campaign npc name/role/
+// description, quest title/description, faction name/description, location
+// description): fails if campaignStore.tsx / userCampaignStore.tsx
+// re-introduce the optional, flag-gated Stage 14/15 routers
+// (routeMainDurable/routeMainAuthority/routeUserDurable/routeUserAuthority)
+// for these fields, or if the unconditional `commitField` sole-authority
+// choke point is removed.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -29,6 +30,12 @@ function read(path) {
 
   if (!/commitField\(greyholmBattleStorage\(\)/.test(text)) {
     failed.push(`${file}: no call to commitField found -- Greyholm npc name/role no longer routes through universal field authority`);
+  }
+
+  for (const kind of ["'greyholm.quest.title'", "'greyholm.quest.description'"]) {
+    if (!text.includes(kind)) {
+      failed.push(`${file}: missing field-authority kind ${kind} -- Greyholm quest fields no longer route through universal field authority`);
+    }
   }
 }
 

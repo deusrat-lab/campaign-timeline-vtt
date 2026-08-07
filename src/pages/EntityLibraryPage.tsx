@@ -1873,7 +1873,7 @@ function QuestEditor({ quest, data, onDone }: { quest: DmQuest; data: CampaignDa
   return (
     <form className="entity-inline-editor" onSubmit={(e) => {
       e.preventDefault();
-      store.patchQuest(quest.id, {
+      const fullPatch = {
         title: draft.title.trim(),
         status: draft.status,
         location: draft.location.trim(),
@@ -1886,7 +1886,35 @@ function QuestEditor({ quest, data, onDone }: { quest: DmQuest; data: CampaignDa
         notes: draft.notes.trim() || undefined,
         image: draft.image || undefined,
         enemies: draft.enemies,
-      });
+      };
+      // Fast path (Block I): same discipline as NpcEditor's role fast-path
+      // above -- when the DM only changed `title` (everything else already
+      // equal to the current value), emit a single-field `{ title }` patch
+      // that maps 1:1 to the universal field authority (`greyholm.quest.title`
+      // in patchQuest). When only `description` changed, same for that field
+      // (`greyholm.quest.description`). Any other change shape dispatches the
+      // full patch exactly as before.
+      const titleChanged = fullPatch.title !== (quest.title ?? '');
+      const descriptionChanged = (fullPatch.description ?? '') !== (quest.description ?? '');
+      const otherFieldsUnchanged =
+        fullPatch.status === (quest.status) &&
+        fullPatch.location === (quest.location ?? '') &&
+        (fullPatch.giver ?? '') === (quest.giver ?? '') &&
+        (fullPatch.goal ?? '') === (quest.goal ?? '') &&
+        (fullPatch.reward ?? '') === (quest.reward ?? '') &&
+        (fullPatch.proof ?? '') === (quest.proof ?? '') &&
+        (fullPatch.consequences ?? '') === (quest.consequences ?? '') &&
+        (fullPatch.notes ?? '') === (quest.notes ?? '') &&
+        (fullPatch.image ?? '') === (quest.image ?? '') &&
+        fullPatch.enemies.length === (quest.enemies ?? []).length &&
+        fullPatch.enemies.every((id) => (quest.enemies ?? []).includes(id));
+      if (titleChanged && !descriptionChanged && otherFieldsUnchanged) {
+        store.patchQuest(quest.id, { title: fullPatch.title });
+      } else if (descriptionChanged && !titleChanged && otherFieldsUnchanged) {
+        store.patchQuest(quest.id, { description: fullPatch.description });
+      } else {
+        store.patchQuest(quest.id, fullPatch);
+      }
       const selectedEnemyIds = new Set(draft.enemies);
       for (const enemy of data.enemies) {
         const hadQuest = (enemy.questIds ?? []).includes(quest.id);

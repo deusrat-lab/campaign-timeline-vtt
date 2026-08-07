@@ -31,6 +31,8 @@ export const UNIVERSAL_FIELD_NAMESPACE = 'campaign-timeline-vtt:universal-field:
 export type FieldAuthorityKind =
   | 'greyholm.npc.role'
   | 'greyholm.npc.name'
+  | 'greyholm.quest.title'
+  | 'greyholm.quest.description'
   | 'userCampaign.npc.role'
   | 'userCampaign.npc.name'
   | 'userCampaign.npc.description'

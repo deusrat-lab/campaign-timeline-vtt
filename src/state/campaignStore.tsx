@@ -1428,7 +1428,26 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       patchTavern: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'tavern', id, patch: patch as Patch<unknown> }),
       patchShop: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'shop', id, patch: patch as Patch<unknown> }),
       patchImage: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'image', id, patch: patch as Patch<unknown> }),
-      patchQuest: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'quest', id, patch: patch as Patch<unknown> }),
+      patchQuest: (id, patch) => {
+        const action: Action = { type: 'PATCH_ENTITY', kind: 'quest', id, patch: patch as Patch<unknown> };
+        // Block I -- same allowlisted single-field discipline as patchNpc above:
+        // a single-field `title` or `description` edit maps 1:1 to the universal
+        // field authority; any other patch shape dispatches directly.
+        const keys = Object.keys(patch as Record<string, unknown>);
+        const singleKey = keys.length === 1 ? keys[0] : null;
+        const value = singleKey ? (patch as Record<string, unknown>)[singleKey] : undefined;
+        const fieldKind: FieldAuthorityKind | null =
+          singleKey === 'title' ? 'greyholm.quest.title' : singleKey === 'description' ? 'greyholm.quest.description' : null;
+        if (fieldKind && typeof value === 'string') {
+          const outcome = commitField(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, fieldKind, id, value);
+          if (!outcome.ok || typeof outcome.value !== 'string') {
+            throw new Error(`patchQuest: universal field commit failed for ${fieldKind} on ${id}: ${outcome.error ?? 'unknown error'}`);
+          }
+          dispatch({ type: 'PATCH_ENTITY', kind: 'quest', id, patch: { [singleKey as string]: outcome.value } as Patch<unknown> });
+        } else {
+          dispatch(action);
+        }
+      },
       patchEnemy: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'enemy', id, patch: patch as Patch<unknown> }),
       patchPlayer: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'player', id, patch: patch as Patch<unknown> }),
       patchEconomyReference: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'economyReference', id, patch: patch as Patch<unknown> }),
