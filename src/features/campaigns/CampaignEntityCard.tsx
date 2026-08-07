@@ -248,6 +248,43 @@ export function CampaignEntityCard({
                   {['notStarted', 'active', 'completed', 'failed', 'hidden'].map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               )}
+              <label>Локация</label>
+              {/* Block I -- general relations authority: this select is the first
+                  live mutation site for userCampaign.quest.locationId. upd() ->
+                  store.updateEntity() -> resolveUserRelationKind('quest','locationId')
+                  already existed and routes this through commitRelations(). */}
+              {ro ? <p>{data.locations.find((l) => l.id === quest.locationId)?.title ?? '—'}</p> : (
+                <select value={quest.locationId ?? ''} onChange={(e) => upd({ locationId: e.target.value || undefined })}>
+                  <option value="">— не привязана —</option>
+                  {data.locations.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
+                </select>
+              )}
+              <label>Связанные NPC</label>
+              {/* Block I -- first live mutation site for userCampaign.quest.npcIds
+                  (array cardinality) -- same commitRelations() path as above. */}
+              {ro ? (
+                <p>{(quest.npcIds ?? []).map((id) => data.npcs.find((n) => n.id === id)?.name ?? id).join(', ') || '—'}</p>
+              ) : (
+                <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid #444', padding: 4 }}>
+                  {data.npcs.map((n) => {
+                    const checked = (quest.npcIds ?? []).includes(n.id);
+                    return (
+                      <label key={n.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const current = quest.npcIds ?? [];
+                            const next = e.target.checked ? [...current, n.id] : current.filter((id) => id !== n.id);
+                            upd({ npcIds: next });
+                          }}
+                        />
+                        {n.name}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </>
           )}
 
@@ -261,6 +298,33 @@ export function CampaignEntityCard({
                 <>
                   <label>Тактика / особенности</label>
                   {ro ? <p style={{ whiteSpace: 'pre-wrap' }}>{enemy.tactics || '—'}</p> : <textarea value={enemy.tactics ?? ''} onChange={(e) => upd({ tactics: e.target.value })} />}
+                  <label>Локации</label>
+                  {/* Block I -- first live mutation site for
+                      userCampaign.enemy.locationIds (array cardinality) --
+                      same commitRelations() path as above. */}
+                  {ro ? (
+                    <p>{(enemy.locationIds ?? []).map((id) => data.locations.find((l) => l.id === id)?.title ?? id).join(', ') || '—'}</p>
+                  ) : (
+                    <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid #444', padding: 4 }}>
+                      {data.locations.map((l) => {
+                        const checked = (enemy.locationIds ?? []).includes(l.id);
+                        return (
+                          <label key={l.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                const current = enemy.locationIds ?? [];
+                                const next = e.target.checked ? [...current, l.id] : current.filter((id) => id !== l.id);
+                                upd({ locationIds: next });
+                              }}
+                            />
+                            {l.title}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                 </>
               )}
             </>

@@ -116,10 +116,30 @@ function read(path) {
   }
 }
 
+{
+  // Block I -- CampaignEntityCard.tsx must actually expose live edit UI for
+  // the 3 Caldran fields that previously had no mutation site at all
+  // (quest.locationId, quest.npcIds, enemy.locationIds). resolveUserRelationKind
+  // having the mapping is necessary but not sufficient -- a regression here
+  // would silently return Caldran to 1/4 "wired but nothing calls it".
+  const file = 'src/features/campaigns/CampaignEntityCard.tsx';
+  const text = read(file);
+  const expectedCallSites = [
+    { needle: 'upd({ locationId: e.target.value || undefined })', label: 'quest.locationId select' },
+    { needle: 'upd({ npcIds: next })', label: 'quest.npcIds checkbox list' },
+    { needle: 'upd({ locationIds: next })', label: 'enemy.locationIds checkbox list' },
+  ];
+  for (const { needle, label } of expectedCallSites) {
+    if (!text.includes(needle)) {
+      failed.push(`${file}: no live UI call site found for ${label} (expected to find ${JSON.stringify(needle)}) -- Caldran relation field regressed to import-only`);
+    }
+  }
+}
+
 if (failed.length) {
   console.error('LEGACY_RELATIONS_WRITE_GUARD_FAIL:');
   for (const f of failed) console.error(`  - ${f}`);
   process.exit(1);
 }
 
-console.log(JSON.stringify({ ok: true, filesChecked: 2, verdict: 'NO_LEGACY_RELATIONS_WRITE_PATH_FOUND (Caldran 4/4 + Greyholm 5/5 bounded field sets)' }));
+console.log(JSON.stringify({ ok: true, filesChecked: 3, verdict: 'NO_LEGACY_RELATIONS_WRITE_PATH_FOUND (Caldran 4/4 + Greyholm 5/5 bounded field sets, all with live UI call sites)' }));

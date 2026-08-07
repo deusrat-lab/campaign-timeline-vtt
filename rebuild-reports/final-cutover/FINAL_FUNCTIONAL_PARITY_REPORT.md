@@ -388,7 +388,7 @@ so the prior passes' thorough browser evidence (cited throughout this file) stan
 | View modes (DM/Player/Observer, tab-scoped) | COMPLETE | unchanged, Block H |
 | Repository authority (14 subsystems + registry) | COMPLETE | unchanged, Block I core |
 | Content (both stacks) | COMPLETE | unchanged |
-| Relations (BLOCK_DELETE + general relation authority) | PARTIAL | Greyholm 5/5 bounded fields now wired (this pass -- quest.giver/quest.enemies/locationState.npcIds/questIds/enemyIds, static guard + 32/32 Node harness against the real production module; live-browser click-through attempted but not completed this pass due to Browser-pane tooling issues, see CONTINUATION_STATE.json); Caldran 1/4 bounded fields wired to live mutation site (rest import-only, nothing to wire yet, unchanged) |
+| Relations (BLOCK_DELETE + general relation authority) | COMPLETE | Both stacks 9/9 bounded fields wired: Greyholm 5/5 (quest.giver/quest.enemies/locationState.npcIds/questIds/enemyIds), Caldran 4/4 (npc.locationId + this pass's quest.locationId/quest.npcIds/enemy.locationIds -- new live UI added to CampaignEntityCard.tsx). Live-browser verified this pass on a real Caldran campaign: create/persist/reload/revert for all 3 newly-wired fields, zero console errors. Static guard (3 files) + 32/32 Node harness against the real production module. |
 | Maps | COMPLETE | unchanged |
 | Party | COMPLETE | unchanged |
 | Routes | COMPLETE | unchanged |
@@ -446,3 +446,74 @@ session, not as evidence of a defect. Caldran's relation fields are unchanged (s
 relations conversion is now Greyholm 5/5 / Caldran 1/4 (was 0/5 / 1/4) — Caldran's 3
 unwired fields remain genuinely import-only (no live edit UI exists yet for them).
 Reasons (b)/(c)/(d) from the prior pass are unchanged and not addressed this pass.
+
+---
+
+## FINAL COMPLETION RUN — Block I closed, Block K/M/N still open
+
+**Block I is now COMPLETE.** Caldran relations went 1/4 → 4/4 this pass: added the
+first-ever live edit UI in `CampaignEntityCard.tsx` for `quest.locationId`,
+`quest.npcIds`, and `enemy.locationIds` (the write-path/authority mapping already
+existed from a prior session — only the UI was missing). Combined with Greyholm's
+prior 5/5, **all 9 bounded relation fields across both stacks are now wired,
+live-UI-verified, and guarded**. See `CONTINUATION_STATE.json`'s
+`blockICompletionSession` for full detail, including the exact browser evidence
+(create/persist/reload/revert on a real Caldran campaign, zero console errors).
+
+**Caldran data-parity discrepancy resolved with evidence, not asserted.** The
+historical "407 entities / 26 quests / 78 enemies" baseline was a frozen fixture
+snapshot; `src/data/campaignScenarios.ts` (the actual live scenario source every
+real campaign is built from) has 22 quests / 76 enemies today, confirmed by all 3
+real present Caldran campaigns independently. Title-based diff (ids are
+non-comparable — freshly minted per campaign instance) shows the current source is
+a strict subset of the fixture (4 named quests + 2 named enemies removed at some
+point before this repo's visible history) — classified as a legitimate historical
+source revision, not a migration defect. New canonical baseline: 17/66/22/76/205/12
+(locations/npcs/quests/enemies/images/factions). Full evidence, the named entities,
+and the classification are in `FINAL_DATA_PARITY_REPORT.json`'s
+`caldranBaselineResolutionEvidence`.
+
+**Root campaign identity contract formalized and enforced.** Determined **Case B**
+(root `campaignId` is an instance/storage-namespace id, not part of semantic content
+identity) from direct code evidence: `createCampaign()` always mints a fresh id,
+`reconstructUserCampaign()` always overwrites the imported campaign's id with the
+caller's target — neither path has ever supported preserving a specific campaignId.
+This means the 2 permanently-lost historical root ids
+(`camp-mshatb5f-mrttl`/`camp-mshg08wg-blruf`) are a disclosed historical incident,
+not a semantic parity gap. Enforced by a new static guard,
+`verify:root-campaign-identity-policy`.
+
+**Also fixed this pass:** `run-final-migration.ts` used to silently overwrite
+`FINAL_DATA_PARITY_REPORT.json`'s curated sections (like `liveCaldranReconciliation`)
+every time it ran — a real, previously-flagged incident. Fixed by making the script
+merge instead of clobber (it now owns only its 4 generated keys and preserves every
+other top-level key verbatim), verified by diffing a real run's output.
+
+**Gates this pass:** `npx tsc -b` clean, `npm run build` clean, all 42
+`npm run verify:*` scripts (41 prior + 1 new) PASS.
+
+**What did NOT get reached this pass (honest, exact remaining blockers):**
+
+- **Block K (full universal export/import schema) — still PARTIAL.** Greyholm's
+  `exportGreyholmUniversal` (`src/domain/adapters/greyholmToUserCampaignAdapter.ts`)
+  still covers only metadata/locations/npcs/quests/enemies/images/factions/
+  mapPlacements. Missing: arcs, routes, calendar/timeline, economy/services,
+  zones/overlays/movable entities, battle definitions/maps/placements. No code was
+  written toward this gap this pass — it needs real, substantial new adapter code,
+  not just wiring.
+- **Full Greyholm isolated round-trip with full-schema semantic comparison** —
+  blocked on the above; the existing round-trip (prior session) only proves the
+  8 sections currently exported.
+- **Block M re-reconciliation and Block N final targeted browser acceptance**
+  (multi-tab, full Greyholm/Caldran acceptance walks) — not re-run this pass. The
+  canonical baseline and root-identity contract this pass produced are ready as
+  inputs, but the reconciliation itself was not executed against them.
+- **`greyholm.placement`** (3 call sites in `campaignStore.tsx`) remains on its
+  unconverted legacy write path — unchanged, out of this pass's scope.
+
+**Verdict: `UNIVERSAL_LOCAL_REBUILD_INCOMPLETE`.** Block I is genuinely complete;
+Block K's full schema, Block M's re-reconciliation, and Block N's final acceptance
+are the three concrete, named blockers standing between this state and a strict
+`UNIVERSAL_LOCAL_REBUILD_1_TO_1_COMPLETE` verdict. None of these are newly
+discovered — all were already flagged as open by the prior session; this pass closed
+Block I and Phase C (Caldran baseline + identity contract) but did not reach Block K.

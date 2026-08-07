@@ -239,16 +239,38 @@ async function main() {
   const caldranKindMap: Record<string, string> = { npcs: 'npc', quests: 'quest', enemies: 'enemy', images: 'image', factions: 'faction' };
 
   const greyholm = await migrateOne('greyholm:main', greySource, greyId, greyManifest, greyKindMap);
-  const caldranResult = await migrateOne('user:caldran-captivity', caldranSource, caldranId, caldranManifest, caldranKindMap);
+  const caldranResult: Record<string, unknown> = await migrateOne('user:caldran-captivity', caldranSource, caldranId, caldranManifest, caldranKindMap);
+  // Curated annotation (not reproducible from this script's own inputs) --
+  // re-attached explicitly rather than relying on it surviving a prior run's
+  // output, since this script fully regenerates the `results` array every
+  // time it runs.
+  caldranResult.fixtureCaveat = "This 'user:caldran-captivity' entry is produced by verify:final-migration against a FROZEN static fixture (scripts/stage08/fixtures/caldran-real-export.json), NOT a live read of any of the 3 real present Caldran localStorage campaigns. The 407/26-quests/78-enemies numbers describe that fixture only.";
 
+  // This script owns exactly these 4 top-level keys. Any other top-level key
+  // already present in the file on disk (e.g. liveCaldranReconciliation,
+  // rootCampaignIdentityPolicy, canonicalCaldranSource -- curated,
+  // manually-verified sections that this script cannot reproduce) is
+  // preserved as-is. A prior session's incident: this script used to
+  // unconditionally overwrite the whole file, silently destroying
+  // liveCaldranReconciliation each time it ran -- fixed here by merging
+  // instead of clobbering.
+  const outPath = resolve(root, 'rebuild-reports/final-cutover/FINAL_DATA_PARITY_REPORT.json');
+  let existing: Record<string, unknown> = {};
+  try {
+    existing = JSON.parse(readFileSync(outPath, 'utf8'));
+  } catch {
+    existing = {};
+  }
+  const ownedKeys = new Set(['generatedAt', 'engine', 'repository', 'results']);
+  const preserved = Object.fromEntries(Object.entries(existing).filter(([k]) => !ownedKeys.has(k)));
   const report = {
     generatedAt: new Date().toISOString(),
     engine: 'src/domain/migration/migrationEngine.ts (runUniversalMigration / rollbackUniversalMigration) — real production code, not reimplemented.',
     repository: 'createProductionCampaignRepository + createMemoryRepositoryStorage (in-memory Map, same repository implementation the browser app uses over localStorage).',
     results: [greyholm, caldranResult],
+    ...preserved,
   };
 
-  const outPath = resolve(root, 'rebuild-reports/final-cutover/FINAL_DATA_PARITY_REPORT.json');
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, JSON.stringify(report, null, 2) + '\n');
   console.log(`Wrote ${outPath}`);

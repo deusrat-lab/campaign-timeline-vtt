@@ -41,6 +41,7 @@
     "verify:route-resolution-uses-registry": "node scripts/final-cutover/verify-route-resolution-uses-registry.mjs",
     "verify:no-workspace-split": "node scripts/final-cutover/verify-no-workspace-split.mjs",
     "verify:no-legacy-relations-write": "node scripts/final-cutover/verify-no-legacy-relations-write.mjs",
+    "verify:root-campaign-identity-policy": "node scripts/final-cutover/verify-root-campaign-identity-policy.mjs",
     "verify:general-relations-authority": "node scripts/final-cutover/verify-general-relations-authority.mjs",
     "verify:no-dead-module-reintroduction": "node scripts/final-cutover/verify-no-dead-module-reintroduction.mjs",
     "verify:complex-authority-and-shadow-isolation": "node scripts/final-cutover/verify-complex-authority-and-shadow-isolation.mjs",

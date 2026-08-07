@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-07T13:09:24.683Z",
+  "generatedAt": "2026-08-07T19:37:32.371Z",
   "engine": "src/domain/migration/migrationEngine.ts (runUniversalMigration / rollbackUniversalMigration) — real production code, not reimplemented.",
   "repository": "createProductionCampaignRepository + createMemoryRepositoryStorage (in-memory Map, same repository implementation the browser app uses over localStorage).",
   "results": [
@@ -141,15 +141,105 @@
     "method": "Live localStorage read via browser devtools JS against a fresh npm run dev server (port 5175), reading campaign-timeline-vtt:universal-registry:v1 and each dmCompanion.userCampaignData.<id>.v1 key directly -- not cached, not estimated.",
     "registryEntryCount": 3,
     "campaigns": [
-      { "campaignId": "camp-mshgi2vf-xdn6x", "title": "Кальдран: Цена имени (плен)", "npcs": 66, "locations": 17, "quests": 22, "enemies": 76, "images": 205, "factions": 12 },
-      { "campaignId": "camp-msin4ti8-cdlvz", "title": "Кальдран: Цена имени (плен)", "npcs": 66, "locations": 17, "quests": 22, "enemies": 76, "images": 205, "factions": 12 },
-      { "campaignId": "camp-msinbo7r-b29td", "title": "Кальдран: Цена имени (плен)", "npcs": 66, "locations": 17, "quests": 22, "enemies": 76, "images": 205, "factions": 12 }
+      {
+        "campaignId": "camp-mshgi2vf-xdn6x",
+        "title": "Кальдран: Цена имени (плен)",
+        "npcs": 66,
+        "locations": 17,
+        "quests": 22,
+        "enemies": 76,
+        "images": 205,
+        "factions": 12
+      },
+      {
+        "campaignId": "camp-msin4ti8-cdlvz",
+        "title": "Кальдран: Цена имени (плен)",
+        "npcs": 66,
+        "locations": 17,
+        "quests": 22,
+        "enemies": 76,
+        "images": 205,
+        "factions": 12
+      },
+      {
+        "campaignId": "camp-msinbo7r-b29td",
+        "title": "Кальдран: Цена имени (плен)",
+        "npcs": 66,
+        "locations": 17,
+        "quests": 22,
+        "enemies": 76,
+        "images": 205,
+        "factions": 12
+      }
     ],
     "note": "The 3 real present Caldran campaigns are internally consistent with each other (identical counts across all 3) but do NOT numerically match the static 407-fixture's quests(26)/enemies(78) fields -- quests=22 and enemies=76 live vs quests=26/enemies=78 in the frozen fixture. npcs(66)/images(205)/factions(12) DO match. This delta was not investigated further this session (out of scope: the fixture is a frozen historical snapshot used only to prove the migration engine's mechanics, not a live-data assertion). Per the campaign-identity incident report, 2 of these 3 campaign ids are RECREATIONS with preserved content but NOT the original root campaign ids (camp-mshatb5f-mrttl and one other original id are gone). Content parity across the 3 present campaigns is real and verified; root-identity parity for 2 of them is not.",
     "greyholmLiveSpotCheck": {
       "method": "Live fetch() of public/data/dm-companion/*.json from the running dev server.",
-      "counts": { "locations": 93, "npcs": 210, "quests": 51, "enemies": 127, "images": 420, "factions": 22 },
+      "counts": {
+        "locations": 93,
+        "npcs": 210,
+        "quests": 51,
+        "enemies": 127,
+        "images": 420,
+        "factions": 22
+      },
       "matchesBaseline": "npcs/quests/enemies/images/factions all match the 979-entity-count baseline's idCoverage manifestCounts exactly (210/51/127/420/22)."
     }
-  }
+  },
+  "canonicalCaldranSource": "src/data/campaignScenarios.ts -- the scenario-caldran-captivity definition read by getScenarioById(), which is the ACTUAL live source every real Caldran campaign in this app is built from at creation time (createCampaignFromScenario). This is the canonical source, superseding scripts/stage08/fixtures/caldran-real-export.json (the frozen 407-entity fixture).",
+  "canonicalCaldranBaseline": {
+    "locations": 17,
+    "npcs": 66,
+    "quests": 22,
+    "enemies": 76,
+    "images": 205,
+    "factions": 12,
+    "note": "images=205 is the file-resolved count (public/scenarios/caldran-captivity/*, all ${ART} template refs resolve, 0 missing), not the 14 inline image entries in campaignScenarios.ts's scenario.images array (those are a small curated subset used for specific card art, not the full image catalog)."
+  },
+  "caldranBaselineResolutionEvidence": {
+    "method": "Local-only comparison: loaded src/data/campaignScenarios.ts's live scenario-caldran-captivity definition via Node's native TS type stripping and compared it directly against scripts/stage08/fixtures/caldran-real-export.json (the frozen fixture) by STABLE CONTENT KEY (quest/enemy title, not the generated qst-*/emy-* ids -- those ids are minted fresh by uid() at campaign-creation time and are never stable across two separate campaign instances, so an id-set comparison would be meaningless; title is the only stable identity the scenario source itself provides pre-creation).",
+    "questsDelta": {
+      "currentSourceCount": 22,
+      "fixtureCount": 26,
+      "onlyInFixture": [
+        "S04. Проверка ремесла",
+        "S05. Кризис подъёма",
+        "S06. Стоянка пленных на дороге",
+        "S12. Голосование домов"
+      ],
+      "onlyInCurrentSource": [],
+      "classification": "legitimate historical source update -- the fixture is strictly a superset of the current scenario source (0 quests exist in current-but-not-fixture), consistent with these 4 quests having been deliberately removed from campaignScenarios.ts at some point before this repo's earliest commit touching that file (git log shows only 1 unrelated commit modifying campaignScenarios.ts in this repo's visible history, so the removal predates it). Not a migration defect: the migration engine correctly moves whatever the live scenario source contains; there is no evidence of accidental truncation (a clean removal of exactly 4 named quests, not a partial/corrupted list)."
+    },
+    "enemiesDelta": {
+      "currentSourceCount": 76,
+      "fixtureCount": 78,
+      "onlyInFixture": [
+        "Пепельнорогий громила",
+        "Дуэльный воин Железного Вепря"
+      ],
+      "onlyInCurrentSource": [],
+      "classification": "legitimate historical source update -- same reasoning as questsDelta above."
+    },
+    "npcsFactionsImagesMatch": "npcs (66/66), factions (12/12), and the 205/205 file-resolved image count all match exactly between current source and fixture -- only quests and enemies were trimmed, nothing else.",
+    "liveCampaignsConfirmClaim": "All 3 real present Caldran campaigns (camp-mshgi2vf-xdn6x, camp-msin4ti8-cdlvz, camp-msinbo7r-b29td) show exactly 22 quests / 76 enemies -- i.e. they match the CURRENT campaignScenarios.ts source exactly, not the frozen fixture. This is independent confirmation that campaignScenarios.ts (not the fixture) is what the app actually produces today.",
+    "outcome": "Outcome A (407/26/78 was an outdated historical snapshot) -- confirmed by evidence, not asserted. canonicalCaldranBaseline above (22 quests / 76 enemies / 398 total across the 6 sections) supersedes the old 407 total as the parity target going forward. The frozen fixture is retained unchanged as a migration-ENGINE-mechanics test fixture only (verify:final-migration) -- fixtureCaveat on that result entry already documents this; it is explicitly not read as a live-data assertion anywhere in this report."
+  },
+  "rootCampaignIdentityPolicy": {
+    "case": "B",
+    "definition": "Root campaign instance ID (the campaignId minted for a User Campaign, e.g. camp-mshgi2vf-xdn6x) is an INSTANCE/STORAGE-NAMESPACE identifier, not part of the semantic content-identity contract. Stable durable content entity IDs (npc/quest/enemy/location/faction/... ids) ARE part of that contract and must match across import/reconstruction; the root campaignId itself is not required to and, per current architecture, structurally cannot be preserved.",
+    "evidence": [
+      "src/state/userCampaignStore.tsx's createCampaign() unconditionally starts with `const id = uid('camp')` -- there is no parameter, code path, or UI affordance anywhere in this codebase that lets a caller specify or preserve a particular campaignId at creation time. Every campaign, without exception, gets a fresh random id the moment it is created.",
+      "src/domain/portability/userCampaignPortability.ts's reconstructUserCampaign(text, newCampaignId) unconditionally overwrites `data.campaignId = newCampaignId` on every import -- the imported campaign's original campaignId (from the exported envelope) is never consulted for the reconstructed instance's identity; the caller (always a fresh 'import as new campaign' UI action) supplies the target id.",
+      "Both of the above are structural properties of the write paths themselves, not incidental omissions -- confirmed by reading the actual function bodies, not inferred from behavior."
+    ],
+    "enforcedBy": "scripts/final-cutover/verify-root-campaign-identity-policy.mjs (new this pass, npm run verify:root-campaign-identity-policy) -- static guard asserting both invariants above hold and that this report's case is recorded as 'B'."
+  },
+  "lostHistoricalCampaignIds": {
+    "ids": [
+      "camp-mshatb5f-mrttl",
+      "camp-mshg08wg-blruf"
+    ],
+    "status": "PERMANENTLY UNRECOVERABLE per prior sessions' investigation (full git history search, live localStorage read, all available reports/evidence -- exact original instances could not be located; content was recreated from the same scenario template under fresh ids). Not re-investigated this session (no new evidence source became available; re-running the same exhausted search would not change the outcome)."
+  },
+  "impactOnParity": "None, per rootCampaignIdentityPolicy Case B above: since root campaignId was never part of the semantic content-identity contract (the architecture cannot preserve it across creation or import even in the success path), the loss of these 2 historical root ids is a real, disclosed historical incident but does NOT constitute a semantic content parity gap. Content parity (stable entity ids, relations, counts) for the 3 present Caldran campaigns is fully verified against canonicalCaldranBaseline above and is unaffected by which root id each campaign happens to carry."
 }
