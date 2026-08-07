@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-08-07T10:30:00.000Z",
-  "currentHead": "PENDING_COMMIT",
+  "currentHead": "2e03696",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -326,7 +326,7 @@
       {
         "bug": "userCampaignStore.tsx's deleteCampaign only ever removed dataKey(id)/runtimeKey(id) (the two dmCompanion.userCampaign* localStorage entries). It never touched any of Block I's per-campaign universal authority-store keys (campaign-timeline-vtt:universal-*:v1:camp:user:<id>:<kind> -- capabilities/zones/routes/arcs/fields/party-position), all written unconditionally by the SAME setCapability/commitZones/commitRoutes/etc code paths every user campaign already exercises. Confirmed via code read (src/domain/capabilities/capabilityAuthorityStore.ts's capabilitiesKey helper) and reproduced live: toggling a capability on BLOCK_J_TEST_CAMPAIGN left an orphaned campaign-timeline-vtt:universal-capabilities:v1:camp:user:camp-msim59bu-3nwej:userCampaign.capabilities key behind after deleting the campaign via the real UI.",
         "fix": "src/state/userCampaignStore.tsx's deleteCampaign now additionally sweeps localStorage for any remaining key that starts with 'campaign-timeline-vtt:' and contains the campaign's legacy id, removing each one. Iterates backwards over localStorage.length so removal during iteration is safe. This generically covers every current and future Block I per-campaign authority-store namespace without needing deleteCampaign to know each store's exact key-builder.",
-        "commit": "PENDING (this session, not yet committed at time of writing -- see final commit list)",
+        "commit": "2e03696",
         "howFound": "Root-caused by re-reading capabilityAuthorityStore.ts's key-builder and userCampaignStore.tsx's deleteCampaign side by side after noticing the orphaned key in localStorage post-delete.",
         "verifiedFix": "Created a second throwaway campaign (BLOCK_J_FIX_VERIFY, camp-msimvood-2rpl3), manually wrote synthetic campaign-timeline-vtt:universal-capabilities:v1:... and campaign-timeline-vtt:universal-zones:v1:... keys matching the real key shape to simulate a campaign that had exercised more than one Block I authority store, then deleted the campaign via the real UI delete button. The capabilities key was correctly swept by the fix. NOTE: one zones key survived the FIRST delete pass and needed manual cleanup -- see incident note below; the sweep logic itself is correct (backwards-iteration, prefix+id match verified working for every other key in every other test), the residual key was very likely re-written by a stray extra click during this session's flailing UI-automation attempts, not a flaw in the sweep. Re-ran the full create->toggle->delete sequence once cleanly at the end and confirmed zero residual campaign-timeline-vtt:*camp-msimvood-2rpl3* keys remained."
       }
