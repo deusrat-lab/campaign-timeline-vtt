@@ -1,12 +1,45 @@
 {
   "generatedAt": "2026-08-07T19:30:00.000Z",
-  "currentHead": "f923501",
+  "currentHead": "090e7ff",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
   "deploy": 0,
   "productionWrites": 0,
   "serverChanges": 0,
+  "blockIRegistryCameraRelationsSession": {
+    "summary": "Session tasked with the 3 items the project owner explicitly re-flagged as open: campaign registry (highest priority), general relations, camera/view-state classification. Priority order was registry > camera (quick) > relations (if time allowed). Registry and camera were both completed and browser/Node-verified; relations was NOT started (out of time after a serious registry attempt) -- deferred with precise scope below, not re-documented as a shallow 'too broad' note.",
+    "registry": {
+      "status": "DONE (sole write authority; route-resolution wiring NOT done -- see scopeNotDone below)",
+      "commit": "090e7ff",
+      "priorConclusionReExamined": "A prior Block I pass had ruled registry conversion out as intractable ('touched by every patchData call app-wide, no bounded choke point'). This session read touchRegistry line-by-line: it only ever bumps `updatedAt` on the ONE matching entry, structurally identical to fieldAuthorityStore.ts's single-scalar-field commit pattern. That is NOT evidence against a bounded choke point -- the prior conclusion was based on light investigation, not a real blocker.",
+      "whatShipped": "New src/domain/registry/registryAuthorityStore.ts: whole-collection commit authority (candidate -> invariant check [well-formed entries, no duplicate campaignId, Greyholm id rejected if smuggled in as an ordinary entry] -> expected-revision-guarded commit -> read-after-write), mirroring arcAuthorityStore.ts/zoneAuthorityStore.ts's shape. Exposes readUniversalRegistry()/lookupCampaign() as ONE lookup yielding Greyholm (synthetic, immutable seed record, GREYHOLM_REGISTRY_CAMPAIGN_ID='greyholm:main', same identity as campaignIdFromLegacy('greyholm','main') used elsewhere) plus every durably-committed User Campaign. src/state/userCampaignStore.tsx: added commitRegistryAndPersist() as the SOLE choke point for every registry mutation; converted all 7 previously-direct `writeJson(REGISTRY_KEY, ...)` call sites (persistRegistry, touchRegistry, renameCampaign, upsertRegistryFrom, server-sync delete handler, server-sync upsert path, player-fetch auto-register path) to route through it.",
+      "guardsAndTests": "scripts/final-cutover/verify-no-legacy-registry-write.mjs (static anti-bypass guard, PASS) + scripts/final-cutover/verify-universal-campaign-registry.mjs (Node harness importing the REAL production module directly via Node 23's native TS type-stripping, 10/10 checks: Greyholm lookup, new-campaign lookup, campaign switch, delete, isolation, duplicate-id rejection, Greyholm-id-smuggling rejection, reload, revision monotonicity -- PASS).",
+      "gates": "tsc -b clean, vite build clean, all 38 verify:* scripts pass (35 pre-existing + 3 new this session: camera-not-exported, no-legacy-registry-write, universal-campaign-registry).",
+      "browserVerified": "Fresh dev server, /campaigns loaded: Greyholm PROTECTED/ACTIVE card and all 3 real Caldran campaigns list correctly (unchanged, confirming the cutover did not disturb existing data). Navigated into Greyholm /map (via World Atlas selector) -- loads correctly ('Кампания загружена · legacy fallback' status, expected since Greyholm's own map-loading path was not rewired this pass). Zero console errors throughout.",
+      "notBrowserVerified": "Live create/delete of a throwaway test campaign through the real UI was attempted but NOT completed: the '+ Новая кампания' button opens a native window.prompt() dialog that the browser-automation tool used this session cannot interact with (clicks land but no visible state change, consistent with a cancelled/no-op prompt). createCampaign/deleteCampaign's underlying code was not touched beyond routing persistRegistry through commitRegistryAndPersist, and is exercised by the Node harness above, but a real end-to-end live-UI create-then-delete round trip is still open for a future session with either a different automation approach (e.g. a form-based creation UI, or scripted localStorage-level exercise instead of the prompt()) or manual verification by the user.",
+      "scopeNotDone": [
+        "Route resolution for /map, /campaigns/:id/... was NOT rewired to call readUniversalRegistry()/lookupCampaign() this pass -- Greyholm's route resolution (campaignStore.tsx) and Caldran's (userCampaignStore.tsx readData/readRuntime) still use their existing separate per-stack lookups, not the new universal lookup. The module is built, tested, and ready for that wiring; doing it live was judged too risky to rush in the time remaining given this project's explicit warning about accidental campaign loss from browser automation.",
+        "src/data/campaignModules.ts (the World-Atlas-era static CampaignModule[] list, richer shape: worldId/canonPolicy/mapIds/adventureModuleId) is a SEPARATE list from the UC registry converted here. It has no live runtime mutation path (a static array, not a store), so there was nothing to convert to sole authority -- explicitly out of scope, not a gap.",
+        "Live browser create+delete round trip for a throwaway test campaign through the real UI (see notBrowserVerified above)."
+      ],
+      "nextConcreteStep": "Wire /map and /campaigns/:id/... route resolution through readUniversalRegistry()/lookupCampaign() in campaignStore.tsx and userCampaignStore.tsx, then do the live create-throwaway-campaign-then-delete-it browser round trip (very carefully, per this project's standing incident warning) to close out the notBrowserVerified gap."
+    },
+    "camera": {
+      "status": "DONE (CLOSED)",
+      "commit": "0e1ef19",
+      "whatShipped": "Formalized the pre-existing but unenforced camera/view-state exclusion as an explicit, checked contract on both stacks. Greyholm (src/pages/MapWorkspacePage.tsx) already kept camera pan/zoom in a separate CAMERA_STORAGE_KEY localStorage key outside the DM-edit overlay with a doc comment -- left as-is, now covered by a guard. Caldran/User Campaigns had a REAL gap found by tracing exportUserCampaignDM: UserCampaignRuntime.mapViewState was silently included in the DM export's legacy extension blob, meaning zoom/pan would round-trip through Export/Import. Fixed with stripCameraViewState() in src/domain/portability/userCampaignPortability.ts (the single enforcement point) and backfilled a fresh default mapViewState on import/restore in userCampaignStore.tsx rather than treating its absence as data loss.",
+      "guardsAndTests": "scripts/final-cutover/verify-camera-not-exported.mjs (static guard asserting both enforcement points exist) -- PASS.",
+      "gates": "tsc -b clean, vite build clean, all verify:* scripts pass."
+    },
+    "relations": {
+      "status": "NOT STARTED (deferred with scope, honestly, per session's own priority order)",
+      "reasonDeferred": "Session priority order was registry > camera (quick) > relations (if time allowed). A serious registry attempt (re-examining and overturning the prior 'intractable' conclusion, then designing and shipping a real authority module) plus the camera formalization consumed the available time for this session.",
+      "priorConclusion": "A prior Block I pass ruled this out as 'too broad for one session -- many entity kinds x fields x two stacks'. NOT re-examined this session (unlike registry) -- no new investigation was done into contentDeletePolicy.ts's bounded set of BLOCK_DELETE-checked relation fields.",
+      "concreteStartingPoint": "src/shared/entity/contentDeletePolicy.ts (referential-integrity/BLOCK_DELETE logic) is the file the task pointed to for the actual bounded set of relation fields already in active use -- e.g. quest.npcIds-style arrays -- read that FIRST in a future session to scope a generalRelationAuthorityStore.ts keyed by (campaignId, fromKind, fromId, relationField, toKind, toId), mirroring the whole-collection commit shape used by registryAuthorityStore.ts/arcAuthorityStore.ts, covering at minimum the fields that bounded set already checks.",
+      "nextConcreteStep": "Read src/shared/entity/contentDeletePolicy.ts and wherever referential-integrity verification (scripts/final-cutover/verify-referential-integrity.mjs and its callers) reads relations from, enumerate the exact bounded field set, then design+ship the authority module for that set only, with a documented extension path for the rest -- same rigor as registry/camera this session (guard script, Node harness, gates, careful live-UI verification)."
+    }
+  },
   "blockGUnifiedWorkspace": {
     "verdict": "BLOCK_G_UNIFIED_CAMPAIGN_WORKSPACE_COMPLETE",
     "commit": "3f3f525 + this pass (browser re-verification, no new code changes needed)",
