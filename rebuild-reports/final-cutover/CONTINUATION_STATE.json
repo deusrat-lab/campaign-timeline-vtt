@@ -1,11 +1,12 @@
 {
-  "generatedAt": "2026-08-07T18:00:00.000Z",
-  "currentHead": "43021b1",
+  "generatedAt": "2026-08-07T19:30:00.000Z",
+  "currentHead": "43021b1 (pre-Block-N; see blockNFinalLocalAcceptance.commit for this pass's commit once created)",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
   "deploy": 0,
   "productionWrites": 0,
+  "serverChanges": 0,
   "blockGUnifiedWorkspace": {
     "verdict": "BLOCK_G_UNIFIED_CAMPAIGN_WORKSPACE_COMPLETE",
     "commit": "3f3f525 + this pass (browser re-verification, no new code changes needed)",
@@ -457,5 +458,27 @@
     "summary": "Re-ran all prior baseline checks live (not cited from cache): Greyholm 979 entities, Caldran 407 entities, Greyholm images 420/420, shared bestiary 414/414 (independently re-derived with an ad-hoc filesystem check), 0 broken references (verify:referential-integrity), 0 duplicate/missing IDs across 843 checked, no cross-campaign authority leakage (durableAuthorityRouter rejects wrong_campaign), no residual Block K test-campaign data in canonical source files, 15/15 verify:universal-regression gates pass, all no-legacy-*-write guards pass, Block L dead-module guard passes.",
     "verdict": "CLEAN_1_TO_1_RECONCILIATION, no regression found",
     "reportUpdated": "rebuild-reports/final-cutover/FINAL_DATA_PARITY_REPORT.json (blockMReconciliation key added)"
+  },
+  "blockNFinalLocalAcceptance": {
+    "verdict": "UNIVERSAL_LOCAL_REBUILD_INCOMPLETE",
+    "purpose": "Wrap-up honesty pass, not a completion attempt. No code changes made or needed -- Block I and Block L are both already, correctly, intentionally incomplete per their own sections above; this pass exists to prove that with fresh evidence, not to force-finish them.",
+    "fullGateSuite": "All 35 npm run verify:* scripts run individually with real exit-code checks (not summarized from memory): 35/35 PASS, zero failures. List: referential-integrity, final-migration, domain, block-i-configuration, no-legacy-battle-write, no-legacy-field-write, no-legacy-presentedcard-write, no-legacy-reveal-write, no-legacy-party-position-write, no-legacy-map-placements-write, no-legacy-routes-write, no-legacy-zones-write, no-legacy-arcs-write, no-legacy-capabilities-write, no-legacy-calendar-write, no-legacy-service-write, no-workspace-split, no-dead-module-reintroduction, stage04, stage05, stage06, stage07, stage09, stage10, stage11, stage12, stage13, stage14, stage08, stage08d, stage15, stage16, stage16-1, stage17, universal-regression. Plus npx tsc -b clean, npm run build (tsc -b + vite build) clean.",
+    "browserAcceptancePass": {
+      "method": "Real dev server (npm run dev via .claude/launch.json stage17-dev, port 5175), Browser pane, real UI clicks, no mocks. Per the task's own guidance: light spot-check re-confirmation for scenarios already thoroughly proven by prior blocks (most of 1-23, 26-30), fresh thorough execution for 24-25 (multi-tab) and 31-35 (aggregate properties).",
+      "spotChecks_1_to_23_26_to_30": "Greyholm /map loads clean, zero console errors. Caldran (camp-mshgi2vf-xdn6x, one of the 3 real recovered campaigns -- not touched destructively) loads via direct URL /campaigns/<id>/map, isolated banner correct, 17 locations render, zero console errors. No regression signal found; not re-run exhaustively per-subsystem (that's Block I's own already-recorded job).",
+      "scenario24_25_multiTab": "Done fresh and thoroughly this pass. Opened a second real tab on the same Caldran campaign. Tab A (seed) set to DM Edit, tab B (tab-3) set to Player View, both via real UI clicks (ref-based, not coordinate-based after a stale first click missed -- corrected mid-pass by re-reading the page and clicking by ref). Forced full cold reloads (navigate force:true) on both tabs. RESULT: tab A kept DM Edit, tab B kept Player View, screenshot-confirmed post-reload -- re-confirms blockHTabScopedViewModes with zero regression. Zero console errors in either tab throughout.",
+      "scenario31_consoleErrors": "TRUE. Zero console errors confirmed across every navigation this pass (Greyholm /map, Caldran /campaigns/<id>/map, both multi-tab reloads).",
+      "scenario32_33_duplicateWritesAndSyncLoops": "PARTIAL/inferred, not independently re-instrumented. No fresh write/sync counter was added this pass. Zero-regression inferred from (a) all 12 no-legacy-*-write guards passing (they mechanically fail on a duplicate legacy write reappearing for a converged scope) and (b) zero console warnings during every interaction this pass (duplicate-sync loops have reliably produced visible React/state-thrash warnings in this codebase per multiple prior-session findings). Honest confidence level: evidence-backed but not a from-scratch instrumented count.",
+      "scenario34_activeLegacyWrites": "PARTIAL, as documented and expected -- NOT a regression. Re-confirmed by grep this pass: `grep -rn \"routeGreyComplex(\" src` still returns exactly 3 call sites, all greyholm.placement (Greyholm map-object placement move/remove has no dedicated Block I authority store, per blockLUnusedExportScanPass.complexAuthoritySinkFinding). commandShadowSink.ts's emitMainCommand/emitUserCommand still fire on every legacy mutation as diagnostics-only shadow replay, never authoritative -- the open product decision from Block L, untouched this pass.",
+      "scenario35_activeLegacyWorkspaceRoutes": "TRUE, holds, re-confirmed. verify:no-workspace-split passed clean (part of the 35/35) -- no <Route element> mounts MapWorkspacePage/IsolatedCampaignMapWorkspace/CampaignBattlePage directly; all three still mount only through GreyholmWorkspace/UserCampaignWorkspace per Block G."
+    },
+    "regressionsFound": "None. No code changes made or required this pass.",
+    "toolingIncidentDuringThisPass": "This session's /tmp directory was not persistent across separate Bash tool invocations in this sandbox (each call got a fresh /tmp), which silently emptied a verify-script's input file list and produced a false 'all gates silently no-op'd' symptom on the first two attempts at running the full verify suite. Root-caused by checking process state and file existence directly rather than trusting a clean-looking but suspiciously short log, not assumed from a passing-looking exit. Fixed by writing the runner script and its input list into the session-persistent scratchpad directory instead of /tmp. Not an application bug -- a note for future sessions running long background verify loops in this environment.",
+    "reportUpdated": "rebuild-reports/final-cutover/FINAL_FUNCTIONAL_PARITY_REPORT.md (new 'Block N' section appended with the full breakdown above)",
+    "remainingForTrueCompleteVerdict": [
+      "Finish Block I's 2 remaining out-of-scope-by-design candidates if ever reprioritized: campaign registry (touched by every patchData call app-wide + live server sync, no bounded choke point found) and general entity relations arrays (many entity kinds x many relation fields x two stacks, explicitly out of scope per safeFieldRegistry.ts's own doc comment). Greyholm's map-object placement (greyholm.placement, 3 call sites in campaignStore.tsx) also has no dedicated authority store yet, unlike every other Block I scope -- the most tractable of the three if only one is picked up next.",
+      "Finish Block L: (1) make the explicit product decision on commandShadowSink.ts/CommandShadowProvider (keep as permanent /diagnostics tooling vs. retire it and its Stage-13 harness) -- the full dependency map and tradeoff is already compiled in blockLUnusedExportScanPass.commandShadowSinkDependencyMap so this is a same-session decision-and-act task, not new investigation; (2) run a proper AST-based unused-export scan (ts-prune or equivalent) across all of src/, not just the 11 Block I authority-store modules already scanned, to find dead exports inside otherwise-live files.",
+      "Build Greyholm's own export/import path to close Block K's documented gap (blockKImportExportRoundTrips.exactNextStep already lays out both options: a Greyholm-specific panel reading/writing GreyholmOverlay directly, or -- the more architecturally 'universal' choice -- a GreyholmOverlay<->UserCampaignData adapter mirroring the existing adaptUserCampaignToUniversal so Greyholm can round-trip through the same userCampaignPortability.ts envelope UC already uses)."
+    ]
   }
 }

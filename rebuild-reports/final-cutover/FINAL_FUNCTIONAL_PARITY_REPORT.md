@@ -265,3 +265,90 @@ something to rush inside a verification pass.
 
 **Not a complete report.** Continues to be filled in as further blocks close; see
 `CONTINUATION_STATE.json` for exact next steps.
+
+## Block N — Final local acceptance pass (this session)
+
+**Verdict: `UNIVERSAL_LOCAL_REBUILD_INCOMPLETE`.** This block is the honesty/wrap-up pass —
+it does NOT claim project completion. Block I (14/16 candidate subsystems converged —
+registry and general-relations explicitly out of scope by design) and Block L (two real
+cleanup passes done, `commandShadowSink.ts` product decision still open, no unused-export
+scan beyond the one already run) remain intentionally incomplete per their own prior
+sections above. Nothing in this pass changed that.
+
+**Full gate suite**: all 35 `npm run verify:*` scripts run individually with real exit-code
+checks (not summarized from memory) — **35/35 PASS**, zero failures. Plus `npx tsc -b`
+clean and `npm run build` (tsc -b + vite build) clean. Full list: referential-integrity,
+final-migration, domain, block-i-configuration, no-legacy-battle-write,
+no-legacy-field-write, no-legacy-presentedcard-write, no-legacy-reveal-write,
+no-legacy-party-position-write, no-legacy-map-placements-write, no-legacy-routes-write,
+no-legacy-zones-write, no-legacy-arcs-write, no-legacy-capabilities-write,
+no-legacy-calendar-write, no-legacy-service-write, no-workspace-split,
+no-dead-module-reintroduction, stage04, stage05, stage06, stage07, stage09, stage10,
+stage11, stage12, stage13, stage14, stage08, stage08d, stage15, stage16, stage16-1,
+stage17, universal-regression — every one exited 0.
+
+**Browser acceptance pass** (real dev server, `npm run dev` port 5175, Browser pane, no
+mocks): Greyholm `/map` loads clean (zero console errors). Caldran
+(`camp-mshgi2vf-xdn6x`, one of the 3 real recovered campaigns — untouched, not clicked
+into any delete control) loads via direct URL at `/campaigns/<id>/map`, isolated banner
+correct, 17 locations render, zero console errors — confirms scenarios 1-23/26-30 have
+not regressed (light spot-check per the task's own guidance, not a full re-run of Block
+I's exhaustive per-subsystem browser proof already on record above).
+
+Scenarios 24-25 (multi-tab) done fresh this pass, thoroughly: opened a second real browser
+tab on the same Caldran campaign, set tab A (`seed`) to **DM Edit**, tab B (`tab-3`) to
+**Player View** via real UI clicks (not programmatic state mutation) — confirmed via
+screenshot Player View correctly shows read-only `Вы видите только то, что открыл Мастер`
+messaging with DM controls absent. Forced full reloads (`navigate` with `force:true`, a
+genuine cold reload not an in-app route change) on both tabs — **tab A kept DM Edit, tab B
+kept Player View**, confirmed via screenshot post-reload. Zero console errors in either tab
+throughout. This directly re-confirms Block H's `blockHTabScopedViewModes` finding still
+holds with no regression.
+
+Scenario 31 (console errors = 0): confirmed zero across every navigation this pass
+(Greyholm `/map`, Caldran `/campaigns/<id>/map`, both tabs pre- and post-reload).
+
+Scenarios 32-33 (duplicate writes / duplicate sync loops): no direct instrumentation was
+added this pass to count write/sync events; inferred zero-regression from (a) 35/35 gates
+including all 12 `no-legacy-*-write` guards passing, which mechanically fail if a converged
+scope regains a duplicate legacy write path, and (b) zero console errors/warnings during
+every browser interaction this pass (a duplicate-sync loop reliably produces visible
+React/state-thrash warnings in this codebase per multiple documented prior-session
+findings). Not independently re-instrumented with a fresh write-counter this pass — a
+lower-confidence but non-zero-evidence "PARTIAL" call, not a blind "COMPLETE".
+
+Scenario 34 (active legacy writes = 0): **PARTIAL, as expected and previously documented.**
+`greyholm.placement` (map-object placement move/remove in `campaignStore.tsx`, 3 call
+sites) is still the one live `routeGreyComplex` scope with no dedicated Block I authority
+store — see `CONTINUATION_STATE.json`'s `blockLUnusedExportScanPass.complexAuthoritySinkFinding`.
+Re-confirmed by grep this pass: `grep -rn "routeGreyComplex(" src` still returns exactly 3
+call sites, all `greyholm.placement`. `commandShadowSink.ts`'s `emitMainCommand`/
+`emitUserCommand` also still fire on every legacy mutation as diagnostics-only shadow
+replay (never authoritative) — the open product decision from Block L. Neither is a
+regression; both are the same known, documented gap carried forward unchanged.
+
+Scenario 35 (active legacy workspace routes = 0): **TRUE, holds.** `verify:no-workspace-split`
+passed clean this pass (part of the 35/35). No `<Route element>` mounts
+`MapWorkspacePage`/`IsolatedCampaignMapWorkspace`/`CampaignBattlePage` directly; all three
+still mount only through `GreyholmWorkspace`/`UserCampaignWorkspace` per Block G.
+
+Scenarios not independently re-exercised fresh this pass (relying on the already-thorough
+prior-block browser evidence cited in the sections above, per the task's own "lighter
+re-confirmation is fine" guidance): 2-23 battle/reveal/presentedCard/party/route/zone
+lifecycle detail, 26-30 new-campaign/export-import/isolation/direct-URL/campaign-switch
+detail. None showed any sign of regression in the gate suite or in the spot-checks that
+were run.
+
+**No regression found.** No code changes were required or made this pass — this was a
+verification-and-honesty pass only, per the task's own instruction not to force-finish
+Block I/L.
+
+Real environment note encountered and resolved this pass (tooling, not app behavior): this
+session's `/tmp` was not persistent across separate Bash tool invocations in this sandbox
+(each call got a fresh `/tmp`), which silently emptied a file-list the verify-loop script
+depended on and produced a false "gates all silently no-op'd" symptom on the first two
+attempts. Root-caused by checking `ps aux`/file existence rather than assumed from a
+clean-looking log tail; fixed by writing the script and its input list into the
+session-persistent scratchpad directory instead. Recorded here because it is exactly the
+kind of "don't rubber-stamp — verify the real exit status" case this block exists to guard
+against.
