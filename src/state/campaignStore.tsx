@@ -40,7 +40,7 @@ import { captureTokenFromUrl, getStoredToken } from './persistence/authToken';
 import { API_BASE_URL } from '../config';
 import { emitMainCommand } from './commandShadowSink';
 import { routeMainComplex, type ComplexActionDescriptor } from './complexAuthoritySink';
-import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, commitReveal, readReveal, type RevealSnapshot, commitPartyPosition, readPartyPosition, type PartyPositionSnapshot, createBrowserRepositoryStorage, campaignIdFromLegacy, commitCapabilities, type CapabilityTogglesSnapshot, commitArcs, type ArcSnapshotEntry, commitCalendar, readCalendar, type CalendarSnapshot, commitServicePatch, type ServiceAuthorityKind } from '../domain';
+import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPresentedCard, commitReveal, readReveal, type RevealSnapshot, commitPartyPosition, readPartyPosition, type PartyPositionSnapshot, createBrowserRepositoryStorage, campaignIdFromLegacy, commitCapabilities, type CapabilityTogglesSnapshot, commitArcs, type ArcSnapshotEntry, commitCalendar, readCalendar, type CalendarSnapshot, commitServicePatch, type ServiceAuthorityKind, commitRelations, readRelations, scalarToIds, idsToScalar, type RelationFieldKind, type RelationEntry } from '../domain';
 
 // Decision 2 — the SAME universal campaign id EmbeddedBattleOverlay.tsx
 // already uses for its (now-superseded) shadow turn-advance path. Must be
@@ -48,6 +48,63 @@ import { commitGreyholmBattle, commitField, type FieldAuthorityKind, commitPrese
 // MAIN_CAMPAIGN_ID ('main-greyholm-campaign') -- that string has no colon
 // segment and fails the branded CampaignId's format assertion.
 const GREYHOLM_UNIVERSAL_CAMPAIGN_ID = campaignIdFromLegacy('greyholm', 'main');
+
+/**
+ * Block I — general relations authority for Greyholm's bounded relation
+ * field set (see `src/domain/relations/relationAuthorityStore.ts` for the
+ * full scope rationale). Maps a Greyholm entity kind + single patched field
+ * to its relation-authority kind and cardinality, mirroring
+ * `resolveUserRelationKind` in `userCampaignStore.tsx`. Closed table so an
+ * unlisted field can never take universal relation authority.
+ */
+function resolveGreyholmRelationKind(
+  entityType: string,
+  field: string | null,
+): { kind: RelationFieldKind; cardinality: 'single' | 'array' } | null {
+  if (!field) return null;
+  const table: Record<string, Record<string, { kind: RelationFieldKind; cardinality: 'single' | 'array' }>> = {
+    quest: {
+      giver: { kind: 'greyholm.quest.giver', cardinality: 'single' },
+      enemies: { kind: 'greyholm.quest.enemies', cardinality: 'array' },
+    },
+    locationState: {
+      npcIds: { kind: 'greyholm.locationState.npcIds', cardinality: 'array' },
+      questIds: { kind: 'greyholm.locationState.questIds', cardinality: 'array' },
+      enemyIds: { kind: 'greyholm.locationState.enemyIds', cardinality: 'array' },
+    },
+  };
+  return table[entityType]?.[field] ?? null;
+}
+
+/**
+ * Shared commit helper for both patchQuest and patchLocationState below --
+ * commits the candidate {fromId, toIds} whole-collection for this relation
+ * field first (isolated, campaign-scoped, expected-revision guard,
+ * read-after-write verified), returns the committed value in the same shape
+ * the caller's single-field patch used (scalar or array). No flag, no
+ * fallback -- mirrors every other Block I authority cutover in this file.
+ */
+function commitGreyholmRelation(
+  relationKind: { kind: RelationFieldKind; cardinality: 'single' | 'array' },
+  entityId: string,
+  singleVal: unknown,
+): string | string[] | undefined {
+  const toIds = relationKind.cardinality === 'single'
+    ? scalarToIds(singleVal as string | undefined)
+    : (singleVal as string[]);
+  const existing = readRelations(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, relationKind.kind);
+  const nextEntries: RelationEntry[] = toIds.length > 0
+    ? [...existing.filter((e) => e.fromId !== entityId), { fromId: entityId, toIds }]
+    : existing.filter((e) => e.fromId !== entityId);
+  const outcome = commitRelations(greyholmBattleStorage(), GREYHOLM_UNIVERSAL_CAMPAIGN_ID, relationKind.kind, nextEntries);
+  if (!outcome.ok || !outcome.entries) {
+    throw new Error(`commitGreyholmRelation: universal relation commit failed for ${relationKind.kind} on ${entityId}: ${outcome.error ?? 'unknown error'}`);
+  }
+  const committedEntry = outcome.entries.find((e) => e.fromId === entityId);
+  return relationKind.cardinality === 'single'
+    ? idsToScalar(committedEntry?.toIds ?? [])
+    : (committedEntry?.toIds ?? []);
+}
 
 // Decision 2 — battle authority storage handle for the Greyholm active-battle
 // commit path (see startActiveBattle/updateActiveBattle/etc below). SSR-safe:
@@ -1318,8 +1375,24 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
       patchWorldMap: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'worldMap', id, patch: patch as Patch<unknown> }),
       patchWorldMapState: (id, patch) =>
         dispatch({ type: 'PATCH_ENTITY', kind: 'worldMapState', id, patch: patch as Patch<unknown> }),
-      patchLocationState: (id, patch) =>
-        dispatch({ type: 'PATCH_ENTITY', kind: 'locationState', id, patch: patch as Patch<unknown> }),
+      patchLocationState: (id, patch) => {
+        const action: Action = { type: 'PATCH_ENTITY', kind: 'locationState', id, patch: patch as Patch<unknown> };
+        // Block I -- general relations authority for locationState.npcIds/
+        // questIds/enemyIds (see resolveGreyholmRelationKind above). Only
+        // exact single-field array patches qualify; anything else (e.g. a
+        // multi-field patch, or DELETED) dispatches directly, unchanged.
+        if (patch === DELETED) { dispatch(action); return; }
+        const keys = Object.keys(patch as Record<string, unknown>);
+        const singleKey = keys.length === 1 ? keys[0] : null;
+        const singleVal = singleKey ? (patch as Record<string, unknown>)[singleKey] : undefined;
+        const relationKind = resolveGreyholmRelationKind('locationState', singleKey);
+        if (relationKind && Array.isArray(singleVal) && singleVal.every((v) => typeof v === 'string')) {
+          const committedValue = commitGreyholmRelation(relationKind, id, singleVal);
+          dispatch({ type: 'PATCH_ENTITY', kind: 'locationState', id, patch: { [singleKey as string]: committedValue } as Patch<unknown> });
+          return;
+        }
+        dispatch(action);
+      },
       patchHotspot: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'hotspot', id, patch: patch as Patch<unknown> }),
       patchRoute: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'route', id, patch: patch as Patch<unknown> }),
       patchTravelEvent: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'travelEvent', id, patch: patch as Patch<unknown> }),
@@ -1428,9 +1501,22 @@ export function CampaignStoreProvider({ children }: { children: ReactNode }) {
             throw new Error(`patchQuest: universal field commit failed for ${fieldKind} on ${id}: ${outcome.error ?? 'unknown error'}`);
           }
           dispatch({ type: 'PATCH_ENTITY', kind: 'quest', id, patch: { [singleKey as string]: outcome.value } as Patch<unknown> });
-        } else {
-          dispatch(action);
+          return;
         }
+        // Block I -- general relations authority for quest.giver (single) and
+        // quest.enemies (array) (see resolveGreyholmRelationKind above).
+        const relationKind = resolveGreyholmRelationKind('quest', singleKey);
+        if (
+          relationKind &&
+          (relationKind.cardinality === 'single'
+            ? value === undefined || typeof value === 'string'
+            : Array.isArray(value) && value.every((v) => typeof v === 'string'))
+        ) {
+          const committedValue = commitGreyholmRelation(relationKind, id, value);
+          dispatch({ type: 'PATCH_ENTITY', kind: 'quest', id, patch: { [singleKey as string]: committedValue } as Patch<unknown> });
+          return;
+        }
+        dispatch(action);
       },
       patchEnemy: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'enemy', id, patch: patch as Patch<unknown> }),
       patchPlayer: (id, patch) => dispatch({ type: 'PATCH_ENTITY', kind: 'player', id, patch: patch as Patch<unknown> }),

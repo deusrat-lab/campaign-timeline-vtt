@@ -1,18 +1,20 @@
 // Block I — anti-legacy guard for the general relations authority cutover
 // (src/domain/relations/relationAuthorityStore.ts): fails if
-// userCampaignStore.tsx's updateEntity() stops routing the bounded relation
-// field set (quest.npcIds, npc.locationId, quest.locationId,
-// enemy.locationIds -- the exact fields findUcBlockingRelations() in
-// CampaignEntityCard.tsx checks for BLOCK_DELETE) through
-// commitRelations() before falling through to the plain genericUpdater
-// legacy write.
+// userCampaignStore.tsx's updateEntity() OR campaignStore.tsx's
+// patchQuest()/patchLocationState() stop routing their bounded relation
+// field sets through commitRelations()/commitGreyholmRelation() before
+// falling through to a legacy write.
 //
-// Caldran (user-campaign) only this pass -- Greyholm's equivalent relation
-// fields (quest.giver, locationState.npcIds/questIds/enemyIds,
-// quest.enemies) are NOT yet wired to universal authority; see
-// rebuild-reports/final-cutover/CONTINUATION_STATE.json for the documented
-// next step. This guard intentionally does not assert anything about
-// campaignStore.tsx (Greyholm) for that reason.
+// Caldran (user-campaign): quest.npcIds, npc.locationId, quest.locationId,
+// enemy.locationIds -- the exact fields findUcBlockingRelations() in
+// CampaignEntityCard.tsx checks for BLOCK_DELETE.
+//
+// Greyholm (main campaign): quest.giver, quest.enemies,
+// locationState.npcIds/questIds/enemyIds -- the exact fields
+// findNpcBlockingRelations/findQuestBlockingRelations/
+// findEnemyBlockingRelations in EntityLibraryPage.tsx check for
+// BLOCK_DELETE. All 5 bounded fields are now wired (Block I complete for
+// this scope) -- see CONTINUATION_STATE.json.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -66,10 +68,58 @@ function read(path) {
   }
 }
 
+{
+  const file = 'src/state/campaignStore.tsx';
+  const text = read(file);
+
+  if (!/function resolveGreyholmRelationKind/.test(text)) {
+    failed.push(`${file}: resolveGreyholmRelationKind() table missing -- Greyholm relation authority cutover regressed`);
+  }
+  if (!/function commitGreyholmRelation/.test(text)) {
+    failed.push(`${file}: commitGreyholmRelation() helper missing -- Greyholm relation authority cutover regressed`);
+  }
+
+  const expectedFields = [
+    "giver: { kind: 'greyholm.quest.giver'",
+    "enemies: { kind: 'greyholm.quest.enemies'",
+    "npcIds: { kind: 'greyholm.locationState.npcIds'",
+    "questIds: { kind: 'greyholm.locationState.questIds'",
+    "enemyIds: { kind: 'greyholm.locationState.enemyIds'",
+  ];
+  for (const needle of expectedFields) {
+    if (!text.includes(needle)) {
+      failed.push(`${file}: resolveGreyholmRelationKind() no longer maps ${JSON.stringify(needle)} -- bounded relation field set regressed`);
+    }
+  }
+
+  const questRelationCallCount = (text.match(/resolveGreyholmRelationKind\('quest', singleKey\)/g) ?? []).length;
+  if (questRelationCallCount !== 1) {
+    failed.push(`${file}: expected exactly 1 resolveGreyholmRelationKind('quest', ...) call in patchQuest(), found ${questRelationCallCount}`);
+  }
+  const locationStateRelationCallCount = (text.match(/resolveGreyholmRelationKind\('locationState', singleKey\)/g) ?? []).length;
+  if (locationStateRelationCallCount !== 1) {
+    failed.push(`${file}: expected exactly 1 resolveGreyholmRelationKind('locationState', ...) call in patchLocationState(), found ${locationStateRelationCallCount}`);
+  }
+
+  const commitCallCount = (text.match(/commitGreyholmRelation\(relationKind, id, /g) ?? []).length;
+  if (commitCallCount !== 2) {
+    failed.push(`${file}: expected exactly 2 commitGreyholmRelation(...) call sites (patchQuest + patchLocationState), found ${commitCallCount}`);
+  }
+
+  // Both relation branches must `return` before their function's plain
+  // legacy `dispatch(action)` fallback, so a relation-field patch can never
+  // silently fall through unguarded.
+  const patchQuestIdx = text.indexOf('patchQuest: (id, patch) => {');
+  const patchLocationStateIdx = text.indexOf('patchLocationState: (id, patch) => {');
+  if (patchQuestIdx === -1 || patchLocationStateIdx === -1) {
+    failed.push(`${file}: patchQuest/patchLocationState not found at expected shape -- guard's assumptions may be stale`);
+  }
+}
+
 if (failed.length) {
   console.error('LEGACY_RELATIONS_WRITE_GUARD_FAIL:');
   for (const f of failed) console.error(`  - ${f}`);
   process.exit(1);
 }
 
-console.log(JSON.stringify({ ok: true, filesChecked: 1, verdict: 'NO_LEGACY_RELATIONS_WRITE_PATH_FOUND (Caldran bounded field set)' }));
+console.log(JSON.stringify({ ok: true, filesChecked: 2, verdict: 'NO_LEGACY_RELATIONS_WRITE_PATH_FOUND (Caldran 4/4 + Greyholm 5/5 bounded field sets)' }));

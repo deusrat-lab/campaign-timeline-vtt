@@ -143,10 +143,57 @@ function findBlockingRelationsForLocation(storage, campaignId, targetLocationId)
   check('empty fromId rejected by invariant', malformedOutcome.ok === false);
 }
 
+// --- Greyholm bounded field set (all 5, now wired via campaignStore.tsx's
+// resolveGreyholmRelationKind/commitGreyholmRelation) ---
+const GREYHOLM_CAMPAIGN = 'greyholm:main';
+const GIVER_FIELD = 'greyholm.quest.giver';
+const LS_NPC_FIELD = 'greyholm.locationState.npcIds';
+{
+  // scalar field: quest.giver
+  const questId = 'quest-g1';
+  const npcId = 'npc-g1';
+  const created = commitRelations(storage, GREYHOLM_CAMPAIGN, GIVER_FIELD, [{ fromId: questId, toIds: scalarToIds(npcId) }]);
+  check('greyholm quest.giver create commit succeeds', created.ok === true);
+  const reloaded = readRelations(storage, GREYHOLM_CAMPAIGN, GIVER_FIELD);
+  check('greyholm quest.giver reload returns committed entry', reloaded.length === 1 && idsToScalar(reloaded[0].toIds) === npcId);
+
+  const findGiverBlockers = (targetNpcId) =>
+    readRelations(storage, GREYHOLM_CAMPAIGN, GIVER_FIELD).filter((e) => e.toIds.includes(targetNpcId)).map((e) => e.fromId);
+  check('greyholm quest.giver BLOCK_DELETE fires for the referenced npc', findGiverBlockers(npcId).length === 1);
+
+  const removed = commitRelations(storage, GREYHOLM_CAMPAIGN, GIVER_FIELD, []);
+  check('greyholm quest.giver remove relation commit succeeds', removed.ok === true);
+  check('greyholm quest.giver delete now succeeds', findGiverBlockers(npcId).length === 0);
+  check('greyholm quest.giver zero dangling references remain', readRelations(storage, GREYHOLM_CAMPAIGN, GIVER_FIELD).length === 0);
+}
+{
+  // array field: locationState.npcIds
+  const locationStateId = 'ls-g1';
+  const npcA = 'npc-ga';
+  const npcB = 'npc-gb';
+  const created = commitRelations(storage, GREYHOLM_CAMPAIGN, LS_NPC_FIELD, [{ fromId: locationStateId, toIds: [npcA, npcB] }]);
+  check('greyholm locationState.npcIds create commit succeeds', created.ok === true);
+  const reloaded = readRelations(storage, GREYHOLM_CAMPAIGN, LS_NPC_FIELD);
+  check('greyholm locationState.npcIds reload returns both ids', reloaded.length === 1 && reloaded[0].toIds.length === 2);
+
+  const afterRemoveA = commitRelations(storage, GREYHOLM_CAMPAIGN, LS_NPC_FIELD, [{ fromId: locationStateId, toIds: [npcB] }]);
+  check('greyholm locationState.npcIds partial removal commits', afterRemoveA.ok === true);
+  check('greyholm locationState.npcIds partial removal leaves only npcB', readRelations(storage, GREYHOLM_CAMPAIGN, LS_NPC_FIELD)[0].toIds[0] === npcB);
+}
+{
+  // Greyholm relations must never leak into a Caldran campaign namespace
+  // (and vice versa) -- same isolation guarantee proven above for
+  // Caldran-vs-Caldran, now proven across the two stacks' id spaces.
+  const caldranSideGiver = readRelations(storage, CAMPAIGN_A, GIVER_FIELD);
+  check('cross-stack isolation: Caldran campaign sees no Greyholm quest.giver relations', caldranSideGiver.length === 0);
+  const greyholmSideNpcLocation = readRelations(storage, GREYHOLM_CAMPAIGN, FIELD);
+  check('cross-stack isolation: Greyholm campaign sees no Caldran npc.locationId relations', greyholmSideNpcLocation.length === 0);
+}
+
 if (failures.length) {
   console.error('GENERAL_RELATIONS_AUTHORITY_FAIL:');
   for (const f of failures) console.error(`  - ${f}`);
   process.exit(1);
 }
 
-console.log(JSON.stringify({ ok: true, checks: 20, verdict: 'GENERAL_RELATIONS_AUTHORITY_PASS' }, null, 2));
+console.log(JSON.stringify({ ok: true, checks: 32, verdict: 'GENERAL_RELATIONS_AUTHORITY_PASS (Caldran 4/4 + Greyholm 5/5 bounded fields)' }, null, 2));

@@ -1896,10 +1896,10 @@ function QuestEditor({ quest, data, onDone }: { quest: DmQuest; data: CampaignDa
       // full patch exactly as before.
       const titleChanged = fullPatch.title !== (quest.title ?? '');
       const descriptionChanged = (fullPatch.description ?? '') !== (quest.description ?? '');
-      const otherFieldsUnchanged =
+      const giverChanged = (fullPatch.giver ?? '') !== (quest.giver ?? '');
+      const otherFieldsUnchangedBase =
         fullPatch.status === (quest.status) &&
         fullPatch.location === (quest.location ?? '') &&
-        (fullPatch.giver ?? '') === (quest.giver ?? '') &&
         (fullPatch.goal ?? '') === (quest.goal ?? '') &&
         (fullPatch.reward ?? '') === (quest.reward ?? '') &&
         (fullPatch.proof ?? '') === (quest.proof ?? '') &&
@@ -1908,10 +1908,17 @@ function QuestEditor({ quest, data, onDone }: { quest: DmQuest; data: CampaignDa
         (fullPatch.image ?? '') === (quest.image ?? '') &&
         fullPatch.enemies.length === (quest.enemies ?? []).length &&
         fullPatch.enemies.every((id) => (quest.enemies ?? []).includes(id));
-      if (titleChanged && !descriptionChanged && otherFieldsUnchanged) {
+      if (titleChanged && !descriptionChanged && !giverChanged && otherFieldsUnchangedBase) {
         store.patchQuest(quest.id, { title: fullPatch.title });
-      } else if (descriptionChanged && !titleChanged && otherFieldsUnchanged) {
+      } else if (descriptionChanged && !titleChanged && !giverChanged && otherFieldsUnchangedBase) {
         store.patchQuest(quest.id, { description: fullPatch.description });
+      } else if (giverChanged && !titleChanged && !descriptionChanged && otherFieldsUnchangedBase) {
+        // Block I -- general relations authority fast-path for quest.giver
+        // (see resolveGreyholmRelationKind in campaignStore.tsx). Same
+        // discipline as the title/description fast-paths above: only an
+        // isolated `giver` change maps 1:1 to the universal relation
+        // authority; any other change shape dispatches the full patch.
+        store.patchQuest(quest.id, { giver: fullPatch.giver });
       } else {
         store.patchQuest(quest.id, fullPatch);
       }

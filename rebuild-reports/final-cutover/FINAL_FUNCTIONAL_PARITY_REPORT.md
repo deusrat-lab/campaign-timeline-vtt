@@ -388,7 +388,7 @@ so the prior passes' thorough browser evidence (cited throughout this file) stan
 | View modes (DM/Player/Observer, tab-scoped) | COMPLETE | unchanged, Block H |
 | Repository authority (14 subsystems + registry) | COMPLETE | unchanged, Block I core |
 | Content (both stacks) | COMPLETE | unchanged |
-| Relations (BLOCK_DELETE + general relation authority) | PARTIAL | Caldran 1/4 bounded fields wired to live mutation site (rest import-only, nothing to wire yet); Greyholm 0/5 bounded fields started (campaignStore.tsx choke point never located) |
+| Relations (BLOCK_DELETE + general relation authority) | PARTIAL | Greyholm 5/5 bounded fields now wired (this pass -- quest.giver/quest.enemies/locationState.npcIds/questIds/enemyIds, static guard + 32/32 Node harness against the real production module; live-browser click-through attempted but not completed this pass due to Browser-pane tooling issues, see CONTINUATION_STATE.json); Caldran 1/4 bounded fields wired to live mutation site (rest import-only, nothing to wire yet, unchanged) |
 | Maps | COMPLETE | unchanged |
 | Party | COMPLETE | unchanged |
 | Routes | COMPLETE | unchanged |
@@ -414,3 +414,35 @@ unrecoverable per prior incident investigation); (d) `greyholm.placement` remain
 unconverted legacy write path. All four gaps are long-standing, previously documented,
 and unchanged by this pass — this pass's job was honest re-verification, not
 new remediation, and no regression was found.
+
+---
+
+## FINAL CLOSURE PASS (Block I — Greyholm relations)
+
+Closed the Greyholm side of gap (a) above: all 5 bounded Greyholm relation fields
+(`quest.giver`, `quest.enemies`, `locationState.npcIds`, `locationState.questIds`,
+`locationState.enemyIds`) are now wired to the universal relation authority
+(`src/domain/relations/relationAuthorityStore.ts`), via the real live choke points in
+`campaignStore.tsx`'s `patchQuest`/`patchLocationState` (the same single-field-patch
+allowlist discipline already used for `greyholm.npc.role`/`name` and
+`greyholm.quest.title`/`description`). See `CONTINUATION_STATE.json`'s
+`blockIGreyholmRelationsSession` for full detail, including why this choke point was
+findable when prior sessions correctly could not find one in the reducer.
+
+Verified: `npx tsc -b` clean, `npm run build` clean, all 41 `npm run verify:*` scripts
+PASS (enumerated directly from `package.json`, not assumed from a remembered count),
+including the extended `verify:no-legacy-relations-write` (now checks both stacks) and
+`verify:general-relations-authority` (32/32 checks, 12 new for Greyholm, run against the
+real production module). **Not done this pass:** a live-browser click-through of these
+Greyholm fields — attempted, but the Browser-pane tool hit repeated rendering/focus
+glitches specific to this session's environment when interacting with native `<select>`
+elements (black screenshots after clicking a select, `document.activeElement` not
+landing on the clicked field). No app-level error was ever observed (zero console
+errors throughout); this is recorded as an open browser-verification item for a future
+session, not as evidence of a defect. Caldran's relation fields are unchanged (still
+1/4 wired) — not in this pass's scope.
+
+**Verdict unchanged: `UNIVERSAL_LOCAL_REBUILD_INCOMPLETE`.** Updated reason (a):
+relations conversion is now Greyholm 5/5 / Caldran 1/4 (was 0/5 / 1/4) — Caldran's 3
+unwired fields remain genuinely import-only (no live edit UI exists yet for them).
+Reasons (b)/(c)/(d) from the prior pass are unchanged and not addressed this pass.
