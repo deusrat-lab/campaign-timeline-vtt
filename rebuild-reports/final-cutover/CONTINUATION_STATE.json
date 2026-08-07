@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-08-07T00:00:00.000Z",
-  "currentHead": "3398f65",
+  "currentHead": "368de32",
   "branch": "master",
   "workingTree": "clean",
   "push": 0,
@@ -64,7 +64,8 @@
     "verify:referential-integrity": "PASS (0 broken)",
     "build:greyholm-runtime-shape": "PASS (0 broken, 34 typed orphans)",
     "verify:final-migration": "PASS (dry-run/commit/read-back/rollback all OK, 0 lost entities, 100% id coverage, both campaigns)",
-    "verify:no-legacy-reveal-write": "PASS (new this pass, both campaignStore.tsx and userCampaignStore.tsx guarded)"
+    "verify:no-legacy-reveal-write": "PASS (new this pass, both campaignStore.tsx and userCampaignStore.tsx guarded)",
+    "verify:no-legacy-calendar-write": "PASS (new this pass, campaignStore.tsx guarded, 12th no-legacy-write guard)"
   },
   "completedBlocks": [
     {
@@ -252,11 +253,11 @@
   ],
   "currentBlock": "I",
   "nextConcreteStep": {
-    "description": "This session converged Greyholm's timeline/arc collection (addTimeline/patchTimeline/deleteTimeline in campaignStore.tsx, NavBar.tsx's <ArcSwitcher> create/rename/reorder/archive/restore/delete controls) onto the SAME universal ARCS authority (commitArcs, src/domain/arcs/arcAuthorityStore.ts) already used by Caldran, under a distinct 'greyholm.arcs' kind (ArcAuthorityKind widened to a union of both kinds; same storage module, campaign-scoped so no cross-contamination). Commit 3398f65. Gates clean (tsc -b, vite build, all 10 verify:no-legacy-*-write guards including the extended verify:no-legacy-arcs-write which now checks both userCampaignStore.tsx and campaignStore.tsx, verify:domain, verify:universal-regression 15/15, verify:referential-integrity 0 broken). Browser-verified live on Greyholm main campaign (create/rename/reorder/archive/reload/restore/delete, zero console errors; seed-arc delete-protection intact). DONE so far (11 subsystems): battles (Decision 2), safe-scalar NPC/quest/faction/location fields, presentedCard, reveal/visibility, Greyholm party-position, Caldran mapPlacements, Caldran routes, Caldran zones, arcs (BOTH Caldran and Greyholm now), capability toggles (shared). Do NOT claim BLOCK_I_UNIVERSAL_REPOSITORY_SOLE_AUTHORITY_COMPLETE until every subsystem listed below is converged: registry, configuration, content (beyond the safe scalar fields already done), relations, timeline calendar entries (distinct from the arcs collection itself -- calendarsByTimelineId / CampaignCalendar, day/phase/custom-shift state, NOT yet converted), economy entities, movable entities beyond placements.",
+    "description": "This session converged Greyholm's timeline-calendar state (calendarsByTimelineId/CampaignCalendar -- setCalendar/advanceTimePhase/advanceDay in campaignStore.tsx, driving the map toolbar's +phase/+day/Долгий отдых/Свой сдвиг controls) onto a NEW unconditional universal authority, src/domain/calendar/calendarAuthorityStore.ts -- an entity-keyed (by timelineId) whole-object commit mirroring fieldAuthorityStore.ts's pattern (NOT a whole-collection commit like arcs/zones, since each timeline owns exactly one CampaignCalendar). Confirmed via grep that Caldran (userCampaignStore.tsx / src/types/userCampaign.ts) has NO calendar/timeline data model at all -- Greyholm-only subsystem, same asymmetry as partyPositionAuthorityStore.ts. Commit 368de32. Gates clean (tsc -b, vite build, all 12 verify:no-legacy-*-write guards including the new verify:no-legacy-calendar-write, verify:domain, verify:universal-regression 15/15, verify:referential-integrity 0 broken). Browser-verified live on the real Greyholm main campaign: +phase, +day, long rest (+1 day reset to morning), custom +3-day shift (1->3->6), full page reload persistence confirmed (survived cold-boot /home redirect + re-navigation), in-session advance+undo round-trip correct, undo confirmed to correctly NOT survive reload (by design, matches FINAL_FUNCTIONAL_PARITY_REPORT.md), zero console errors throughout. DONE so far (12 subsystems): battles (Decision 2), safe-scalar NPC/quest/faction/location fields, presentedCard, reveal/visibility, Greyholm party-position, Caldran mapPlacements, Caldran routes, Caldran zones, arcs (both Caldran and Greyholm), capability toggles (shared), Greyholm timeline calendar. Do NOT claim BLOCK_I_UNIVERSAL_REPOSITORY_SOLE_AUTHORITY_COMPLETE until every subsystem listed below is converged: registry, configuration, content (beyond the safe scalar fields already done), relations, economy entities, movable entities beyond placements.",
     "suggestedNext": {
-      "subsystem": "Timeline calendar state (calendarsByTimelineId / CampaignCalendar)",
-      "file": "src/state/campaignStore.tsx (Greyholm: SET_TIME_OF_DAY/ADVANCE_DAY/LONG_REST/CUSTOM_SHIFT-style calendar actions -- grep for 'calendarsByTimelineId', 'DEFAULT_CALENDAR', 'getCalendar') and src/state/userCampaignStore.tsx (Caldran equivalent, if one exists -- confirm real UI wiring first, the day/phase/'Долгий отдых'/'Свой сдвиг' controls visible in the map toolbar)",
-      "pattern": "Likely a per-timelineId scalar/small-object commit (mirrors fieldAuthorityStore.ts or partyPositionAuthorityStore.ts's whole-object pattern, NOT a whole-collection commit like arcs/zones/routes) since each timeline has exactly one CampaignCalendar -- read the real reducer cases and action creators first to confirm the actual shape before designing the commit kind, exactly as this session and the capability-toggle session both did."
+      "subsystem": "Campaign registry / configuration (campaign metadata: name, description, protected/active flags, capability defaults distinct from the already-converged runtime capability TOGGLES) OR relations (cross-entity links not yet covered by scalar fields/placements/routes/zones/arcs)",
+      "file": "Start by grepping src/state/campaignStore.tsx and src/state/userCampaignStore.tsx for registry-level mutations (renameCampaign, campaign metadata patches) and any relation/link collections not yet in the converged list -- confirm real shape and both-stack presence/absence before designing the commit kind, exactly as this session and all prior Block I sessions did.",
+      "pattern": "Likely another entity-keyed or whole-collection commit depending on what's found -- read the real reducer/action-creator code first."
     }
   },
   "remainingBlocks": [
