@@ -34,6 +34,7 @@
     "verify:no-legacy-capabilities-write": "node scripts/final-cutover/verify-no-legacy-capabilities-write.mjs",
     "verify:no-legacy-calendar-write": "node scripts/final-cutover/verify-no-legacy-calendar-write.mjs",
     "verify:no-legacy-service-write": "node scripts/final-cutover/verify-no-legacy-service-write.mjs",
+    "verify:camera-not-exported": "node scripts/final-cutover/verify-camera-not-exported.mjs",
     "verify:no-workspace-split": "node scripts/final-cutover/verify-no-workspace-split.mjs",
     "verify:no-dead-module-reintroduction": "node scripts/final-cutover/verify-no-dead-module-reintroduction.mjs",
     "verify:stage04": "node scripts/verify-stage-04-parity.mjs",

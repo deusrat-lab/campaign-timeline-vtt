@@ -54,6 +54,26 @@ function normalizeVolatile<T>(snapshot: T): T {
   return snapshot;
 }
 
+/**
+ * Camera/viewport (zoom/pan) contract — see also the mirrored contract at
+ * src/pages/MapWorkspacePage.tsx (Greyholm's CAMERA_STORAGE_KEY).
+ *
+ * `UserCampaignRuntime.mapViewState` (zoom/panX/panY) is UI/session/tab-local
+ * viewport state, NOT durable campaign content. It must be excluded from
+ * every export payload (DM and Player-Safe alike) for the same reason
+ * Greyholm's camera lives in a separate, never-exported localStorage key:
+ * panning/zooming a map must never be treated as a content edit, must never
+ * round-trip through Export/Import, and must never leak between isolated
+ * browser tabs (Block H tab-scoped isolation). This function is the single
+ * enforcement point for that rule on the User-Campaign (Caldran) stack.
+ * Enforced by scripts/final-cutover/verify-camera-not-exported.mjs.
+ */
+function stripCameraViewState(runtime: UserCampaignRuntime | undefined): UserCampaignRuntime | undefined {
+  if (!runtime) return runtime;
+  const { mapViewState: _omit, ...rest } = runtime;
+  return rest as UserCampaignRuntime;
+}
+
 function battleTokenCounts(runtime?: UserCampaignRuntime): { boards: number; tokens: number } {
   const boards = runtime?.battleBoards ?? {};
   const boardCount = Object.keys(boards).length;
@@ -80,7 +100,7 @@ export function exportUserCampaignDM(data: UserCampaignData, runtime?: UserCampa
     boardCount: counts.boards,
     tokenCount: counts.tokens,
     snapshot,
-    extensions: { [LEGACY_EXT]: { kind: LEGACY_KIND, data, runtime } },
+    extensions: { [LEGACY_EXT]: { kind: LEGACY_KIND, data, runtime: stripCameraViewState(runtime) } },
   };
   return stableStringify(envelope);
 }

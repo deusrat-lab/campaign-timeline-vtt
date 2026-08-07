@@ -995,7 +995,13 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
       persistRegistry([...registry, entry]);
       writeJson(dataKey(newId), data);
       setDataCache((prev) => ({ ...prev, [newId]: data }));
-      const rt = rec.runtime ? { ...rec.runtime, campaignId: newId } : emptyRuntime(newId, data.baseMapId);
+      // Camera/viewport (mapViewState) is deliberately excluded from every export
+      // payload (see stripCameraViewState in userCampaignPortability.ts) — it is
+      // UI/session-local state, not durable content. Backfill a fresh default here
+      // rather than treating its absence as data loss.
+      const rt = rec.runtime
+        ? { ...emptyRuntime(newId, data.baseMapId), ...rec.runtime, campaignId: newId }
+        : emptyRuntime(newId, data.baseMapId);
       writeJson(runtimeKey(newId), rt);
       setRuntimeCache((prev) => ({ ...prev, [newId]: rt }));
       pushBlob(newId);
@@ -1025,7 +1031,9 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
       if (!rec.ok || !rec.data) return { ok: false, errors: ['restore reconstruct failed'] };
       writeJson(dataKey(id), rec.data);
       setDataCache((prev) => ({ ...prev, [id]: rec.data! }));
-      const rt = rec.runtime ?? emptyRuntime(id, rec.data.baseMapId);
+      const rt = rec.runtime
+        ? { ...emptyRuntime(id, rec.data.baseMapId), ...rec.runtime, campaignId: id }
+        : emptyRuntime(id, rec.data.baseMapId);
       writeJson(runtimeKey(id), rt);
       setRuntimeCache((prev) => ({ ...prev, [id]: rt }));
       pushBlob(id);
