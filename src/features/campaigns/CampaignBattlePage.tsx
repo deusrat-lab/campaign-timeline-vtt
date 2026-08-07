@@ -4,6 +4,7 @@ import '../world-atlas/atlasLayer.css';
 import './campaignWorkspace.css';
 import { getCampaignById } from '../../data/campaignModules';
 import { useUserCampaigns } from '../../state/userCampaignStore';
+import { resolveCampaignRouteExistence } from '../../domain';
 import { scenarioForCampaign } from '../../data/scenarioMerge';
 import { getBattleMapCatalog, getBattleMapById, battleMapImageUrl, battleMapVariantTypes, BATTLE_VARIANT_LABEL } from '../../data/battleMapCatalog';
 import type { BattleMapManifestEntry } from '../../data/battleMapManifest';
@@ -29,6 +30,9 @@ export function CampaignBattlePage() {
   const data = campaignId ? store.getData(campaignId) : null;
   const runtime = campaignId ? store.getRuntime(campaignId) : null;
   const isMain = campaignId ? getCampaignById(campaignId)?.protected : false;
+  // Part 1 -- same universal-registry-first existence check as
+  // IsolatedCampaignMapWorkspace.tsx (see src/domain/registry/registryAuthorityStore.ts).
+  const registryEntry = campaignId ? store.lookupCampaign(campaignId) : null;
 
   // Each battle map has its OWN board (tokens/terrain/grid/view), keyed by the
   // route map id. Fall back to the legacy single `battleBoard` only when it
@@ -221,6 +225,18 @@ export function CampaignBattlePage() {
   // Declared before the early return below so hook order stays stable when the
   // campaign hydrates from the server (data null → present).
   const downRef = useRef<{ x: number; y: number; moved: boolean; sp: { x: number; y: number } } | null>(null);
+
+  // Part 1 -- same shared universal-registry-first gate as
+  // IsolatedCampaignMapWorkspace.tsx (src/domain/registry/routeExistence.ts).
+  const existence = resolveCampaignRouteExistence(campaignId, registryEntry, data);
+  if (existence === 'registryConfirmedMissing') {
+    return (
+      <div className="ucw-lib-page">
+        <button className="atlas-back-link" onClick={() => navigate('/campaigns')}>← Кампании</button>
+        <p className="atlas-empty">Кампания не найдена.</p>
+      </div>
+    );
+  }
 
   if (!campaignId || !data || !runtime || isMain) {
     return (

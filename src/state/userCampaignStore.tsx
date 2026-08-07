@@ -48,6 +48,7 @@ import {
   type CapabilityTogglesSnapshot,
   commitRegistry,
   type RegistryEntry,
+  lookupCampaign as lookupCampaignAuthority,
 } from '../domain';
 
 const UC_BACKUP_NS = 'campaign-timeline-vtt:uc-backup:v1';
@@ -314,6 +315,13 @@ interface UserCampaignValue {
 
   getData: (id: string) => UserCampaignData | null;
   getRuntime: (id: string) => UserCampaignRuntime;
+  /** Part 1 (this session) — universal-registry-backed existence check for
+   * route resolution. Resolves Greyholm OR a User Campaign id through the
+   * single `lookupCampaign()` contract in `src/domain/registry/registryAuthorityStore.ts`
+   * instead of the ad-hoc "campaignId truthy + getData() returns non-null"
+   * pattern route components used before. Returns null when the id does not
+   * resolve in either source (never committed, or deleted). */
+  lookupCampaign: (id: string) => RegistryEntry | null;
   updateData: (id: string, updater: (prev: UserCampaignData) => UserCampaignData) => void;
   updateRuntime: (id: string, updater: (prev: UserCampaignRuntime) => UserCampaignRuntime) => void;
 
@@ -703,6 +711,13 @@ export function UserCampaignProvider({ children }: { children: ReactNode }) {
 
     getData: readData,
     getRuntime: readRuntime,
+    lookupCampaign: (id: string) => {
+      const legacyEntries: RegistryEntry[] = registry.map((e) => ({
+        campaignId: e.campaignId, title: e.title, type: e.type, baseMapId: e.baseMapId,
+        regionIds: e.regionIds, createdAt: e.createdAt, updatedAt: e.updatedAt, kind: 'userCampaign',
+      }));
+      return lookupCampaignAuthority(registryAuthorityStorage(), legacyEntries, id);
+    },
     updateData: patchData,
     updateRuntime: patchRuntime,
 

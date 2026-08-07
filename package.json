@@ -37,6 +37,7 @@
     "verify:camera-not-exported": "node scripts/final-cutover/verify-camera-not-exported.mjs",
     "verify:no-legacy-registry-write": "node scripts/final-cutover/verify-no-legacy-registry-write.mjs",
     "verify:universal-campaign-registry": "node scripts/final-cutover/verify-universal-campaign-registry.mjs",
+    "verify:route-resolution-uses-registry": "node scripts/final-cutover/verify-route-resolution-uses-registry.mjs",
     "verify:no-workspace-split": "node scripts/final-cutover/verify-no-workspace-split.mjs",
     "verify:no-dead-module-reintroduction": "node scripts/final-cutover/verify-no-dead-module-reintroduction.mjs",
     "verify:stage04": "node scripts/verify-stage-04-parity.mjs",

@@ -5,6 +5,7 @@ import './campaignWorkspace.css';
 import { getAtlasMapById, WORLD_ATLAS_MAPS } from '../../data/worldAtlasMaps';
 import { getRegionById } from '../../data/worldRegions';
 import { useUserCampaigns } from '../../state/userCampaignStore';
+import { resolveCampaignRouteExistence } from '../../domain';
 import { USER_CAMPAIGN_TYPE_LABELS, type CampaignEntityType, type UserCampaignMode } from '../../types/userCampaign';
 import type { WorldRegion } from '../../types/worldAtlas';
 import { CampaignEntityCard } from './CampaignEntityCard';
@@ -32,6 +33,12 @@ export function IsolatedCampaignMapWorkspace() {
   const store = useUserCampaigns();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Part 1 (this session) -- route resolution now checks the universal
+  // registry (src/domain/registry/registryAuthorityStore.ts) instead of
+  // relying solely on "does a data blob happen to exist under this id".
+  // `registryEntry` is the existence source of truth; `data`/`runtime` stay
+  // the content source exactly as before (unchanged for valid routes).
+  const registryEntry = campaignId ? store.lookupCampaign(campaignId) : null;
   const data = campaignId ? store.getData(campaignId) : null;
   const runtime = campaignId ? store.getRuntime(campaignId) : null;
   const [searchParams, setSearchParams] = useSearchParams();
@@ -169,7 +176,21 @@ export function IsolatedCampaignMapWorkspace() {
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinchRef = useRef<{ dist: number; zoom: number; midWorldX: number; midWorldY: number } | null>(null);
 
-  if (!data || !runtime || !campaignId) {
+  // Part 1 -- route resolution now goes through the shared
+  // resolveCampaignRouteExistence() gate (src/domain/registry/routeExistence.ts),
+  // fed by the universal lookupCampaign() result (registryEntry) rather than
+  // just checking whether the legacy data blob happens to exist.
+  const existence = resolveCampaignRouteExistence(campaignId, registryEntry, data);
+  if (existence === 'registryConfirmedMissing' || !runtime) {
+    return (
+      <div className="atlas-layer">
+        <button className="atlas-back-link" onClick={() => navigate('/campaigns')}>← Кампании</button>
+        <p className="atlas-empty">Кампания не найдена. Возможно, она была удалена.</p>
+      </div>
+    );
+  }
+
+  if (!data || !campaignId) {
     return (
       <div className="atlas-layer">
         <button className="atlas-back-link" onClick={() => navigate('/campaigns')}>← Кампании</button>

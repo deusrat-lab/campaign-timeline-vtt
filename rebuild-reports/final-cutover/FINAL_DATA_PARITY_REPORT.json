@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-07T08:50:31.824Z",
+  "generatedAt": "2026-08-07T11:39:54.741Z",
   "engine": "src/domain/migration/migrationEngine.ts (runUniversalMigration / rollbackUniversalMigration) — real production code, not reimplemented.",
   "repository": "createProductionCampaignRepository + createMemoryRepositoryStorage (in-memory Map, same repository implementation the browser app uses over localStorage).",
   "results": [
@@ -134,54 +134,5 @@
         }
       }
     }
-  ],
-  "blockMReconciliation": {
-    "sessionDate": "2026-08-07",
-    "headAtReconciliation": "ebe72410b64e5a84154cc07e836d6dbb1df48ee6",
-    "purpose": "Full 1:1 reconciliation after Block I (universal authority convergence), Block K (UC import/export round-trip proof), and Block L (dead-code cleanup) — every number below was re-run live in this session against current filesystem/repository data, not copied from the pre-existing baseline.",
-    "entityCounts": {
-      "greyholm": { "expected": 979, "actual": 979, "match": true, "source": "npm run verify:final-migration (src/domain/migration/migrationEngine.ts against live public/data/dm-companion/*.json)" },
-      "caldran": { "expected": 407, "actual": 407, "match": true, "source": "npm run verify:final-migration (src/domain/migration/migrationEngine.ts against live src/data/campaignScenarios.ts)" }
-    },
-    "imageReferenceResolution": {
-      "greyholmImages": { "expected": "420/420", "actual": "420/420", "match": true, "source": "idCoverage.images in results[0], re-derived this session" },
-      "caldranBestiary": {
-        "expected": "414/414",
-        "actual": "414/414",
-        "match": true,
-        "source": "Independent ad-hoc script this session: parsed public/data/dm-companion/bestiary.local.json (414 entries), resolved every imageUrl against the filesystem under public/ — 0 missing. Not read from any cached report.",
-        "note": "This is the shared bestiary catalog used by both Greyholm (/bestiary) and Caldran (/campaigns/:id/library/bestiary); it is a separate figure from Caldran's own scenario images (205/205, tracked in results[1].idCoverage.images)."
-      }
-    },
-    "referentialIntegrity": {
-      "command": "npm run verify:referential-integrity",
-      "result": { "totalBroken": 0, "greyholmChecked": 14, "greyholmSkipped": 10, "caldranChecked": 9, "caldranSkipped": 6 },
-      "verdict": "REFERENTIAL_INTEGRITY_PASS (statically-checkable relations only)"
-    },
-    "idHygiene": {
-      "duplicateIds": { "checked": 843, "duplicatesFound": 0, "method": "ad-hoc script this session hashing all ids across npcs/quests/custom-enemies/images/factions/players/shops/taverns in public/data/dm-companion/*.json" },
-      "missingIds": 0,
-      "crossCampaignAuthorityLeakage": {
-        "method": "Code review of src/domain/durable-authority/durableAuthorityRouter.ts this session (fresh check, not re-citing Block I's own browser verification)",
-        "finding": "commitCommand rejects with reason 'wrong_campaign' whenever pre.metadata.campaignId !== request.campaignId (line ~281), and ensureEntry keys per-campaign state off request.campaignId throughout — namespace guard confirmed present in the currently-committed code.",
-        "verdict": "no leakage found"
-      }
-    },
-    "residualTestCampaigns": {
-      "blockKTestCampaigns": "none found in canonical source files (src/data/campaignScenarios.ts, public/data/dm-companion/*.json) — grepped for test-campaign/testCamp/dummy/sandbox markers, zero matches. Block K's import/export round-trip used browser localStorage scratch state, not these committed files, so it left no residue in the data this report measures.",
-      "blockLDataImpact": "Block L deleted code only (dead modules + unused exports/reducer actions); git history confirms no changes under public/data/ or src/data/ from Block L commits."
-    },
-    "structuralSpotCheck": {
-      "command": "npm run verify:universal-regression",
-      "result": "UNIVERSAL_REGRESSION_PASS: 15/15 gates (stage05 through stage17) — covers projections, repository, migration engine, shadow read/read-path, real-section wiring, shared workspace, command shadow/authority, durable authority, complex authority, full integration",
-      "additionalChecks": [
-        "verify:block-i-configuration — 18/18 passed",
-        "verify:no-legacy-battle-write, -field-write, -reveal-write, -zones-write, -arcs-write, -capabilities-write, -routes-write — all PASS (no legacy write path reintroduced for battles/fields/reveal/zones/arcs/capabilities/routes)",
-        "verify:no-dead-module-reintroduction — BLOCK_L_DEAD_MODULE_GUARD_PASS"
-      ]
-    },
-    "verdict": "CLEAN_1_TO_1_RECONCILIATION — every previously-established number (979 Greyholm entities, 407 Caldran entities, 420/420 Greyholm images, 414/414 shared bestiary, 0 broken references, 0 duplicate/missing IDs, 0 cross-campaign leakage) was independently re-run against live current data this session and holds exactly. No regression found.",
-    "workingTreeAtEnd": "must be verified clean by the caller after this file is committed; see session commit for the exact commit hash"
-  }
+  ]
 }
-
