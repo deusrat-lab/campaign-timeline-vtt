@@ -50,9 +50,9 @@ export default function App() {
           <Route path="/" element={<HomePage monthId={monthId} onAddExpense={() => setExpenseOpen(true)} />} />
           <Route path="/operations" element={<OperationsPage monthId={monthId} />} />
           <Route path="/budget" element={<BudgetPage monthId={monthId} />} />
-          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/reports" element={<ReportsPage activeMonthId={monthId} />} />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/settings/categories" element={<CategoriesPage />} />
+          <Route path="/settings/categories" element={<CategoriesPage activeMonthId={monthId} />} />
           <Route path="/new-month" element={<MonthWizard />} />
           <Route path="/close/:monthId" element={<CloseMonthPage />} />
         </Routes>

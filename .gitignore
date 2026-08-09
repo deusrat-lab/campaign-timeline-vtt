@@ -9,3 +9,6 @@ test-results
 .vscode
 dist-artifacts
 .pages-serve
+# Локальні артефакти release-валідації — можуть містити реальні фінансові дані
+# користувача (fingerprint суми/ID з реального бекапу). Ніколи не комітити.
+artifacts

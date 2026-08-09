@@ -33,6 +33,24 @@ i18n                             i18n/*
 
 Наразі сервера немає (за вимогою етапу 1).
 
+## Репозиторії (v0.3, доповнено)
+
+Крім початкового набору (`getOrCreateMonth`, `upsertPlan`, `addExpense`,
+`addIncome`, `addRefund`, `doTransfer`, `saveCategory`, …), `db/repositories.ts`
+тепер містить:
+
+- `updateTransaction(id, patch)` — виправлення `expense`/`income`/`refund` на
+  тому самому id (без нового запису); кидає помилку для типів переказів.
+- `deleteTransfer(id)` — м'яке скасування переказу з поверненням балансу
+  резерву/накопичення; `Transfer.deletedAt` тепер фільтрується скрізь, де
+  перекази читаються для розрахунку лімітів (`loadMonthView`, `categoryBalance`).
+- `doTransfer` — додано валідацію (сума > 0, не в себе, категорія активна,
+  достатньо коштів у джерелі) і атомарний запис в одній Dexie-транзакції.
+
+Нові чисті домени: `domain/calculations/weekly.ts` (тижневий бюджет),
+`domain/calculations/liveReport.ts` (кумулятивні витрати, топ категорій для
+live-звіту активного місяця).
+
 ## Потік даних (приклад: додати витрату)
 
 1. `ExpenseSheet` → `repositories.addExpense()` → `db.transactions.add()` + аудит.

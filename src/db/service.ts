@@ -44,7 +44,9 @@ export async function loadMonthView(monthId: Id): Promise<MonthView> {
   const transactions = (await db.transactions.where('monthId').equals(monthId).toArray()).filter(
     (t) => !t.deletedAt,
   );
-  const transfers = await db.transfers.where('monthId').equals(monthId).toArray();
+  const transfers = (await db.transfers.where('monthId').equals(monthId).toArray()).filter(
+    (t) => !t.deletedAt,
+  );
 
   const totals = computeMonthTotals(month, plans, transactions);
   const stateByCategory = new Map<Id, CategoryState>();
@@ -82,7 +84,7 @@ export async function categoryHistory(
     const transfersIn = await db.transfers
       .where('monthId')
       .equals(m.id)
-      .filter((tr) => tr.destinationCategoryId === categoryId)
+      .filter((tr) => tr.destinationCategoryId === categoryId && !tr.deletedAt)
       .count();
     points.push({
       monthKey: m.monthKey,

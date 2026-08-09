@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Sheet, useToast } from './ui';
 import { useMonthView, useReserves, useSavings } from '../hooks/useDb';
 import { useMoneyFormat } from '../hooks/useFormat';
 import { doTransfer, type TransferSource } from '../db/repositories';
-import { parseUahInput, toMoney } from '../domain/money';
+import { parseUahInput, toMoney, toUah } from '../domain/money';
 import { uk } from '../i18n';
 import { PROTECTED_PRIORITIES } from '../domain/models';
 
@@ -17,11 +17,17 @@ export function TransferSheet({
   open,
   onClose,
   destinationCategoryId,
+  initialAmount,
+  initialSource,
 }: {
   monthId: string | null;
   open: boolean;
   onClose: () => void;
   destinationCategoryId?: string;
+  /** Стартова сума (наприклад, сума дефіциту при "Покрити дефіцит"). */
+  initialAmount?: number;
+  /** Стартове джерело (наприклад, категорія при "Перерозподілити залишок"). */
+  initialSource?: TransferSource;
 }) {
   const view = useMonthView(monthId);
   const reserves = useReserves();
@@ -29,10 +35,19 @@ export function TransferSheet({
   const fmt = useMoneyFormat();
   const toast = useToast();
 
-  const [amountRaw, setAmountRaw] = useState('');
+  const [amountRaw, setAmountRaw] = useState(initialAmount ? String(toUah(initialAmount)) : '');
   const [destId, setDestId] = useState(destinationCategoryId ?? '');
-  const [source, setSource] = useState<TransferSource | null>(null);
+  const [source, setSource] = useState<TransferSource | null>(initialSource ?? null);
   const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setAmountRaw(initialAmount ? String(toUah(initialAmount)) : '');
+    setDestId(destinationCategoryId ?? '');
+    setSource(initialSource ?? null);
+    setReason('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, destinationCategoryId, initialAmount, JSON.stringify(initialSource)]);
 
   const amount = toMoney(parseUahInput(amountRaw));
 

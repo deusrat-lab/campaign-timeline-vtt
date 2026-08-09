@@ -82,6 +82,7 @@ export async function upsertPlan(
   if (existing) {
     const updated = { ...existing, ...patch, updatedAt: now };
     await db.monthlyCategoryPlans.put(updated);
+    await logAudit('monthlyCategoryPlan', updated.id, 'update', JSON.stringify(patch));
     return updated;
   }
   const plan: MonthlyCategoryPlan = {
@@ -100,6 +101,7 @@ export async function upsertPlan(
     ...patch,
   };
   await db.monthlyCategoryPlans.add(plan);
+  await logAudit('monthlyCategoryPlan', plan.id, 'create', JSON.stringify(patch));
   return plan;
 }
 
@@ -183,6 +185,50 @@ export async function softDeleteTransaction(id: Id): Promise<void> {
   await logAudit('transaction', id, 'delete');
 }
 
+const EDITABLE_TRANSACTION_TYPES: Transaction['type'][] = ['expense', 'income', 'refund'];
+
+export interface UpdateTransactionPatch {
+  amount?: Money;
+  categoryId?: Id | null;
+  date?: string;
+  note?: string;
+  paymentMethod?: PaymentMethod | null;
+}
+
+/**
+ * Виправити помилково введену операцію: сума/категорія/дата/нотатка
+ * оновлюються на тому самому id (без створення нового запису), тому
+ * баланс змінюється рівно на різницю, без подвійного обліку.
+ * Перекази (category_transfer, reserve_*, savings_*, correction) редагувати
+ * заборонено — для них використовується deleteTransfer + новий перенос.
+ */
+export async function updateTransaction(
+  id: Id,
+  patch: UpdateTransactionPatch,
+): Promise<Transaction> {
+  const existing = await db.transactions.get(id);
+  if (!existing) throw new Error('Операцію не знайдено');
+  if (!EDITABLE_TRANSACTION_TYPES.includes(existing.type)) {
+    throw new Error(`Операції типу "${existing.type}" не можна редагувати напряму`);
+  }
+  const now = ts();
+  const before = {
+    amount: existing.amount,
+    categoryId: existing.categoryId,
+    date: existing.date,
+    note: existing.note,
+  };
+  const updated: Transaction = { ...existing, ...patch, updatedAt: now };
+  await db.transactions.put(updated);
+  await logAudit(
+    'transaction',
+    id,
+    'update',
+    JSON.stringify({ before, after: patch }),
+  );
+  return updated;
+}
+
 // ---- Переноси між категоріями та джерелами -----------------------------
 
 export type TransferSource =
@@ -211,6 +257,15 @@ export async function doTransfer(input: DoTransferInput): Promise<Transfer> {
   const date = input.date ?? isoDateOf(new Date());
   const { source } = input;
 
+  if (!(input.amount > 0)) throw new Error('Сума переносу має бути додатною');
+  if (source.type === 'category' && source.categoryId === input.destinationCategoryId) {
+    throw new Error('Не можна переносити кошти в ту саму категорію');
+  }
+  const destCategory = await db.categories.get(input.destinationCategoryId);
+  if (!destCategory || !destCategory.active) {
+    throw new Error('Категорію призначення не знайдено або вона неактивна');
+  }
+
   let sourceBalanceBefore = 0;
   let sourceBalanceAfter = 0;
   let transactionId: Id | null = null;
@@ -219,44 +274,27 @@ export async function doTransfer(input: DoTransferInput): Promise<Transfer> {
   };
 
   if (source.type === 'category') {
-    const state = await categoryBalance(input.monthId, source.categoryId);
-    sourceBalanceBefore = state;
-    sourceBalanceAfter = state - input.amount;
+    sourceBalanceBefore = await categoryBalance(input.monthId, source.categoryId);
+    if (sourceBalanceBefore < input.amount) {
+      throw new Error('Недостатньо коштів у категорії-джерелі');
+    }
+    sourceBalanceAfter = sourceBalanceBefore - input.amount;
     transferBase.sourceCategoryId = source.categoryId;
   } else if (source.type === 'reserve') {
     const r = await db.reserves.get(source.reserveId);
     sourceBalanceBefore = r?.balance ?? 0;
+    if (!r || sourceBalanceBefore < input.amount) {
+      throw new Error('Недостатньо коштів у резерві');
+    }
     sourceBalanceAfter = sourceBalanceBefore - input.amount;
-    await db.reserves.update(source.reserveId, { balance: sourceBalanceAfter, updatedAt: now });
-    const tx = await addTransaction({
-      monthId: input.monthId,
-      type: 'reserve_withdrawal',
-      amount: input.amount,
-      date,
-      reserveId: source.reserveId,
-      destinationCategoryId: input.destinationCategoryId,
-      note: input.reason,
-    });
-    transactionId = tx.id;
     transferBase.sourceReserveId = source.reserveId;
   } else if (source.type === 'savings') {
     const g = await db.savingsGoals.get(source.savingsGoalId);
     sourceBalanceBefore = g?.currentAmount ?? 0;
+    if (!g || sourceBalanceBefore < input.amount) {
+      throw new Error('Недостатньо коштів у накопиченні');
+    }
     sourceBalanceAfter = sourceBalanceBefore - input.amount;
-    await db.savingsGoals.update(source.savingsGoalId, {
-      currentAmount: sourceBalanceAfter,
-      updatedAt: now,
-    });
-    const tx = await addTransaction({
-      monthId: input.monthId,
-      type: 'savings_withdrawal',
-      amount: input.amount,
-      date,
-      savingsGoalId: source.savingsGoalId,
-      destinationCategoryId: input.destinationCategoryId,
-      note: input.reason,
-    });
-    transactionId = tx.id;
     transferBase.sourceSavingsGoalId = source.savingsGoalId;
   }
 
@@ -274,11 +312,45 @@ export async function doTransfer(input: DoTransferInput): Promise<Transfer> {
     initiator: 'user',
     sourceBalanceBefore,
     sourceBalanceAfter,
-    transactionId,
+    transactionId: null,
     ...transferBase,
   };
-  await db.transfers.add(transfer);
-  await logAudit('transfer', transfer.id, 'create', `${source.type}->category`);
+
+  await db.transaction('rw', db.reserves, db.savingsGoals, db.transactions, db.transfers, db.auditLog, async () => {
+    if (source.type === 'reserve') {
+      await db.reserves.update(source.reserveId, { balance: sourceBalanceAfter, updatedAt: now });
+      const tx = await addTransaction({
+        monthId: input.monthId,
+        type: 'reserve_withdrawal',
+        amount: input.amount,
+        date,
+        reserveId: source.reserveId,
+        destinationCategoryId: input.destinationCategoryId,
+        note: input.reason,
+      });
+      transactionId = tx.id;
+      transfer.transactionId = transactionId;
+    } else if (source.type === 'savings') {
+      await db.savingsGoals.update(source.savingsGoalId, {
+        currentAmount: sourceBalanceAfter,
+        updatedAt: now,
+      });
+      const tx = await addTransaction({
+        monthId: input.monthId,
+        type: 'savings_withdrawal',
+        amount: input.amount,
+        date,
+        savingsGoalId: source.savingsGoalId,
+        destinationCategoryId: input.destinationCategoryId,
+        note: input.reason,
+      });
+      transactionId = tx.id;
+      transfer.transactionId = transactionId;
+    }
+    await db.transfers.add(transfer);
+    await logAudit('transfer', transfer.id, 'create', `${source.type}->category`);
+  });
+
   return transfer;
 }
 
@@ -291,8 +363,34 @@ async function categoryBalance(monthId: Id, categoryId: Id): Promise<Money> {
   const txs = (await db.transactions.where('monthId').equals(monthId).toArray()).filter(
     (t) => !t.deletedAt,
   );
-  const transfers = await db.transfers.where('monthId').equals(monthId).toArray();
+  const transfers = (await db.transfers.where('monthId').equals(monthId).toArray()).filter(
+    (t) => !t.deletedAt,
+  );
   return computeCategoryState(plan, txs, transfers).available;
+}
+
+/**
+ * Скасувати перенос (м'яке видалення). Якщо джерелом були резерв/накопичення,
+ * пов'язана операція зняття теж скасовується, щоб не втратити й не подвоїти
+ * гроші. Використовується як "редагування" переносу: скасувати + створити
+ * новий коректний перенос через doTransfer.
+ */
+export async function deleteTransfer(id: Id): Promise<void> {
+  const transfer = await db.transfers.get(id);
+  if (!transfer || transfer.deletedAt) return;
+  const now = ts();
+  await db.transfers.update(id, { deletedAt: now, updatedAt: now });
+  if (transfer.transactionId) {
+    await softDeleteTransaction(transfer.transactionId);
+  }
+  if (transfer.sourceType === 'reserve' && transfer.sourceReserveId) {
+    const r = await db.reserves.get(transfer.sourceReserveId);
+    if (r) await db.reserves.update(transfer.sourceReserveId, { balance: r.balance + transfer.amount, updatedAt: now });
+  } else if (transfer.sourceType === 'savings' && transfer.sourceSavingsGoalId) {
+    const g = await db.savingsGoals.get(transfer.sourceSavingsGoalId);
+    if (g) await db.savingsGoals.update(transfer.sourceSavingsGoalId, { currentAmount: g.currentAmount + transfer.amount, updatedAt: now });
+  }
+  await logAudit('transfer', id, 'delete');
 }
 
 // ---- Резерви та накопичення -------------------------------------------

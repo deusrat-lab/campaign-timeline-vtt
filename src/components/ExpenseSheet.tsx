@@ -28,6 +28,7 @@ export function ExpenseSheet({
   const [date, setDate] = useState(isoDateOf(new Date()));
   const [note, setNote] = useState('');
   const [showCatForm, setShowCatForm] = useState(false);
+  const [catSearch, setCatSearch] = useState('');
   const sections = useMemo(
     () => (view ? Array.from(new Set(view.categories.map((c) => c.section))) : []),
     [view],
@@ -41,6 +42,12 @@ export function ExpenseSheet({
       .filter((c): c is NonNullable<typeof c> => !!c && c.active)
       .sort((a, b) => a.priority - b.priority);
   }, [view]);
+
+  const visibleCats = useMemo(() => {
+    const q = catSearch.trim().toLowerCase();
+    if (!q) return activeCats;
+    return activeCats.filter((c) => c.name.toLowerCase().includes(q) || c.section.toLowerCase().includes(q));
+  }, [activeCats, catSearch]);
 
   const amount = toMoney(parseUahInput(amountRaw));
   const selectedState = useMemo(() => {
@@ -82,8 +89,16 @@ export function ExpenseSheet({
 
       <div className="field">
         <label>{uk.common.category}</label>
+        {activeCats.length > 6 && (
+          <input
+            className="input mb"
+            placeholder="🔎 Знайти категорію"
+            value={catSearch}
+            onChange={(e) => setCatSearch(e.target.value)}
+          />
+        )}
         <div className="chip-row">
-          {activeCats.map((c) => (
+          {visibleCats.map((c) => (
             <button
               key={c.id}
               className={`chip ${categoryId === c.id ? 'selected' : ''}`}
@@ -93,6 +108,7 @@ export function ExpenseSheet({
               {c.name}
             </button>
           ))}
+          {visibleCats.length === 0 && <span className="muted small">Нічого не знайдено.</span>}
           <button className="chip" onClick={() => setShowCatForm(true)}>＋ Нова</button>
         </div>
       </div>

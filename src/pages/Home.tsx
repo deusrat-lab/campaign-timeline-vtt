@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMonthView, useReserves } from '../hooks/useDb';
 import { useMoneyFormat } from '../hooks/useFormat';
 import { TransferSheet } from '../components/TransferSheet';
+import { WeeklyBudgetCard } from '../components/WeeklyBudgetCard';
 import { setMonthStatus } from '../db/repositories';
 import { uk } from '../i18n';
 import { PRIORITY_LABELS } from '../domain/models';
@@ -81,6 +82,8 @@ export function HomePage({ monthId, onAddExpense }: { monthId: string | null; on
           />
         </div>
       </div>
+
+      {month.status === 'active' && <WeeklyBudgetCard view={view} />}
 
       <div className="grid-2">
         {month.status !== 'closed' && (

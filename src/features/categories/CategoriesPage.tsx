@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
+import { useMonthView } from '../../hooks/useDb';
 import {
   archiveCategory,
   deleteCategorySafe,
@@ -10,9 +11,11 @@ import {
   moveCategory,
   restoreCategory,
   setCategoryActive,
+  upsertPlan,
 } from '../../db/repositories';
 import { useToast } from '../../components/ui';
 import { CategoryForm } from './CategoryForm';
+import { AddToMonthPrompt } from './AddToMonthPrompt';
 import { PRIORITY_LABELS, type Category, type Priority } from '../../domain/models';
 
 const PRIORITY_HINT: Record<Priority, string> = {
@@ -24,15 +27,17 @@ const PRIORITY_HINT: Record<Priority, string> = {
   6: 'Ігри, підписки, спонтанне',
 };
 
-export function CategoriesPage() {
+export function CategoriesPage({ activeMonthId }: { activeMonthId?: string | null }) {
   const navigate = useNavigate();
   const toast = useToast();
   const cats = useLiveQuery(() => db.categories.orderBy('sortOrder').toArray(), []);
+  const activeMonth = useMonthView(activeMonthId ?? null);
   const [search, setSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'all'>('all');
   const [editing, setEditing] = useState<Category | 'new' | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [addToMonthFor, setAddToMonthFor] = useState<Category | null>(null);
 
   const sections = useMemo(
     () => Array.from(new Set((cats ?? []).map((c) => c.section))).sort(),
@@ -164,7 +169,27 @@ export function CategoriesPage() {
           category={editing === 'new' ? null : editing}
           sections={sections}
           onClose={() => setEditing(null)}
-          onSaved={() => setEditing(null)}
+          onSaved={(saved) => {
+            const wasNew = editing === 'new';
+            setEditing(null);
+            const monthActive = activeMonth && activeMonth.month.status === 'active';
+            const alreadyPlanned = activeMonth?.plans.some((p) => p.categoryId === saved.id);
+            if (wasNew && saved.kind === 'spending' && monthActive && !alreadyPlanned) {
+              setAddToMonthFor(saved);
+            }
+          }}
+        />
+      )}
+
+      {addToMonthFor && activeMonthId && (
+        <AddToMonthPrompt
+          category={addToMonthFor}
+          onClose={() => setAddToMonthFor(null)}
+          onConfirm={async (planned) => {
+            await upsertPlan(activeMonthId, addToMonthFor.id, { planned });
+            toast({ message: `Додано до поточного місяця: ${addToMonthFor.name}` });
+            setAddToMonthFor(null);
+          }}
         />
       )}
     </>

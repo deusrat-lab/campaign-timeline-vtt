@@ -1,12 +1,17 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
+import { useMonthView } from '../hooks/useDb';
 import { useMoneyFormat } from '../hooks/useFormat';
 import { uk } from '../i18n';
 import type { ClosureSummary } from '../domain/models';
 import { buildInsights, type ClosedMonthPoint } from '../domain/calculations/insights';
+import { spendingOverTime, topCategoriesBySpend } from '../domain/calculations/liveReport';
+import { isoDateOf } from '../utils/id';
+import type { MonthView } from '../db/service';
 
-export function ReportsPage() {
+export function ReportsPage({ activeMonthId }: { activeMonthId: string | null }) {
   const fmt = useMoneyFormat();
+  const activeView = useMonthView(activeMonthId);
   const closures = useLiveQuery(async () => {
     const list = await db.monthlyClosures.toArray();
     const withMonth = await Promise.all(
@@ -22,6 +27,9 @@ export function ReportsPage() {
   return (
     <>
       <h1>{uk.nav.reports}</h1>
+
+      {activeView && activeView.month.status === 'active' && <LiveMonthReport view={activeView} fmt={fmt} />}
+
       {closures.length === 0 && (
         <div className="empty">
           <div className="emoji">📈</div>
@@ -59,6 +67,74 @@ export function ReportsPage() {
         );
       })}
     </>
+  );
+}
+
+/** Live-звіт активного місяця: рахується з поточних операцій, без очікування закриття. */
+function LiveMonthReport({ view, fmt }: { view: MonthView; fmt: (m: number) => string }) {
+  const { month, totals, categories, stateByCategory } = view;
+  const monthStart = `${month.monthKey}-01`;
+  const today = isoDateOf(new Date());
+  const todayInMonth = today < monthStart ? monthStart : today;
+  const points = spendingOverTime(view.transactions, monthStart, todayInMonth);
+  const top = topCategoriesBySpend(stateByCategory, 5);
+  const maxCumulative = Math.max(...points.map((p) => p.cumulative), 1);
+
+  return (
+    <div className="card" style={{ background: 'var(--surface-2)' }}>
+      <div className="row">
+        <div className="section-title" style={{ margin: 0 }}>Цей місяць (live)</div>
+        <span className="badge ok">{uk.status.active}</span>
+      </div>
+
+      <div className="grid-2 mt small">
+        <Kv label={uk.home.income} v={fmt(totals.actualIncome)} />
+        <Kv label={uk.home.spent} v={fmt(totals.totalExpense)} />
+        <Kv label={uk.home.available} v={fmt(totals.availableToSpend)} />
+        <Kv label="Резерв (рух)" v={fmt(totals.toReserves - totals.fromReserves)} />
+        <Kv label="Накопичення (рух)" v={fmt(totals.toSavings - totals.fromSavings)} />
+        <Kv
+          label={totals.deficit > 0 ? uk.home.deficit : uk.home.surplus}
+          v={fmt(totals.deficit > 0 ? totals.deficit : totals.unallocated < 0 ? 0 : totals.unallocated)}
+        />
+      </div>
+
+      {points.length > 1 && (
+        <div className="mt">
+          <div className="small muted" style={{ marginBottom: 4 }}>Витрати наростаючим підсумком</div>
+          <div className="row" style={{ alignItems: 'flex-end', gap: 2, height: 48 }}>
+            {points.map((p) => (
+              <span
+                key={p.date}
+                title={`${p.date}: ${fmt(p.cumulative)}`}
+                style={{
+                  flex: 1,
+                  minWidth: 2,
+                  height: `${Math.max(4, (p.cumulative / maxCumulative) * 48)}px`,
+                  background: 'var(--danger)',
+                  borderRadius: 2,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {top.length > 0 && (
+        <div className="mt">
+          <div className="small muted" style={{ marginBottom: 4 }}>Топ категорій за фактом</div>
+          {top.map((line) => {
+            const cat = categories.find((c) => c.id === line.categoryId);
+            return (
+              <div key={line.categoryId} className="row" style={{ padding: '3px 0' }}>
+                <span className="small">{cat?.emoji} {cat?.name ?? '—'}</span>
+                <span className="small" style={{ fontWeight: 600 }}>{fmt(line.actual)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
